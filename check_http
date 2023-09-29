@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+import argparse
+import io
+import pycurl
+import socket
+import ssl
+import collections
+import traceback
+import datetime
+import dns.query
+import dns.zone
+import dns.resolver
+import dns.exception
+
+#-------------------------------------------------------------------------------
+
+def candebug():
+    return False
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+_preheaders = []
+_headers = {}
+def _header_function(header_line):
+    global _preheaders
+    global _headers
+
+    # HTTP standard specifies that headers are encoded in iso-8859-1.
+    header_line = header_line.decode('iso-8859-1')
+    #print(header_line)
+
+    # Header lines include the first status line (HTTP/1.x ...).
+    # We are going to ignore all lines that don't have a colon in them.
+    # This will botch headers that are split on multiple lines...
+    if ':' not in header_line:
+        if header_line!="" and len(_headers)==0:
+            _preheaders.append(header_line.strip())
+        return
+
+    # Break the header line into header name and value.
+    name, value = header_line.split(':', 1)
+
+    # Remove whitespace that may be present.
+    # Header lines include the trailing newline, and there may be whitespace
+    # around the colon.
+    name = name.strip()
+    value = value.strip()
+
+    # Header names are case insensitive.
+    # Lowercase name here.
+    name = name.lower()
+
+    #print(name+": "+value)
+    # Now we can actually record the header name and value.
+    # Note: this only works when headers are not duplicated, see below.
+    _headers[name] = value
+
+def generate_resolves(hostname,port,dnsservers):
+    result = []
+
+    if dnsservers != "":
+        listdnsservers = dnsservers.split(",")
+        #print(listdnsservers)
+
+        try:
+            customresolver = dns.resolver.Resolver(configure=False)
+            customresolver.nameservers = listdnsservers
+            customresolver.retry_servfail = True
+            customresolver.edns = True
+
+            result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,"A")[0])]
+        except:
+            pass
+
+        #print(result)
+    return result
+
+def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,headerstring,certificatedays,interface,dnsservers):
+    global _preheaders
+    global _headers
+
+    curl = None
+    timeoutmessage = None
+    failuremessage = None
+    responsecode = None
+    totaltime = None
+    certinfo = None
+    try:
+        #print(sslversion) # 1.2+
+        curlsslfinal = None
+        if sslversion!=None:
+            protocol = "https"
+            if sslversion == "default":
+                curlsslmin = pycurl.SSLVERSION_DEFAULT
+                sslversionplus =  True
+            else:
+                sslversionplus = sslversion.endswith("+")
+                sslversion = sslversion.strip("+")
+                curlsslmin = None
+                #print(sslversion) # 1.2+
+                if sslversion == "TLSv1.0":
+                    curlsslmin = pycurl.SSLVERSION_TLSv1_0
+                elif sslversion == "TLSv1.1":
+                    curlsslmin = pycurl.SSLVERSION_TLSv1_1
+                elif sslversion == "TLSv1.2":
+                    curlsslmin = pycurl.SSLVERSION_TLSv1_2
+                elif sslversion == "TLSv1.3":
+                    curlsslmin = pycurl.SSLVERSION_TLSv1_3
+
+            if sslversionplus == False:
+                curlsslfinal = curlsslmin
+            else:
+                curlsslfinal = curlsslmin | curlsslmin
+            #print(sslversion) # 1.2+
+        else:
+            protocol = "http"
+        url = protocol+"://"+hostname+":"+str(port)+path
+        #print(url)
+        httpversionparts = httpversion.split(",")
+        if len(httpversionparts)>0:
+            curlhttpcode = 0
+            if "0.9" in httpversionparts:
+                curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_0_9
+            if "1.0" in httpversionparts:
+                curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_1_0
+            if "1.1" in httpversionparts:
+                curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_1_1
+            if "2.0" in httpversionparts:
+                curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_2_0
+        #print("precurl")
+        buffer = io.BytesIO()
+        curl = pycurl.Curl()
+        curl.reset()
+        curl.setopt(pycurl.URL, url)
+        curl.setopt(pycurl.WRITEDATA, buffer)
+        curl.setopt(pycurl.HTTP_VERSION, curlhttpcode)
+        if curlsslfinal!=None:
+            curl.setopt(pycurl.SSL_VERIFYPEER, 1) # default is 1
+            curl.setopt(pycurl.SSL_VERIFYHOST, 2) # default is 2
+            curl.setopt(pycurl.SSLVERSION, curlsslfinal)
+        else:
+            curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+            curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+        if expect!="" or len(headerstring)>0:
+            curl.setopt(pycurl.HEADERFUNCTION, _header_function)
+        if protocol=="https" and certificatedays!="":
+            curl.setopt(pycurl.OPT_CERTINFO, 1)
+        curl.setopt(pycurl.TIMEOUT, timeoutvalue)
+        #curl.setopt(pycurl.FOLLOWLOCATION, 1)
+        if interface!="":
+            curl.setopt(pycurl.INTERFACE, interface)
+        resolves = generate_resolves(hostname,port,dnsservers)
+        if len(resolves)>0:
+            curl.setopt(pycurl.RESOLVE, resolves)
+        curl.perform()
+        responsecode = curl.getinfo(pycurl.RESPONSE_CODE)
+        totaltime = curl.getinfo(pycurl.TOTAL_TIME)
+        certinfo = curl.getinfo(pycurl.INFO_CERTINFO)
+    except pycurl.error as e:
+        #print(traceback.format_exc())
+        code, msg = e.args
+        if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after "):
+            timeoutmessage = msg
+        else:
+            failuremessage = msg
+    except Exception as e:
+        failuremessage = str(e)
+    finally:
+        if curl!=None:
+            curl.close()
+    if failuremessage!=None:
+        exitnagios("CRITICAL","error - "+str(failuremessage))
+    if timeoutmessage!=None:
+        exitnagios(timeoutstatus,"error - "+str(timeoutmessage))
+
+    #print(_preheaders)
+    if expect!="":
+        foundexpect = False
+        for line in _preheaders:
+            if line.startswith(expect):
+                foundexpect = True
+        if foundexpect == False:
+            exitnagios("CRITICAL","cannot match '"+expect+"' in "+str(_preheaders))
+
+    #print(_headers)
+    for hsitem in headerstring:
+        headermatchparts = hsitem.split(":",1)
+        headermatchkey = headermatchparts[0].strip().lower()
+        headermatchvalue = headermatchparts[1].strip()
+        if headermatchkey in _headers:
+            if _headers[headermatchkey] != headermatchvalue:
+                exitnagios("CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"'")
+        else:
+            exitnagios("CRITICAL","cannot locate headerstring '"+headermatchkey+"'")
+
+    if protocol=="https" and certificatedays!="":
+        certexpirationraw = None
+        certexpirationparsed = None
+        try:
+            certvars = certinfo[0]
+            for certvar in certvars:
+                certvarname, certvarvalue = certvar
+                if certvarname == "Expire Date":
+                    certexpirationraw = certvarvalue
+                    break
+            if certexpirationraw!=None:
+                from dateutil.parser import parse
+                #print(certexpirationraw)
+                certexpirationparsed = parse(certexpirationraw)
+        except:
+            #print(traceback.format_exc())
+            pass
+        if certexpirationparsed==None:
+            exitnagios("CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"'")
+        else:
+            today = datetime.datetime.now(datetime.UTC)
+            timeremaining = certexpirationparsed.timestamp()-today.timestamp()
+            daysremaining = int(timeremaining/86400)
+            certificatedaysparts = certificatedays.split(",")
+            criticaldays = int(certificatedaysparts[0])
+            if len(certificatedaysparts)>1:
+                warningdays = int(certificatedaysparts[1])
+            else:
+                warningdays = -1
+            if daysremaining<criticaldays:
+                exitnagios("CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days")
+            elif daysremaining<warningdays:
+                exitnagios("WARNING","the certificate is expiring in '"+str(daysremaining)+"' days")
+
+    if responsecode>=500:
+        exitnagios("WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime))
+
+    exitnagios("OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime))
+
+#    context = ssl.create_default_context()
+#    with socket.create_connection((hostname, port)) as sock:
+#        with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+#            # https://docs.python.org/3/library/ssl.html#ssl.SSLSocket.getpeercert
+#            cert = ssock.getpeercert()
+#    alternatives = []
+#    subject = dict(item[0] for item in cert["subject"])
+#    alternatives.append(subject["commonName"])
+#    subjectAltName = collections.defaultdict(set)
+#    for type_, san in cert["subjectAltName"]:
+#        subjectAltName[type_].add(san)
+#    for item in subjectAltName["DNS"]:
+#        if item not in alternatives:
+#            alternatives.append(item)
+#    #print(alternatives)
+#    matching = False
+#    for item in alternatives:
+#        if item == hostname:
+#            matching = True
+#            break
+#    if matching:
+#        response=0
+#        output = "can connect and certificate for '"+hostname+"' matches via extended search"
+#    else:
+#        response=2
+#        foundname = output.split("'")[1]
+#        output = "can connect, but the certificate found '"+foundname+"' name does not match the expected '"+hostname+"'"
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
+    parser.add_argument("-A", "--path",                                  dest="path",            default="",            help="path to check")
+    parser.add_argument("-p", "--port",                                  dest="port",            default=80,            help="port to use, usually 80 or 443")
+    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-S", "--sslversion",                            dest="sslversion",      default=None,          help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
+    parser.add_argument("-e", "--expect",                                dest="expect",          default="",            help="first (status) line of the server response (default: HTTP/1.)")
+    parser.add_argument("-d", "--headerstring",    action="append",      dest="headerstring",    default=[],            help="string to expect in the response headers")
+    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,20",        help="minimum number of days a certificate has to be valid crit,warn")
+    parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
+    parser.add_argument("-I", "--interface",                             dest="interface",       default="",            help="what interface to use")
+    parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
+    args = parser.parse_args()
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+    #infomsg(args.ipv4)
+    #infomsg(args.ipv6)
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    protocol = ""
+    if args.ipv4 == True :
+        protocol = "-4"
+    elif args.ipv6 == True :
+        protocol = "-6"
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        #print("precall")
+        #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion))
+        dolibcurlcheck(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.headerstring,args.certificatedays,args.interface,args.dnsservers)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+main()
+
+#-------------------------------------------------------------------------------

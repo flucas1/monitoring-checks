@@ -40,11 +40,11 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def resolvewithretries(customresolver, zone, field, useTcp):
+def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
     responses = None
     # [] means that the record does not exists
     # None means error contacting the server
-    for i in range(3):
+    for i in range(retries):
         try:
             responses = customresolver.resolve(zone, field, tcp=useTcp, raise_on_no_answer=True)
         except dns.resolver.NXDOMAIN as e:
@@ -132,7 +132,7 @@ def get_zone(useTcp, addressinfo, timeoutvalue, zone):
 
 def get_mname(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = get_resolver(addressinfo, timeoutvalue)
-    responses = resolvewithretries(customresolver, zone, "SOA", useTcp)
+    responses = resolvewithretries(customresolver, zone, "SOA", useTcp, retries=9)
     if responses == None:
         return ""
     else:
@@ -218,8 +218,20 @@ def get_resolver(addressinfo, timeoutvalue):
         customresolver = dns.resolver.get_default_resolver()
     else:
         customresolver = dns.resolver.Resolver(configure=False)
-        stream = io.StringIO("nameserver "+address)
-        customresolver.read_resolv_conf(stream)
+        for counter in range(5):
+            validparsing = False
+            try:
+                stream = io.StringIO("nameserver "+address)
+                customresolver.read_resolv_conf(stream)
+            except:
+                pass
+            if len(customresolver.nameservers) == 1:
+                if customresolver.nameservers[0] == address:
+                    validparsing = True
+            if validparsing:
+                break
+            else:
+                time.sleep(1)
         customresolver.port = port
     customresolver.timeout = timeoutvalue
     return customresolver
