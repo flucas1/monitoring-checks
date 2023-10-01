@@ -46,6 +46,8 @@ def dokubernetescall(kubeconfig):
 #-------------------------------------------------------------------------------
 
 def main():
+    # -k --kubeconfig
+
     kubeconfig = "/etc/kubernetes/admin.conf"
     dokubernetescall(kubeconfig)
 
