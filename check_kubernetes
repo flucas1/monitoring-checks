@@ -46,10 +46,11 @@ def dokubernetescall(kubeconfig):
 #-------------------------------------------------------------------------------
 
 def main():
-    # -k --kubeconfig
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--kubeconfig",   dest="kubeconfig",    default="/etc/kubernetes/admin.conf",   help="path to kubeconfig admin file")
+    args = parser.parse_args()
 
-    kubeconfig = "/etc/kubernetes/admin.conf"
-    dokubernetescall(kubeconfig)
+    dokubernetescall(args.kubeconfig)
 
 if __name__ == '__main__':
     main()
