@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+def candebug():
+    return False
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dokubernetescall(kubeconfig):
+    cmdline = ["/usr/bin/kubectl","version","--kubeconfig",kubeconfig]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode == 0:
+        exitnagios("OK","the kubernetes cluster is respoding")
+    else:
+        exitnagios("CRITICAL","issue contacting the kubernetes cluster")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    kubeconfig = "/etc/kubernetes/admin.conf"
+    dokubernetescall(kubeconfig)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------
