@@ -50,7 +50,11 @@ def main():
     parser.add_argument("-k", "--kubeconfig",   dest="kubeconfig",    default="/etc/kubernetes/admin.conf",   help="path to kubeconfig admin file")
     args = parser.parse_args()
 
-    dokubernetescall(args.kubeconfig)
+    kubeconfig = args.kubeconfig
+    if os.path.isfile(kubeconfig):
+        dokubernetescall(kubeconfig)
+    else:
+        exitnagios("CRITICAL","cannot find kubeconfig file '"+kubeconfig+"'")
 
 if __name__ == '__main__':
     main()
