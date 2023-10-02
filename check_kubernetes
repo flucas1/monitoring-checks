@@ -8,8 +8,18 @@ import platform
 
 #-------------------------------------------------------------------------------
 
+_candebug = False
+def setdebug(value):
+    global _candebug
+    _candebug = value
+
 def candebug():
-    return False
+    global _candebug
+    #return sys.stdout.isatty()
+    if _candebug:
+        return True
+    else:
+        return False
 
 def infomsg(msg):
     if candebug() == True:
@@ -29,26 +39,112 @@ def exitnagios(status,message):
     print(status+": "+message)
     sys.exit(exitcode)
 
+def mostseverestatus(current,candidate):
+   if (current==""):
+       return candidate
+   if (current=="CRITICAL") or (candidate=="CRITICAL"):
+       return "CRITICAL"
+   elif (current=="WARNING") or (candidate=="WARNING"):
+       return "WARNING"
+   elif (current=="UNKNOWN") or (candidate=="UNKNOWN"):
+       return "UNKOWN"
+   elif (current=="OK") or (candidate=="OK"):
+       return "OK"
+   else:
+       return "UNKNOWN"
+
+#-------------------------------------------------------------------------------
+
+def test_kubernetes_version(kubeconfig):
+    status = ""
+    message = ""
+
+    try:
+        cmdline = ["/usr/bin/kubectl","version","--kubeconfig",kubeconfig]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+
+        if exitcode == 0:
+            status = "OK"
+        else:
+            status = "CRITICAL"
+            message = "issue contacting the kubernetes cluster"
+    except Exception as e:
+        infomsg("there was an exception - "+str(e))
+        status = "CRITICAL"
+        message = "exception in version"
+
+    return status,message
+
+def test_kubernetes_nodes(kubeconfig):
+    status = ""
+    message = ""
+
+    try:
+        cmdline = ["/usr/bin/kubectl","get","nodes","--kubeconfig",kubeconfig]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+
+        if exitcode == 0:
+            status = "WARNING"
+            message = "nodes not implemented"
+        else:
+            status = "CRITICAL"
+            message = "issue contacting the kubernetes cluster"
+    except Exception as e:
+        infomsg("there was an exception - "+str(e))
+        status = "CRITICAL"
+        message = "exception in nodes"
+
+    return status,message
+
+#kubectl get pods --no-headers --all-namespaces
+#kubectl get replicasets --no-headers --all-namespaces
+#kubectl get statefulsets --no-headers --all-namespaces
+#kubectl get daemonsets --no-headers --all-namespaces
+#kubectl get deployments --no-headers --all-namespaces
+#kubectl get persistentvolumeclaims --no-headers --all-namespaces
+#kubectl get jobs --no-headers --all-namespaces
+#kubectl get cronjobs --no-headers --all-namespaces
+
 #-------------------------------------------------------------------------------
 
 def dokubernetescall(kubeconfig):
-    cmdline = ["/usr/bin/kubectl","version","--kubeconfig",kubeconfig]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    status = ""
+    message = ""
 
-    if exitcode == 0:
-        exitnagios("OK","the kubernetes cluster is respoding")
-    else:
-        exitnagios("CRITICAL","issue contacting the kubernetes cluster")
+    infomsg("--- RUNNING STEP: 'version'")
+    tempstatus,tempmessage = test_kubernetes_version(kubeconfig)
+    status = mostseverestatus(status,tempstatus)
+    message = message.strip()+"\n"+tempmessage.strip()
+
+    infomsg("--- RUNNING STEP: 'nodes'")
+    tempstatus,tempmessage = test_kubernetes_nodes(kubeconfig)
+    status = mostseverestatus(status,tempstatus)
+    message = message.strip()+"\n"+tempmessage.strip()
+
+    if status=="OK":
+        message="everything looks normal"
+    message = message.strip().replace("\n"," - ")
+
+    exitnagios(status,message)
 
 #-------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-k", "--kubeconfig",   dest="kubeconfig",    default="/etc/kubernetes/admin.conf",   help="path to kubeconfig admin file")
+    parser.add_argument("-m", "--mode",         dest="mode",          action="store",   default="pipeline",                     help="choose one of: monitoring,pipeline"        )
+    parser.add_argument("-k", "--kubeconfig",   dest="kubeconfig",    action="store",   default="/etc/kubernetes/admin.conf",   help="path to kubeconfig admin file"             )
     args = parser.parse_args()
+
+    if args.mode.strip().lower() == "pipeline":
+        setdebug(True)
+    else:
+        setdebug(False)
 
     kubeconfig = args.kubeconfig
     if os.path.isfile(kubeconfig):
