@@ -23,7 +23,7 @@ def candebug():
 
 def infomsg(msg):
     if candebug() == True:
-        print(msg)
+        print(msg, flush=True)
 
 def exitnagios(status,message):
     if status=="OK":
@@ -36,7 +36,7 @@ def exitnagios(status,message):
         exitcode = 3
     else:
         exitcode = 4
-    print(status+": "+message)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 def mostseverestatus(current,candidate):
@@ -52,6 +52,68 @@ def mostseverestatus(current,candidate):
        return "OK"
    else:
        return "UNKNOWN"
+
+#-------------------------------------------------------------------------------
+
+def generic_compare_columns(kubeconfig,resource,columns):
+    status = ""
+    message = ""
+
+    try:
+        cmdline = ["/usr/bin/kubectl","get",resource,"--all-namespaces","--kubeconfig",kubeconfig]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+
+        if exitcode == 0:
+            lines = output.splitlines()
+            header = lines.pop(0)
+            #print(header, flush=True)
+            haserror = False
+            hasvalid = False
+            for line in lines:
+                parts = line.split()
+                #print(columns, flush=True)
+                identical = True
+                reference = None
+                for column in columns:
+                    value = parts[column]
+                    #print(value, flush=True)
+                    exploded = value.split("/")
+                    #print(exploded, flush=True)
+                    for test in exploded:
+                        #print(test, flush=True)
+                        if reference==None:
+                            reference = test
+                        elif test!=reference:
+                            identical = False
+                            #print("break", flush=True)
+                            break
+                if identical == True:
+                    hasvalid = True
+                else:
+                    haserror = True
+                    break
+            if hasvalid:
+                if haserror:
+                    status = "WARNING"
+                    message = "some "+resource+" in error"
+                else:
+                    status = "OK"
+            else:
+                status = "CRITICAL"
+                message = "all "+resource+" in error"
+        else:
+            status = "CRITICAL"
+            message = "issue contacting the kubernetes cluster"
+    except Exception as e:
+        infomsg("there was an exception - "+str(e))
+        status = "CRITICAL"
+        message = "exception in "+resource
+
+    return status,message
+
 
 #-------------------------------------------------------------------------------
 
@@ -160,52 +222,16 @@ def test_kubernetes_pods(kubeconfig):
 
     return status,message
 
-#kubectl get replicasets --no-headers --all-namespaces
+def test_kubernetes_replicasets(kubeconfig):
+    return generic_compare_columns(kubeconfig,"replicasets",[2,3,4])
+
 #kubectl get statefulsets --no-headers --all-namespaces
-#kubectl get daemonsets --no-headers --all-namespaces
+
+def test_kubernetes_daemonsets(kubeconfig):
+    return generic_compare_columns(kubeconfig,"daemonsets",[2,3,4,5,6])
 
 def test_kubernetes_deployments(kubeconfig):
-    status = ""
-    message = ""
-
-    try:
-        cmdline = ["/usr/bin/kubectl","get","deployments","--all-namespaces","--kubeconfig",kubeconfig]
-        completedproc = subprocess.run(cmdline,capture_output=True)
-        output = completedproc.stdout.decode("utf-8").strip()
-        errors = completedproc.stderr.decode("utf-8").strip()
-        exitcode = completedproc.returncode
-
-        if exitcode == 0:
-            lines = output.splitlines()
-            header = lines.pop(0)
-            haserror = False
-            hasvalid = False
-            for line in lines:
-                parts = line.split()
-                status = parts[2].lower()
-                targets = status.split("/")
-                if targets[0]==targets[1]:
-                    hasvalid = True
-                else:
-                    haserror = True
-            if hasvalid:
-                if haserror:
-                    status = "WARNING"
-                    message = "some deployments in error"
-                else:
-                    status = "OK"
-            else:
-                status = "CRITICAL"
-                message = "all deployments in error"
-        else:
-            status = "CRITICAL"
-            message = "issue contacting the kubernetes cluster"
-    except Exception as e:
-        infomsg("there was an exception - "+str(e))
-        status = "CRITICAL"
-        message = "exception in deployments"
-
-    return status,message
+    return generic_compare_columns(kubeconfig,"deployments",[2,3,4])
 
 #kubectl get persistentvolumeclaims --no-headers --all-namespaces
 #kubectl get jobs --no-headers --all-namespaces
@@ -229,6 +255,16 @@ def dokubernetescall(kubeconfig):
 
     infomsg("--- RUNNING STEP: 'pods'")
     tempstatus,tempmessage = test_kubernetes_pods(kubeconfig)
+    status = mostseverestatus(status,tempstatus)
+    message = message.strip()+"\n"+tempmessage.strip()
+
+    infomsg("--- RUNNING STEP: 'replicasets'")
+    tempstatus,tempmessage = test_kubernetes_replicasets(kubeconfig)
+    status = mostseverestatus(status,tempstatus)
+    message = message.strip()+"\n"+tempmessage.strip()
+
+    infomsg("--- RUNNING STEP: 'daemonsets'")
+    tempstatus,tempmessage = test_kubernetes_daemonsets(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
 
