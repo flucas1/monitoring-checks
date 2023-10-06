@@ -23,7 +23,7 @@ def candebug():
 
 def infomsg(msg):
     if candebug() == True:
-        print(msg)
+        print(msg, flush=True)
 
 def exitnagios(status,message):
     if status=="OK":
@@ -36,7 +36,7 @@ def exitnagios(status,message):
         exitcode = 3
     else:
         exitcode = 4
-    print(status+": "+message)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def _header_function(header_line):
 
     # HTTP standard specifies that headers are encoded in iso-8859-1.
     header_line = header_line.decode('iso-8859-1')
-    #print(header_line)
+    #print(header_line, flush=True)
 
     # Header lines include the first status line (HTTP/1.x ...).
     # We are going to ignore all lines that don't have a colon in them.
@@ -72,7 +72,7 @@ def _header_function(header_line):
     # Lowercase name here.
     name = name.lower()
 
-    #print(name+": "+value)
+    #print(name+": "+value, flush=True)
     # Now we can actually record the header name and value.
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
@@ -82,7 +82,7 @@ def generate_resolves(hostname,port,dnsservers):
 
     if dnsservers != "":
         listdnsservers = dnsservers.split(",")
-        #print(listdnsservers)
+        #print(listdnsservers, flush=True)
 
         try:
             customresolver = dns.resolver.Resolver(configure=False)
@@ -94,7 +94,7 @@ def generate_resolves(hostname,port,dnsservers):
         except:
             pass
 
-        #print(result)
+        #print(result, flush=True)
     return result
 
 def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,headerstring,certificatedays,interface,dnsservers):
@@ -108,7 +108,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
     totaltime = None
     certinfo = None
     try:
-        #print(sslversion) # 1.2+
+        #print(sslversion, flush=True) # 1.2+
         curlsslfinal = None
         if sslversion!=None:
             protocol = "https"
@@ -119,7 +119,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
                 sslversionplus = sslversion.endswith("+")
                 sslversion = sslversion.strip("+")
                 curlsslmin = None
-                #print(sslversion) # 1.2+
+                #print(sslversion, flush=True) # 1.2+
                 if sslversion == "TLSv1.0":
                     curlsslmin = pycurl.SSLVERSION_TLSv1_0
                 elif sslversion == "TLSv1.1":
@@ -133,11 +133,11 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
                 curlsslfinal = curlsslmin
             else:
                 curlsslfinal = curlsslmin | curlsslmin
-            #print(sslversion) # 1.2+
+            #print(sslversion, flush=True) # 1.2+
         else:
             protocol = "http"
         url = protocol+"://"+hostname+":"+str(port)+path
-        #print(url)
+        #print(url, flush=True)
         httpversionparts = httpversion.split(",")
         if len(httpversionparts)>0:
             curlhttpcode = 0
@@ -149,7 +149,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_1_1
             if "2.0" in httpversionparts:
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_2_0
-        #print("precurl")
+        #print("precurl", flush=True)
         buffer = io.BytesIO()
         curl = pycurl.Curl()
         curl.reset()
@@ -179,7 +179,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         totaltime = curl.getinfo(pycurl.TOTAL_TIME)
         certinfo = curl.getinfo(pycurl.INFO_CERTINFO)
     except pycurl.error as e:
-        #print(traceback.format_exc())
+        #print(traceback.format_exc(), flush=True)
         code, msg = e.args
         if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after "):
             timeoutmessage = msg
@@ -195,7 +195,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
     if timeoutmessage!=None:
         exitnagios(timeoutstatus,"error - "+str(timeoutmessage))
 
-    #print(_preheaders)
+    #print(_preheaders, flush=True)
     if expect!="":
         foundexpect = False
         for line in _preheaders:
@@ -204,7 +204,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         if foundexpect == False:
             exitnagios("CRITICAL","cannot match '"+expect+"' in "+str(_preheaders))
 
-    #print(_headers)
+    #print(_headers, flush=True)
     for hsitem in headerstring:
         headermatchparts = hsitem.split(":",1)
         headermatchkey = headermatchparts[0].strip().lower()
@@ -227,10 +227,10 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
                     break
             if certexpirationraw!=None:
                 from dateutil.parser import parse
-                #print(certexpirationraw)
+                #print(certexpirationraw, flush=True)
                 certexpirationparsed = parse(certexpirationraw)
         except:
-            #print(traceback.format_exc())
+            #print(traceback.format_exc(), flush=True)
             pass
         if certexpirationparsed==None:
             exitnagios("CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"'")
@@ -268,7 +268,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
 #    for item in subjectAltName["DNS"]:
 #        if item not in alternatives:
 #            alternatives.append(item)
-#    #print(alternatives)
+#    #print(alternatives, flush=True)
 #    matching = False
 #    for item in alternatives:
 #        if item == hostname:
@@ -324,8 +324,8 @@ def main():
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        #print("precall")
-        #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion))
+        #print("precall", flush=True)
+        #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion), flush=True)
         dolibcurlcheck(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.headerstring,args.certificatedays,args.interface,args.dnsservers)
     else:
         exitnagios("CRITICAL","timeout status is not valid")

@@ -22,7 +22,7 @@ def candebug():
 
 def infomsg(msg):
     if candebug() == True:
-        print(msg)
+        print(msg, flush=True)
 
 def exitnagios(status,message):
     if status=="OK":
@@ -35,7 +35,7 @@ def exitnagios(status,message):
         exitcode = 3
     else:
         exitcode = 4
-    print(status+": "+message)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
@@ -49,21 +49,21 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
             responses = customresolver.resolve(zone, field, tcp=useTcp, raise_on_no_answer=True)
         except dns.resolver.NXDOMAIN as e:
             # The DNS query name does not exist:
-            #print("returning [] - "+type(e).__name__+" - "+str(e))
+            #print("returning [] - "+type(e).__name__+" - "+str(e), flush=True)
             responses = []
         except dns.resolver.NoAnswer as e:
             # The DNS query name does not exist:
-            #print("returning [] - "+type(e).__name__+" - "+str(e))
+            #print("returning [] - "+type(e).__name__+" - "+str(e), flush=True)
             responses = []
         except Exception as e:
-            #print("returning None - "+type(e).__name__+" - "+str(e))
+            #print("returning None - "+type(e).__name__+" - "+str(e), flush=True)
             responses = None
-        #print(responses)
+        #print(responses, flush=True)
         if responses == None:
             time.sleep(0.1)
         else:
             break
-    #print(responses)
+    #print(responses, flush=True)
     return responses
 
 def build_name(entry, zone):
@@ -177,7 +177,7 @@ def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
     customresolver = get_resolver(addressinfo,timeoutvalue)
     canonical_name = entry
     counter = 0
-    #print(canonical_name)
+    #print(canonical_name, flush=True)
     while True:
         counter = counter+1
         if counter>30:
@@ -186,7 +186,7 @@ def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
             break
         else:
             answer = resolvewithretries(customresolver, canonical_name, "CNAME", useTcp)
-            #print(answer)
+            #print(answer, flush=True, flush=True)
             if answer == None:
                 canonical_name = ""
                 break
@@ -318,7 +318,7 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
                 exitnagios(timeoutstatus,"no response when trying to transfer zone from server")
             if text_mname != text_server:
                 exitnagios("CRITICAL","zone in target server "+server+" and MNAME server "+mname+" are different.")
-                #print(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())))
+                #print(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())), flush=True)
             else:
                 ns = get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
@@ -348,13 +348,13 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
             exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            #print(traceback.format_exc())
+            #print(traceback.format_exc(), flush=True)
             exitnagios(timeoutstatus,"error during check consistency - noroute - "+str(e))
         else:
-            #print(traceback.format_exc())
+            #print(traceback.format_exc(), flush=True)
             exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+"  - "+str(e))
     except Exception as e:
-        #print(traceback.format_exc())
+        #print(traceback.format_exc(), flush=True)
         exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
 def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
