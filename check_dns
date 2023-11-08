@@ -335,7 +335,8 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
                         elif text_test == text_server:
                             validservers.append(test)
                         else:
-                            exitnagios("CRITICAL","zone in target server "+server+" and NS server "+test+" are different.\n"+os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines())))
+                            #zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
+                            exitnagios("CRITICAL","zone in target server "+server+" and NS server "+test+" are different.")
                     except Exception as e:
                         errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
