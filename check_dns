@@ -155,7 +155,9 @@ def get_ns(useTcp, addressinfo, timeoutvalue, zone):
         result = []
         if len(responses)>0:
             for response in responses:
-                result.append(response.target.to_text())
+                finalname = response.target.to_text()
+                if finalname not in result:
+                    result.append(finalname)
         return result
 
 def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
@@ -331,14 +333,16 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
                     try:
                         text_test = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if text_test=="":
-                            errorservers.append(test)
+                            if test not in errorservers:
+                                errorservers.append(test)
                         elif text_test == text_server:
                             validservers.append(test)
                         else:
                             #zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
                             exitnagios("CRITICAL","zone in target server "+server+" and NS server "+test+" are different.")
                     except Exception as e:
-                        errorservers.append(test)
+                        if test not in errorservers:
+                            errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
                     exitnagios("CRITICAL","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
@@ -396,7 +400,8 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                     try:
                         serial_test = get_serial(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if serial_test == "":
-                            errorservers.append(test)
+                            if test not in errorservers:
+                                errorservers.append(test)
                         #infomsg(str(serial_test))
                         difference = abs(serial_test-serial_server)
                         if (difference > tolerancecrit) or (difference > tolerancewarn):
@@ -409,7 +414,8 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                             identical = False
                         validservers.append(test)
                     except Exception as e:
-                        errorservers.append(test)
+                        if test not in errorservers:
+                            errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
                     exitnagios("CRITICAL","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
