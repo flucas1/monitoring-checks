@@ -295,7 +295,7 @@ def main():
     parser.add_argument("-S", "--sslversion",                            dest="sslversion",      default=None,          help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
     parser.add_argument("-e", "--expect",                                dest="expect",          default="",            help="first (status) line of the server response (default: HTTP/1.)")
     parser.add_argument("-d", "--headerstring",    action="append",      dest="headerstring",    default=[],            help="string to expect in the response headers")
-    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,20",        help="minimum number of days a certificate has to be valid crit,warn")
+    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,10",        help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
     parser.add_argument("-I", "--interface",                             dest="interface",       default="",            help="what interface to use")
     parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
