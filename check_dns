@@ -146,6 +146,14 @@ def get_serial(useTcp, addressinfo, timeoutvalue, zone):
     else:
         return (responses[0]).serial
 
+def get_retry(useTcp, addressinfo, timeoutvalue, zone):
+    customresolver = get_resolver(addressinfo, timeoutvalue)
+    responses = resolvewithretries(customresolver, zone, "SOA", useTcp)
+    if responses == None:
+        return ""
+    else:
+        return (responses[0]).retry
+
 def get_ns(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = get_resolver(addressinfo, timeoutvalue)
     responses = resolvewithretries(customresolver, zone, "NS", useTcp)
@@ -366,19 +374,39 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
     try:
         addressinfo = get_address(ipv6, server)
         try:
-            mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
-            if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname")
+            automode = tolerancewarn<0 or tolerancecrit<0
+
             serial_server = get_serial(useTcp, addressinfo, timeoutvalue, zone)
             if serial_server == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve serial_server")
+            if automode:
+                retry_server = get_retry(useTcp, addressinfo, timeoutvalue, zone)
+                if retry_server == "":
+                    exitnagios(timeoutstatus,"no response when trying to resolve retry_server")
+            #infomsg(serial_server)
+
+            mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
+            if mname == "":
+                exitnagios(timeoutstatus,"no response when trying to resolve mname")
             principalserver = get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
             serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve serial_mname")
+            if automode:
+                retry_mname = get_retry(useTcp, principalserver, timeoutvalue, zone)
+                if retry_mname == "":
+                    exitnagios(timeoutstatus,"no response when trying to resolve retry_mname")
             #infomsg(serial_mname)
+
             difference = abs(serial_mname-serial_server)
+
+            if automode:
+                commonretry = max(retry_server,retry_mname)
+                #print("the biggest retry time is "+str(commonretry), flush=True)
+                tolerancewarn = commonretry
+                tolerancecrit = commonretry*2
+
             identical = True
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
@@ -483,8 +511,8 @@ def main():
     parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,         help="test transfer of zone at server")
     parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,         help="the reply must be authoritative (not implemented)")
     parser.add_argument("-q", "--quiet",             action="store_false", dest="verbose",          default=True,          help="quiet operation")
-    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="0",           help="tolerance in zone serial before considering warning")
-    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="0",           help="tolerance in zone serial before considering critical")
+    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",        help="tolerance in zone serial before considering warning (integer or 'auto')")
+    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",        help="tolerance in zone serial before considering critical (integer or 'auto')")
     parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",           help="minimun number of responding servers before considering warning")
     parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",           help="minimun number of responding servers before considering critical")
     parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",           help="tolerance in missing values in record before considering warning")
@@ -519,6 +547,15 @@ def main():
     else:
         useTcp=False
 
+    if args.sertolerancewarn == "auto":
+        sertolerancewarn = -1
+    else:
+        sertolerancewarn = int(args.sertolerancewarn)
+    if args.sertolerancecrit == "auto":
+        sertolerancecrit = -1
+    else:
+        sertolerancecrit = int(args.sertolerancecrit)
+
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
     if len(parts)>1:
@@ -527,7 +564,7 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            check_zone(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,int(args.sertolerancewarn),int(args.sertolerancecrit),int(args.sermincountwarn),int(args.sermincountcrit))
+            check_zone(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
             check_record(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
