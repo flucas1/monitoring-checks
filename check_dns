@@ -411,9 +411,9 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
                 if difference > tolerancecrit:
-                    exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial")
+                    exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+")")
                 elif difference > tolerancewarn:
-                    exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial")
+                    exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+")")
             else:
                 if difference > 0:
                     identical = False
@@ -435,9 +435,9 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                         if (difference > tolerancecrit) or (difference > tolerancewarn):
                             identical = False
                             if difference > tolerancecrit:
-                                exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial")
+                                exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+")")
                             elif difference > tolerancewarn:
-                                exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial")
+                                exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+")")
                         if difference > 0:
                             identical = False
                         validservers.append(test)
