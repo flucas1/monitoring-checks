@@ -97,7 +97,7 @@ def generate_resolves(hostname,port,dnsservers):
         #print(result, flush=True)
     return result
 
-def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,headerstring,certificatedays,interface,dnsservers):
+def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
     global _preheaders
     global _headers
 
@@ -163,7 +163,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         else:
             curl.setopt(pycurl.SSL_VERIFYPEER, 0)
             curl.setopt(pycurl.SSL_VERIFYHOST, 0)
-        if expect!="" or len(headerstring)>0:
+        if expect!="" or unknown!="" or len(headerstring)>0:
             curl.setopt(pycurl.HEADERFUNCTION, _header_function)
         if protocol=="https" and certificatedays!="":
             curl.setopt(pycurl.OPT_CERTINFO, 1)
@@ -196,6 +196,13 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         exitnagios(timeoutstatus,"error - "+str(timeoutmessage))
 
     #print(_preheaders, flush=True)
+    if unknown!="":
+        foundunknown = False
+        for line in _preheaders:
+            if line.startswith(unknown):
+                foundunknown = True
+        if foundunkown == True:
+            exitnagios("UNKNOWN","match '"+unknown+"' in "+str(_preheaders))
     if expect!="":
         foundexpect = False
         for line in _preheaders:
@@ -294,6 +301,7 @@ def main():
     parser.add_argument("-t", "--timeout",                               dest="timeout",         default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-S", "--sslversion",                            dest="sslversion",      default=None,          help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
     parser.add_argument("-e", "--expect",                                dest="expect",          default="",            help="first (status) line of the server response (default: HTTP/1.)")
+    parser.add_argument("-K", "--unknown",                               dest="unknown",         default="",            help="first (status) line of the server response (default: HTTP/1.)")
     parser.add_argument("-d", "--headerstring",    action="append",      dest="headerstring",    default=[],            help="string to expect in the response headers")
     parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,10",        help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
@@ -326,7 +334,7 @@ def main():
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         #print("precall", flush=True)
         #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion), flush=True)
-        dolibcurlcheck(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.headerstring,args.certificatedays,args.interface,args.dnsservers)
+        dolibcurlcheck(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
