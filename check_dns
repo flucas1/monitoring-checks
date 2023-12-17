@@ -378,11 +378,11 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
 
             serial_server = get_serial(useTcp, addressinfo, timeoutvalue, zone)
             if serial_server == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve serial_server")
+                exitnagios(timeoutstatus,"no response when trying to resolve serial_server "+addressinfo)
             if automode:
                 retry_server = get_retry(useTcp, addressinfo, timeoutvalue, zone)
                 if retry_server == "":
-                    exitnagios(timeoutstatus,"no response when trying to resolve retry_server")
+                    exitnagios(timeoutstatus,"no response when trying to resolve retry_server "+addressinfo)
             #infomsg(serial_server)
 
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
