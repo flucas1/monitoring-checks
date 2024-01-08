@@ -202,7 +202,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            exitnagios("UNKNOWN","match '"+unknown+"' in "+str(_preheaders))
+            exitnagios(timeoutstatus,"match '"+unknown+"' in "+str(_preheaders))
     if expect!="":
         foundexpect = False
         for line in _preheaders:
