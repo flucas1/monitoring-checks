@@ -15,6 +15,7 @@ import dns.query
 import dns.zone
 import dns.resolver
 import dns.exception
+import time
 
 #-------------------------------------------------------------------------------
 
@@ -102,19 +103,19 @@ def dolibcurlcheck_retries(protocol,hostname,port,path,timeoutvalue,timeoutstatu
     exitmessage = "not executed"
     counter = 0
     while True:
-        counter = counter+1
-        if counter>retries:
-            break
-
         try:
             exitlevel,exitmessage = dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers)
+            counter = counter+1
+            if counter>retries:
+                break
+            elif exitlevel == "OK":
+                break
+            else:
+                time.sleep(10)
         except Exception as e:
             exitlevel = "CRITICAL"
             exitmessage = "exception - "+str(e)
             break
-
-        if exitlevel == "OK":
-           break
 
     exitnagios(exitlevel,exitmessage)
 
