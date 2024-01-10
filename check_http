@@ -97,10 +97,33 @@ def generate_resolves(hostname,port,dnsservers):
         #print(result, flush=True)
     return result
 
-def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
+def dolibcurlcheck_retries(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,retries):
+    exitlevel = "UNKNOWN"
+    exitmessage = "not executed"
+    counter = 0
+    while True:
+        counter = counter+1
+        if counter>retries:
+            break
+
+        try:
+            exitlevel,exitmessage = dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers)
+        except Exception as e:
+            exitlevel = "CRITICAL"
+            exitmessage = "exception - "+str(e)
+            break
+
+        if exitlevel == "OK":
+           break
+
+    exitnagios(exitlevel,exitmessage)
+
+def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
     global _preheaders
     global _headers
 
+    _preheaders = []
+    _headers = {}
     curl = None
     timeoutmessage = None
     failuremessage = None
@@ -191,9 +214,9 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         if curl!=None:
             curl.close()
     if failuremessage!=None:
-        exitnagios("CRITICAL","error - "+str(failuremessage))
+        return "CRITICAL","error - "+str(failuremessage)
     if timeoutmessage!=None:
-        exitnagios(timeoutstatus,"error - "+str(timeoutmessage))
+        return timeoutstatus,"error - "+str(timeoutmessage)
 
     #print(_preheaders, flush=True)
     if unknown!="":
@@ -202,14 +225,14 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            exitnagios(timeoutstatus,"match '"+unknown+"' in "+str(_preheaders))
+            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)
     if expect!="":
         foundexpect = False
         for line in _preheaders:
             if line.startswith(expect):
                 foundexpect = True
         if foundexpect == False:
-            exitnagios("CRITICAL","cannot match '"+expect+"' in "+str(_preheaders))
+            return "CRITICAL","cannot match '"+expect+"' in "+str(_preheaders)
 
     #print(_headers, flush=True)
     for hsitem in headerstring:
@@ -218,9 +241,9 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
         headermatchvalue = headermatchparts[1].strip()
         if headermatchkey in _headers:
             if _headers[headermatchkey] != headermatchvalue:
-                exitnagios("CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"'")
+                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"'"
         else:
-            exitnagios("CRITICAL","cannot locate headerstring '"+headermatchkey+"'")
+            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"'"
 
     if protocol=="https" and certificatedays!="":
         certexpirationraw = None
@@ -240,7 +263,7 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
             #print(traceback.format_exc(), flush=True)
             pass
         if certexpirationparsed==None:
-            exitnagios("CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"'")
+            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"'"
         else:
             today = datetime.datetime.now(datetime.UTC)
             timeremaining = certexpirationparsed.timestamp()-today.timestamp()
@@ -252,14 +275,14 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
             else:
                 warningdays = -1
             if daysremaining<criticaldays:
-                exitnagios("CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days")
+                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days"
             elif daysremaining<warningdays:
-                exitnagios("WARNING","the certificate is expiring in '"+str(daysremaining)+"' days")
+                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days"
 
     if responsecode>=500:
-        exitnagios("WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime))
+        return "WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)
 
-    exitnagios("OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime))
+    return "OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)
 
 #    context = ssl.create_default_context()
 #    with socket.create_connection((hostname, port)) as sock:
@@ -292,51 +315,53 @@ def dolibcurlcheck(protocol,hostname,port,path,timeoutvalue,timeoutstatus,httpve
 #-------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
-    parser.add_argument("-A", "--path",                                  dest="path",            default="",            help="path to check")
-    parser.add_argument("-p", "--port",                                  dest="port",            default=80,            help="port to use, usually 80 or 443")
-    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="10:CRITICAL", help="timeout value:STATUS")
-    parser.add_argument("-S", "--sslversion",                            dest="sslversion",      default=None,          help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
-    parser.add_argument("-e", "--expect",                                dest="expect",          default="",            help="first (status) line of the server response (default: HTTP/1.)")
-    parser.add_argument("-K", "--unknown",                               dest="unknown",         default="",            help="first (status) line of the server response (default: HTTP/1.)")
-    parser.add_argument("-d", "--headerstring",    action="append",      dest="headerstring",    default=[],            help="string to expect in the response headers")
-    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,10",        help="minimum number of days a certificate has to be valid crit,warn")
-    parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
-    parser.add_argument("-I", "--interface",                             dest="interface",       default="",            help="what interface to use")
-    parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
-    args = parser.parse_args()
+     parser = argparse.ArgumentParser()
+     parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+     parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
+     parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
+     parser.add_argument("-A", "--path",                                  dest="path",            default="",            help="path to check")
+     parser.add_argument("-p", "--port",                                  dest="port",            default=80,            help="port to use, usually 80 or 443")
+     parser.add_argument("-t", "--timeout",                               dest="timeout",         default="10:CRITICAL", help="timeout value:STATUS")
+     parser.add_argument("-S", "--sslversion",                            dest="sslversion",      default=None,          help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
+     parser.add_argument("-e", "--expect",                                dest="expect",          default="",            help="first (status) line of the server response (default: HTTP/1.)")
+     parser.add_argument("-K", "--unknown",                               dest="unknown",         default="",            help="first (status) line of the server response (default: HTTP/1.)")
+     parser.add_argument("-d", "--headerstring",    action="append",      dest="headerstring",    default=[],            help="string to expect in the response headers")
+     parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,10",        help="minimum number of days a certificate has to be valid crit,warn")
+     parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
+     parser.add_argument("-I", "--interface",                             dest="interface",       default="",            help="what interface to use")
+     parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
+     args = parser.parse_args()
 
-    if (args.ipv4 == True) and (args.ipv6 == True):
-        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
-    if (args.ipv4 == False) and (args.ipv6 == False):
-        args.ipv4 = True
-    #infomsg(args.ipv4)
-    #infomsg(args.ipv6)
+     if (args.ipv4 == True) and (args.ipv6 == True):
+         exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+     if (args.ipv4 == False) and (args.ipv6 == False):
+         args.ipv4 = True
+     #infomsg(args.ipv4)
+     #infomsg(args.ipv6)
 
-    if (args.hostname == ""):
-        exitnagios("CRITICAL","hostname not defined")
+     if (args.hostname == ""):
+         exitnagios("CRITICAL","hostname not defined")
 
-    protocol = ""
-    if args.ipv4 == True :
-        protocol = "-4"
-    elif args.ipv6 == True :
-        protocol = "-6"
+     protocol = ""
+     if args.ipv4 == True :
+         protocol = "-4"
+     elif args.ipv6 == True :
+         protocol = "-6"
 
-    parts = args.timeout.split(":")
-    timeoutvalue = int(parts[0])
-    if len(parts)>1:
-        timeoutstatus = parts[1]
-    else:
-        timeoutstatus = "CRITICAL"
-    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        #print("precall", flush=True)
-        #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion), flush=True)
-        dolibcurlcheck(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers)
-    else:
-        exitnagios("CRITICAL","timeout status is not valid")
+     retries = 3
+
+     parts = args.timeout.split(":")
+     timeoutvalue = int(parts[0])
+     if len(parts)>1:
+         timeoutstatus = parts[1]
+     else:
+         timeoutstatus = "CRITICAL"
+     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+         #print("precall", flush=True)
+         #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion), flush=True)
+         dolibcurlcheck_retries(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
+     else:
+         exitnagios("CRITICAL","timeout status is not valid")
 
 main()
 
