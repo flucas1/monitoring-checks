@@ -63,7 +63,7 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
             time.sleep(0.1)
         else:
             break
-    #print(responses, flush=True)
+    #print(zone+" -> "+str(responses), flush=True)
     return responses
 
 def build_name(entry, zone):
@@ -319,7 +319,7 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
         try:
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname")
+                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
             text_mname = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
             if text_mname=="":
                 exitnagios(timeoutstatus,"no response when trying to transfer zone from mname")
@@ -387,12 +387,12 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
 
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname")
+                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
             principalserver = get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
             serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve serial_mname")
+                exitnagios(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using server "+addressinfo)
             if automode:
                 retry_mname = get_retry(useTcp, principalserver, timeoutvalue, zone)
                 if retry_mname == "":
