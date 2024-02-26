@@ -58,6 +58,7 @@ def mostseverestatus(current,candidate):
 def generic_compare_columns(kubeconfig,resource,columns):
     status = ""
     message = ""
+    perf = ""
 
     try:
         cmdline = ["/usr/bin/kubectl","get",resource,"--all-namespaces","--kubeconfig",kubeconfig]
@@ -72,6 +73,7 @@ def generic_compare_columns(kubeconfig,resource,columns):
             #print(header, flush=True)
             haserror = False
             hasvalid = False
+            counterrors = 0
             for line in lines:
                 parts = line.split()
                 #print(columns, flush=True)
@@ -94,7 +96,7 @@ def generic_compare_columns(kubeconfig,resource,columns):
                     hasvalid = True
                 else:
                     haserror = True
-                    break
+                    counterrors = counterrors+1
             if hasvalid:
                 if haserror:
                     status = "WARNING"
@@ -104,22 +106,25 @@ def generic_compare_columns(kubeconfig,resource,columns):
             else:
                 status = "CRITICAL"
                 message = "all "+resource+" in error"
+            perf = resource+"_total="+str(len(lines))+" "+resource+"_err="+str(counterrors)
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
+            perf = resource+"_total=-1 "+resource+"_err=-1"
     except Exception as e:
         infomsg("there was an exception - "+str(e))
         status = "CRITICAL"
         message = "exception in "+resource
+        perf = resource+"_total=-1 "+resource+"_err=-1"
 
-    return status,message
-
+    return status,message,perf
 
 #-------------------------------------------------------------------------------
 
 def test_kubernetes_version(kubeconfig):
     status = ""
     message = ""
+    perf = ""
 
     try:
         cmdline = ["/usr/bin/kubectl","version","--kubeconfig",kubeconfig]
@@ -130,19 +135,23 @@ def test_kubernetes_version(kubeconfig):
 
         if exitcode == 0:
             status = "OK"
+            perf = "version="+output.split()[-1]
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
+            perf = "version=-1"
     except Exception as e:
         infomsg("there was an exception - "+str(e))
         status = "CRITICAL"
         message = "exception in version"
+        perf = "version=-1"
 
-    return status,message
+    return status,message,perf
 
 def test_kubernetes_nodes(kubeconfig):
     status = ""
     message = ""
+    perf = ""
 
     try:
         cmdline = ["/usr/bin/kubectl","get","nodes","--kubeconfig",kubeconfig]
@@ -156,12 +165,14 @@ def test_kubernetes_nodes(kubeconfig):
             header = lines.pop(0)
             haserror = False
             hasvalid = False
+            counterrors = 0
             for line in lines:
                 parts = line.split()
                 if parts[1].lower() == "ready":
                     hasvalid = True
                 else:
                     haserror = True
+                    counterrors = counterrors+1
             if hasvalid:
                 if haserror:
                     status = "WARNING"
@@ -171,19 +182,23 @@ def test_kubernetes_nodes(kubeconfig):
             else:
                 status = "CRITICAL"
                 message = "all nodes in error"
+            perf = "nodes_total="+str(len(lines))+" nodes_err="+str(counterrors)
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
+            perf = "nodes_total=-1 nodes_err=-1"
     except Exception as e:
         infomsg("there was an exception - "+str(e))
         status = "CRITICAL"
         message = "exception in nodes"
+        perf = "nodes_total=-1 nodes_err=-1"
 
-    return status,message
+    return status,message,perf
 
 def test_kubernetes_pods(kubeconfig):
     status = ""
     message = ""
+    perf = ""
 
     try:
         cmdline = ["/usr/bin/kubectl","get","pods","--all-namespaces","--kubeconfig",kubeconfig]
@@ -197,12 +212,14 @@ def test_kubernetes_pods(kubeconfig):
             header = lines.pop(0)
             haserror = False
             hasvalid = False
+            counterrors = 0
             for line in lines:
                 parts = line.split()
                 if parts[3].lower() == "running":
                     hasvalid = True
                 else:
                     haserror = True
+                    counterrors = counterrors+1
             if hasvalid:
                 if haserror:
                     status = "WARNING"
@@ -212,15 +229,18 @@ def test_kubernetes_pods(kubeconfig):
             else:
                 status = "CRITICAL"
                 message = "all pods in error"
+            perf = "pods_total="+str(len(lines))+" pods_err="+str(counterrors)
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
+            perf = "pods_total=-1 pods_err=-1"
     except Exception as e:
         infomsg("there was an exception - "+str(e))
         status = "CRITICAL"
         message = "exception in pods"
+        perf = "pods_total=-1 pods_err=-1"
 
-    return status,message
+    return status,message,perf
 
 def test_kubernetes_replicasets(kubeconfig):
     return generic_compare_columns(kubeconfig,"replicasets",[2,3,4])
@@ -242,42 +262,49 @@ def test_kubernetes_deployments(kubeconfig):
 def dokubernetescall(kubeconfig):
     status = ""
     message = ""
+    perf = ""
 
     infomsg("--- RUNNING STEP: 'version'")
-    tempstatus,tempmessage = test_kubernetes_version(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_version(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'nodes'")
-    tempstatus,tempmessage = test_kubernetes_nodes(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_nodes(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'pods'")
-    tempstatus,tempmessage = test_kubernetes_pods(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_pods(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'replicasets'")
-    tempstatus,tempmessage = test_kubernetes_replicasets(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_replicasets(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'daemonsets'")
-    tempstatus,tempmessage = test_kubernetes_daemonsets(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_daemonsets(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'deployments'")
-    tempstatus,tempmessage = test_kubernetes_deployments(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_deployments(kubeconfig)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
+    perf = perf.strip()+" "+tempperf.strip()
 
     if status=="OK":
         message="everything looks normal"
     message = message.strip().replace("\n"," - ")
 
-    exitnagios(status,message)
+    exitnagios(status,message+" | "+perf)
 
 #-------------------------------------------------------------------------------
 
