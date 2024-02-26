@@ -215,9 +215,9 @@ def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus
         if curl!=None:
             curl.close()
     if failuremessage!=None:
-        return "CRITICAL","error - "+str(failuremessage)
+        return "CRITICAL","error - "+str(failuremessage)+" | totaltime="+str(totaltime)
     if timeoutmessage!=None:
-        return timeoutstatus,"error - "+str(timeoutmessage)
+        return timeoutstatus,"error - "+str(timeoutmessage)+" | totaltime="+str(totaltime)
 
     #print(_preheaders, flush=True)
     if unknown!="":
@@ -226,14 +226,14 @@ def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)
+            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
     if expect!="":
         foundexpect = False
         for line in _preheaders:
             if line.startswith(expect):
                 foundexpect = True
         if foundexpect == False:
-            return "CRITICAL","cannot match '"+expect+"' in "+str(_preheaders)
+            return "CRITICAL","cannot match '"+expect+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
 
     #print(_headers, flush=True)
     for hsitem in headerstring:
@@ -242,10 +242,11 @@ def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus
         headermatchvalue = headermatchparts[1].strip()
         if headermatchkey in _headers:
             if _headers[headermatchkey] != headermatchvalue:
-                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"'"
+                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"' | totaltime="+str(totaltime)
         else:
-            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"'"
+            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"' | totaltime="+str(totaltime)
 
+    daysremaining = -1
     if protocol=="https" and certificatedays!="":
         certexpirationraw = None
         certexpirationparsed = None
@@ -264,7 +265,7 @@ def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus
             #print(traceback.format_exc(), flush=True)
             pass
         if certexpirationparsed==None:
-            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"'"
+            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' | totaltime="+str(totaltime)
         else:
             today = datetime.datetime.now(datetime.UTC)
             timeremaining = certexpirationparsed.timestamp()-today.timestamp()
@@ -276,14 +277,14 @@ def dolibcurlcheck_simple(protocol,hostname,port,path,timeoutvalue,timeoutstatus
             else:
                 warningdays = -1
             if daysremaining<criticaldays:
-                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days"
+                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
             elif daysremaining<warningdays:
-                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days"
+                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
 
     if responsecode>=500:
-        return "WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)
+        return "WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)
 
-    return "OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)
+    return "OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
 
 #    context = ssl.create_default_context()
 #    with socket.create_connection((hostname, port)) as sock:
