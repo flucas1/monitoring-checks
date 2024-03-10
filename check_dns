@@ -271,13 +271,13 @@ def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                     listexpected = sorted(expected.split(","))
                     listfound = sorted(found.split(","))
                     if (",".join(listexpected) == ",".join(listfound)):
-                        exitnagios("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" as expected")
+                        exitnagios("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" as expected | found="+str(len(listfound)))
                     else:
                         listunexpected = []
                         for test in listfound:
                             if test not in listexpected:
                                 listunexpected.append(test)
-                        msgunexpected = "there were issues with the query of record "+record+" to "+addressinfo+" - Result "+" ".join(listunexpected)+" were not in expected "+expected
+                        msgunexpected = "there were issues with the query of record "+record+" to "+addressinfo+" - Result "+" ".join(listunexpected)+" were not in expected "+expected+" | found="+str(len(listfound))+" unexpected="+str(len(listunexpected))
                         if len(listunexpected)>0:
                             exitnagios("CRITICAL",msgunexpected)
                         
@@ -285,7 +285,7 @@ def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                         for test in listexpected:
                             if test not in listfound:
                                 listmissing.append(test)
-                        msgmissing = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is missing "+" ".join(listmissing)+" as in "+expected
+                        msgmissing = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is missing "+" ".join(listmissing)+" as in "+expected+" | found="+str(len(listfound))+" missing="+str(len(listmissing))
                         if alternativeslogic == True:
                            exitnagios("OK",msgmissing)
                         if len(listmissing)>recmissingcrit:
@@ -293,7 +293,7 @@ def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                         if len(listmissing)>recmissingwarn:
                             exitnagios("WARNING",msgmissing)
                         
-                        msgfound = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is not reaching the minimum count of values"
+                        msgfound = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is not reaching the minimum count of values | found="+str(len(listfound))+" unexpected=0 missing=0"
                         if len(listfound)<recmincountcrit:
                             exitnagios("CRITICAL",msgfound)
                         if len(listfound)<recmincountwarn:
@@ -352,11 +352,11 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
                         if test not in errorservers:
                             errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    exitnagios("CRITICAL","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                    exitnagios("CRITICAL","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    exitnagios("WARNING","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                    exitnagios("WARNING","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 else:
-                    exitnagios("OK","zone in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                    exitnagios("OK","zone in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
         except dns.exception.Timeout as e:
             exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
@@ -411,9 +411,9 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
                 if difference > tolerancecrit:
-                    exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+")")
+                    exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                 elif difference > tolerancewarn:
-                    exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+")")
+                    exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
             else:
                 if difference > 0:
                     identical = False
@@ -423,6 +423,7 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                 #infomsg(ns)
                 validservers = []
                 errorservers = []
+                maxdifference = -1
                 for test in ns:
                     #infomsg(test)
                     try:
@@ -432,12 +433,14 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                                 errorservers.append(test)
                         #infomsg(str(serial_test))
                         difference = abs(serial_test-serial_server)
+                        if difference > maxdifference:
+                            maxdifference = difference
                         if (difference > tolerancecrit) or (difference > tolerancewarn):
                             identical = False
                             if difference > tolerancecrit:
-                                exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+")")
+                                exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                             elif difference > tolerancewarn:
-                                exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+")")
+                                exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                         if difference > 0:
                             identical = False
                         validservers.append(test)
@@ -449,9 +452,9 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
                     exitnagios("WARNING","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
             if identical == True:
-                exitnagios("OK","zone in target server has identical serial "+str(serial_server)+" than the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                exitnagios("OK","zone in target server has identical serial "+str(serial_server)+" than the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
             else:
-                exitnagios("OK","zone in target server withing the tolerance "+str(tolerancewarn)+" of the serial "+str(serial_server)+" from the MNAME and NS entries - errors: "+" ".join(validservers))
+                exitnagios("OK","zone in target server withing the tolerance "+str(tolerancewarn)+" of the serial "+str(serial_server)+" from the MNAME and NS entries - errors: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
         except dns.exception.Timeout as e:
             exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
@@ -467,9 +470,12 @@ def check_transfer(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, a
     try:
         addressinfo = get_address(ipv6, server)
         try:
+            start = datetime.datetime.now(datetime.UTC)
             text = get_zone(useTcp, addressinfo, timeoutvalue, zone)
+            elapsed = datetime.datetime.now(datetime.UTC)-start
+            duration = elapsed.total_seconds()
             if text!="":
-                exitnagios("OK","transfer of zone "+zone+" from "+addressinfo+" successful")
+                exitnagios("OK","transfer of zone "+zone+" from "+addressinfo+" successful | duration="+str(duration))
             else:
                 exitnagios("CRITICAL","there were issues with the transfer of zone "+zone+" from "+addressinfo)
         except dns.exception.Timeout as e:
