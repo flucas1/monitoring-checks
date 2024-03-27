@@ -78,12 +78,13 @@ def _header_function(header_line):
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
 
-def generate_resolves(hostname,port,dnsservers):
+def generate_resolves(hostname,ipprotocol,port,dnsservers):
     result = []
 
+    infomsg("generate_resolves: "+str(dnsservers))
     if dnsservers != "":
         listdnsservers = dnsservers.split(",")
-        #print(listdnsservers, flush=True)
+        infomsg("listdnsservers: "+str(listdnsservers))
 
         try:
             customresolver = dns.resolver.Resolver(configure=False)
@@ -91,7 +92,14 @@ def generate_resolves(hostname,port,dnsservers):
             customresolver.retry_servfail = True
             customresolver.edns = True
 
-            result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,"A")[0])]
+            recordtype = ""
+            if ipprotocol in ["4","-4"]:
+                recordtype = "A"
+            elif ipprotocol in ["4","-4"]:
+                recordtype = "AAAA"
+            #print(recordtype, flush=True)
+
+            result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
         except:
             pass
 
@@ -104,6 +112,7 @@ def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutsta
     counter = 0
     while True:
         try:
+            infomsg("retry "+str(counter))
             exitlevel,exitmessage = dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers)
             counter = counter+1
             if counter>retries:
@@ -132,7 +141,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     totaltime = None
     certinfo = None
     try:
-        #print(sslversion, flush=True) # 1.2+
+        infomsg("ssl "+str(sslversion))
         curlsslfinal = None
         if sslversion!=None:
             httpprotocol = "https"
@@ -161,7 +170,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         else:
             httpprotocol = "http"
         url = httpprotocol+"://"+hostname+":"+str(port)+path
-        #print(url, flush=True)
+        infomsg("url "+url)
         httpversionparts = httpversion.split(",")
         if len(httpversionparts)>0:
             curlhttpcode = 0
@@ -173,19 +182,19 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_1_1
             if "2.0" in httpversionparts:
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_2_0
-        #print("precurl", flush=True)
+        infomsg("precurl")
         buffer = io.BytesIO()
         curl = pycurl.Curl()
         curl.reset()
         curl.setopt(pycurl.URL, url)
         curl.setopt(pycurl.WRITEDATA, buffer)
         curl.setopt(pycurl.HTTP_VERSION, curlhttpcode)
-        if ipprotocol=="4":
-            curl.setopt(pycurl.IPRESOLVE, pycurl.CURL_IPRESOLVE_V4)
-        elif ipprotocol=="6":
-            curl.setopt(pycurl.IPRESOLVE, pycurl.CURL_IPRESOLVE_V6)
-        #else:
-        #    curl.setopt(pycurl.IPRESOLVE, pycurl.CURL_IPRESOLVE_WHATEVER)
+        if ipprotocol in ["4","-4"]:
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
+        elif ipprotocol in ["6","-6"]:
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
+        else:
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
         if curlsslfinal!=None:
             curl.setopt(pycurl.SSL_VERIFYPEER, 1) # default is 1
             curl.setopt(pycurl.SSL_VERIFYHOST, 2) # default is 2
@@ -201,7 +210,8 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         #curl.setopt(pycurl.FOLLOWLOCATION, 1)
         if interface!="":
             curl.setopt(pycurl.INTERFACE, interface)
-        resolves = generate_resolves(hostname,port,dnsservers)
+        resolves = generate_resolves(hostname,ipprotocol,port,dnsservers)
+        infomsg("resolves "+str(resolves))
         if len(resolves)>0:
             curl.setopt(pycurl.RESOLVE, resolves)
         curl.perform()
@@ -220,6 +230,9 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     finally:
         if curl!=None:
             curl.close()
+
+    infomsg("timeoutmsg: "+str(timeoutmessage))
+    infomsg("failuremsg: "+str(failuremessage))
     if failuremessage!=None:
         return "CRITICAL","error - "+str(failuremessage)+" | totaltime="+str(totaltime)
     if timeoutmessage!=None:
@@ -324,7 +337,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
     parser.add_argument("-A", "--path",                                  dest="path",            default="",            help="path to check")
@@ -340,17 +353,10 @@ def main():
     parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
     args = parser.parse_args()
 
-    if (args.ipv4 == True) and (args.ipv6 == True):
-        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
-    if (args.ipv4 == False) and (args.ipv6 == False):
-        args.ipv4 = True
-    #infomsg(args.ipv4)
-    #infomsg(args.ipv6)
-
     if (args.hostname == ""):
         exitnagios("CRITICAL","hostname not defined")
 
-    protocol = ""
+    protocol = None
     if (args.ipv4 == True) and (args.ipv6 == True) :
         exitnagios("CRITICAL","select only one protocol")
     elif args.ipv4 == True :
@@ -369,8 +375,8 @@ def main():
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        #print("precall", flush=True)
-        #print(str(args.hostname), str(args.port), str(args.httpversion), str(args.sslversion), flush=True)
+        infomsg("precall")
+        infomsg(str(args.hostname)+" "+str(args.port)+" "+str(args.httpversion)+" "+str(args.sslversion))
         dolibcurlcheck_retries(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
