@@ -137,7 +137,6 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     global _preheaders
     global _headers
 
-    _cannotresolvecustom = "cannot resolve using custom servers"
     _preheaders = []
     _headers = {}
     curl = None
@@ -222,7 +221,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
             if len(resolves)>0:
                 curl.setopt(pycurl.RESOLVE, resolves)
             else:
-                raise Exception(_cannotresolvecustom)
+                raise Exception("cannot resolve using custom servers")
         curl.perform()
         responsecode = curl.getinfo(pycurl.RESPONSE_CODE)
         totaltime = curl.getinfo(pycurl.TOTAL_TIME)
@@ -230,7 +229,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     except pycurl.error as e:
         #print(traceback.format_exc(), flush=True)
         code, msg = e.args
-        if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after ") or (msg == _cannotresolvecustom):
+        if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after "):
             timeoutmessage = msg
         else:
             failuremessage = msg
