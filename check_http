@@ -19,8 +19,13 @@ import time
 
 #-------------------------------------------------------------------------------
 
+_candebug = False
 def candebug():
-    return False
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
 
 def infomsg(msg):
     if candebug() == True:
@@ -95,7 +100,7 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
             recordtype = ""
             if ipprotocol in ["4","-4"]:
                 recordtype = "A"
-            elif ipprotocol in ["4","-4"]:
+            elif ipprotocol in ["6","-6"]:
                 recordtype = "AAAA"
             #print(recordtype, flush=True)
 
@@ -210,10 +215,13 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         #curl.setopt(pycurl.FOLLOWLOCATION, 1)
         if interface!="":
             curl.setopt(pycurl.INTERFACE, interface)
-        resolves = generate_resolves(hostname,ipprotocol,port,dnsservers)
-        infomsg("resolves "+str(resolves))
-        if len(resolves)>0:
-            curl.setopt(pycurl.RESOLVE, resolves)
+        if len(dnsservers)>0:
+            resolves = generate_resolves(hostname,ipprotocol,port,dnsservers)
+            infomsg("resolves "+str(resolves))
+            if len(resolves)>0:
+                curl.setopt(pycurl.RESOLVE, resolves)
+            else:
+                raise Exception("cannot resolve using custom servers")
         curl.perform()
         responsecode = curl.getinfo(pycurl.RESPONSE_CODE)
         totaltime = curl.getinfo(pycurl.TOTAL_TIME)
@@ -351,7 +359,10 @@ def main():
     parser.add_argument("-P", "--httpversion",                           dest="httpversion",     default="",            help="0.9,1.0,1.1,2,3")
     parser.add_argument("-I", "--interface",                             dest="interface",       default="",            help="what interface to use")
     parser.add_argument("-D", "--dnsservers",                            dest="dnsservers",      default="",            help="dns servers to use")
+    parser.add_argument("-®", "--debug",            action="store_true",  dest="debug",           default=False,         help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if (args.hostname == ""):
         exitnagios("CRITICAL","hostname not defined")
