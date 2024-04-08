@@ -319,12 +319,10 @@ def main():
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
-    setcandebug(args.debug)
-
     if args.mode.strip().lower() == "pipeline":
-        setdebug(True)
+        setcandebug(True)
     else:
-        setdebug(False)
+        setcandebug(args.debug)
 
     kubeconfig = args.kubeconfig
     if os.path.isfile(kubeconfig):
