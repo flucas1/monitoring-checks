@@ -56,7 +56,7 @@ def _header_function(header_line):
 
     # HTTP standard specifies that headers are encoded in iso-8859-1.
     header_line = header_line.decode('iso-8859-1')
-    #print(header_line, flush=True)
+    infomsg(header_line)
 
     # Header lines include the first status line (HTTP/1.x ...).
     # We are going to ignore all lines that don't have a colon in them.
@@ -79,7 +79,7 @@ def _header_function(header_line):
     # Lowercase name here.
     name = name.lower()
 
-    #print(name+": "+value, flush=True)
+    infomsg(name+": "+value)
     # Now we can actually record the header name and value.
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
@@ -103,13 +103,13 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
                 recordtype = "A"
             elif ipprotocol in ["6","-6"]:
                 recordtype = "AAAA"
-            #print(recordtype, flush=True)
+            infomsg(recordtype)
 
             result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
         except:
             pass
 
-        #print(result, flush=True)
+        infomsg(result)
     return result
 
 def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,retries):
@@ -158,7 +158,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
                 sslversionplus = sslversion.endswith("+")
                 sslversion = sslversion.strip("+")
                 curlsslmin = None
-                #print(sslversion, flush=True) # 1.2+
+                infomsg(sslversion) # 1.2+
                 if sslversion == "TLSv1.0":
                     curlsslmin = pycurl.SSLVERSION_TLSv1_0
                 elif sslversion == "TLSv1.1":
@@ -172,7 +172,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
                 curlsslfinal = curlsslmin
             else:
                 curlsslfinal = curlsslmin | curlsslmin
-            #print(sslversion, flush=True) # 1.2+
+            infomsg(sslversion) # 1.2+
         else:
             httpprotocol = "http"
         url = httpprotocol+"://"+hostname+":"+str(port)+path
@@ -228,7 +228,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         totaltime = curl.getinfo(pycurl.TOTAL_TIME)
         certinfo = curl.getinfo(pycurl.INFO_CERTINFO)
     except pycurl.error as e:
-        #print(traceback.format_exc(), flush=True)
+        infomsg(traceback.format_exc())
         code, msg = e.args
         if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after ") or msg.startswith("Operation timed out after "):
             timeoutmessage = msg
@@ -247,7 +247,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     if timeoutmessage!=None:
         return timeoutstatus,"error - "+str(timeoutmessage)+" | totaltime="+str(totaltime)
 
-    #print(_preheaders, flush=True)
+    infomsg(_preheaders)
     if unknown!="":
         foundunknown = False
         for line in _preheaders:
@@ -263,7 +263,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         if foundexpect == False:
             return "CRITICAL","cannot match '"+expect+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
 
-    #print(_headers, flush=True)
+    infomsg(_headers)
     for hsitem in headerstring:
         headermatchparts = hsitem.split(":",1)
         headermatchkey = headermatchparts[0].strip().lower()
@@ -287,10 +287,10 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
                     break
             if certexpirationraw!=None:
                 from dateutil.parser import parse
-                #print(certexpirationraw, flush=True)
+                infomsg(certexpirationraw)
                 certexpirationparsed = parse(certexpirationraw)
         except:
-            #print(traceback.format_exc(), flush=True)
+            infomsg(traceback.format_exc())
             pass
         if certexpirationparsed==None:
             return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' | totaltime="+str(totaltime)
@@ -328,7 +328,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
 #    for item in subjectAltName["DNS"]:
 #        if item not in alternatives:
 #            alternatives.append(item)
-#    #print(alternatives, flush=True)
+#    infomsg(alternatives)
 #    matching = False
 #    for item in alternatives:
 #        if item == hostname:

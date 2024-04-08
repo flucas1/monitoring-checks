@@ -74,27 +74,27 @@ def generic_compare_columns(kubeconfig,resource,columns):
         if exitcode == 0:
             lines = output.splitlines()
             header = lines.pop(0)
-            #print(header, flush=True)
+            infomsg(header)
             haserror = False
             hasvalid = False
             counterrors = 0
             for line in lines:
                 parts = line.split()
-                #print(columns, flush=True)
+                infomsg(columns)
                 identical = True
                 reference = None
                 for column in columns:
                     value = parts[column]
-                    #print(value, flush=True)
+                    infomsg(value)
                     exploded = value.split("/")
-                    #print(exploded, flush=True)
+                    infomsg(exploded)
                     for test in exploded:
-                        #print(test, flush=True)
+                        infomsg(test)
                         if reference==None:
                             reference = test
                         elif test!=reference:
                             identical = False
-                            #print("break", flush=True)
+                            infomsg("break")
                             break
                 if identical == True:
                     hasvalid = True
