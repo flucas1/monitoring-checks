@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doexpectedcall(expectedarchitecture, expectedreleasename):
+    machine = platform.machine()
+    linuxinfo = platform.freedesktop_os_release()
+    release = linuxinfo["PRETTY_NAME"]
+    
+    if machine.strip() not in expectedarchitecture.strip().split(","):
+        exitnagios("CRITICAL","the architecture is "+machine+" but it was expected "+expectedarchitecture)
+    
+    if expectedreleasename.strip() != release.strip():
+        exitnagios("CRITICAL","the OS release is "+release+" but it was expected "+expectedreleasename)
+
+    exitnagios("OK","the architecture is "+machine+" and the OS release is "+release)
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--architecture",  action="store", default="", help="expected machine architecture")
+    parser.add_argument("-r", "--releasename",   action="store", default="", help="expected OS release name")
+
+    args = parser.parse_args()
+    
+    return args
+
+def main():
+    args = parse_args()
+
+    doexpectedcall(args.architecture, args.releasename)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

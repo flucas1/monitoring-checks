@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import datetime
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doclamdcall(filetest):
+    start = datetime.datetime.now(datetime.UTC)
+
+    cmdline = ["/usr/bin/clamdscan","--stream","--stdout","--infected","--no-summary",filetest]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    elapsed = datetime.datetime.now(datetime.UTC)-start
+    duration = elapsed.total_seconds()
+
+    if exitcode == 0:
+        if errors=="":
+            exitnagios("OK","clamdscan is working properly | duration="+str(duration))
+        else:
+            exitnagios("WARNING","clamdscan got some issues checking "+filetest+" - "+errors.replace("\n"," ")+" | duration="+str(duration))
+    else:
+        exitnagios("CRITICAL","clamdscan failed checking "+filetest+" - "+errors.replace("\n"," ")+" | duration="+str(duration))
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--filetest",     action="store", default="/etc/mtab", dest="filetest", help="file to check")
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    doclamdcall(args.filetest)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

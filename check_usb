@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import re
+import sys
+import subprocess
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def status_to_code(status):
+    if status in ["OK","0",0]:
+        exitcode = 0
+    elif status in ["WARNING","1",1]:
+        exitcode = 1
+    elif status in ["CRITICAL","2",2]:
+        exitcode = 2
+    elif status in ["UNKNOWN","3",3]:
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = status_to_code(status)
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def check_the_line(lineid,linemsg,device_identifiers,device_messages):
+    matching = False
+    #print(lineid, flush=True)
+    #print(linemsg, flush=True)
+    
+    device_options = device_identifiers.split(",")
+    for option in device_options:
+        optionparts = option.strip().split(":")
+        device_id = optionparts[0]+":"+optionparts[1]
+        if len(optionparts)>2:
+            device_range = optionparts[2]
+        else:
+            device_range = None
+        
+        #print(device_id, flush=True)
+        #print(device_range, flush=True)
+        #print(device_messages, flush=True)
+        if lineid.lower() == device_id.lower():
+            if device_messages == "":
+                matching = True
+                break
+            else:
+                for item in device_messages.split("¶"):
+                    if item.strip() == linemsg.strip():
+                       matching = True
+                       break
+    return matching
+
+def is_usb_connected(device_identifiers,device_messages,device_expected):
+    found = False
+    try:
+        cmdline = ["/usr/bin/lsusb"]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8")
+        errors = completedproc.stderr.decode("utf-8")
+        exitcode = completedproc.returncode
+        
+        founddict = {}
+        if exitcode==0:
+            #print(output, flush=True)
+            for line in output.splitlines():
+                parts = line.split()
+                if parts[0]=="Bus" and parts[2] == "Device":
+                    #print(line, flush=True)
+                    if check_the_line(parts[5]," ".join(parts[6:]),device_identifiers,device_messages):
+                        key = device_identifiers+"@"+device_messages
+                        if key in founddict:
+                            founddict[key] = founddict[key]+1
+                        else:
+                            founddict[key] = 1
+        else:
+            exitnagios("CRITICAL","issue wiht lsusb")
+    except Exception as e:
+        exitnagios("CRITICAL","internal error - "+str(e))
+
+    #here parse dictkey and extract range before @ and makesure it matches
+    totalfound = None
+    try:
+        totalfound = founddict[device_identifiers+"@"+device_messages]
+        if device_expected=="":
+            expected_min = None
+            expected_max = None
+        else:
+            parts = device_expected.split(":")
+            if len(parts)==1:
+                expected_min = int(device_expected)
+                expected_max = int(device_expected)
+            else:
+                expected_min = int(parts[0])
+                expected_max = int(parts[1])
+        if (device_expected=="") or ((totalfound>=expected_min) and (totalfound<=expected_max)):
+            exitnagios("OK","found "+str(totalfound)+" USB "+str(founddict))
+        else:
+            exitnagios("CRITICAL","cannot find the USB device, or the count of them is not matching "+str(founddict)+" - expected "+str(device_expected))
+    except Exception as e:
+        if totalfound == None:
+            exitnagios("CRITICAL","cannot find "+device_identifiers+" "+device_messages)
+        else:
+            exitnagios("CRITICAL","internal error - "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--devices",  dest="devices",  default="", help="devices" )
+    parser.add_argument("-m", "--messages", dest="messages", default="", help="messages")
+    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected")
+    args = parser.parse_args()
+
+    is_usb_connected(args.devices,args.messages,args.expected)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

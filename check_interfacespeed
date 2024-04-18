@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doospfroutescall(interface,expectedspeeds,warningspeeds,expectedduplex,warningduplex):
+    cmdline = ["/usr/sbin/ethtool",interface]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode == 0:
+        foundspeed = ""
+        foundduplex = ""
+        lines = output.splitlines()
+        for line in lines:
+            #infomsg(line)
+            tokenspeed = "\tSpeed:"
+            if line.startswith(tokenspeed):
+                foundspeed = line[len(tokenspeed)+1:]
+            tokenduplex = "\tDuplex:"
+            if line.startswith(tokenduplex):
+                foundduplex = line[len(tokenduplex)+1:]
+
+        if (foundspeed!="" and len(expectedspeeds)==0) and (foundduplex!="" and len(expectedduplex)==0):
+            exitnagios("OK","the interface speed is "+foundspeed+" and duplex is "+foundduplex)
+        elif (foundspeed in expectedspeeds) and (foundduplex in expectedduplex):
+            exitnagios("OK","the interface speed is "+foundspeed+" and duplex is "+foundduplex+" as expected")
+        elif (foundspeed in warningspeeds) and (foundduplex in warningduplex):
+            exitnagios("WARNING","the interface speed is "+foundspeed+" and duplex is "+foundduplex+" but it was expected "+" ".join(expectedspeeds)+" and "+" ".join(expectedduplex))
+        else:
+            exitnagios("CRITICAL","the interface speed is "+foundspeed+" and duplex is "+foundduplex+" but it was expected "+" ".join(expectedspeeds)+" and "+" ".join(expectedduplex))
+    else:
+        exitnagios("CRITICAL","issue retrieving the interface information")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--interface", dest="interface", default="",         help="wan,lan,eth0")
+    parser.add_argument("-e", "--expected",  dest="expected",  default="1000Mb/s", help="1000Mb/s")
+    parser.add_argument("-w", "--warning",   dest="warning",   default="100Mb/s",  help="100Mb/s")
+    args = parser.parse_args()
+
+    interface = args.interface
+    if interface == "":
+        exitnagios("CRITICAL","no interface selected")
+    expectedspeeds = []
+    for item in args.expected.split("¶"):
+        expectedspeeds.append(item.strip())
+    warningspeeds = []
+    for item in args.warning.split("¶"):
+        warningspeeds.append(item.strip())
+
+    doospfroutescall(interface,expectedspeeds,warningspeeds,["Full"],["Half"])
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

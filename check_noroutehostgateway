@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import argparse
+import subprocess
+import concurrent.futures
+import ipaddress
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def checkifaddress(test):
+    converted = None
+    try:
+        converted = ipaddress.ip_address(test)
+    except:
+        pass
+    return (converted != None)
+
+def donoroutehostgatewaycall(whitelist):
+    cmdline = ["/usr/bin/ip","route"]
+    infomsg(cmdline)
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8")
+    errors = completedproc.stderr.decode("utf-8")
+    exitcode = completedproc.returncode
+    if exitcode!=0:
+        exitnagios("CRITICAL","cannot read routes table")
+
+    exclusion = []
+    for item in whitelist.lower().split(","):
+        exclusion.append(item.split("/"))
+
+    for line in output.strip().splitlines():
+        if line.startswith(" ") == False:
+            parts = line.split()
+            if (len(parts)>0) and (checkifaddress(parts[0]) == True):
+                if parts[len(parts)-1].lower() != "linkdown":
+                    if len(parts)>1 and parts[1].lower() == "via":
+                        infomsg(parts)
+                        exception = False
+                        for item in exclusion:
+                            if len(item)>0 and item[0]==parts[0]:
+                                if len(item)>1:
+                                    if item[1]==parts[2]:
+                                        if len(item)>2:
+                                            if item[2]==parts[4]:
+                                                exception = True
+                                        else:
+                                            exception = True
+                                else:
+                                    exception = True
+                        if exception == False:
+                            exitnagios("CRITICAL","found UGH route: "+parts[0]+"/"+parts[2]+"/"+parts[4])
+
+    exitnagios("OK","routes table looks normal")
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--whitelist", action="store", default="", dest="whitelist", help="routes to whitelist")
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    donoroutehostgatewaycall(args.whitelist)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

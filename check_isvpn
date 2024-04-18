@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import subprocess
+import argparse
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+#-------------------------------------------------------------------------------
+
+def dodnsleakcall(expected,proxy):
+    try:
+        driver = generatedriver(proxy)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,20)
+        action=ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://iphub.info/"
+        driver.get(url)
+        infomsg("asking for navigating "+url)
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+
+        wait.until(EC.presence_of_element_located((By.ID, "type")))
+
+        element = driver.find_element(By.ID, "type")
+        if element == None:
+            exitnagios("CRITICAL","no result from page")
+
+        value = element.text.strip()
+        if value in ["It seems that this address is not a VPN", "Good IP (residential or business)"]:
+            if expected:
+                exitnagios("CRITICAL","this is not a VPN, but it was expected to be")
+            else:
+                exitnagios("OK","this is not a VPN")
+        elif value in ["It seems that this address is a VPN", "Hosting, proxy or bad IP"]:
+            if expected:
+                exitnagios("OK","this is a VPN as expected")
+            else:
+                exitnagios("CRITICAL","this is unexpectedly a VPN")
+        else:
+            exitnagios("CRITICAL","cannot interpret output - "+value)
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected",                             dest="expected",      default="false",        help="expected true/false")
+    args = parser.parse_args()
+
+    if args.expected.lower() in ["1","yes","true"]:
+        expected = True
+    else:
+        expected = False
+    proxy = ""
+
+    dodnsleakcall(expected,proxy)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

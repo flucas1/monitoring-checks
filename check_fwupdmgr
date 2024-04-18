@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dofwupdmgrcall():
+    cmdline = ["/usr/bin/fwupdmgr","get-updates","--assume-yes"]
+    customenv = os.environ.copy()
+    customenv["NO_COLOR"]="1"
+    completedproc = subprocess.run(cmdline,capture_output=True,env=customenv)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode in [0,2]:
+        #print(output, flush=True)
+        #print(errors, flush=True)
+        #errors.splitlines[0].endswith(": UEFI capsule updates not available or enabled in firmware setup") :
+        if errors.endswith("No updates available") or errors.endswith("No updatable devices") :
+            exitnagios("OK","there are no fwupdmgr updates")
+        else:
+            exitnagios("WARNING","there are fwupdmgr updates")
+    else:
+        exitnagios("CRITICAL","issue running fwupdmgr updates")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    dofwupdmgrcall()
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

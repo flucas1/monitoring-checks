@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import subprocess
+import concurrent.futures
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def status_to_code(status):
+    if status in ["OK","0",0]:
+        exitcode = 0
+    elif status in ["WARNING","1",1]:
+        exitcode = 1
+    elif status in ["CRITICAL","2",2]:
+        exitcode = 2
+    elif status in ["UNKNOWN","3",3]:
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = status_to_code(status)
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, childtimeoutstatus):
+    try:
+        #print(childtimeoutvalue, flush=True)
+        #print(childtimeoutstatus, flush=True)
+        cmdline = multiargs
+        cmdline = cmdline+["-H",host]
+        if childtimeoutvalue!=None and childtimeoutstatus!=None:
+            cmdline = cmdline+["-t",str(childtimeoutvalue)+":"+childtimeoutstatus]
+        #print(cmdline, flush=True)
+        completedproc = subprocess.run(cmdline,capture_output=True,timeout=multitimeoutvalue)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+    except TimeoutError as e:
+        output = "timeout"
+        errors = ""
+        exitcode = status_to_code(multitimeoutstatus)
+    except Exception as e:
+        output = "unknown error"
+        errors = str(e)
+        exitcode = 2
+    #print(exitcode, flush=True)
+    return (exitcode,output,errors)
+
+#-------------------------------------------------------------------------------
+
+multitimeoutparts = sys.argv[1].split(":")
+multitimeoutvalue = int(multitimeoutparts[0])
+multitimeoutstatus = "CRITICAL"
+if len(multitimeoutparts)>1:
+    multitimeoutstatus = multitimeoutparts[1]
+multihostnames = ""
+multiargs = []
+childtimeout = ""
+lastarghostname = False
+lastargtimeout = False
+#print(len(sys.argv), flush=True)
+for i in range(2,len(sys.argv)):
+    argument = sys.argv[i]
+    if argument.startswith("--hostname=")==True:
+        multihostnames = argument[len("--hostname="):]
+    elif lastarghostname==True:
+        lastarghostname = False
+        multihostnames = argument
+    elif argument=="-H":
+        lastarghostname=True
+    elif argument.startswith("--timeout=")==True:
+        childtimeout = argument[len("--timeout="):]
+    elif lastargtimeout==True:
+        lastargtimeout = False
+        childtimeout = argument
+    elif argument=="-t":
+        lastargtimeout=True
+    else:
+        multiargs.append(argument)
+
+#print("timeoutvalue: "+str(multitimeoutvalue), flush=True)
+#print("timeoutstatus: "+str(multitimeoutstatus), flush=True)
+#print("childtimeout: "+str(childtimeout), flush=True)
+#print("hostnames: "+multihostnames, flush=True)
+#print("args: "+str(multiargs), flush=True)
+
+allhosts = multihostnames.split(",")
+childtimeoutvalue = None
+childtimeoutstatus = None
+if childtimeout != "":
+    childtimeoutparts = childtimeout.split(":")
+    #print(childtimeoutparts, flush=True)
+    childtimeoutvalue = int(childtimeoutparts[0])
+    if len(childtimeoutparts)>1:
+        childtimeoutstatus = childtimeoutparts[1]
+if childtimeoutstatus == None:
+    childtimeoutstatus = "CRITICAL"
+#print(childtimeoutvalue, flush=True)
+#print(childtimeoutstatus, flush=True)
+
+executor = concurrent.futures.ProcessPoolExecutor()
+futures = []
+mappings = {}
+for host in allhosts:
+    future = executor.submit(dotest, host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, "UNKNOWN")
+    futures.append(future)
+    mappings[future] = host
+for future in concurrent.futures.as_completed(futures):
+    (exitcode,output,errors) = future.result()
+    #print(exitcode,output,errors, flush=True)
+    if exitcode==0:
+        for test in futures:
+            test.cancel()
+        for pid, proc in executor._processes.items():
+            if proc!=None:
+                proc.terminate()
+        executor.shutdown(wait=False, cancel_futures=True)
+        parts = output.split("|",1)
+        finalmsg = mappings[future]+" -> "+parts[1]
+        if errors!="":
+            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+        if len(parts)>1:
+            finalmsg = finalmsg+"\n| "+parts[1]
+        exitnagios("OK",finalmsg)
+
+# in this moment, nothing has returned an OK, so it must be CRITICAL WARNING or UNKNOWN
+
+for future in futures:
+    (exitcode,output,errors) = future.result()
+    if exitcode==2:
+        parts = output.split("|",1)
+        finalmsg = mappings[future]+" -> "+parts[1]
+        if errors!="":
+            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+        if len(parts)>1:
+            finalmsg = finalmsg+"\n| "+parts[1]
+        exitnagios("CRITICAL",finalmsg)
+for future in futures:
+    (exitcode,output,errors) = future.result()
+    if exitcode==1:
+        parts = output.split("|",1)
+        finalmsg = mappings[future]+" -> "+parts[1]
+        if errors!="":
+            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+        if len(parts)>1:
+            finalmsg = finalmsg+"\n| "+parts[1]
+        exitnagios("WARNING",finalmsg)
+
+allunknown = True
+finalmsg = "all alternatives return unknown"
+for future in futures:
+    (exitcode,output,errors) = future.result()
+    if exitcode!=3:
+        allunknown = False
+        break
+    else:
+        if len(finalmsg)>0:
+            finalmsg = finalmsg+" "
+        finalmsg = finalmsg+mappings[future]+" -> "+output
+if allunknown == True:
+    exitnagios(childtimeoutstatus,finalmsg)
+
+exitnagios("CRITICAL","unexpected multiaddr case")

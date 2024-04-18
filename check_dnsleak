@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import subprocess
+import argparse
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+#-------------------------------------------------------------------------------
+
+def extractvalue(driver,entryname):
+    element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
+    value = element.text
+    #print(value, flush=True)
+    return value
+
+def extracttable(driver):
+    element = driver.find_element(By.ID, "dns-list")
+    value = ""
+    lines = element.find_elements(By.TAG_NAME,"tr")
+    #print(element.text, flush=True)
+    for line in lines:
+        if len(value)>0:
+            value = value + " § "
+        cells = line.find_elements(By.TAG_NAME,"td")
+        entry = ""
+        for cell in cells:
+            if len(entry)>0:
+                entry = entry + " ; "
+            entry = entry + cell.text
+        value = value + entry
+    return value
+
+def comparepart(value,expecteds):
+    listexpected = expecteds.split("¶")
+    result = False
+    for alternative in listexpected:
+        result = result or value==alternative.strip()
+    return result
+
+def comparetriplet(value,expected):
+    if expected == "":
+        return True
+    else:
+        listvalue = value.split(";")
+        listexpected = expected.split(";")
+
+        if (len(listvalue)==3) and (len(listexpected)==3):
+            cleanvalue = []
+            for value in listvalue:
+                cleanvalue.append(value.strip())
+
+            cleanexpected = []
+            for expected in listexpected:
+                cleanexpected.append(expected.strip())
+
+            result = True
+            for i in range(0,3):
+                if cleanexpected[i]!="":
+                    result = result and comparepart(cleanvalue[i],cleanexpected[i])
+            return result
+        else:
+            return False
+
+def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
+    try:
+        driver = generatedriver(proxy)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,10)
+        action=ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://browserleaks.com/dns"
+        driver.get(url)
+        infomsg("asking for navigating "+url)
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+        infomsg("page loaded")
+
+        try:
+            wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"),"Found"))
+        except Exception as e:
+            pass
+        finally:
+            infomsg("found element dns-test")
+
+        try:
+            resume = driver.find_element(By.ID, "dns-test")
+        except Exception as e:
+            exitnagios("CRITICAL","cannot find result element")
+        if resume == None:
+            exitnagios("CRITICAL","no result from page")
+        infomsg("test with results")
+
+        address = extractvalue(driver, "IP Address")
+        isp = extractvalue(driver, "ISP")
+        location = extractvalue(driver, "Location")
+        resultedip = address.replace(";"," ")+" ; "+isp.replace(";"," ")+" ; "+location.replace(";"," ")
+        infomsg(resultedip)
+
+        resulteddns = ""
+        try:
+            wait.until(EC.presence_of_element_located((By.ID, "dns-list")))
+            resulteddns = extracttable(driver).strip()
+        except Exception as e:
+            pass
+        finally:
+            infomsg("found element dns-list as '"+resulteddns+"'")
+
+        successmsg = ""
+        warningmsg = ""
+        errormsg = ""
+
+        expectedipparts = []
+        for item in expectedip.split("§"):
+            item = item.strip()
+            if item not in expectedipparts:
+                expectedipparts.append(item)
+        #print(expectedipparts, flush=True)
+        if resultedip == "":
+            warningmsg += "The IP response is empty, and was expected '"+" § ".join(expectedipparts)+"'. "
+        else:
+            successip = True
+            resultedipparts = []
+            for item in resultedip.split("§"):
+                item = item.strip()
+                if item not in resultedipparts:
+                    resultedipparts.append(item)
+            for testresultedip in resultedipparts:
+                partial = False
+                for testexpectedip in expectedipparts:
+                    #print(testresultedip.strip(), flush=True)
+                    #print(testexpectedip.strip(), flush=True)
+                    if comparetriplet(testresultedip.strip(),testexpectedip.strip()):
+                        partial = True
+                        break
+                #print(partial, flush=True)
+                successip = successip and partial
+            if successip:
+                successmsg += "The IP response '"+resultedip+"' is as expected. "
+            else:
+                errormsg += "The IP response '"+resultedip+"' is not as expected '"+expectedip+"'. "
+
+        expecteddnsparts = []
+        for item in expecteddns.split("§"):
+            item = item.strip()
+            if item not in expecteddnsparts:
+                expecteddnsparts.append(item)
+        #print(expecteddnsparts, flush=True)
+        if resulteddns == "":
+            warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddnsparts)+"'. "
+        else:
+            successdns = True
+            resulteddnsparts = []
+            for item in resulteddns.split("§"):
+                item = item.strip()
+                if item not in resulteddnsparts:
+                    resulteddnsparts.append(item)
+            # all the resulted dns should pass the test for at least one option in expeted dns
+            #print(resulteddnsparts, flush=True)
+            for testresulteddns in resulteddnsparts:
+                partial = False
+                for testexpecteddns in expecteddnsparts:
+                    #print(testresulteddns.strip(), flush=True)
+                    #print(testexpecteddns.strip(), flush=True)
+                    if comparetriplet(testresulteddns.strip(),testexpecteddns.strip()):
+                        partial = True
+                        break
+                #print(partial, flush=True)
+                successdns = successdns and partial
+            if successdns:
+                successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
+            else:
+                errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddnsparts)+"'. "
+
+        if errormsg != "":
+            exitnagios("CRITICAL",errormsg)
+        elif warningmsg != "":
+            exitnagios("WARNING",warningmsg)
+        else:
+            exitnagios("OK",successmsg)
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check - "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",           action="store_true",  dest="ipv4",          default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",           action="store_true",  dest="ipv6",          default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-p", "--proxy",                                dest="proxy",         default="",            help="use a proxy")
+    parser.add_argument("-i", "--expectedip",                           dest="expectedip",    default="",            help="expected response for the IP")
+    parser.add_argument("-d", "--expecteddns",                          dest="expecteddns",   default="",            help="expected response for the DNS")
+    args = parser.parse_args()
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+    #infomsg(args.ipv4)
+    #infomsg(args.ipv6)
+
+    protocol = ""
+    if args.ipv4 == True :
+        protocol = "-4"
+    elif args.ipv6 == True :
+        protocol = "-6"
+
+    dodnsleakcall(protocol,args.proxy,args.expectedip,args.expecteddns)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

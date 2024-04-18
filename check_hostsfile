@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import traceback
+import datetime
+import time
+import ipaddress
+import dns.query
+import dns.resolver
+import dns.exception
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def extractsearchlist():
+    result = ""
+    handle = None
+    try:
+        handle = open("/etc/resolv.conf","r")
+        lines = handle.read().splitlines()
+        for line in lines:
+            line = line.strip().split("#",1)[0]
+            if len(line)>0:
+                parts = line.split()
+                if parts[0]=="search":
+                    result = parts[1].split()
+                    break
+    finally:
+        if handle!=None:
+            handle.close()
+    return result
+
+def extracthostslist():
+    result = {}
+    handle = None
+    try:
+        handle = open("/etc/hosts","r")
+        lines = handle.read().splitlines()
+        for line in lines:
+            line = line.strip().split("#",1)[0]
+            if len(line)>0:
+                parts = line.split()
+                key = parts[0]
+                result[key] = parts[1:]
+    finally:
+        if handle!=None:
+            handle.close()
+    return result
+
+def testvalue(ipo,dnsquery,recordtype,customresolver):
+    result = True
+    try:
+        queryrr = customresolver.resolve(dnsquery,recordtype,search=False)
+        #print(queryrr.rrset, flush=True)
+        if len(queryrr.rrset)==1:
+            resolvedip = ipaddress.ip_address(queryrr.rrset[0])
+            if resolvedip != ipo:
+                result = False
+        else:
+            result = False
+    except:
+        result = False
+    return result
+
+def testentry(ipo,canonical,aliases,searchlist,customresolver):
+    result = True
+
+    recordtype = None
+    if ipo.version == 4:
+        recordtype = "A"
+    elif ipo.version == 6:
+        recordtype = "AAAA"
+
+    if testvalue(ipo,canonical,recordtype,customresolver):
+        for alias in aliases:
+            if testvalue(ipo,alias,recordtype,customresolver)==False:
+                foundusingsearch = False
+                for search in searchlist:
+                    if testvalue(ipo,alias+"."+search,recordtype,customresolver):
+                        foundusingsearch = True
+                        break
+                #print(alias+" "+str(foundusingsearch), flush=True)
+                if foundusingsearch == False:
+                    result = False
+                    break
+    else:
+        result = False
+
+    return result
+
+def dohostsfilecheck():
+    searchlist = extractsearchlist()
+    hosts = extracthostslist()
+    #print(searchlist, flush=True)
+    #print(hosts, flush=True)
+
+    allvalid = True
+    failing = {}
+    customresolver = dns.resolver.Resolver("/etc/resolv.conf")
+
+    for key,value in hosts.items():
+        ipo = ipaddress.ip_address(key)
+        if (ipo.is_loopback==False) and (ipo.is_private or ipo.is_global) and (ipo.is_reserved==False) and (ipo.is_link_local==False) and (ipo.is_multicast==False):
+            canonical = value[0]
+            aliases = value[1:]
+            valid = testentry(ipo,canonical,aliases,searchlist,customresolver)
+            allvalid = allvalid and valid
+            if not valid:
+                failing[key] = value
+    
+    if allvalid:
+        exitnagios("OK","the hosts file seems valid")
+    else:
+        exitnagios("WARNING","some lines do not fully conform to specification or do not resolve properly "+str(failing))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    dohostsfilecheck()
+
+main()
+
+#-------------------------------------------------------------------------------

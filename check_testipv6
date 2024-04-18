@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import subprocess
+import argparse
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+#-------------------------------------------------------------------------------
+
+def extractvalue(driver,entryname):
+    element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
+
+    #print(value, flush=True)
+    return value
+
+def dotestipv6call(protocol,proxy):
+    try:
+        driver = generatedriver(proxy)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,10)
+        action=ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://test-ipv6.com/"
+        driver.get(url)
+        infomsg("asking for navigating "+url)
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+        infomsg("page loaded")
+
+        try:
+            wait.until(EC.text_to_be_present_in_element((By.ID, "debugtable"),"Your readiness score"))
+        except Exception as e:
+            pass
+        finally:
+            infomsg("found element rediness score")
+
+        try:
+            resume = driver.find_element(By.ID, "debugtable")
+        except Exception as e:
+            exitnagios("CRITICAL","cannot find result element")
+        if resume == None:
+            exitnagios("CRITICAL","no result from page")
+        infomsg("test with results")
+
+        rawresult = resume.text
+        parts = rawresult.split()
+        marks = parts[3]
+        infomsg("raw marks is '"+marks+"'")
+        grading = marks.split("/")
+        currentmark = int(grading[0])
+        totalmarks = int(grading[1])
+
+        if currentmark == 0:
+            exitnagios("CRITICAL","The result of the test is "+str(currentmark)+"/"+str(totalmarks)+" | result="+str(currentmark)+" best="+str(totalmarks))
+        elif currentmark == totalmarks:
+            exitnagios("OK","The result of the test is "+str(currentmark)+"/"+str(totalmarks)+" | result="+str(currentmark)+" best="+str(totalmarks))
+        else:
+            exitnagios("WARNING","The result of the test is "+str(currentmark)+"/"+str(totalmarks)+" | result="+str(currentmark)+" best="+str(totalmarks))
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check - "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                             help="use a proxy")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+
+    protocol = ""
+    if args.ipv4 == True :
+        protocol = "-4"
+    elif args.ipv6 == True :
+        protocol = "-6"
+
+    dotestipv6call(protocol,args.proxy)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

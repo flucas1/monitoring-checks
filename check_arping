@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+def candebug():
+    global _candebug
+    return _candebug
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+#collect arguments
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname", action="store", help="target IP or hostname")
+    parser.add_argument("-p", "--packets",  action="store", type=int, default=1, help="number of pings")
+    parser.add_argument("-t", "--timeout",  action="store", type=int, default=10, help="timeout")
+    args = parser.parse_args()
+
+    if not args.hostname:
+        parser.error("Must give a hostname.\n use --help for options")
+    else:
+        return args
+
+
+args = parse_args()
+
+cmdline = ["/usr/sbin/arping","-C",str(args.packets),"-w",str(args.timeout),args.hostname]
+completedproc = subprocess.run(cmdline,capture_output=True)
+output = completedproc.stdout.decode("utf-8")
+errors = completedproc.stderr.decode("utf-8")
+response = completedproc.returncode
+
+alllines = output.splitlines()
+linems = alllines[-1]
+linepercent = alllines[-2]
+avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
+percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
+
+#print(output)
+
+#and then check the response...
+if response == 0:
+  print("OK: "+args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent), flush=True)
+  sys.exit(0)
+else:
+  print("CRITICAL: "+args.hostname+" is not responding to ARP! | average=1 percent=0", flush=True)
+  sys.exit(2)

@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import subprocess
+import concurrent.futures
+import argparse
+import time
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def status_to_code(status):
+    if status in ["OK","0",0]:
+        exitcode = 0
+    elif status in ["WARNING","1",1]:
+        exitcode = 1
+    elif status in ["CRITICAL","2",2]:
+        exitcode = 2
+    elif status in ["UNKNOWN","3",3]:
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = status_to_code(status)
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dosmstoolscall(modem):
+    filename = "/var/log/smstools/smsd_stats/status"
+    resultstatus = ""
+    resultmsg = ""
+
+    for counter in range(3):
+        handle = None
+        try:
+            if os.path.isfile(filename):
+                handle = open(filename, "r")
+                contents = handle.read()
+                for line in contents.splitlines():
+                    #print(line, flush=True)
+                    if line.startswith(modem+":"):
+                        resultstatus = ""
+                        resultmsg = ""
+                        try:
+                            parts = line.split("\t")
+                            status = parts[2].strip(",")
+                            if status in ["Unknown"]:
+                                resultstatus = "CRITICAL"
+                                resultmsg = "modem ID "+modem+" is not connected | signal=0"
+                            else:
+                                info = parts[7]
+                                blocks = info.split()
+                                signal = blocks[3].strip("(),")
+                                resultmsg = "modem ID "+modem+" is "+signal+" ("+blocks[1]+" dBm) | signal="+str(blocks[1])
+                                if signal in ["Excellent","Good","Workable"]:
+                                    resultstatus = "OK"
+                                elif signal in ["Marginal"]:
+                                    resultstatus = "WARNING"
+                                else:
+                                    resultstatus = "CRITICAL"
+                        except:
+                            pass
+        finally:
+            if handle != None:
+                handle.close()
+
+        if resultmsg != "" and resultstatus != "":
+            exitnagios(resultstatus,resultmsg)
+        else:
+            time.sleep(5)
+
+    exitnagios("CRITICAL","modem ID "+modem+" could not be parsed or is not defined | signal=0")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--modem", dest="modem", default="", help="modem ID")
+    args = parser.parse_args()
+
+    dosmstoolscall(args.modem)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

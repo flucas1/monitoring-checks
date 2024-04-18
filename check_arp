@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import argparse
+import subprocess
+import concurrent.futures
+import ipaddress
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+def candebug():
+    global _candebug
+    return _candebug
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doarpcall(whitelist):
+    cmdline = ["/usr/bin/ip","neighbour","show"]
+    infomsg(cmdline)
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8")
+    errors = completedproc.stderr.decode("utf-8")
+    exitcode = completedproc.returncode
+    if exitcode!=0:
+        exitnagios("CRITICAL","cannot read ARP table | total_v6=-1 total_v4=-1 duplicated_v6=-1 duplicated_v4=-1")
+
+    exclusion = whitelist.lower().split(",")
+
+    arptable4 = {}
+    arptable6 = {}
+    for line in output.strip().splitlines():
+        parts = line.split()
+        if len(parts)>3 and parts[3].lower() == "lladdr":
+            if (len(parts)>5 and parts[5].lower() == "reachable") or (len(parts)>6 and parts[6].lower() == "reachable"):
+                infomsg(parts)
+                key = parts[4].lower()
+                value = parts[0].lower()
+                infomsg(key+" "+value)
+                
+                try:
+                    parsed = ipaddress.ip_address(value)
+                except:
+                    parsed = None
+                
+                typeparsed = type(parsed)
+                if typeparsed is ipaddress.IPv4Address:
+                    if key not in arptable4:
+                        arptable4[key] = []
+                    if value not in arptable4[key]:
+                        arptable4[key].append(value)
+                elif typeparsed is ipaddress.IPv6Address:
+                    if key not in arptable6:
+                        arptable6[key] = []
+                    if value not in arptable6[key]:
+                        arptable6[key].append(value)
+                else:
+                    print("failed parsing "+value,flush=True)
+
+    infomsg(str(arptable4))
+    infomsg(str(arptable6))
+
+    duplicated4 = {}
+    duplicated6 = {}
+    for key, values in arptable4.items():
+        filtered = []
+        for test in values:
+            if str(test) not in exclusion:
+                filtered.append(test)
+        if len(filtered)>1:
+            duplicated4[key] = filtered
+    for key, values in arptable6.items():
+        filtered = []
+        for test in values:
+            if str(test) not in exclusion:
+                filtered.append(test)
+        if len(filtered)>2:
+            duplicated6[key] = filtered
+
+    iscritical = False
+    iswarning = False
+    if len(duplicated4)>0:
+        iscritical = True
+    elif len(duplicated6)>0:
+        map6 = {}
+        for candidate6 in duplicated6:
+            try:
+                basenetwork = str(ipaddress.ip_network(candidate6+"/64", strict=False))
+            except:
+                basenetwork = None
+            if basenetwork!=None:
+                if basenetwork not in map6.keys():
+                    map6[basenetwork]=1
+                else:
+                    map6[basenetwork]=map6[basenetwork]+1
+        infomsg(map6)
+        for basenetwork,count in map6.items():
+            if count>2:
+                iscritical = True
+            elif count>1:
+                iswarning = True
+
+    if iscritical == True:
+        exitnagios("CRITICAL","duplicated ARP IPv4 entries "+str(duplicated4)+" - duplicated ARP IPv6 entries "+str(duplicated6)+" | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6="+str(len(duplicated6))+" duplicated_v4="+str(len(duplicated4)))
+    elif iswarning == True:
+        exitnagios("CRITICAL","duplicated ARP IPv4 entries "+str(duplicated4)+" - duplicated ARP IPv6 entries "+str(duplicated6)+" | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6="+str(len(duplicated6))+" duplicated_v4="+str(len(duplicated4)))
+    else:
+        exitnagios("OK","ARP table looks normal | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6=0 duplicated_v4=0")
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--whitelist", action="store", default="", dest="whitelist", help="MACs to whitelist")
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    doarpcall(args.whitelist)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

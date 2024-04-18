@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import gps
+import time
+import os
+import sys
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+#collect arguments
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--timeout", dest="timeout", default="90:CRITICAL", help="timeout value:STATUS")
+    args = parser.parse_args()
+
+    #if not options.hostname:
+    #    parser.error("Must give a hostname.\n use --help for options")
+    #else:
+    #    return args
+    return args
+
+def dogpstimecheck(timeoutvalue,timeoutstatus):
+    gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE|gps.watch_options.WATCH_NEWSTYLE)
+
+    timeout = False
+    gps_time = None
+    try:
+        start = time.time()
+        while True:
+            if gpsd.waiting():
+                if gpsd.read() == 0:
+                    report = gpsd.data
+                    #print(report,flush=True)
+                    if report['class'] == 'TPV':
+                         test_time = report.get('time','')
+                         if (test_time != ''):
+                             gps_time = test_time
+                             break
+            if time.time() > start + timeoutvalue:
+                timeout = True
+                break
+            else:
+                time.sleep(1)
+    except Exception as e:
+        exitnagios("UNKNOWN","internal error - "+str(e))
+    finally:
+        if timeout:
+            exitnagios(timeoutstatus,"GPS time not received")
+        elif (gps_time==None):
+            exitnagios("WARNING","GPS data cannot be parsed: "+str(gps_time))
+        else:
+            exitnagios("OK","GPS time is: "+str(gps_time))
+
+def main():
+    args = parse_args()
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        dogpstimecheck(timeoutvalue,timeoutstatus)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+main()
+
+#-------------------------------------------------------------------------------

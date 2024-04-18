@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+# other alternative can be .... as root  check /var/lib/openvpn/XXXXX.status
+# there are different types, but only the ones allowing multiple clients (as server, and not 1-1 key)
+
+import socket
+import os
+import pathlib
+import re
+import sys
+import traceback
+import time
+import warnings
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+class connexion:
+    """class connexion that create a socket, and connects to management openvpn server"""
+    def __init__(self, hostname, port, password, request):
+        self.hostname=hostname
+        self.port=port
+        self.password=password
+        self.request=request
+
+    def interact(self):
+        """function that interacte with the server and try to get out some data"""
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        import telnetlib
+
+        timeout = 5
+        try:
+            tn = telnetlib.Telnet(self.hostname, self.port, timeout)
+            tn.read_until(b"ENTER PASSWORD:")
+            tn.write(self.password.encode("ascii") + b"\r\n")
+            tn.read_until(b"SUCCESS:")
+            #print("A", flush=True)
+            tn.read_until(b"-- type 'help' for more info" + b"\r\n")
+            #print("B", flush=True)
+            tn.write(self.request.encode("ascii") + b"\r\n")
+            #print("C", flush=True)
+            response = tn.read_until(b"\r\n"+b"END"+b"\r\n")
+            #print("D", flush=True)
+            return response.decode("ascii")
+        except Exception as e:
+            exitnagios("CRITICAL",str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--target",     dest="target",    default="",            help="target hostname"                           )
+    parser.add_argument("-p", "--port",       dest="port",      default="",            help="port to use"                               )
+    parser.add_argument("-w", "--warning",    dest="warning",   default="",            help="warning level"                             )
+    parser.add_argument("-c", "--critical",   dest="critical",  default="",            help="critical level"                            )
+    parser.add_argument("-f", "--filecred",   dest="filecred",  default="",            help="file containing the management credentials")
+    args = parser.parse_args()
+
+    if args.filecred == "":
+        exitnagios("CRITICAL","filecred is not specified | clients=-1")
+    else:
+        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
+        password=filecontentslines[0]
+
+    if args.target == "":
+        exitnagios("CRITICAL","hostname is not specified | clients=-1")
+    else:
+        host = args.target
+    if args.port == "":
+        exitnagios("CRITICAL","port is not specified | clients=-1")
+    else:
+        port = int(args.port)
+
+    sock=connexion(host, port, password, "status")
+    data=sock.interact()
+
+    tab1=re.findall("(.+),(\d+\.\d+\.\d+\.\d+\:\d+),(\d+),(\d+),(.+)", data)
+    tab2=re.findall("(\d+\.\d+\.\d+\.\d+),(.+),(\d+\.\d+\.\d+\.\d+\:\d+),(.+)", data)
+
+    num=int((len(tab1)+len(tab2))/2)
+
+    if args.critical!="":
+        if num>int(args.critical):
+            exitnagios("CRITICAL","there are "+str(num)+" clients connected | clients="+str(num))
+    if args.warning!="":
+        if num>int(args.warning):
+            exitnagios("WARNING","there are "+str(num)+" clients connected | clients="+str(num))
+
+    exitnagios("OK","there are "+str(num)+" clients connected | clients="+str(num))
+
+main()
+
+#-------------------------------------------------------------------------------

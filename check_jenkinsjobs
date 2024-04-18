@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import pathlib
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def docheckjenkinsjobs(directory):
+    jobspath = os.path.join(directory,"jobs")
+    if os.path.isdir(jobspath)==False:
+        exitnagios("CRITICAL","the jobs path "+release+" does not exists")
+    
+    listjobs = []
+    for entry in os.listdir(jobspath):
+        pathentry = os.path.join(jobspath,entry)
+        if os.path.isdir(pathentry):
+            listjobs.append(entry)
+
+    invalidjobs = []
+    for entry in listjobs:
+        if isvalidjob(jobspath,entry)==False:
+            invalidjobs.append(entry)
+
+    if len(invalidjobs)>0:
+        exitnagios("CRITICAL","some jenkins jobs have issues: "+" ".join(invalidjobs)+" | issues="+str(len(invalidjobs)))
+    else:
+        exitnagios("OK","all jenkins jobs are in valid state | issues=0")
+
+def isvalidjob(jobspath,entry):
+    permalinks = os.path.join(jobspath,entry,"builds","permalinks")
+    if os.path.isfile(permalinks)==False:
+        return False
+    else:
+        isOK = False
+        lastCompletedBuild = -1
+        lastStableBuild = -1
+        lastSuccessfulBuild = -1
+        lines = pathlib.Path(permalinks).read_text().splitlines()
+        for line in lines:
+            #print(line,flush=True)
+            parts = line.split()
+            if len(parts)>0:
+                if parts[0] == "lastCompletedBuild":
+                    lastCompletedBuild = int(parts[1])
+                elif parts[0] == "lastStableBuild":
+                    lastStableBuild = int(parts[1])
+                elif parts[0] == "lastSuccessfulBuild":
+                    lastSuccessfulBuild = int(parts[1])
+        isOK = (lastSuccessfulBuild == lastStableBuild) and (lastSuccessfulBuild == lastCompletedBuild) and (lastSuccessfulBuild > 0)
+        #print(entry+" "+str(lastCompletedBuild)+" "+str(lastStableBuild)+" "+str(lastSuccessfulBuild)+" "+str(isOK),flush=True)
+        return isOK
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--directory", action="store", default="/var/lib/jenkins", help="path for the jenkins working folder")
+
+    args = parser.parse_args()
+    
+    return args
+
+def main():
+    args = parse_args()
+
+    docheckjenkinsjobs(args.directory)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+# aptitude install python3-mechanize
+
+import socket
+import os
+import time
+import traceback
+import sys
+import datetime
+import subprocess
+import argparse
+import re
+import pathlib
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def errormsg(msg):
+    print(msg, flush=True)
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+def do_is_newest(username, password, ip, timeoutvalue, timeoutstatus):
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = sock.connect_ex((ip,80))
+    if result == 0:
+        sock.close()
+    else:
+        sock.close()
+        exitnagios(timeoutstatus,"not reacheable "+ip)
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+    wait = WebDriverWait(driver,20)
+    action=ActionChains(driver)
+
+    infomsg("browser initialized")
+
+    #start login
+
+    try:
+        url = "http://"+ip+"/Main_Login.asp"
+        driver.get(url)
+        infomsg("asking for logging "+url)
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+        infomsg("page loaded")
+        wait.until(EC.visibility_of_element_located((By.ID, "login_filed")))
+        infomsg("login page ready")
+
+        elemusername = driver.find_element(by=By.NAME, value="login_username")
+        infomsg(elemusername.get_attribute("outerHTML"))
+        action.move_to_element(elemusername).perform()
+        elemusername.click()
+        elemusername.send_keys(username)
+        infomsg("username sent")
+
+        elempassword = driver.find_element(by=By.NAME, value="login_passwd")
+        infomsg(elempassword.get_attribute("outerHTML"))
+        action.move_to_element(elempassword).perform()
+        elempassword.click()
+        elempassword.send_keys(password)
+        infomsg("password sent")
+
+        login = None
+        if login == None:
+            try:
+                login = driver.find_element(by=By.ID, value="button")
+            except Exception as e:
+                pass
+        if login == None:
+            try:
+                login = driver.find_element(by=By.CLASS_NAME, value="button")
+            except Exception as e:
+                pass
+        infomsg(login.get_attribute("outerHTML"))
+        action.move_to_element(login).perform()
+        login.click()
+        infomsg("login click!")
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+    except Exception as e:
+        exitnagios("CRITICAL","exeception during loging-in "+str(e))
+
+    #end login
+
+    #start check login
+
+    current_url = driver.current_url
+    infomsg(current_url)
+    if current_url in ["http://"+ip+"/GameDashboard.asp","http://"+ip+"/index.asp"]:
+        infomsg("Logged In")
+    else:
+        exitnagios("CRITICAL","error during log in --- arrived unexpectedly to "+current_url)
+
+    #end check login
+
+    #star check upgrade
+
+    url = "http://"+ip+"/Advanced_FirmwareUpgrade_Content.asp?confirm_show=0"
+    driver.get(url)
+
+    time.sleep(5)
+
+    wait_page_loaded(driver)
+    infomsg("firmware page loaged")
+
+    wait.until(EC.visibility_of_element_located((By.ID, "current_version")))
+    current = driver.find_element(by=By.ID, value="current_version")
+    infomsg(current.get_attribute("outerHTML"))
+    actual = current.get_attribute('innerHTML').split(":")[1].strip()
+    infomsg(actual)
+    infomsg("current version found")
+
+    time.sleep(10)
+
+    while True:
+        working = driver.find_element(by=By.ID, value="update_scan")
+        if working.is_displayed():
+            time.sleep(10)
+        else:
+            break
+    infomsg("update scan found")
+
+    try:
+        wait.until(EC.visibility_of_element_located((By.ID, "checkNewFW")))
+        infomsg("check button found")
+    except:
+        exitnagios("WARNING","issue detecting the update status")
+
+    available = driver.find_element(by=By.ID, value="checkNewFW")
+    infomsg(available.get_attribute("outerHTML"))
+    target = available.find_elements(by=By.CSS_SELECTOR,value="*")[0].get_attribute('innerHTML').strip()
+    infomsg(target)
+
+    #end check upgrade
+
+    if target == "The router's current firmware is the latest version.":
+        exitnagios("OK","there are no firmware updates")
+    else:
+        exitnagios("CRITICAL","there is a new firmware "+target+" and the current one is "+actual)
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname",   dest="hostname",                         help="server to check")
+    parser.add_argument("-t", "--timeout",    dest="timeout",   default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-f", "--filecred",   dest="filecred",  default="",            help="file containing the management credentials")
+    args = parser.parse_args()
+
+    if args.filecred == "":
+        exitnagios("CRITICAL","filecred is not specified")
+    else:
+        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
+        username=filecontentslines[0]
+        password=filecontentslines[1]
+
+    if args.hostname==None or args.hostname=="":
+        exitnagios("CRITICAL","please specify a target hostname")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        try:
+            address = socket.gethostbyname(args.hostname).strip()
+            infomsg("The target ip is: "+address)
+            do_is_newest(username, password, address, timeoutvalue, timeoutstatus)
+        except Exception as e:
+            exitnagios("CRITICAL","exception during browsing "+str(e))
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+main()
+
+#-------------------------------------------------------------------------------

@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import datetime
+import dateutil.parser
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dolastloginscall(warning,critical):
+    cmdline = ["/usr/bin/last","--system","--ip","--time-format=iso","--since=-7days","shutdown","reboot"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    #print(output, flush=True)
+    if exitcode == 0:
+        lines = output.splitlines()
+        crashed = True
+        crashdate = datetime.datetime.now(datetime.UTC)
+        if len(lines)>1:
+            linereboot = lines[0].split()
+            lineshutdown = lines[1].split()
+            if len(linereboot)==0 or len(lineshutdown)==0:
+                crashed = False
+            elif linereboot[0]=="reboot" and lineshutdown[0]=="shutdown":
+                crashed = False
+            else:
+                try:
+                    crashdate = dateutil.parser.parse(linereboot[4])
+                except:
+                    pass
+        elif len(lines)>0 and lines[0].startswith("wtmp begins "):
+            crashed = False
+
+        if not crashed:
+            exitnagios("OK","the system has not crashed recently | elapsed=-1")
+        else:
+            now = datetime.datetime.now() # no utc, to compare with local time
+            elapsed = now.timestamp() - crashdate.timestamp()
+            elapsedhours = int(elapsed // 3600)
+            extraseconds = elapsed % 3600
+            elapsedminutes = int(extraseconds // 60)
+            elapsedseconds = int(extraseconds % 60)
+            if elapsedhours<critical:
+                exitnagios("CRITICAL","there was a crash "+str(elapsedhours)+"h "+str(elapsedminutes)+"m ago | elapsed="+str(elapsed))
+            elif elapsedhours<warning:
+                exitnagios("WARNING","there was a crash "+str(elapsedhours)+"h "+str(elapsedminutes)+"m ago | elapsed="+str(elapsed))
+            else:
+                exitnagios("OK","there was a crash, but it was "+str(elapsedhours)+"h "+str(elapsedminutes)+"m ago | elapsed="+str(elapsed))
+    else:
+        exitnagios("CRITICAL","issue retrieving last logins")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning",                              dest="warning",       default="48",          help="Warning level - hours")
+    parser.add_argument("-c", "--critical",                             dest="critical",      default="96",          help="Critical level - hours")
+    args = parser.parse_args()
+
+    warning = int(args.warning)
+    critical = int(args.critical)
+    dolastloginscall(warning,critical)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------
+
+

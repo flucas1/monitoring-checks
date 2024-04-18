@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import gps
+import time
+import os
+import sys
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+#collect arguments
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning", action="store", type=int, default=3, help="if this number or less, it becomes warning state (default 3, 3D FIX requires 4)")
+    parser.add_argument("-c", "--critical", action="store", type=int, default=2, help="if this number or less, it becomes critical state (default 2, 2D FIX requires 3)")
+    parser.add_argument("-t", "--timeout", action="store", type=int, default=90, help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
+    args = parser.parse_args()
+
+    #if not args.hostname:
+    #    parser.error("Must give a hostname.\n use --help for options")
+    #else:
+    #    return args
+    return args
+
+args = parse_args()
+gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE|gps.watch_options.WATCH_NEWSTYLE)
+total_used = []
+total_seen = []
+try:
+    start = time.time()
+    while True:
+        if gpsd.waiting():
+            if gpsd.read():
+                report = gpsd.data
+                #print(report,flush=True)
+                if report["class"] == "SKY":
+                    total_used.append(gpsd.satellites_used)
+                    total_seen.append(len(gpsd.satellites))
+                    break
+        if time.time() > start + args.timeout:
+            #total_seen = len(gpsd.satellites)
+            break
+        else:
+            time.sleep(1)
+except Exception as e:
+    print("UNKNOWN:","internal error - "+ str(e), flush=True)
+    sys.exit(3)
+finally:
+    average_used = 0
+    counter = 0
+    while (counter<len(total_used)):
+        average_used = average_used + total_used[counter]
+        counter = counter+1
+    if counter>0:
+        average_used = average_used/counter
+    
+    average_seen = 0
+    counter = 0
+    while (counter<len(total_seen)):
+        average_seen = average_seen + total_seen[counter]
+        counter = counter+1
+    if counter>0:
+        average_seen = average_seen/counter
+    
+    message = "Total used: "+str(average_used)+" ; Total seen: "+str(average_seen)+" | used="+str(average_used)+" seen="+str(average_seen)
+    if (average_used<=args.critical):
+        print("CRITICAL:",message, flush=True)
+        sys.exit(2)
+    elif (average_used<=args.warning):
+        print("WARNING:",message, flush=True)
+        sys.exit(1)
+    else:
+        print("OK:",message, flush=True)
+        sys.exit(0)

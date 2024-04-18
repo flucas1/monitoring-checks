@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import netifaces
+import ipaddress
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dointerfacenetworkcheck(interface,segment,address,existence):
+    interfaces = netifaces.interfaces()
+
+    found_addrs = []
+
+    found_interface = False
+    for item in interfaces:
+        if item == interface:
+            found_interface = True
+            addrs = netifaces.ifaddresses(interface)
+            if netifaces.AF_INET in addrs.keys():
+                for entry in addrs[netifaces.AF_INET]:
+                    found_addrs.append(entry)
+            if netifaces.AF_INET6 in addrs.keys():
+                for entry in addrs[netifaces.AF_INET6]:
+                    found_addrs.append(entry)
+            break
+
+    #print(found_addrs, flush=True)
+
+    if segment=="" and address=="":
+        if (found_interface == True) and (existence == True):
+            exitnagios("OK","interface "+interface+" exists")
+        else:
+            exitnagios("CRITICAL","no IP for interface "+interface)
+    else:
+        errors_segment = []
+        errors_address = []
+
+        if segment != "":
+            for test in segment.split(","):
+                found = False
+                for option in found_addrs:
+                    if "/" in option["netmask"]:
+                        extra = option["netmask"].split("/")[-1]
+                    else:
+                        extra = option["netmask"]
+                    network = ipaddress.ip_network(option["addr"]+"/"+extra, strict=False)
+                    if str(network)==str(ipaddress.ip_network(test, strict=False)):
+                        found = True
+                        break
+                if found == False:
+                    errors_segment.append(test)
+
+        if address != "":
+            for test in address.split(","):
+                found = False
+                for option in found_addrs:
+                    testparts = test.replace(":",".").split(".")
+                    refeparts = option["addr"].replace(":",".").split(".")
+                    if len(testparts)==len(refeparts):
+                        matching = True
+                        for index, item in enumerate(testparts):
+                            if testparts[index]!="*":
+                                matching = matching and (refeparts[index]==testparts[index])
+                        if matching:
+                            found = True
+                if found == False:
+                    errors_address.append(address)
+
+        if len(errors_segment)==0 and len(errors_address)==0:
+            exitnagios("OK","found a match - segment: "+segment+" - address: "+address)
+        else:
+            exitnagios("CRITICAL","could not find a match - segment errors: "+str(errors_segment)+" - address errors: "+str(errors_address)+" - current: "+str(found_addrs))
+
+    exitnagios("CRITICAL","unexpected case")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-I", "--interface",                              dest="interface",       default="",            help="interface to check")
+    parser.add_argument("-s", "--segment",                                dest="segment",         default="",            help="expected network segment")
+    parser.add_argument("-a", "--address",                                dest="address",         default="",            help="expected network address")
+    parser.add_argument("-x", "--existence",        action="store_true",  dest="existence",       default=False,         help="check only for interface exitence")
+    parser.add_argument("-®", "--debug",            action="store_true",  dest="debug",           default=False,         help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if (args.interface == ""):
+        exitnagios("CRITICAL","interface not defined")
+
+    dointerfacenetworkcheck(args.interface,args.segment,args.address,args.existence)
+
+main()
+
+#-------------------------------------------------------------------------------

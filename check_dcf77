@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dodcf77call(warning,critical):
+    cmdline = ["/usr/bin/ntpq","-c","clocklist"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode == 0:
+        percent = 0
+        lines = output.splitlines()
+        token = "refclock_states="
+        for line in lines:
+            line = line.strip()
+            if line.startswith(token):
+                value=line[len(token)+1:-1]
+                parts=value.split(";")
+                nominal = "NOMINAL:"
+                for part in parts:
+                    part = part.strip()
+                    if part.startswith(nominal):
+                        proto = part[len(nominal):].strip()
+                        quasi = proto.split()[1]
+                        percent = float(quasi[1:-2])
+        if percent>float(warning):
+            exitnagios("OK","the reception status is "+str(percent)+"% | nominal="+str(percent))
+        elif percent<=float(critical):
+            exitnagios("CRITICAL","the reception status is "+str(percent)+"% | nominal="+str(percent))
+        else:
+            exitnagios("WARNING","the reception status is "+str(percent)+"% | nominal="+str(percent))
+    else:
+        exitnagios("CRITICAL","issue retrieving DCF77 values")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning",                              dest="warning",       default="80",          help="warning level %")
+    parser.add_argument("-c", "--critical",                             dest="critical",      default="50",          help="critical level %")
+    args = parser.parse_args()
+
+    dodcf77call(args.warning,args.critical)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

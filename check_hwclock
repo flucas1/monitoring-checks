@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import time
+import datetime
+import os
+import sys
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+#collect arguments
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning", action="store", type=int, default=5, help="if this number or more, it becomes warning state (default 5")
+    parser.add_argument("-c", "--critical", action="store", type=int, default=10, help="if this number or more, it becomes critical state (default 10")
+    parser.add_argument("-t", "--timeout", action="store", type=int, default=90, help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
+    args = parser.parse_args()
+
+    #if not args.hostname:
+    #    parser.error("Must give a hostname.\n use --help for options")
+    #else:
+    #    return args
+    return args
+
+def check_rtc_utc():
+    adjfilename = "/etc/adjtime"
+    if os.path.isfile(adjfilename)==True:
+        filehandle = open(adjfilename,"rt")
+        hwclockdata = filehandle.read().splitlines()
+        filehandle.close()
+        
+        is_rtc_utc = (hwclockdata[2].strip().upper() == "UTC")
+        if is_rtc_utc == False:
+            print("CRITICAL:","hwclock is not UTC", flush=True)
+            sys.exit(2)
+
+def get_rtc_data():
+    filehandle = open("/proc/driver/rtc","rt")
+    rtcdata = filehandle.read().splitlines()
+    filehandle.close()
+
+    date = ""
+    time = ""
+    for line in rtcdata:
+        parts = line.split(":",1)
+        key = parts[0].strip()
+        value = parts[1].strip()
+        if key == "rtc_date":
+            date = value.split("-")
+        if key == "rtc_time":
+            time = value.split(":")
+        if key == "batt_status":
+            if value != "okay":
+                print("CRITICAL:","rtc battery not OKAY", flush=True)
+                sys.exit(2)
+
+    rtctime = datetime.datetime(int(date[0]),int(date[1]),int(date[2]),int(time[0]),int(time[1]),int(time[2]),tzinfo=datetime.timezone.utc)
+    return int(rtctime.timestamp())
+
+def evaluate(difference):
+    args = parse_args()
+
+    if (difference>=args.critical):
+        print("CRITICAL:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
+        sys.exit(2)
+    elif (difference>=args.warning):
+        print("WARNING:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
+        sys.exit(1)
+    else:
+        print("OK:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
+        sys.exit(0)
+
+check_rtc_utc()
+rtctime = get_rtc_data()
+#print(rtctime, flush=True)
+systime = int(time.time())
+#print(systime, flush=True)
+difference = abs(rtctime - systime)
+evaluate(difference)
+
+print("CRITICAL:","Internal error", flush=True)
+sys.exit(2)

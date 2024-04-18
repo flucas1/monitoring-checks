@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import subprocess
+import argparse
+import mechanize
+import time
+from bs4 import BeautifulSoup
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doportexternalcall(domain):
+    try:
+        valid = False
+        url = "https://code.kryo.se/iodine/check-it/"
+        retries = 3
+        counter = 0
+        while True:
+            counter = counter+1
+            welldone = False
+            try:
+                br = mechanize.Browser()
+                br.set_handle_robots(False) # ignore robots file
+                #br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
+                br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
+                br.open(url)
+                br.select_form(nr=0)
+                br["domain"] = str(domain)
+                res = br.submit()
+                content = res.read()
+
+
+                if content != None:
+                    soup = BeautifulSoup(content, "html.parser")
+                    #infomsg(soup)
+                    div = soup.find("div", id="blaffa")
+                    #infomsg(div)
+                    wdbold = soup.find_all("b")
+                    welldone = False
+                    for item in wdbold:
+                        if item.text == "Well done":
+                            welldone = True
+            except Exception as e:
+                print(str(e),flush=True)
+            finally:
+                valid = False
+
+            if welldone == True:
+                valid = True
+                break
+            elif counter>=retries:
+                break
+            else:
+                time.sleep(10)
+
+        if valid == True:
+            exitnagios("OK","the tunnel is well done")
+        else:
+            exitnagios("CRITICAL","the tunnel is not valid")
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname",                             dest="hostname",      default="",            help="server to check")
+    args = parser.parse_args()
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    doportexternalcall(args.hostname)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

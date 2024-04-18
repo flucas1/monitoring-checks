@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doramspeedcall(expected):
+    cmdline = ["/usr/sbin/dmidecode","--type","memory"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    token = "Speed:"
+    if exitcode == 0:
+        foundspeeds = []
+        for line in output.splitlines():
+            line = line.strip()
+            if line.startswith(token):
+                data = line[len(token):].strip()
+                foundspeeds.append(data)
+        finalvalue = " ; ".join(foundspeeds)
+        if expected=="" or expected==None:
+            exitnagios("OK","the found speeds are '"+finalvalue+"'")
+        elif finalvalue==expected:
+            exitnagios("OK","the found speeds are '"+finalvalue+"' as expected")
+        else:
+            exitnagios("CRITICAL","the found speeds '"+finalvalue+"' are not as the expected '"+expected+"'")
+    else:
+        exitnagios("CRITICAL","issue retrieving ram speed")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected",                             dest="expected",      default="",        help="expected values")
+    args = parser.parse_args()
+
+    parts = args.expected.split(";")
+    clean = []
+    for part in parts:
+        clean.append(part.strip())
+    expected = " ; ".join(clean)
+
+    doramspeedcall(expected)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

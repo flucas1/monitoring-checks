@@ -19,12 +19,12 @@ import traceback
 #-------------------------------------------------------------------------------
 
 _candebug = False
-def setcandebug(value):
-    global _candebug
-    _candebug = value
 def candebug():
     global _candebug
     return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
 
 def infomsg(msg):
     if candebug() == True:

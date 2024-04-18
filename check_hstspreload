@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import subprocess
+import argparse
+import time
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+#-------------------------------------------------------------------------------
+
+def dotorcall(proxy,protocol,domain):
+    #print(proxy, flush=True)
+    #print(protocol, flush=True)
+    #print(domain, flush=True)
+    try:
+        driver = generatedriver(proxy)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,20)
+        action=ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://hstspreload.org/?domain="+domain
+        driver.get(url)
+        infomsg("asking for navigating "+url)
+
+        time.sleep(5)
+        wait_page_loaded(driver)
+
+        wait.until(EC.text_to_be_present_in_element((By.ID, "status"),"Status: "))
+
+        element = driver.find_element(By.ID, "status")
+        #print(element, flush=True)
+        statustext = None
+        if element == None:
+            exitnagios("CRITICAL","cannot find the status element")
+        else:
+            statustext = element.text.strip()
+        #print(statustext, flush=True)
+
+        errors = driver.find_elements(By.CLASS_NAME, "error")
+        errormsgs = []
+        for error in errors:
+            errormsgs.append(error.text.strip().replace("\n"," "))
+        errormsg = ". ".join(errormsgs)
+        #print("ERRORS: "+errormsg,flush=True)
+        warnings = driver.find_elements(By.CLASS_NAME, "warning")
+        warningmsgs = []
+        for warning in warnings:
+            warningmsgs.append(warning.text.strip().replace("\n"," "))
+        warningmsg = ". ".join(warningmsgs)
+        #print("WARNINGS: "+warningmsg,flush=True)
+
+        if statustext=="Status: "+domain+" is currently preloaded.":
+            exitnagios("OK","the domain is included in the preload list")
+        elif statustext=="Status: "+domain+" is pending submission to the preload list.":
+            exitnagios("WARNING","the domain is waiting to be included in the preload list")
+        elif statustext=="Status: "+domain+" is currently preloaded, but no longer meets the requirements. It may be at risk of removal.":
+            if warningmsg == "" and errormsg == "Error: Too many redirects There are more than 3 redirects starting from `http://"+domain+"`.":
+                exitnagios("OK","warning about too many redirects")
+            else:
+                exitnagios("WARNING","the domain is at risk of removal - "+errormsg+" - "+warningmsg)
+        elif statustext=="Status: "+domain+" is not preloaded.":
+            exitnagios("CRITICAL","the domain is not in the preload list")
+        else:
+            exitnagios("CRITICAL","cannot parse the output "+str(statustext))
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check - "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-H', '--host',                                 dest="host",          required=True,         help="Hostname")
+    parser.add_argument("-4", "--ipv4",           action="store_true",  dest="ipv4",          default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",           action="store_true",  dest="ipv6",          default=False,         help="use ipv6 (exclusive with ipv4)")
+    args = parser.parse_args()
+
+    if (args.host == ""):
+        exitnagios("CRITICAL","specify a host/domain to check")
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+    #infomsg(args.ipv4)
+    #infomsg(args.ipv6)
+
+    protocol = ""
+    if args.ipv4 == True :
+        protocol = "-4"
+    elif args.ipv6 == True :
+        protocol = "-6"
+
+    proxy = ""
+    dotorcall(proxy,protocol,args.host)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

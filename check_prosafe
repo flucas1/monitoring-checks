@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import netifaces
+import time
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def findswitchesininterface(interface,model):
+    result = []
+
+    for index in range(2):
+        infomsg("interface "+interface+" - iteration "+str(index))
+        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"discover"]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+        if exitcode == 0:
+            infos = {}
+            for line in output.splitlines():
+                line = line.strip()
+                if line == "":
+                    infos = {}
+                else:
+                    parts = line.split(":",1)
+                    marker = parts[0].strip()
+                    if marker in ["model","name","MAC","dhcp","ip"]:
+                        infos[marker] = parts[1].strip()
+                if ("model" in infos.keys()) and ("MAC" in infos.keys()):
+                    if (infos["model"] == model) or (model == ""):
+                        mac = infos["MAC"]
+                        if mac not in result:
+                            result.append(mac)
+        time.sleep(1)
+
+    infomsg("interfaces "+str(result))
+    return result
+
+def findallswitches(model):
+    switches = {}
+    if_list = netifaces.interfaces()
+    for interface in if_list:
+        if (interface.startswith("veth")==False) and (interface.startswith("flannel")==False) and (interface.startswith("calico")==False) and (interface.startswith("cni")==False) and (interface.startswith("tun")==False) and (interface.startswith("tap")==False) and (interface not in ["pimreg","lo"]):
+            foundmacs = findswitchesininterface(interface,model)
+            if len(foundmacs)>0:
+                switches[interface]=foundmacs
+    return switches
+
+
+def queryversion(interface,mac,strict):
+    result = None
+
+    if strict:
+        maxversions = 5
+    else:
+        maxversions = 2
+    for index in range(maxversions):
+        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"query","--mac",mac,"firmwarever"]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+        if exitcode == 0:
+            for line in output.splitlines():
+                line = line.strip()
+                parts = line.split()
+                if len(parts)>0 and parts[0]=="Firmwarever":
+                    result = parts[1]
+                    break
+        infomsg("queryversion")
+        if result != None:
+            break
+        else:
+            time.sleep(1)
+
+    return result
+
+def getversions(switches,version,strict):
+    results = {}
+    for interface,macs in switches.items():
+        for mac in macs:
+            version = queryversion(interface,mac,strict)
+            results[mac] = {}
+            results[mac]["interface"] = interface
+            results[mac]["version"] = version
+    return results
+
+#-------------------------------------------------------------------------------
+
+def doprosafecall(model,expected,strict):
+    switches = findallswitches(model)
+    infomsg(str(switches))
+    versions = getversions(switches,expected,strict)
+    infomsg(str(versions))
+
+    valid = {}
+    failures = {}
+    for key,value in versions.items():
+        foundversion = value["version"]
+        if (foundversion==None and strict==False) or (foundversion==expected) or (expected==""):
+            valid[key] = value
+        else:
+            failures[key] = value
+
+    if len(failures)==0:
+        exitnagios("OK","all switches found are OK - valid "+str(valid)+" | found="+str(len(versions))+" failures="+str(len(failures))+" valid="+str(len(valid))+" version="+expected)
+    else:
+        exitnagios("WARNING","some switches are not as expected - failures "+str(failures)+" - valid "+str(valid)+" | found="+str(len(versions))+" failures="+str(len(failures))+" valid="+str(len(valid))+" version="+expected)
+
+#-------------------------------------------------------------------------------
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script("return document.readyState;")
+    return page_state == "complete"
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+def getexpected(model):
+    expected = ""
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+
+        chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+        driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,20)
+        action=ActionChains(driver)
+
+        infomsg("browser initialized")
+
+        url = "https://www.netgear.com/support/product/"+model.lower()+"#download"
+        driver.get(url)
+        time.sleep(1)
+        wait_page_loaded(driver)
+
+        wait.until(EC.visibility_of_element_located((By.ID, "topicsdownload")))
+        titles = driver.find_elements(by=By.CLASS_NAME, value="accordion-title")
+        candidates = []
+        for title in titles:
+            text = title.get_attribute("text")
+            if "Firmware Version" in text:
+                parts = text.split()
+                version = parts[2]
+                if version not in candidates:
+                    candidates.append(version)
+        if len(candidates)>0:
+             expected = candidates[0]
+        #for candidate in candidates:
+        #    if expected == "":
+        #        expected = candidate
+        #    else:
+        #        expparts = expected.split(".")
+        #        candparts = candidate.split(".")
+
+        infomsg("the autodetected expected value is "+expected)
+
+    except Exception as e:
+        infomsg("unexpected error during the check "+str(e))
+
+    return expected
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--model",                                 dest="model",      default="",                              help="netgear prosafe model to check")
+    parser.add_argument("-e", "--expected",                              dest="expected",   default="auto",                          help="expected firmware version")
+    parser.add_argument("-s", "--strict",                                dest="strict",     default=False,    action="store_true",   help="if version not found, raise problem")
+    parser.add_argument("-l", "--tolerant",                              dest="strict",                       action="store_false",  help="if version not found, do not raise problem")
+    parser.add_argument("-®", "--debug",           action="store_true",  dest="debug",      default=False,                           help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    #model = "GS108Ev3"
+    #expected = "2.06.24"
+    #strict = False
+
+    model = args.model
+    strict = args.strict
+    if args.expected in ["auto","",None]:
+        expected = getexpected(model)
+        #print(expected,flush=True)
+    else:
+        expected = args.expected
+
+    doprosafecall(model,expected,strict)
+
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------

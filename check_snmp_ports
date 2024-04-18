@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import re
+import subprocess
+import datetime
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dosnmpuptimecall(listports, expected, hostname, port, community, timeoutvalue, timeoutstatus):
+    found = {}
+    token = "iso.3.6.1.2.1.2.2.1.5."
+    exitcode, stdout = snmpget(hostname, port, community, ".1.3.6.1.2.1.2.2.1.5")
+    if exitcode==None:
+        exitnagios(timeoutstatus,"Timeout")
+    elif exitcode==0:
+        for line in stdout.strip().splitlines():
+            if line.startswith(token):
+                parsing = line[len(token):]
+                parts = parsing.split("=",1)
+                port=parts[0].strip()
+                payload=parts[1].strip().split()
+                found[port]=payload[1]
+    else:
+        exitnagios("CRITICAL","Unexpected scenario")
+
+    #print(found,flush=True)
+    validports = listports.split(",")
+    #print(validports,flush=True)
+    errors = {}
+    success = {}
+    for testport in validports:
+        if testport in found.keys():
+            current = found[testport]
+            if current==expected:
+                success[testport] = current
+            else:
+                errors[testport] = current
+        else:
+            errors[testport] = "?"
+
+    if len(errors)==0:
+        exitnagios("OK","all ports as expected "+str(success))
+    else:
+        exitnagios("CRITICAL","some ports are not expected "+str(errors)+" - "+str(success))
+
+def snmpget(hostname, port, community, oid):
+    cmdline = ["/usr/bin/snmpwalk","-v","2c","-c",community,hostname+":"+str(port),oid]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    if errors.startswith("Timeout: No Response from "):
+        exitcode = None
+        output = None
+
+    return (exitcode, output)
+
+#-------------------------------------------------------------------------------
+
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
+    parser.add_argument("-p", "--port",                                  dest="port",            default=161,           help="port to use, usually 143 or 993")
+    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="30:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-m", "--community",                             dest="community",       default="public",      help="private/public")
+    parser.add_argument("-l", "--listports",                             dest="listports",       default="",            help="comma separated list of ports to check speed")
+    parser.add_argument("-e", "--expected",                              dest="expected",        default="",            help="expected speed")
+    args = parser.parse_args()
+
+    if args.hostname == "":
+        exitnagios("CRITICAL","no hostname specified")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        dosnmpuptimecall(args.listports,args.expected,args.hostname,int(args.port),args.community,timeoutvalue,timeoutstatus)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
+
+#timeout
+#warning

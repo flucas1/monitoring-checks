@@ -1,0 +1,148 @@
+#!/usr/bin/python3
+#-------------------------------------------------------------------------------
+
+import imaplib
+import argparse
+import sys
+import time
+import datetime
+import socket
+import ssl
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays):
+    try:
+        start = datetime.datetime.now(datetime.UTC)
+        imapconnection = None
+        #socket.setdefaulttimeout(timeoutvalue)
+        if dossl==True:
+            ctx = ssl.create_default_context()
+            imapconnection = imaplib.IMAP4_SSL(host=hostname,port=port,timeout=timeoutvalue,ssl_context=ctx)
+        else:
+            imapconnection = imaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
+        if imapconnection != None:
+            #print(imapconnection.PROTOCOL_VERSION, flush=True)
+            certexpirationparsed = None
+            if dossl==True:
+                #print(imapconnection.socket().version(), flush=True)
+                certexpirationraw = None
+                try:
+                    cert_data = imapconnection.socket().getpeercert()
+                    #print(cert_data, flush=True)
+                    certexpirationraw = cert_data["notAfter"]
+                    #print("Expiry date:", certexpirationraw, flush=True)
+                    if certexpirationraw != None:
+                        from dateutil.parser import parse
+                        certexpirationparsed = parse(cert_data["notAfter"])
+                except:
+                    #print(traceback.format_exc(), flush=True)
+                    pass
+            imapconnection.shutdown()
+
+            elapsed = datetime.datetime.now(datetime.UTC)-start
+            duration = elapsed.total_seconds()
+            daysremaining = -1
+            if dossl==True and certificatedays!="":
+                if certexpirationparsed==None:
+                    exitnagios("CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' | time="+str(duration)+" validity=0")
+                else:
+                    today = datetime.datetime.now(datetime.UTC)
+                    timeremaining = certexpirationparsed.timestamp()-today.timestamp()
+                    daysremaining = int(timeremaining/86400)
+
+            if duration>=critical:
+                exitnagios("CRITICAL", "it took "+str(duration)+ " seconds to answer | time="+str(duration)+" validity="+str(daysremaining))
+            elif duration>=warning:
+                exitnagios("WARNING", "it took "+str(duration)+ " seconds to answer | time="+str(duration)+" validity="+str(daysremaining))
+            else:
+                certificatedaysparts = certificatedays.split(",")
+                criticaldays = int(certificatedaysparts[0])
+                if len(certificatedaysparts)>1:
+                    warningdays = int(certificatedaysparts[1])
+                else:
+                    warningdays = -1
+
+                if daysremaining>=0 and daysremaining<criticaldays:
+                    exitnagios("CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days | time="+str(duration)+" validity="+str(daysremaining))
+                elif daysremaining>=0 and daysremaining<warningdays:
+                    exitnagios("WARNING","the certificate is expiring in '"+str(daysremaining)+"' days | time="+str(duration)+" validity="+str(daysremaining))
+                else:
+                    exitnagios("OK", "it took "+str(duration)+ " seconds to answer | time="+str(duration)+" validity="+str(daysremaining))
+    except socket.error:
+        exitnagios(timeoutstatus,"socket error | time=-1 validity=-1")
+    exitnagios("CRITICAL","unexpected error | time=-1 validity=-1")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
+    parser.add_argument("-p", "--port",                                  dest="port",            default=143,           help="port to use, usually 143 or 993")
+    parser.add_argument("-w", "--warning",                               dest="warning",         default=10,            help="warning time (float)")
+    parser.add_argument("-c", "--critical",                              dest="critical",        default=15,            help="critical time (float)")
+    parser.add_argument("-S", "--ssl",             action="store_true",  dest="ssl",             default=False,         help="use ssl")
+    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="30:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,20",        help="minimum number of days a certificate has to be valid crit,warn")
+    args = parser.parse_args()
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+    #infomsg(args.ipv4)
+    #infomsg(args.ipv6)
+
+    protocol = ""
+    if args.ipv4 == True :
+        protocol = "-4"
+    elif args.ipv6 == True :
+        protocol = "-6"
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        doimapcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+main()
+
+#-------------------------------------------------------------------------------

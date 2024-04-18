@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def getfiles(basepath,extensions):
+    foundfiles = []
+
+    for entry in os.listdir(basepath):
+        fullentry = os.path.join(basepath,entry)
+        if os.path.isdir(fullentry):
+            foundfiles = foundfiles+getfiles(fullentry,extensions)
+        else:
+            #print(fullentry,flush=True)
+            fileext = os.path.splitext(fullentry)[1]
+            if len(fileext)>0:
+                fileext = fileext[1:]
+            #print(fileext,flush=True)
+            if fileext in extensions:
+                foundfiles.append(fullentry)
+
+    foundfiles.sort()
+    return foundfiles
+
+def dodpkgetcfilescall():
+    try:
+        extensions = ["dpkg-dist", "dpkg-new", "dpkg-old", "ucf-dist", "update-old"]
+        foundfiles = getfiles("/etc",extensions)
+
+        if len(foundfiles)==0:
+            exitnagios("OK","there are no extra dpkg-etc files | total=0")
+        else:
+            exitnagios("WARNING","please review extra dpkg-etc files: "+" ".join(foundfiles)+" | total="+str(len(foundfiles)))
+    except Exception as e:
+        exitnagios("CRITICAL","issue retrieving extra dpkg-etc files - "+str(e)+" total=-1")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    dodpkgetcfilescall()
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

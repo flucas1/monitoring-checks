@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+##aptitude install python-nagiosplugin
+
+import os
+import sys
+import subprocess
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def isfinal(parts):
+    finals = ["localaccount"]
+    return parts[0] in finals
+
+def isexclusion(parts):
+    exceptions = []
+    exceptions.append(["mailer-daemon", "postmaster"])
+    exceptions.append(["root", "localaccount"])
+    #infomsg(exceptions)
+    for exception in exceptions:
+        if (exception[0] == parts[0]) and (exception[1] == parts[1]):
+            return True
+    return False
+
+def isexpected(parts):
+    return parts[1] == "root"
+
+def domailaliasescall():
+    try:
+        aliasesfile = "/etc/aliases"
+        if os.path.isfile(aliasesfile):
+            errors = []
+            exclusion = []
+            expected = []
+            handle = open(aliasesfile,"r")
+            try:
+                lines = handle.read().splitlines()
+                for line in lines:
+                    line = line.strip()
+                    if len(line)>0:
+                        if line[0] not in [";","#"]:
+                            parts = line.split(":",1)
+                            if len(parts)==2:
+                                parts[0] = parts[0].strip()
+                                parts[1] = parts[1].strip()
+                                if isfinal(parts) == True:
+                                    infomsg("ERROR -> "+str(parts))
+                                    errors.append(line)
+                                elif isexclusion(parts):
+                                    infomsg("EXCLUSION -> "+str(parts))
+                                    exclusion.append(line)
+                                elif isexpected(parts):
+                                    infomsg("EXPECTED -> "+str(parts))
+                                    expected.append(line)
+                                else:
+                                    infomsg("ERROR -> "+str(parts))
+                                    errors.append(line)
+                            else:
+                                errors.append(line)
+                                #infomsg("->"+line+"<-")
+            finally:
+                handle.close()
+            if len(errors) == 0:
+                exitnagios("OK","no issues found in "+aliasesfile+" | errors="+str(len(errors))+" exclusion="+str(len(exclusion))+" expected="+str(len(expected)))
+            else:
+                exitnagios("CRITICAL","issues found in "+aliasesfile+" -> "+" - ".join(errors)+" | errors="+str(len(errors))+" exclusion="+str(len(exclusion))+" expected="+str(len(expected)))
+        else:
+            exitnagios("CRITICAL","cannot find "+aliasesfile+" | errors=-1 exclusion=-1 expected=-1")
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected exception "+str(e)+" | errors=-1 exclusion=-1 expected=-1")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    domailaliasescall()
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

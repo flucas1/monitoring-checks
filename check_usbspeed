@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import argparse
+import pathlib
+import subprocess
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def status_to_code(status):
+    if status in ["OK","0",0]:
+        exitcode = 0
+    elif status in ["WARNING","1",1]:
+        exitcode = 1
+    elif status in ["CRITICAL","2",2]:
+        exitcode = 2
+    elif status in ["UNKNOWN","3",3]:
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = status_to_code(status)
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def speedfromversion(version):
+    if version in ["1.00","1.10"]:
+        return 12
+    elif version in ["2.00","2.01"]:
+        return 480
+    elif version in ["3.00"]:
+        return 5000
+    elif version in ["3.10"]:
+        return 10000
+    elif version in ["3.20"]:
+        return 20000
+    else:
+        return 0
+
+def getmaxspeed(device):
+    deviceroute = os.path.basename(device).replace("-",":")
+    cmdline = ["/usr/bin/lsusb","-v","-s",deviceroute]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    response = completedproc.returncode
+
+    maxspeed = 0
+    if response==0:
+        for line in output.splitlines():
+            line = line.strip()
+            if line.startswith("Device can operate at SuperSpeed "):
+                parts = line.split()
+                candidate = parts[5]
+                candidate = candidate.replace("(","").replace(")","").replace("Gbps","")+"000"
+                candidate = int(candidate)
+                if candidate>maxspeed:
+                    maxspeed=candidate
+    elif response==1:
+        if output=="" and errors=="":
+            maxspeed=-1
+
+    return maxspeed
+
+def printinfo(device):
+    status = False
+    try:
+        version     = pathlib.Path(os.path.join(device,"version")).read_text().strip()
+        #reference   = speedfromversion(version)
+        parts = version.split(".")
+        major = int(parts[0])
+        if major >= 3:
+            maxspeed = getmaxspeed(device)
+            actualspeed = pathlib.Path(os.path.join(device,"speed"  )).read_text().strip()
+            actualspeed = int(actualspeed)
+            #print(version+" "+str(reference)+" "+str(actualspeed),flush=True)
+            #print(str(actualspeed),flush=True)
+            if maxspeed==actualspeed:
+                status = True
+            elif maxspeed==-1:
+                status = True
+        else:
+            status = True
+    except Exception as e:
+        pass
+    return status
+
+def listdevices():
+    result = []
+    basepath = "/sys/bus/usb/devices"
+    listcontents = os.listdir(basepath)
+    for item in listcontents:
+        fullpath = os.path.join(basepath,item)
+        if os.path.isdir(fullpath):
+            parts = item.split("-")
+            if (len(parts)==2) and (":" not in item):
+                result.append(fullpath)
+    return result
+
+def is_usb_speedmax():
+    issues = []
+
+    realdevices = listdevices()
+    for device in realdevices:
+        status = printinfo(device)
+        if status == False:
+            issues.append(device)
+
+    if len(issues)==0:
+        exitnagios("OK","no issues found | issues=0")
+    else:
+        exitnagios("WARNING","some issues found - "+str(issues)+" | issues="+str(len(issues)))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+
+    is_usb_speedmax()
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

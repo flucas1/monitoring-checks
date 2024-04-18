@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import datetime
+import json
+import re
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def mergestatus(previous,newinput):
+    result = previous
+    if newinput == "CRITICAL":
+        result = newinput
+    elif newinput == "WARNING" and result != "CRITICAL":
+        result = newinput
+    return result
+
+def match_ssid(ssid,listregex):
+    for testregex in listregex:
+        if re.match(testregex,ssid):
+            return True
+    return False
+
+def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
+    cmdline = ["/usr/sbin/iw","dev",interface,"info"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    if exitcode != 0:
+        return ("WARNING","The interface "+interface+" is not valid "+interface+".")
+    else:
+        for line in output.splitlines():
+            cleared = line.strip()
+            parts = cleared.split()
+            if len(parts)==2 and parts[0]=="type":
+                if parts[1] not in ["managed"]:
+                    return ("UNKNOWN","The interface "+interface+" is mode "+parts[1]+".")
+
+    cmdline = ["/usr/bin/jc","iw","dev",interface,"scan"]
+    #print(" ".join(cmdline),flush=True)
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    if exitcode != 0:
+        return ("WARNING","Cannot get the wireless info for the interface "+interface+".")
+
+    resultstatus = ""
+    resultmessages = []
+    ignoredcount = 0
+    alertcount = 0
+    resultperf = []
+
+    jsoninfo = json.loads(output)
+    #print(jsoninfo,flush=True)
+
+    totalcount = len(jsoninfo)
+    for network in jsoninfo:
+        #print(network,flush=True)
+        if "ssid" in network.keys():
+            current_ssid = network["ssid"]
+            if "primary_channel" in network.keys():
+                current_channel = str(network["primary_channel"])
+            else:
+                current_channel = "unknown"
+            if match_ssid(current_ssid,ignoredlist):
+                resultmessages.append("The SSID "+current_ssid+" with channel "+current_channel+" matches the ignore list "+str(ignoredlist)+".")
+                ignorecount=ignorecount+1
+            elif match_ssid(current_ssid,alertlist):
+                resultstatus = "CRITICAL"
+                resultmessages.append("The SSID "+current_ssid+" with channel "+current_channel+" matches the alert list "+str(alertlist)+".")
+                alertcount=alertcount+1
+            elif current_ssid in expected.keys():
+                current_mac = network["bssid"].strip().upper()
+                cleaned_mac = current_mac.replace(":","")
+                expected_macs = expected[current_ssid]
+                if cleaned_mac not in expected_macs:
+                    resultstatus = "CRITICAL"
+                    resultmessages.append("The base mac "+current_mac+" for SSID "+current_ssid+" with channel "+current_channel+" is not in valid list "+str(expected_macs)+".")
+                if "channel_utilisation" in network.keys():
+                    current_utilization_parts = network["channel_utilisation"].strip().split("/")
+                    current_utilization = round((int(current_utilization_parts[0])/int(current_utilization_parts[1]))*100)
+                    #print(current_utilization,flush=True)
+                    if current_utilization >= utilcrit:
+                        resultstatus = "CRITICAL"
+                        resultmessages.append("The channel utilization is "+str(current_utilization)+"% for SSID "+current_ssid+" with channel "+current_channel+" has reached the critical "+str(utilcrit)+"%.")
+                    elif current_utilization >= utilwarn:
+                        resultstatus = "WARNING"
+                        resultmessages.append("The channel utilization is "+str(current_utilization)+"% for SSID "+current_ssid+" with channel "+current_channel+" has reached the warning "+str(utilwarn)+"%.")
+                    else:
+                        resultmessages.append("The channel utilization is "+str(current_utilization)+"% for SSID "+current_ssid+" with channel "+current_channel+" is OK.")
+                else:
+                    current_utilization=-1
+                resultperf.append("ssid_"+current_ssid+"="+str(current_utilization))
+
+    return (resultstatus," ".join(resultmessages)+" | totalcount="+str(totalcount)+" ignoredcount="+str(ignoredcount)+" alertcount="+str(alertcount)+" "+" ".join(resultperf))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--alert",        dest="alert",        default="",       help="alert if an ssid matching")
+    parser.add_argument("-g", "--ignored",      dest="ignored",      default="",       help="ssids to ignore")
+    parser.add_argument("-e", "--expected",     dest="expected",     default="",       help="expected mac addresses for ssids")
+    parser.add_argument("-u", "--utilization",  dest="utilization",  default="70;90",  help="max utilization of expected ssids warning;critical")
+    parser.add_argument("-i", "--interface",    dest="interface",    default="",       help="interface to use")
+    args = parser.parse_args()
+
+    interfacelist = args.interface.split(",")
+    interfacelist.remove("")
+    if len(interfacelist)==0:
+        searchpath = "/sys/class/net"
+        entries = os.listdir(searchpath)
+        for entry in entries:
+            if os.path.isdir(os.path.join(searchpath,entry,"wireless")):
+                interfacelist.append(entry)
+    #print(str(interfacelist),flush=True)
+
+    ignoredlist = args.ignored.split("¶")
+    if "" in ignoredlist:
+        ignoredlist.remove("")
+
+    alertlist = args.alert.split("¶")
+    if "" in alertlist:
+        alertlist.remove("")
+
+    exptparts = args.expected.split("¶")
+    if "" in exptparts:
+        exptparts.remove("")
+    expected = {}
+    for entry in exptparts:
+        segments = entry.strip().split("=")
+        ssid = segments[0]
+        macs = segments[1].replace(";",",").split(",")
+        cleanedmacs = []
+        for tempmac in macs:
+            cleanedmacs.append(tempmac.strip().replace(":","").upper())
+        expected[ssid] = cleanedmacs
+
+    utilparts = args.utilization.split(";")
+    utilwarn = int(utilparts[0].strip())
+    utilcrit = int(utilparts[1].strip())
+
+    finalstatus = ""
+    finalmessages = []
+    for interface in interfacelist:
+        status, message = dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit)
+        finalstatus = mergestatus(finalstatus,status)
+        if message != "":
+            finalmessages.append(message)
+
+    if (finalstatus==""):
+        exitnagios("OK","Wireless info is valid. "+" ".join(finalmessages))
+    else:
+        exitnagios(finalstatus," ".join(finalmessages))
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

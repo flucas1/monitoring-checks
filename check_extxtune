@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def extractlinevalue(line,test):
+    result = None
+    #print(line, flush=True)
+    if line.startswith(test):
+        result = line[len(test):].strip()
+    #print(result, flush=True)
+    return result
+
+def checktune(partition,mountcount,mountperiod):
+    cmdline = ["/usr/sbin/dumpe2fs","-h",partition]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    #print(output, flush=True)
+
+    currentcount = None
+    currentperiod = None
+    for line in output.splitlines():
+        testcount = extractlinevalue(line,"Maximum mount count:")
+        if testcount!=None:
+            currentcount = testcount.split()[0]
+
+        testinterval = extractlinevalue(line,"Check interval:")
+        if testinterval!=None:
+            currentperiod = testinterval.split()[0]
+
+    #print(currentcount, flush=True)
+    #print(currentperiod, flush=True)
+
+    validcount =str(currentcount)==str(mountcount)
+    validperiod = str(currentperiod)==str(mountperiod)
+
+    result = validcount and validperiod
+
+    return result
+
+def dopostgresclustercountcall(mountcount,mountperiod):
+    cmdline = ["/usr/bin/findmnt","--real","--types=ext2,ext3,ext4","--noheadings","--list","--uniq","--nofsroot","--notruncate","--output=SOURCE"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode == 0:
+        lines = output.splitlines()
+        filesystems = []
+        for line in lines:
+            test = line.strip()
+            if test not in filesystems:
+                filesystems.append(test)
+        #print(filesystems, flush=True)
+
+        issues = []
+        for partition in filesystems:
+            tuned = checktune(partition,mountcount,mountperiod)
+            if not tuned:
+                issues = issues + [partition]
+
+        if len(issues)>0:
+            exitnagios("CRITICAL","the filesystems <"+" ".join(issues)+"> are not properly tuned - "+" ".join(filesystems))
+        else:
+            exitnagios("OK","all filesystems are properly tuned - "+" ".join(filesystems))
+    else:
+        exitnagios("CRITICAL","issue retrieving the list of mounted filesystems")
+
+#-------------------------------------------------------------------------------
+
+def main():
+#    parser = argparse.ArgumentParser()
+#    parser.add_argument("-e", "--expected", dest="expected", default="1", help="expected")
+#    args = parser.parse_args()
+
+    mountcount = 1
+    mountperiod = 604800
+    dopostgresclustercountcall(mountcount,mountperiod)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

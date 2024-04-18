@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import sys
+import os
+import subprocess
+import time
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doretrycall():
+    cmdline = sys.argv[1:]
+    counter = 0
+    retries = 3
+    while True:
+        counter = counter+1
+        #print(str(cmdline),flush=True)
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+        if exitcode == 0:
+            print(output, file=sys.stdout, flush=True, end="")
+            print(errors, file=sys.stderr, flush=True, end="")
+            exit(0)
+        elif counter>=retries:
+            print(output, file=sys.stdout, flush=True, end="")
+            print(errors, file=sys.stderr, flush=True, end="")
+            exit(exitcode)
+        else:
+            time.sleep(10)
+
+#-------------------------------------------------------------------------------
+
+def main():
+    doretrycall()
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

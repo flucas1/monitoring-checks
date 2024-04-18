@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import io
+import socket
+import subprocess
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def getroles():
+    command = ["/usr/bin/samba-tool","fsmo","show"]
+    output = subprocess.check_output(command, stderr=subprocess.PIPE).decode('utf-8')
+    rows = output.split('\n')
+    return rows
+
+def extractmaster(role, lines):
+    for line in lines:
+        if line.startswith(role):
+            return "CONTROLLER"
+    return ""
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--master",                               dest="master",        default="",           help="expected Master for all roles")
+    args = parser.parse_args()
+
+    if (args.master == ""):
+        print("CRITICAL: expected master was not defined!", flush=True)
+        sys.exit(2)
+
+    roles = getroles()
+    SchemaMasterRole         = extractmaster("SchemaMasterRole",         roles)
+    InfrastructureMasterRole = extractmaster("InfrastructureMasterRole", roles)
+    RidAllocationMasterRole  = extractmaster("RidAllocationMasterRole",  roles)
+    PdcEmulationMasterRole   = extractmaster("PdcEmulationMasterRole",   roles)
+    DomainNamingMasterRole   = extractmaster("DomainNamingMasterRole",   roles)
+    DomainDnsZonesMasterRole = extractmaster("DomainDnsZonesMasterRole", roles)
+    ForestDnsZonesMasterRole = extractmaster("ForestDnsZonesMasterRole", roles)
+
+    if ( (SchemaMasterRole         == args.master) and
+         (InfrastructureMasterRole == args.master) and
+         (RidAllocationMasterRole  == args.master) and
+         (PdcEmulationMasterRole   == args.master) and
+         (DomainNamingMasterRole   == args.master) and
+         (DomainDnsZonesMasterRole == args.master) and
+         (ForestDnsZonesMasterRole == args.master) ):
+        print("OK: All FSMO roles are "+args.master, flush=True)
+        sys.exit(0)
+    else:
+        print("CRITICAL: not all FSMO roles are not matching "+args.master+" -- "+" -- ".join(roles), flush=True)
+        sys.exit(2)
+
+if __name__ == '__main__':
+    main()
+

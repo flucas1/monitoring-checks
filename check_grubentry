@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import platform
+import re
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dogrubentrycall(expected):
+    try:
+        lines = []
+        handle = open("/boot/grub/grub.cfg", "r")
+        try:
+            lines = handle.read().strip().splitlines()
+        finally:
+            handle.close()
+        allcandidates = []
+        for line in lines:
+            line = line.strip()
+            if line.startswith("menuentry "):
+
+                singlequotes = re.findall("'([^']*)'", line)
+                if len(singlequotes)>0:
+                    allcandidates.append(singlequotes[0])
+                doublequotes = re.findall('"([^"]*)"', line)
+                if doublequotes!=None:
+                    if len(doublequotes)>0:
+                        allcandidates.append(doublequotes[0])
+        validcandidates = []
+        for item in allcandidates:
+            if item.startswith("Debian GNU/Linux, with Linux "):
+                validcandidates.append(item)
+        #print(validcandidates, flush=True)
+
+        cmdline = ["/usr/bin/uname","--kernel-release"]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+        version = ""
+        if exitcode == 0:
+            version = output.strip()
+        currententry = "Debian GNU/Linux, with Linux "+version
+        #print(currententry, flush=True)
+
+        foundindex = validcandidates.index(currententry)
+        if foundindex==expected:
+            exitnagios("OK","running grub entry '"+currententry+"'")
+        else:
+            exitnagios("WARNING","running grub entry '"+currententry+"' but it was expected '"+validcandidates[expected]+"'")
+    except Exception as e:
+        exitnagios("CRITICAL","internal issue - "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected", dest="expected", default="0", help="expected")
+    args = parser.parse_args()
+
+    expected = int(args.expected)
+    dogrubentrycall(expected)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------

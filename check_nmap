@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import subprocess
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def processservice(port,status,service,expectedservice,exitstatus):
+    if expectedservice=="":
+        exitnagios(exitstatus,"Port is "+status+" and found service "+service+" listening on port "+str(port)+" - no expeced service specified")
+    elif service==expectedservice:
+        exitnagios(exitstatus,"Port is "+status+" and found service "+service+" listening on port "+str(port)+" - and the expeced service matches")
+    elif service=="unknown":
+        exitnagios("CRITICAL","Port is "+status+" but unknown service listening on port "+str(port)+" - it was expected "+expectedservice)
+    else:
+        exitnagios("WARNING","Port is "+status+" but incorrect service "+service+" listening on port "+str(port)+" - it was expected "+expectedservice)
+
+def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filteredstatus,timeoutvalue,timeoutstatus):
+    parts=4
+    initial_rtt=str(int(round(timeoutvalue/parts)))+"s"
+    max_rtt=str(int(round(timeoutvalue/parts)))+"s"
+    # https://nmap.org/book/man-host-discovery.html
+    if mode == "udp":
+       sflag = "-sU"
+       pflag = "" # "-PU"
+    if mode == "tcp":
+       sflag = "-sS"
+       pflag = "" # "-PS" # 
+    command=["/usr/bin/nmap"]
+    if protocol != "":
+        command = command+[protocol]
+    command = command+["--privileged",sflag,pflag,"--discovery-ignore-rst","-p",str(port),hostname,"--initial-rtt-timeout",initial_rtt,"--max-rtt-timeout",max_rtt]
+    infomsg(" ".join(command))
+
+    result = subprocess.run(command,capture_output=True)
+    output = result.stdout.decode("utf-8").rstrip()
+    errors = result.stderr.decode("utf-8").rstrip()
+
+    response = ""
+    for line in output.splitlines():
+        if line.startswith(str(port)+"/"+mode):
+            response = line
+    infomsg(response)
+
+    if response != "":
+        try:
+            parts = response.split()
+            status = parts[1]
+            service = parts[2]
+
+            infomsg("The response is '"+status+"' and it was expected '"+expectedresponse+"'")
+
+            if expectedresponse=="open":
+                if status=="open":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="open|filtered":
+                    processservice(port,status,service,expectedservice,"WARNING")
+                elif status=="filtered":
+                    processservice(port,status,service,expectedservice,filteredstatus)
+                elif status=="closed":
+                    exitnagios("CRITICAL","Port "+str(port)+" is filtered instead of open")
+                else:
+                    exitnagios("CRITICAL","cannot map status")
+            elif expectedresponse=="open+filtered":
+                if status=="open":
+                    processservice(port,status,service,expectedservice,"WARNING")
+                elif status=="open|filtered":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="filtered":
+                    processservice(port,status,service,expectedservice,filteredstatus)
+                elif status=="closed":
+                    exitnagios("CRITICAL","Port "+str(port)+" is closed instead of open+filtered")
+                else:
+                    exitnagios("CRITICAL","cannot map status")
+            elif expectedresponse=="filtered":
+                if status=="open":
+                    processservice(port,status,service,expectedservice,"WARNING")
+                elif status=="open|filtered":
+                    processservice(port,status,service,expectedservice,"WARNING")
+                elif status=="filtered":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="closed":
+                    exitnagios("CRITICAL","Port "+str(port)+" is closed instead of filtered")
+                else:
+                    exitnagios("CRITICAL","cannot map status")
+            elif expectedresponse=="notclosed":
+                if status=="open":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="open|filtered":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="filtered":
+                    processservice(port,status,service,expectedservice,"OK")
+                elif status=="closed":
+                    exitnagios("CRITICAL","Port "+str(port)+" is closed instead of notclosed")
+                else:
+                    exitnagios("CRITICAL","cannot map status")
+            elif expectedresponse=="closed":
+                if status=="open":
+                    exitnagios("CRITICAL","Port "+str(port)+" is reacheable (open)")
+                elif status=="open|filtered":
+                    exitnagios("CRITICAL","Port "+str(port)+" is reacheable (open+filtered)")
+                elif status=="filtered":
+                    exitnagios("WARNING","Port "+str(port)+" is reacheable (filtered)")
+                elif status=="closed":
+                    exitnagios("OK","Port "+str(port)+" is closed")
+                else:
+                    exitnagios("CRITICAL","cannot map status")
+            else:
+                exitnagios("CRITICAL","unexpected response "+expectedresponse)
+        except Exception as e:
+            exitnagios("CRITICAL","exception "+str(e))
+    else:
+        exitnagios(timeoutstatus,"nmap respose is empty for command '"+" ".join(command)+"'")
+
+    exitnagios("CRITICAL","unexpected scenario")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",           default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",           default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",            action="store_true",  dest="ipv0",           default=False,         help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                              dest="hostname",       default="",            help="server to check")
+    parser.add_argument("-m", "--mode",                                  dest="mode",           default="",            help="mode TCP/UDP")
+    parser.add_argument("-p", "--port",                                  dest="port",           default="" ,           help="port number to check")
+    parser.add_argument("-s", "--service",                               dest="service",        default="",            help="Name of the service that should be listening on the port")
+    parser.add_argument("-r", "--response",                              dest="response",       default="notclosed",   help="respose: open,filtered,open+filtered,notclosed,closed")
+    parser.add_argument("-f", "--filtered",                              dest="filtered",       default="WARNING",     help="OK,WARNING,CRITICAL,UNKNOWN")
+    parser.add_argument("-t", "--timeout",                               dest="timeout",        default="30:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",           action="store_true",  dest="debug",          default=False,         help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
+
+    if (args.mode == ""):
+        exitnagios("CRITICAL","mode not defined")
+
+    if (args.port == ""):
+        exitnagios("CRITICAL","port not defined")
+
+    if args.filtered not in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        exitnagios("CRITICAL","filtered status is not valid")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus not in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+    donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus)
+
+if __name__ == '__main__':
+    main()
+
+#-------------------------------------------------------------------------------
