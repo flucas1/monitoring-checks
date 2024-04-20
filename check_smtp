@@ -55,18 +55,18 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
     if smtpconnection != None:
         certexpirationparsed = None
         if dossl==True:
-            #print(smtpconnection.socket().version(), flush=True)
+            infomsg(smtpconnection.socket().version())
             certexpirationraw = None
             try:
                 cert_data = smtpconnection.sock.getpeercert()
-                #print(cert_data, flush=True)
+                infomsg(cert_data)
                 certexpirationraw = cert_data["notAfter"]
-                #print("Expiry date:", certexpirationraw, flush=True)
+                infomsg("Expiry date: "+str(certexpirationraw))
                 if certexpirationraw != None:
                     from dateutil.parser import parse
                     certexpirationparsed = parse(cert_data["notAfter"])
             except:
-                #print(traceback.format_exc(), flush=True)
+                infomsg(str(traceback.format_exc()))
                 pass
 
         smtpconnection.ehlo_or_helo_if_needed()
@@ -80,8 +80,8 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
         response,message = smtpconnection.docmd("MAIL FROM:",testemailaddress)
         if response in [250]:
             response,message = smtpconnection.docmd("RCPT TO:",testemailaddress)
-            #print(response, flush=True)
-            #print(message, flush=True)
+            infomsg(response)
+            infomsg(message)
             if response in [250,251,354]:
                 if relay != "open":
                     exitnagios("CRITICAL","found an open relay "+str(response)+", but it should be closed | time=-1 validity=-1")

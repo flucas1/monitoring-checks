@@ -50,21 +50,21 @@ def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
         else:
             imapconnection = imaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
         if imapconnection != None:
-            #print(imapconnection.PROTOCOL_VERSION, flush=True)
+            infomsg(str(imapconnection.PROTOCOL_VERSION))
             certexpirationparsed = None
             if dossl==True:
-                #print(imapconnection.socket().version(), flush=True)
+                infomsg(str(imapconnection.socket().version()))
                 certexpirationraw = None
                 try:
                     cert_data = imapconnection.socket().getpeercert()
-                    #print(cert_data, flush=True)
+                    infomsg(str(cert_data))
                     certexpirationraw = cert_data["notAfter"]
-                    #print("Expiry date:", certexpirationraw, flush=True)
+                    infomsg("Expiry date: "+str(certexpirationraw))
                     if certexpirationraw != None:
                         from dateutil.parser import parse
                         certexpirationparsed = parse(cert_data["notAfter"])
                 except:
-                    #print(traceback.format_exc(), flush=True)
+                    infomsg(str(traceback.format_exc()))
                     pass
             imapconnection.shutdown()
 

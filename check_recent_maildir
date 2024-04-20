@@ -278,11 +278,11 @@ def get_extra_tz():
 def most_recent_date_simple(inbox):
     referencedate = None
 
-    #print(inbox)
+    infomsg(inbox)
     try:
         inbox.clean()
         for key in inbox.iterkeys():
-            #print(key)
+            infomsg(key)
             try:
                 message = inbox[key]
             except email.errors.MessageParseError:
@@ -293,7 +293,7 @@ def most_recent_date_simple(inbox):
                 candidatedate = dateutil.parser.parse(date, tzinfos=get_extra_tz())
             except:
                 candidatedate = None
-            #print(candidatedate)
+            infomsg(candidatedate)
             if (candidatedate!=None) and ((referencedate==None) or (candidatedate>referencedate)):
                 referencedate = candidatedate
     except Exception as e:
@@ -311,7 +311,7 @@ def most_recent_date_recursive(inbox):
         if (candidatedate!=None) and ((referencedate==None) or (candidatedate>referencedate)):
             referencedate = candidatedate
 
-    #print(referencedate)
+    infomsg(referencedate)
     return referencedate
 
 def get_home_path(username):
@@ -344,12 +344,12 @@ def dorecentmaildircall(username,warning,critical):
         if userhomepath==None or userhomepath=="" or os.path.isdir(userhomepath)==False:
             exitnagios("CRITICAL","the home folder '"+userhomepath+"' is not valid | maxage=-1")
         maildirpath = os.path.join(userhomepath,"Maildir")
-        #print(maildirpath)
+        infomsg(maildirpath)
         inbox = mailbox.Maildir(maildirpath, factory=None)
 
         newest_date = most_recent_date_recursive(inbox)
         newest_date = newest_date.astimezone(datetime.timezone.utc)
-        #print(newest_date)
+        infomsg(newest_date)
 
         if (newest_date)==None:
             exitnagios("CRITICAL","no emails found | maxage=-1")
