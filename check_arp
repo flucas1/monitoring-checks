@@ -134,12 +134,14 @@ def doarpcall(whitelist):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--whitelist", action="store", default="", dest="whitelist", help="MACs to whitelist")
+    parser.add_argument("-l", "--whitelist",         action="store",       dest="whitelist",        default="",                             help="MACs to whitelist")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
     return args
 
 def main():
     args = parse_args()
+    setcandebug(args.debug)
     doarpcall(args.whitelist)
 
 if __name__ == '__main__':

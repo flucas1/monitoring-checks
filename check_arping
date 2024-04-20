@@ -39,9 +39,10 @@ def exitnagios(status,message):
 #collect arguments
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--hostname", action="store", help="target IP or hostname")
-    parser.add_argument("-p", "--packets",  action="store", type=int, default=1, help="number of pings")
-    parser.add_argument("-t", "--timeout",  action="store", type=int, default=10, help="timeout")
+    parser.add_argument("-H", "--hostname",          action="store",                                                                        help="target IP or hostname")
+    parser.add_argument("-p", "--packets",           action="store",       type=int,                default=1,                              help="number of pings")
+    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=10,                             help="timeout")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
     if not args.hostname:
@@ -49,8 +50,9 @@ def parse_args():
     else:
         return args
 
-
 args = parse_args()
+
+setcandebug(args.debug)
 
 cmdline = ["/usr/sbin/arping","-C",str(args.packets),"-w",str(args.timeout),args.hostname]
 completedproc = subprocess.run(cmdline,capture_output=True)

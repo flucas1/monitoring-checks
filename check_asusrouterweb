@@ -472,14 +472,17 @@ def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeo
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--hostname",   dest="hostname",                         help="server to check")
-    parser.add_argument("-t", "--timeout",    dest="timeout",   default="10:CRITICAL", help="timeout value:STATUS")
-    parser.add_argument("-f", "--filecred",   dest="filecred",  default="",            help="file containing the management credentials")
-    parser.add_argument("-m", "--mode",       dest="mode",      default="",            help="value to check")
-    parser.add_argument("-w", "--warning",    dest="warning",   default="",            help="warning level %")
-    parser.add_argument("-c", "--critical",   dest="critical",  default="",            help="critical level %")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                 help="server to check")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                  help="timeout value:STATUS")
+    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                             help="file containing the management credentials")
+    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                             help="value to check")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                             help="warning level %")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                             help="critical level %")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
-
+    
+    setcandebug(args.debug)
+    
     if args.hostname==None or args.hostname=="":
         exitnagios("CRITICAL","please specify a target hostname")
 

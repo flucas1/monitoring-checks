@@ -61,11 +61,10 @@ def allinterfaces():
     infomsg(interfaces)
     return interfaces
 
-def findservers(interface,verbose,requestmac,timeout):
+def findservers(interface,requestmac,timeout):
 
     command = ['/usr/lib/nagios/plugins/check_dhcp', '-i', interface, '-m', requestmac, '-t', str(timeout), '-v']
-    if verbose:
-        print(" ".join(command))
+    infomsg(" ".join(command))
 
     try:
         result = subprocess.check_output(command)
@@ -74,10 +73,9 @@ def findservers(interface,verbose,requestmac,timeout):
     except Exception as e:
         return None
 
-def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
+def checkdhcp(interface, chaddr, ciaddr, servers, timeout):
     interfaceaddress = get_ip_address(interface)
-    if verbose:
-        print(interfaceaddress)
+    infomsg(interfaceaddress)
     requestmac = chaddr
     expectedip = re.compile(ciaddr)
     validservers = servers.split(',')
@@ -85,7 +83,7 @@ def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
         if testaddress in validservers:
             validservers.remove(testaddress)
 
-    output = findservers(interface,verbose,requestmac,timeout)
+    output = findservers(interface,requestmac,timeout)
     infomsg(output)
 
     if output == None:
@@ -114,32 +112,32 @@ def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
             print("OK: foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on "+interface+" | count="+str(len(responses)))
         return isok
 
-def checkall(verbose, interfaces, chaddr, ciaddr, servers, timeout):
+def checkall(interfaces, chaddr, ciaddr, servers, timeout):
     result = True
-    if verbose:
-        print("List of interfaces: "+" ".join(interfaces))
+    infomsg("List of interfaces: "+" ".join(interfaces))
     for interface in interfaces:
-        current = checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout)
+        current = checkdhcp(interface, chaddr, ciaddr, servers, timeout)
         result = result or current
     return result
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--servers",                       dest="servers",    default='0.0.0.0',           help="DHCP server IP (default %default)")
-    parser.add_argument("-m", "--chaddr",                        dest="chaddr",     default='FF:FF:FF:FF:FF:FF', help="chaddr: Client's MAC address (default %default)")
-    parser.add_argument("-c", "--ciaddr",                        dest="ciaddr",     default='0.0.0.0',           help="ciaddr: Client's desired IP address (default %default)")
-    parser.add_argument("-t", "--timeout",                       dest="timeout",    default='10',                help="UDP timeout (default %default)")
-    parser.add_argument("-i", "--interfaces",                    dest="interfaces", default='',                  help="comma separated interfaces where to listen")
-    parser.add_argument("-v", "--verbose", action="store_true",  dest="verbose",                                 help="Verbose operation")
-    parser.add_argument("-q", "--quiet",   action="store_false", dest="verbose",                                 help="Quiet operation")
+    parser.add_argument("-s", "--servers",                                 dest="servers",          default='0.0.0.0',                      help="DHCP server IP (default %default)")
+    parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default='FF:FF:FF:FF:FF:FF',            help="chaddr: Client's MAC address (default %default)")
+    parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default='0.0.0.0',                      help="ciaddr: Client's desired IP address (default %default)")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default='10',                           help="UDP timeout (default %default)")
+    parser.add_argument("-i", "--interfaces",                              dest="interfaces",       default='',                             help="comma separated interfaces where to listen")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if args.interfaces == "":
         interfaces = allinterfaces()
     else:
         interfaces = args.interfaces.split(",")
 
-    result = checkall(args.verbose, interfaces, args.chaddr, args.ciaddr, args.servers, args.timeout)
+    result = checkall(interfaces, args.chaddr, args.ciaddr, args.servers, args.timeout)
     if result == True:
         infomsg("OK")
         sys.exit(0)
