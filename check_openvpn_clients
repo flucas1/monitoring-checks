@@ -78,12 +78,15 @@ class connexion:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--target",     dest="target",    default="",            help="target hostname"                           )
-    parser.add_argument("-p", "--port",       dest="port",      default="",            help="port to use"                               )
-    parser.add_argument("-w", "--warning",    dest="warning",   default="",            help="warning level"                             )
-    parser.add_argument("-c", "--critical",   dest="critical",  default="",            help="critical level"                            )
-    parser.add_argument("-f", "--filecred",   dest="filecred",  default="",            help="file containing the management credentials")
+    parser.add_argument("-t", "--target",                                  dest="target",           default="",                             help="target hostname"                           )
+    parser.add_argument("-p", "--port",                                    dest="port",             default="",                             help="port to use"                               )
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                             help="warning level"                             )
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                             help="critical level"                            )
+    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                             help="file containing the management credentials")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if args.filecred == "":
         exitnagios("CRITICAL","filecred is not specified | clients=-1")

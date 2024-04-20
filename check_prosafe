@@ -216,11 +216,11 @@ def getexpected(model):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model",                                 dest="model",      default="",                              help="netgear prosafe model to check")
-    parser.add_argument("-e", "--expected",                              dest="expected",   default="auto",                          help="expected firmware version")
-    parser.add_argument("-s", "--strict",                                dest="strict",     default=False,    action="store_true",   help="if version not found, raise problem")
-    parser.add_argument("-l", "--tolerant",                              dest="strict",                       action="store_false",  help="if version not found, do not raise problem")
-    parser.add_argument("-®", "--debug",           action="store_true",  dest="debug",      default=False,                           help="be more verbose")
+    parser.add_argument("-m", "--model",                                   dest="model",            default="",                             help="netgear prosafe model to check")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="auto",                         help="expected firmware version")
+    parser.add_argument("-s", "--strict",            action="store_true",  dest="strict",           default=False,                          help="if version not found, raise problem")
+    parser.add_argument("-l", "--tolerant",          action="store_false", dest="strict",                                                   help="if version not found, do not raise problem")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)

@@ -38,7 +38,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def oom_check(criticallevel, warninglevel, short=False, verbose=False):
+def oom_check(criticallevel, warninglevel, short=False):
     cmdline = ["/usr/bin/journalctl","--utc","--no-pager","-kq","-o","json","-b","-0","--output-fields=MESSAGE"]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -67,14 +67,16 @@ def oom_check(criticallevel, warninglevel, short=False, verbose=False):
 #-------------------------------------------------------------------------------
 
 def main():
-    argp = argparse.ArgumentParser(add_help=True, description="Check for OOM killer events")
-    argp.add_argument("-w", "--warning",  default="",          help="Number of occurences to trigger a warning")
-    argp.add_argument("-c", "--critical", default="1",         help="Number of occurences to trigger a warning")
-    argp.add_argument("-s", "--short",    action="store_true", help="If this option is specified, check ignores dmesg OOM problems older then 24 hours")
-    argp.add_argument("-v", "--verbose",  action="store_true", help="Show verbose output from demsg about OOM killer events")
-    args = argp.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning",                                                          default="",                             help="Number of occurences to trigger a warning")
+    parser.add_argument("-c", "--critical",                                                         default="1",                            help="Number of occurences to trigger a warning")
+    parser.add_argument("-s", "--short",             action="store_true",                                                                   help="If this option is specified, check ignores dmesg OOM problems older then 24 hours")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    args = parser.parse_args()
 
-    oom_check(args.warning, args.critical, args.short, args.verbose)
+    setcandebug(args.debug)
+
+    oom_check(args.warning, args.critical, args.short)
 
 
 if __name__ == "__main__":
