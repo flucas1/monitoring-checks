@@ -77,9 +77,9 @@ def wait_page_loaded(driver):
 #-------------------------------------------------------------------------------
 
 def dotorcall(proxy,protocol,domain):
-    #print(proxy, flush=True)
-    #print(protocol, flush=True)
-    #print(domain, flush=True)
+    infomsg(proxy)
+    infomsg(protocol)
+    infomsg(domain)
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -97,26 +97,26 @@ def dotorcall(proxy,protocol,domain):
         wait.until(EC.text_to_be_present_in_element((By.ID, "status"),"Status: "))
 
         element = driver.find_element(By.ID, "status")
-        #print(element, flush=True)
+        infomsg(element)
         statustext = None
         if element == None:
             exitnagios("CRITICAL","cannot find the status element")
         else:
             statustext = element.text.strip()
-        #print(statustext, flush=True)
+        infomsg(statustext)
 
         errors = driver.find_elements(By.CLASS_NAME, "error")
         errormsgs = []
         for error in errors:
             errormsgs.append(error.text.strip().replace("\n"," "))
         errormsg = ". ".join(errormsgs)
-        #print("ERRORS: "+errormsg,flush=True)
+        infomsg("ERRORS: "+errormsg)
         warnings = driver.find_elements(By.CLASS_NAME, "warning")
         warningmsgs = []
         for warning in warnings:
             warningmsgs.append(warning.text.strip().replace("\n"," "))
         warningmsg = ". ".join(warningmsgs)
-        #print("WARNINGS: "+warningmsg,flush=True)
+        infomsg("WARNINGS: "+warningmsg)
 
         if statustext=="Status: "+domain+" is currently preloaded.":
             exitnagios("OK","the domain is included in the preload list")

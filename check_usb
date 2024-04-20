@@ -42,8 +42,8 @@ def exitnagios(status,message):
 
 def check_the_line(lineid,linemsg,device_identifiers,device_messages):
     matching = False
-    #print(lineid, flush=True)
-    #print(linemsg, flush=True)
+    infomsg(lineid)
+    infomsg(linemsg)
     
     device_options = device_identifiers.split(",")
     for option in device_options:
@@ -54,9 +54,9 @@ def check_the_line(lineid,linemsg,device_identifiers,device_messages):
         else:
             device_range = None
         
-        #print(device_id, flush=True)
-        #print(device_range, flush=True)
-        #print(device_messages, flush=True)
+        infomsg(device_id)
+        infomsg(device_range)
+        infomsg(device_messages)
         if lineid.lower() == device_id.lower():
             if device_messages == "":
                 matching = True
@@ -79,11 +79,11 @@ def is_usb_connected(device_identifiers,device_messages,device_expected):
         
         founddict = {}
         if exitcode==0:
-            #print(output, flush=True)
+            infomsg(output)
             for line in output.splitlines():
                 parts = line.split()
                 if parts[0]=="Bus" and parts[2] == "Device":
-                    #print(line, flush=True)
+                    infomsg(line)
                     if check_the_line(parts[5]," ".join(parts[6:]),device_identifiers,device_messages):
                         key = device_identifiers+"@"+device_messages
                         if key in founddict:

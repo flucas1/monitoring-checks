@@ -79,14 +79,14 @@ def wait_page_loaded(driver):
 def extractvalue(driver,entryname):
     element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
     value = element.text
-    #print(value, flush=True)
+    infomsg(value)
     return value
 
 def extracttable(driver):
     element = driver.find_element(By.ID, "dns-list")
     value = ""
     lines = element.find_elements(By.TAG_NAME,"tr")
-    #print(element.text, flush=True)
+    infomsg(element.text)
     for line in lines:
         if len(value)>0:
             value = value + " § "
@@ -185,7 +185,7 @@ def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
             item = item.strip()
             if item not in expectedipparts:
                 expectedipparts.append(item)
-        #print(expectedipparts, flush=True)
+        infomsg(expectedipparts)
         if resultedip == "":
             warningmsg += "The IP response is empty, and was expected '"+" § ".join(expectedipparts)+"'. "
         else:
@@ -198,12 +198,12 @@ def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
             for testresultedip in resultedipparts:
                 partial = False
                 for testexpectedip in expectedipparts:
-                    #print(testresultedip.strip(), flush=True)
-                    #print(testexpectedip.strip(), flush=True)
+                    infomsg(testresultedip.strip())
+                    infomsg(testexpectedip.strip())
                     if comparetriplet(testresultedip.strip(),testexpectedip.strip()):
                         partial = True
                         break
-                #print(partial, flush=True)
+                infomsg(partial)
                 successip = successip and partial
             if successip:
                 successmsg += "The IP response '"+resultedip+"' is as expected. "
@@ -215,7 +215,7 @@ def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
             item = item.strip()
             if item not in expecteddnsparts:
                 expecteddnsparts.append(item)
-        #print(expecteddnsparts, flush=True)
+        infomsg(expecteddnsparts)
         if resulteddns == "":
             warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddnsparts)+"'. "
         else:
@@ -226,16 +226,16 @@ def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
                 if item not in resulteddnsparts:
                     resulteddnsparts.append(item)
             # all the resulted dns should pass the test for at least one option in expeted dns
-            #print(resulteddnsparts, flush=True)
+            infomsg(resulteddnsparts)
             for testresulteddns in resulteddnsparts:
                 partial = False
                 for testexpecteddns in expecteddnsparts:
-                    #print(testresulteddns.strip(), flush=True)
-                    #print(testexpecteddns.strip(), flush=True)
+                    infomsg(testresulteddns.strip())
+                    infomsg(testexpecteddns.strip())
                     if comparetriplet(testresulteddns.strip(),testexpecteddns.strip()):
                         partial = True
                         break
-                #print(partial, flush=True)
+                infomsg(partial)
                 successdns = successdns and partial
             if successdns:
                 successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "

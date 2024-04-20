@@ -389,23 +389,23 @@ def doasusroutercall(host,username,password,timeoutvalue):
         ri = RouterInfo(host,username,password)
         infomsg(ri)
 
-        #print("Uptime    : " + str(ri.get_uptime_secs()),flush=True)
-        #print("Memory    : " + str(ri.get_memory_usage()),flush=True)
-        #print("CPU       : " + str(ri.get_cpu_usage()),flush=True)
-        #print("Data      : " + str(ri.get_traffic_total()),flush=True)
-        #print("Settings  : " + str(ri.get_settings()),flush=True)
-        #print("Uptime    : " + str(ri.get_uptime()),flush=True)
-        #print("Online    : " + str(ri.is_wan_online()),flush=True)
-        #print("Clients   : " + str(ri.get_clients_fullinfo()),flush=True)
-        #print("Clients   : " + str(ri.get_clients_info()),flush=True)
-        #print("Online    : " + str(ri.get_online_clients()),flush=True)
-        #print("IP addr   : " + str(ri.get_lan_ip_address()),flush=True)
-        #print("Netmask   : " + str(ri.get_lan_netmask()),flush=True)
-        #print("Gateway   : " + str(ri.get_lan_gateway()),flush=True)
-        #print("DHCP      : " + str(ri.get_dhcp_list()),flush=True)
-        #print("Bandwidth : " + str(ri.get_traffic()),flush=True)
-        #print("WAN       : " + str(ri.get_status_wan()),flush=True)
-        #print("Client   : " + str(ri.get_client_info('B8:2C:A0:5F:37:52')),flush=True)
+        infomsg("Uptime    : " + str(ri.get_uptime_secs()))
+        infomsg("Memory    : " + str(ri.get_memory_usage()))
+        infomsg("CPU       : " + str(ri.get_cpu_usage()))
+        infomsg("Data      : " + str(ri.get_traffic_total()))
+        infomsg("Settings  : " + str(ri.get_settings()))
+        infomsg("Uptime    : " + str(ri.get_uptime()))
+        infomsg("Online    : " + str(ri.is_wan_online()))
+        infomsg("Clients   : " + str(ri.get_clients_fullinfo()))
+        infomsg("Clients   : " + str(ri.get_clients_info()))
+        infomsg("Online    : " + str(ri.get_online_clients()))
+        infomsg("IP addr   : " + str(ri.get_lan_ip_address()))
+        infomsg("Netmask   : " + str(ri.get_lan_netmask()))
+        infomsg("Gateway   : " + str(ri.get_lan_gateway()))
+        infomsg("DHCP      : " + str(ri.get_dhcp_list()))
+        infomsg("Bandwidth : " + str(ri.get_traffic()))
+        infomsg("WAN       : " + str(ri.get_status_wan()))
+        infomsg("Client   : " + str(ri.get_client_info('B8:2C:A0:5F:37:52')))
 
         #status = "dummy"
         #exitnagios("OK","the result '"+status+"' is as expected")
@@ -431,7 +431,7 @@ def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
     ri = doasusroutercall(host,username,password,timeoutvalue)
     uptime = ri.get_uptime_secs()
     if uptime!=None:
-        #print(uptime,flush=True)
+        infomsg(uptime)
         check_status(uptime,warn_low,warn_high,crit_low,crit_high)
     else:
         exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
@@ -441,7 +441,7 @@ def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
     memory = ri.get_memory_usage()
     if memory!=None:
         value = (int(memory["mem_used"])/int(memory["mem_total"]))*100
-        #print(value,flush=True)
+        infomsg(value)
         check_status(round(value,2),warn_low,warn_high,crit_low,crit_high)
     else:
         exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
@@ -450,7 +450,7 @@ def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeo
     ri = doasusroutercall(host,username,password,timeoutvalue)
     cpu = ri.get_cpu_usage()
     if cpu!=None:
-        #print(cores,flush=True)
+        infomsg(cores)
         cores = int(len(cpu)/2)
         counter = 1
         values = []
@@ -458,12 +458,12 @@ def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeo
             temp = (int(cpu["cpu"+str(counter)+"_usage"])/int(cpu["cpu"+str(counter)+"_total"]))*100
             values.append(temp)
             counter = counter+1
-        #print(values,flush=True)
+        infomsg(values)
         added = 0
         for value in values:
             added = added+value
         average = added/len(values)
-        #print(average,flush=True)
+        infomsg(average)
         check_status(round(average,2),warn_low,warn_high,crit_low,crit_high)
     else:
         exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")

@@ -44,11 +44,11 @@ def exitnagios(status,message):
 def get_ip_address(ifname):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #print(s, flush=True)
+        infomsg(s)
         i = fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', ifname[:15].encode('utf-8')))
-        #print(i, flush=True)
+        infomsg(i)
         a = socket.inet_ntoa(i[20:24])
-        #print(a, flush=True)
+        infomsg(a)
         return [a]
     except Exception as e:
         return []
@@ -58,14 +58,14 @@ def allinterfaces():
     for card in socket.if_nameindex():
         if (card[1] != 'lo'):
             interfaces.append(card[1])
-    #print(interfaces, flush=True)
+    infomsg(interfaces)
     return interfaces
 
 def findservers(interface,verbose,requestmac,timeout):
 
     command = ['/usr/lib/nagios/plugins/check_dhcp', '-i', interface, '-m', requestmac, '-t', str(timeout), '-v']
     if verbose:
-        print(" ".join(command), flush=True)
+        print(" ".join(command))
 
     try:
         result = subprocess.check_output(command)
@@ -77,7 +77,7 @@ def findservers(interface,verbose,requestmac,timeout):
 def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
     interfaceaddress = get_ip_address(interface)
     if verbose:
-        print(interfaceaddress, flush=True)
+        print(interfaceaddress)
     requestmac = chaddr
     expectedip = re.compile(ciaddr)
     validservers = servers.split(',')
@@ -86,10 +86,10 @@ def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
             validservers.remove(testaddress)
 
     output = findservers(interface,verbose,requestmac,timeout)
-    #print(output, flush=True)
+    infomsg(output)
 
     if output == None:
-        print("OK: the network on interface "+interface+" does not have any dhcp server | count=0", flush=True)
+        print("OK: the network on interface "+interface+" does not have any dhcp server | count=0")
         return True
     else:
         lines = output.splitlines()
@@ -102,22 +102,22 @@ def checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout):
                 foundip = parts[9]
                 if foundserver not in validservers:
                     isok = False
-                    print("CRITICAL: bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface, flush=True)
+                    print("CRITICAL: bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
                 if expectedip.match(foundip) == False:
                     isok = False
-                    print("CRITICAL: bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface, flush=True)
+                    print("CRITICAL: bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
                 responses.append(foundserver)
         if ((responses.sort() != validservers.sort()) or (len(responses) != len(validservers))):
             isok = False
-            print("WARNING: Difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on "+interface+" | count="+str(len(responses)), flush=True)
+            print("WARNING: Difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on "+interface+" | count="+str(len(responses)))
         if isok == True:
-            print("OK: foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on "+interface+" | count="+str(len(responses)), flush=True)
+            print("OK: foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on "+interface+" | count="+str(len(responses)))
         return isok
 
 def checkall(verbose, interfaces, chaddr, ciaddr, servers, timeout):
     result = True
     if verbose:
-        print("List of interfaces: "+" ".join(interfaces), flush=True)
+        print("List of interfaces: "+" ".join(interfaces))
     for interface in interfaces:
         current = checkdhcp(interface, verbose, chaddr, ciaddr, servers, timeout)
         result = result or current
@@ -141,10 +141,10 @@ def main():
 
     result = checkall(args.verbose, interfaces, args.chaddr, args.ciaddr, args.servers, args.timeout)
     if result == True:
-        #print("OK", flush=True)
+        infomsg("OK")
         sys.exit(0)
     else:
-        #print("KO", flush=True)
+        infomsg("KO")
         sys.exit(2)
 
 if __name__ == '__main__':

@@ -51,12 +51,12 @@ def getmacfromip(remoteIP):
     command = ["/usr/sbin/arp","-n",str(remoteIP)]
     output = subprocess.check_output(command).decode("utf-8")
     rows = output.split("\n")
-    #print(rows, flush=True)
+    infomsg(rows)
     if len(rows) > 0:
         row = rows[1]
         parts = row.split()
         if len(parts) > 0:
-            #print(parts, flush=True)
+            infomsg(parts)
             return parts[2]
     return ""
 
@@ -74,22 +74,22 @@ def getspeeds(interface,targetmac):
     command = ["/usr/bin/plcstat", "-i", interface, "-t", "-q"]
     output = subprocess.check_output(command).decode("utf-8")
     rows = output.split("\n")
-    #print(rows, flush=True)
+    infomsg(rows)
     for row in output.split("\n"):
         parts = row.split()
         if len(parts) > 0:
-            #print(parts[3], flush=True)
+            infomsg(parts[3])
             if (parts[3] == targetmac):
                 speeds = [parts[5], parts[6]]
-                #print(speeds, flush=True)
+                infomsg(speeds)
                 return(speeds)
 
     return None
 
 def change_mac(base, offset):
-    #print(base, flush=True)
+    infomsg(base)
     mac = base.replace(":","").replace("-","").replace(" ","")
-    #print(mac, flush=True)
+    infomsg(mac)
     old_string = "{:012X}".format(int(mac, 16) + offset)
     new_string = ":".join(s for s in re.split(r"(\w{2})", old_string.upper()) if s.isalnum())
     return new_string
@@ -114,7 +114,7 @@ def main():
             exitnagios("CRITICAL","It was not possible to resolve hostname into IP havig hostname as "+hostname)
 
         tempmac = getmacfromip(targetip)
-        #print(targetmac, flush=True)
+        infomsg(targetmac)
         if (tempmac == ""):
             exitnagios("CRITICAL","It was not possible to resolve IP into MAC. having hostname as "+hostname+" and targetip as "+targetip)
         targetmac = change_mac(tempmac,1)
@@ -130,7 +130,7 @@ def main():
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         interfaces = findinterfaces()
         for interface in interfaces:
-            #print(interface, flush=True)
+            infomsg(interface)
             speeds = getspeeds(interface,targetmac)
             if speeds != None:
                 upload = speeds[0]
