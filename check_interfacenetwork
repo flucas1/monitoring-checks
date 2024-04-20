@@ -109,11 +109,11 @@ def dointerfacenetworkcheck(interface,segment,address,existence):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-I", "--interface",                              dest="interface",       default="",            help="interface to check")
-    parser.add_argument("-s", "--segment",                                dest="segment",         default="",            help="expected network segment")
-    parser.add_argument("-a", "--address",                                dest="address",         default="",            help="expected network address")
-    parser.add_argument("-x", "--existence",        action="store_true",  dest="existence",       default=False,         help="check only for interface exitence")
-    parser.add_argument("-®", "--debug",            action="store_true",  dest="debug",           default=False,         help="be more verbose")
+    parser.add_argument("-I", "--interface",                               dest="interface",        default="",                             help="interface to check")
+    parser.add_argument("-s", "--segment",                                 dest="segment",          default="",                             help="expected network segment")
+    parser.add_argument("-a", "--address",                                 dest="address",          default="",                             help="expected network address")
+    parser.add_argument("-x", "--existence",         action="store_true",  dest="existence",        default=False,                          help="check only for interface exitence")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
