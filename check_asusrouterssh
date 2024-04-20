@@ -71,7 +71,7 @@ def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
         value = round(float(result))
     except:
         value = None
-    #print(uptime,flush=True)
+    infomsg(uptime)
     if value!=None:
         check_status(value,warn_low,warn_high,crit_low,crit_high)
     else:
@@ -88,7 +88,7 @@ def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
         value = round((used/total)*100,2)
     except:
         value = None
-    #print(uptime,flush=True)
+    infomsg(uptime)
     if value!=None:
         check_status(value,warn_low,warn_high,crit_low,crit_high)
     else:
@@ -101,7 +101,7 @@ def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeo
         value = round(float(result),2)
     except:
         value = None
-    #print(uptime,flush=True)
+    infomsg(uptime)
     if value!=None:
         check_status(value,warn_low,warn_high,crit_low,crit_high)
     else:

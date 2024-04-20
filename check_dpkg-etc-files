@@ -45,11 +45,11 @@ def getfiles(basepath,extensions):
         if os.path.isdir(fullentry):
             foundfiles = foundfiles+getfiles(fullentry,extensions)
         else:
-            #print(fullentry,flush=True)
+            infomsg(fullentry)
             fileext = os.path.splitext(fullentry)[1]
             if len(fileext)>0:
                 fileext = fileext[1:]
-            #print(fileext,flush=True)
+            infomsg(fileext)
             if fileext in extensions:
                 foundfiles.append(fullentry)
 

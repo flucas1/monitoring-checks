@@ -79,7 +79,7 @@ def wait_page_loaded(driver):
 def extractvalue(driver,entryname):
     element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
 
-    #print(value, flush=True)
+    infomsg(value)
     return value
 
 def dotestipv6call(protocol,proxy):

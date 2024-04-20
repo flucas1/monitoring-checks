@@ -45,7 +45,7 @@ def dofreeswapscall(warning,critical,minimun):
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    #print(output, flush=True)
+    infomsg(output)
     if exitcode == 0:
         lines = output.splitlines()
         hasswap = False
@@ -56,7 +56,7 @@ def dofreeswapscall(warning,critical,minimun):
             for line in lines:
                 parts = line.split()
                 if parts[0]=="Swap:":
-                    #print(parts, flush=True)
+                    infomsg(parts)
                     hasswap = True
                     total = total+int(parts[1])
                     free = free+int(parts[3])

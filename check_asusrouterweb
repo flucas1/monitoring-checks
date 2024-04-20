@@ -330,7 +330,7 @@ class RouterInfo:
         if clnts==None:
             return None
         else:
-            #print(clnts)
+            infomsg(clnts)
             lst = []
             for c in clnts['get_clientlist']:
                 if (len(c) == 17) and ("isOnline" in clnts['get_clientlist'][c]) and (clnts['get_clientlist'][c]['isOnline'] == '1'):
@@ -387,7 +387,7 @@ class RouterInfo:
 def doasusroutercall(host,username,password,timeoutvalue):
     try:
         ri = RouterInfo(host,username,password)
-        #print(ri,flush=True)
+        infomsg(ri)
 
         #print("Uptime    : " + str(ri.get_uptime_secs()),flush=True)
         #print("Memory    : " + str(ri.get_memory_usage()),flush=True)

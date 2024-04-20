@@ -45,7 +45,7 @@ def dolastloginscall(warning,critical):
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    #print(output, flush=True)
+    infomsg(output)
     if exitcode == 0:
         lines = output.splitlines()
         crashed = True

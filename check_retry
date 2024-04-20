@@ -42,7 +42,7 @@ def doretrycall():
     retries = 3
     while True:
         counter = counter+1
-        #print(str(cmdline),flush=True)
+        infomsg(str(cmdline))
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()

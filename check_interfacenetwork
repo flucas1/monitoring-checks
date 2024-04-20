@@ -56,7 +56,7 @@ def dointerfacenetworkcheck(interface,segment,address,existence):
                     found_addrs.append(entry)
             break
 
-    #print(found_addrs, flush=True)
+    infomsg(found_addrs)
 
     if segment=="" and address=="":
         if (found_interface == True) and (existence == True):

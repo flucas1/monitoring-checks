@@ -61,7 +61,7 @@ try:
         if gpsd.waiting():
             if gpsd.read():
                 report = gpsd.data
-                #print(report,flush=True)
+                infomsg(report)
                 if report["class"] == "SKY":
                     total_used.append(gpsd.satellites_used)
                     total_seen.append(len(gpsd.satellites))

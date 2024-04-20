@@ -64,7 +64,7 @@ linepercent = alllines[-2]
 avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
 percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
 
-#print(output)
+infomsg(output)
 
 #and then check the response...
 if response == 0:

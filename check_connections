@@ -50,7 +50,7 @@ def doconnectionscall(warning,critical):
             parts = totalline.split()
             if len(parts)>1:
                 totalconnections = int(parts[1])
-                #print(totalconnections,flush=True)
+                infomsg(totalconnections)
                 if (critical!=None) and (critical!="") and (totalconnections > int(critical)):
                     exitnagios("CRITICAL","there are too many connections - "+str(totalconnections)+" connections | connections="+str(totalconnections))
                 elif (warning!=None) and (warning!="") and (totalconnections > int(warning)):

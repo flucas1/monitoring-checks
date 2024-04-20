@@ -60,7 +60,7 @@ def dogpstimecheck(timeoutvalue,timeoutstatus):
             if gpsd.waiting():
                 if gpsd.read() == 0:
                     report = gpsd.data
-                    #print(report,flush=True)
+                    infomsg(report)
                     if report['class'] == 'TPV':
                          test_time = report.get('time','')
                          if (test_time != ''):

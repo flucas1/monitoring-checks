@@ -54,7 +54,7 @@ def dosmstoolscall(modem):
                 handle = open(filename, "r")
                 contents = handle.read()
                 for line in contents.splitlines():
-                    #print(line, flush=True)
+                    infomsg(line)
                     if line.startswith(modem+":"):
                         resultstatus = ""
                         resultmsg = ""
