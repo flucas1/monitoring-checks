@@ -37,21 +37,20 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def checkgetent(verbose, database, key, value, partial):
+def checkgetent(database, key, value, partial):
     command = ['/usr/bin/getent', database]
     infomsg(line)
-    if verbose:
-        print(" ".join(command), flush=True)
+    infomsg(" ".join(command))
     output = ""
     try:
         result = subprocess.check_output(command)
         output = result.decode('utf-8')
     except Exception as e:
-        print("CRITICAL: exception during getent call", flush=True)
+        infomsg("CRITICAL: exception during getent call")
         return False
 
     if output == None:
-        print("CRITICAL: no output from getent", flush=True)
+        infomsg("CRITICAL: no output from getent")
         return False
     else:
         lines = output.splitlines()
@@ -62,34 +61,35 @@ def checkgetent(verbose, database, key, value, partial):
             if  line.startswith(key+":"):
                 found = True
                 if ((value==None) or (value=="")):
-                    print("OK: found key and no expected value was set - "+line, flush=True)
+                    infomsg("OK: found key and no expected value was set - "+line)
                     isok = True
                 elif (line == key+value):
-                    print("OK: found fully matching expected line "+line, flush=True)
+                    infomsg("OK: found fully matching expected line "+line)
                     isok = True
                 elif partial and (line.startswith(key+value)):
-                    print("OK: found partial match with expected line "+line, flush=True)
+                    infomsg("OK: found partial match with expected line "+line)
                     isok = True
                 else:
-                    print("CRITICAL: found unexpected line "+line+" but it was expected "+key+value, flush=True)
+                    infomsg("CRITICAL: found unexpected line "+line+" but it was expected "+key+value)
                 break
         if found == False:
-            print("CRITICAL: key not found "+key, flush=True)
+            infomsg("CRITICAL: key not found "+key)
         return isok
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--database",                       dest="database",                help="database to use (passwod, group, ...)")
-    parser.add_argument("-k", "--key",                            dest="key",                     help="key to search")
-    parser.add_argument("-l", "--value",                          dest="value",    default=None,  help="expected value")
-    parser.add_argument("-p", "--partial",  action="store_true",  dest="partial",  default=False, help="is partial match")
-    parser.add_argument("-w", "--warning",  action="store_false", dest="critical",                help="Return warning if not matching")
-    parser.add_argument("-c", "--critical", action="store_true",  dest="critical", default=True,  help="Return critical if not matching (default)")
-    parser.add_argument("-v", "--verbose",  action="store_true",  dest="verbose",                 help="Verbose operation")
-    parser.add_argument("-q", "--quiet",    action="store_false", dest="verbose",                 help="Quiet operation")
+    parser.add_argument("-d", "--database",                                dest="database",                                                 help="database to use (passwod, group, ...)")
+    parser.add_argument("-k", "--key",                                     dest="key",                                                      help="key to search")
+    parser.add_argument("-l", "--value",                                   dest="value",            default=None,                           help="expected value")
+    parser.add_argument("-p", "--partial",           action="store_true",  dest="partial",          default=False,                          help="is partial match")
+    parser.add_argument("-w", "--warning",           action="store_false", dest="critical",                                                 help="Return warning if not matching")
+    parser.add_argument("-c", "--critical",          action="store_true",  dest="critical",         default=True,                           help="Return critical if not matching (default)")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
-    result = checkgetent(args.verbose, args.database, args.key, args.value, args.partial)
+    setcandebug(args.debug)
+
+    result = checkgetent(args.database, args.key, args.value, args.partial)
     if result == True:
         sys.exit(0)
     else:

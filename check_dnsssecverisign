@@ -167,9 +167,15 @@ def dodnssecverisigncall(domain,proxy,ignoremessages):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host',                                 dest="host",          required=True,          help="Hostname")
-    parser.add_argument("-e", "--expected",                             dest="expected",      default="false",        help="expected true/false")
+    parser.add_argument('-H', '--host',                                    dest="host",                                                     help="Hostname")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                        help="expected true/false")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+    
+    setcandebug(args.debug)
+
+    if (args.host == ""):
+        exitnagios("CRITICAL","specify a host/domain to check")
 
     proxy = ""
     ignoremessages = []

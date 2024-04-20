@@ -255,12 +255,15 @@ def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",           action="store_true",  dest="ipv4",          default=False,         help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",           action="store_true",  dest="ipv6",          default=False,         help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-p", "--proxy",                                dest="proxy",         default="",            help="use a proxy")
-    parser.add_argument("-i", "--expectedip",                           dest="expectedip",    default="",            help="expected response for the IP")
-    parser.add_argument("-d", "--expecteddns",                          dest="expecteddns",   default="",            help="expected response for the DNS")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                             help="use a proxy")
+    parser.add_argument("-i", "--expectedip",                              dest="expectedip",       default="",                             help="expected response for the IP")
+    parser.add_argument("-d", "--expecteddns",                             dest="expecteddns",      default="",                             help="expected response for the DNS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if (args.ipv4 == True) and (args.ipv6 == True):
         exitnagios("CRITICAL","choose ipv4 or ipv6, not both")

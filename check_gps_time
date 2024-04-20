@@ -41,6 +41,7 @@ def exitnagios(status,message):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--timeout", dest="timeout", default="90:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
     #if not options.hostname:
@@ -83,6 +84,8 @@ def dogpstimecheck(timeoutvalue,timeoutstatus):
 
 def main():
     args = parse_args()
+
+    setcandebug(args.debug)
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
