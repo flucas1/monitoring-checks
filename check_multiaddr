@@ -125,7 +125,7 @@ for host in allhosts:
     mappings[future] = host
 for future in concurrent.futures.as_completed(futures):
     (exitcode,output,errors) = future.result()
-    infomsg(exitcode,output,errors)
+    infomsg(str(exitcode)+"\n"+output+"\n"+errors)
     if exitcode==0:
         for test in futures:
             test.cancel()
