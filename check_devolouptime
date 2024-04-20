@@ -132,7 +132,7 @@ def dodevolouptimecall(password, warningmin, criticalmin, warningmax, criticalma
             wait_page_loaded(driver)
             wait.until(EC.visibility_of_element_located((By.ID, "overview-route-system-status")))
 
-            #print("A", flush=True)
+            infomsg("A")
             current_url = driver.current_url
             infomsg(current_url)
             if current_url == "http://"+ip+"/#/overview":
@@ -140,7 +140,7 @@ def dodevolouptimecall(password, warningmin, criticalmin, warningmax, criticalma
                 pass
             else:
                 raise Exception("error during log in "+current_url)
-            #print("B", flush=True)
+            infomsg("B")
 
             url = "http://"+ip+"/#/info/device"
             driver.get(url)
@@ -150,7 +150,7 @@ def dodevolouptimecall(password, warningmin, criticalmin, warningmax, criticalma
             wait.until(EC.visibility_of_element_located((By.ID, "uptime")))
             wait.until(EC.text_to_be_present_in_element((By.ID, "uptime"), "day"))
             uptime = driver.find_element(By.ID, "uptime")
-            #print(uptime.text, flush=True)
+            infomsg(uptime.text)
             infomsg(uptime.get_attribute("outerHTML"))
             uptimeparts = uptime.text.strip().split(",")
             rawdays = uptimeparts[0].split()[0]

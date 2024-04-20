@@ -233,7 +233,7 @@ def main():
     strict = args.strict
     if args.expected in ["auto","",None]:
         expected = getexpected(model)
-        #print(expected,flush=True)
+        infomsg(expected)
     else:
         expected = args.expected
 

@@ -80,7 +80,7 @@ def testvalue(ipo,dnsquery,recordtype,customresolver):
     result = True
     try:
         queryrr = customresolver.resolve(dnsquery,recordtype,search=False)
-        #print(queryrr.rrset, flush=True)
+        infomsg(queryrr.rrset)
         if len(queryrr.rrset)==1:
             resolvedip = ipaddress.ip_address(queryrr.rrset[0])
             if resolvedip != ipo:
@@ -108,7 +108,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
                     if testvalue(ipo,alias+"."+search,recordtype,customresolver):
                         foundusingsearch = True
                         break
-                #print(alias+" "+str(foundusingsearch), flush=True)
+                infomsg(alias+" "+str(foundusingsearch))
                 if foundusingsearch == False:
                     result = False
                     break
@@ -120,8 +120,8 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
 def dohostsfilecheck():
     searchlist = extractsearchlist()
     hosts = extracthostslist()
-    #print(searchlist, flush=True)
-    #print(hosts, flush=True)
+    infomsg(searchlist)
+    infomsg(hosts)
 
     allvalid = True
     failing = {}

@@ -47,8 +47,8 @@ def dofwupdmgrcall():
     exitcode = completedproc.returncode
 
     if exitcode in [0,2]:
-        #print(output, flush=True)
-        #print(errors, flush=True)
+        infomsg(output)
+        infomsg(errors)
         #errors.splitlines[0].endswith(": UEFI capsule updates not available or enabled in firmware setup") :
         if errors.endswith("No updates available") or errors.endswith("No updatable devices") :
             exitnagios("OK","there are no fwupdmgr updates")

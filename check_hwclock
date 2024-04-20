@@ -101,9 +101,9 @@ def evaluate(difference):
 
 check_rtc_utc()
 rtctime = get_rtc_data()
-#print(rtctime, flush=True)
+infomsg(rtctime)
 systime = int(time.time())
-#print(systime, flush=True)
+infomsg(systime)
 difference = abs(rtctime - systime)
 evaluate(difference)
 

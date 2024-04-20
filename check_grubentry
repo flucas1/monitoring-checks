@@ -62,7 +62,7 @@ def dogrubentrycall(expected):
         for item in allcandidates:
             if item.startswith("Debian GNU/Linux, with Linux "):
                 validcandidates.append(item)
-        #print(validcandidates, flush=True)
+        infomsg(validcandidates)
 
         cmdline = ["/usr/bin/uname","--kernel-release"]
         completedproc = subprocess.run(cmdline,capture_output=True)
@@ -73,7 +73,7 @@ def dogrubentrycall(expected):
         if exitcode == 0:
             version = output.strip()
         currententry = "Debian GNU/Linux, with Linux "+version
-        #print(currententry, flush=True)
+        infomsg(currententry)
 
         foundindex = validcandidates.index(currententry)
         if foundindex==expected:

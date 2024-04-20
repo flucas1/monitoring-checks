@@ -39,7 +39,7 @@ def exitnagios(status,message):
 
 def checkgetent(verbose, database, key, value, partial):
     command = ['/usr/bin/getent', database]
-    #print(line, flush=True)
+    infomsg(line)
     if verbose:
         print(" ".join(command), flush=True)
     output = ""
@@ -58,7 +58,7 @@ def checkgetent(verbose, database, key, value, partial):
         isok = False
         found = False
         for line in lines:
-            #print(line, flush=True)
+            infomsg(line)
             if  line.startswith(key+":"):
                 found = True
                 if ((value==None) or (value=="")):

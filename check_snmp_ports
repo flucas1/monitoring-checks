@@ -54,9 +54,9 @@ def dosnmpuptimecall(listports, expected, hostname, port, community, timeoutvalu
     else:
         exitnagios("CRITICAL","Unexpected scenario")
 
-    #print(found,flush=True)
+    infomsg(found)
     validports = listports.split(",")
-    #print(validports,flush=True)
+    infomsg(validports)
     errors = {}
     success = {}
     for testport in validports:

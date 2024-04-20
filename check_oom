@@ -40,18 +40,18 @@ def exitnagios(status,message):
 
 def oom_check(criticallevel, warninglevel, short=False, verbose=False):
     cmdline = ["/usr/bin/journalctl","--utc","--no-pager","-kq","-o","json","-b","-0","--output-fields=MESSAGE"]
-    #print(cmdline, flush=True)
+    infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    #print(output, flush=True)
+    infomsg(output)
     if exitcode==0:
         counter=0
         for line in output.splitlines():
             parsed = json.loads(line)
-            #print(parsed, flush=True)
+            infomsg(parsed)
             if "killed process" in parsed["MESSAGE"]:
                 counter = counter+1
 

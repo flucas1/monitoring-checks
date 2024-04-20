@@ -70,7 +70,7 @@ def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
                     return ("UNKNOWN","The interface "+interface+" is mode "+parts[1]+".")
 
     cmdline = ["/usr/bin/jc","iw","dev",interface,"scan"]
-    #print(" ".join(cmdline),flush=True)
+    infomsg(" ".join(cmdline))
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
@@ -85,11 +85,11 @@ def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
     resultperf = []
 
     jsoninfo = json.loads(output)
-    #print(jsoninfo,flush=True)
+    infomsg(jsoninfo)
 
     totalcount = len(jsoninfo)
     for network in jsoninfo:
-        #print(network,flush=True)
+        infomsg(network)
         if "ssid" in network.keys():
             current_ssid = network["ssid"]
             if "primary_channel" in network.keys():
@@ -113,7 +113,7 @@ def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
                 if "channel_utilisation" in network.keys():
                     current_utilization_parts = network["channel_utilisation"].strip().split("/")
                     current_utilization = round((int(current_utilization_parts[0])/int(current_utilization_parts[1]))*100)
-                    #print(current_utilization,flush=True)
+                    infomsg(current_utilization)
                     if current_utilization >= utilcrit:
                         resultstatus = "CRITICAL"
                         resultmessages.append("The channel utilization is "+str(current_utilization)+"% for SSID "+current_ssid+" with channel "+current_channel+" has reached the critical "+str(utilcrit)+"%.")
@@ -147,7 +147,7 @@ def main():
         for entry in entries:
             if os.path.isdir(os.path.join(searchpath,entry,"wireless")):
                 interfacelist.append(entry)
-    #print(str(interfacelist),flush=True)
+    infomsg(str(interfacelist))
 
     ignoredlist = args.ignored.split("¶")
     if "" in ignoredlist:
