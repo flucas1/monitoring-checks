@@ -42,9 +42,9 @@ def check_kcc():
     result = []
     command = ["/usr/bin/samba-tool", "drs", "kcc"]
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode('utf-8')
+        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
     except subprocess.CalledProcessError:
-        output = "Error during 'samba-tool drs kcc'."
+        output = "Error during 'samba-tool drs kcc'"
         return False, output
     return True, output
 
@@ -52,34 +52,44 @@ def check_sysvol():
     result = []
     command = ["/usr/bin/samba-tool", "ntacl", "sysvolcheck"]
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode('utf-8')
+        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
     except subprocess.CalledProcessError:
-        output = "Error during 'samba-tool ntacl sysvolcheck'."
+        output = "Error during 'samba-tool ntacl sysvolcheck'"
         return False, output
     return True, output
 
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    args = parser.parse_args()
+    return args
 
 def main():
-    exitcode = 0
+    args = parse_args()
+    
+    setcandebug(args.debug)
+
+    errors = 0
     output = ""
 
     kcc_result, kcc_output = check_kcc()
     if kcc_result == False:
-        exitcode = 2
+        errors = errors+1
         output += kcc_output+"\n"
 
     sysvol_result, sysvol_output = check_sysvol()
     if sysvol_result == False:
-        exitcode = 2
+        errors = errors+1
         output += sysvol_output+"\n"
 
-    if exitcode == 0:
-        print('OK:','no issues detected in kcc nor sysvol', flush=True)
-        sys.exit(0)
+    if errors == 0:
+        exitnagios("OK","no issues detected in kcc nor sysvol")
     else:
-        print('CRITICAL:',output, flush=True)
-        sys.exit(exitcode)
+        exitnagios("CRITICAL",output)
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+
+#-------------------------------------------------------------------------------

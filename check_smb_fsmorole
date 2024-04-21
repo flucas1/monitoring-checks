@@ -50,14 +50,22 @@ def extractmaster(role, lines):
             return "CONTROLLER"
     return ""
 
-def main():
+#-------------------------------------------------------------------------------
+
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--master",                               dest="master",        default="",           help="expected Master for all roles")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    
+    setcandebug(args.debug)
 
     if (args.master == ""):
-        print("CRITICAL: expected master was not defined!", flush=True)
-        sys.exit(2)
+        exitnagios("CRITICAL","expected master was not defined!")
 
     roles = getroles()
     SchemaMasterRole         = extractmaster("SchemaMasterRole",         roles)
@@ -75,12 +83,11 @@ def main():
          (DomainNamingMasterRole   == args.master) and
          (DomainDnsZonesMasterRole == args.master) and
          (ForestDnsZonesMasterRole == args.master) ):
-        print("OK: All FSMO roles are "+args.master, flush=True)
-        sys.exit(0)
+        exitnagios("OK","All FSMO roles are "+args.master)
     else:
-        print("CRITICAL: not all FSMO roles are not matching "+args.master+" -- "+" -- ".join(roles), flush=True)
-        sys.exit(2)
+        exitnagios("CRITICAL","not all FSMO roles are not matching "+args.master+" -- "+" -- ".join(roles))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
+#-------------------------------------------------------------------------------

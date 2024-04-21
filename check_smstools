@@ -92,8 +92,11 @@ def dosmstoolscall(modem):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--modem", dest="modem", default="", help="modem ID")
+    parser.add_argument("-m", "--modem",                                   dest="modem",            default="",                             help="modem ID")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     dosmstoolscall(args.modem)
 
