@@ -133,7 +133,10 @@ def is_usb_speedmax():
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     is_usb_speedmax()
 

@@ -80,10 +80,13 @@ def dofreeswapscall(warning,critical,minimun):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",                              dest="warning",       default="",          help="warning level %")
-    parser.add_argument("-c", "--critical",                             dest="critical",      default="",          help="critical level %")
-    parser.add_argument("-m", "--minimun",                              dest="minimun",       default="",          help="minimun size MB")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="warning level %")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="critical level %")
+    parser.add_argument("-m", "--minimun",                                 dest="minimun",          default="",                                   help="minimun size MB")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     dofreeswapscall(args.warning,args.critical,args.minimun)
 

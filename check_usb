@@ -124,10 +124,13 @@ def is_usb_connected(device_identifiers,device_messages,device_expected):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--devices",  dest="devices",  default="", help="devices" )
-    parser.add_argument("-m", "--messages", dest="messages", default="", help="messages")
-    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected")
+    parser.add_argument("-d", "--devices",                                 dest="devices",          default="",                                   help="devices" )
+    parser.add_argument("-m", "--messages",                                dest="messages",         default="",                                   help="messages")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     is_usb_connected(args.devices,args.messages,args.expected)
 

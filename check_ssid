@@ -132,12 +132,15 @@ def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--alert",        dest="alert",        default="",       help="alert if an ssid matching")
-    parser.add_argument("-g", "--ignored",      dest="ignored",      default="",       help="ssids to ignore")
-    parser.add_argument("-e", "--expected",     dest="expected",     default="",       help="expected mac addresses for ssids")
-    parser.add_argument("-u", "--utilization",  dest="utilization",  default="70;90",  help="max utilization of expected ssids warning;critical")
-    parser.add_argument("-i", "--interface",    dest="interface",    default="",       help="interface to use")
+    parser.add_argument("-a", "--alert",                                   dest="alert",            default="",                                   help="alert if an ssid matching")
+    parser.add_argument("-g", "--ignored",                                 dest="ignored",          default="",                                   help="ssids to ignore")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected mac addresses for ssids")
+    parser.add_argument("-u", "--utilization",                             dest="utilization",      default="70;90",                              help="max utilization of expected ssids warning;critical")
+    parser.add_argument("-i", "--interface",                               dest="interface",        default="",                                   help="interface to use")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     interfacelist = args.interface.split(",")
     interfacelist.remove("")
