@@ -88,19 +88,21 @@ def snmpget(hostname, port, community, oid):
 #-------------------------------------------------------------------------------
 
 def main():
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
-    parser.add_argument("-p", "--port",                                  dest="port",            default=161,           help="port to use, usually 143 or 993")
-    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="30:CRITICAL", help="timeout value:STATUS")
-    parser.add_argument("-m", "--community",                             dest="community",       default="public",      help="private/public")
-    parser.add_argument("-w", "--warning-min",                           dest="warningmin",      default="",            help="minimun value for a warning (minutes)")
-    parser.add_argument("-c", "--critical-min",                          dest="criticalmin",     default="",            help="maximun value for a critical (minutes)")
-    parser.add_argument("-W", "--warning-max",                           dest="warningmax",      default="",            help="minimun value for a warning (minutes)")
-    parser.add_argument("-C", "--critical-max",                          dest="criticalmax",     default="",            help="maximun value for a critical (minutes)")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                             help="server to check")
+    parser.add_argument("-p", "--port",                                    dest="port",             default=161,                            help="port to use, usually 143 or 993")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                  help="timeout value:STATUS")
+    parser.add_argument("-m", "--community",                               dest="community",        default="public",                       help="private/public")
+    parser.add_argument("-w", "--warning-min",                             dest="warningmin",       default="",                             help="minimun value for a warning (minutes)")
+    parser.add_argument("-c", "--critical-min",                            dest="criticalmin",      default="",                             help="maximun value for a critical (minutes)")
+    parser.add_argument("-W", "--warning-max",                             dest="warningmax",       default="",                             help="minimun value for a warning (minutes)")
+    parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                             help="maximun value for a critical (minutes)")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if args.hostname == "":
         exitnagios("CRITICAL","no hostname specified")

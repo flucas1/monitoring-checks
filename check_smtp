@@ -135,17 +135,20 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
-    parser.add_argument("-p", "--port",                                  dest="port",            default=25,            help="port to use, usually 143 or 993")
-    parser.add_argument("-w", "--warning",                               dest="warning",         default=10,            help="warning time (float)")
-    parser.add_argument("-c", "--critical",                              dest="critical",        default=15,            help="critical time (float)")
-    parser.add_argument("-S", "--ssl",             action="store_true",  dest="ssl",             default=False,         help="use ssl")
-    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="30:CRITICAL", help="timeout value:STATUS")
-    parser.add_argument("-C", "--certificatedays",                       dest="certificatedays", default="5,20",        help="minimum number of days a certificate has to be valid crit,warn")
-    parser.add_argument("-r", "--relay",                                 dest="relay",           default="closed",      help="open or closed relay")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                             help="server to check")
+    parser.add_argument("-p", "--port",                                    dest="port",             default=25,                             help="port to use, usually 143 or 993")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default=10,                             help="warning time (float)")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default=15,                             help="critical time (float)")
+    parser.add_argument("-S", "--ssl",               action="store_true",  dest="ssl",              default=False,                          help="use ssl")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                  help="timeout value:STATUS")
+    parser.add_argument("-C", "--certificatedays",                         dest="certificatedays",  default="5,20",                         help="minimum number of days a certificate has to be valid crit,warn")
+    parser.add_argument("-r", "--relay",                                   dest="relay",            default="closed",                       help="open or closed relay")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
+
+    setcandebug(args.debug)
 
     if (args.ipv4 == True) and (args.ipv6 == True):
         exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
