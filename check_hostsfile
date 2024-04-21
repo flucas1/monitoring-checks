@@ -89,6 +89,7 @@ def testvalue(ipo,dnsquery,recordtype,customresolver):
         else:
             result = False
     except:
+        infomsg("Error resolving "+dnsquery+" "+recordtype)
         result = False
     return result
 
@@ -102,6 +103,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
         recordtype = "AAAA"
 
     if testvalue(ipo,canonical,recordtype,customresolver):
+        infomsg("Test value True for "+str(ipo))
         for alias in aliases:
             if testvalue(ipo,alias,recordtype,customresolver)==False:
                 foundusingsearch = False
@@ -114,6 +116,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
                     result = False
                     break
     else:
+        infomsg("Test value False for "+str(ipo))
         result = False
 
     return result
@@ -131,6 +134,7 @@ def dohostsfilecheck():
     for key,value in hosts.items():
         ipo = ipaddress.ip_address(key)
         if (ipo.is_loopback==False) and (ipo.is_private or ipo.is_global) and (ipo.is_reserved==False) and (ipo.is_link_local==False) and (ipo.is_multicast==False):
+            infomsg("Evaluating for "+str(ipo))
             canonical = value[0]
             aliases = value[1:]
             valid = testentry(ipo,canonical,aliases,searchlist,customresolver)
