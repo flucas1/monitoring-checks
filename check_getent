@@ -39,7 +39,6 @@ def exitnagios(status,message):
 
 def checkgetent(database, key, value, partial):
     command = ['/usr/bin/getent', database]
-    infomsg(line)
     infomsg(" ".join(command))
     output = ""
     try:
