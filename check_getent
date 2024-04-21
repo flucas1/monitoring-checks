@@ -37,43 +37,37 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def checkgetent(database, key, value, partial):
-    command = ['/usr/bin/getent', database]
-    infomsg(" ".join(command))
+def checkgetent(database, key, value, partial, outputlevel):
+    command = ["/usr/bin/getent", database]
+    infomsg(str(command))
     output = ""
     try:
         result = subprocess.check_output(command)
-        output = result.decode('utf-8')
+        output = result.decode("utf-8")
     except Exception as e:
-        infomsg("CRITICAL: exception during getent call")
-        return False
+        exitnagios("CRITICAL","exception during getent call")
 
     if output == None:
-        infomsg("CRITICAL: no output from getent")
-        return False
+        exitnagios("CRITICAL","no output from getent")
     else:
         lines = output.splitlines()
         isok = False
         found = False
         for line in lines:
-            infomsg(line)
+            infomsg("Evaluating line - "+line)
             if  line.startswith(key+":"):
                 found = True
                 if ((value==None) or (value=="")):
-                    infomsg("OK: found key and no expected value was set - "+line)
-                    isok = True
+                    exitnagios("OK","found key and no expected value was set - "+line)
                 elif (line == key+value):
-                    infomsg("OK: found fully matching expected line "+line)
-                    isok = True
+                    exitnagios("OK","found fully matching expected line "+line)
                 elif partial and (line.startswith(key+value)):
-                    infomsg("OK: found partial match with expected line "+line)
-                    isok = True
+                    exitnagios("OK","found partial match with expected line "+line)
                 else:
-                    infomsg("CRITICAL: found unexpected line "+line+" but it was expected "+key+value)
+                    exitnagios(outputlevel,"found unexpected line "+line+" but it was expected "+key+value)
                 break
         if found == False:
-            infomsg("CRITICAL: key not found "+key)
-        return isok
+            exitnagios("CRITICAL","key not found "+key)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -88,14 +82,14 @@ def main():
 
     setcandebug(args.debug)
 
-    result = checkgetent(args.database, args.key, args.value, args.partial)
-    if result == True:
-        sys.exit(0)
+    if args.critical==True:
+        outputlevel = "CRITICAL"
     else:
-        if args.critical:
-            sys.exit(2)
-        else:
-            sys.exit(1)
+        outputlevel = "WARNING"
 
-if __name__ == '__main__':
+    result = checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
+
+if __name__ == "__main__":
     main()
+
+#-------------------------------------------------------------------------------

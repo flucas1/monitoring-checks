@@ -55,7 +55,7 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
     if smtpconnection != None:
         certexpirationparsed = None
         if dossl==True:
-            infomsg(smtpconnection.socket().version())
+            infomsg("doing SSL")
             certexpirationraw = None
             try:
                 cert_data = smtpconnection.sock.getpeercert()
