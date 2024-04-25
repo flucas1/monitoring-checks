@@ -66,7 +66,7 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
             responses = None
         infomsg(responses)
         if responses == None:
-            time.sleep(0.1)
+            time.sleep(i*5)
         else:
             break
     infomsg(zone+" -> "+str(responses))
