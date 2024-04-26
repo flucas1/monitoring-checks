@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import cups
+import argparse
+import sys
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def connect_cups(hostname, port, ssl):
+    cups.setServer(hostname)
+    cups.setPort(port)
+    #cups.setSsl(ssl)
+    return cups.Connection()
+
+def connect_cups(socket):
+    cups.setServer(socket)
+    return cups.Connection()
+
+def get_printers_states(conn, printers_names=None, all_printers=False):
+    printer_valid = []
+    printers_failed = []
+    found = False
+    printers = conn.getPrinters()
+    if all_printers:
+        printers_names = printers.keys()
+    for printer_name in printers_names:
+        for cprinter_name, cprinter_attributes in printers.items():
+            if printer_name == cprinter_name:
+                cprinter_state = cprinter_attributes["printer-state"]
+                if cprinter_state == 3:
+                    printer_valid.append("%s (idle)" % printer_name)
+                elif cprinter_state == 4:
+                    printer_valid.append("%s (printing)" % printer_name)
+                elif cprinter_state == 5:
+                    printers_failed.append("%s (stopped)" % printer_name)
+                else:
+                    printers_failed.append("%s (error %s)" % (printer_name, cprinter_state))
+                found = True
+        if not found:
+            printers_failed.append(printer_name + " (not found)")
+        found = False
+    return printer_valid, printers_failed
+
+#-------------------------------------------------------------------------------
+
+def parse_options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname",     action="store",                                                                        help="server hostname")
+    parser.add_argument("-p", "--port",         action="store",                                                                        help="port")
+    parser.add_argument("-S", "--ssl",          action="store_true",                           default=False,                          help="Use SSL/TLS")
+    parser.add_argument("-k", "--socket",       action="store",                                                                        help="socket file (hot compatible with --hostname)")
+    parser.add_argument("-r", "--printers",     action="store",                                                                        help="A comma separated list of printers")
+    parser.add_argument("-a", "--all-printers", action="store_true",                           default=False,                          help="Test all printers (not compatible with --printers)")
+    parser.add_argument("-®", "--debug",        action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    args = parser.parse_args()
+
+    return args
+
+def main():
+    args = parse_options()
+    
+    setcandebug(args.debug)
+    
+    if ((args.hostname is None and args.socket is None) or (args.printers is None and args.all_printers is False) or (args.printers is not None and args.all_printers is True)):
+        exitnagios("UNKNOWN","Wrong syntax. Use -h to get help")
+    if args.printers is not None:
+        args.printers = args.printers.split(",")
+
+    socket = None
+    hostname = None
+    port = None
+    ssl = None
+    if args.socket != "":
+        socket = args.socket
+    elif args.hostname != "":
+        hostname = args.hostname
+        if args.port != "":
+            port = int(args.port)
+        else:
+            port = 631
+        ssl = args.ssl
+
+    try:
+        if socket==None:
+            conn = connect_cups(hostname, port, ssl)
+        else:
+            conn = connect_cups(socket)
+    except RuntimeError as e:
+        exitnagios("UNKNOWN",str(e))
+
+    printers_valid, printers_failed = get_printers_states(conn, args.printers, args.all_printers)
+    if printers_failed:
+        exitnagios("CRITICAL",", ".join(printers_failed)+" | valid="+str(len(printers_valid))+" invalid="+str(len(printers_failed)))
+    if printers_valid:
+        exitnagios("OK",", ".join(printers_valid)+" | valid="+str(len(printers_valid))+" invalid="+str(len(printers_failed)))
+    else:
+        exitnagios("UNKNOWN","No printer found | valid=-1 invalid=-1")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
