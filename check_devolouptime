@@ -187,19 +187,38 @@ def dodevolouptimecall(password, warningmin, criticalmin, warningmax, criticalma
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                             help="server to check")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-w", "--warning-min",                             dest="warningmin",       default="",                             help="minimun value for a warning (seconds)")
-    parser.add_argument("-c", "--critical-min",                            dest="criticalmin",      default="",                             help="maximun value for a critical (seconds)")
-    parser.add_argument("-W", "--warning-max",                             dest="warningmax",       default="",                             help="minimun value for a warning (seconds)")
-    parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                             help="maximun value for a critical (seconds)")
-    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                             help="file containing the management credentials")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-w", "--warning-min",                             dest="warningmin",       default="",                                   help="minimun value for a warning (seconds)")
+    parser.add_argument("-c", "--critical-min",                            dest="criticalmin",      default="",                                   help="maximun value for a critical (seconds)")
+    parser.add_argument("-W", "--warning-max",                             dest="warningmax",       default="",                                   help="minimun value for a warning (seconds)")
+    parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                                   help="maximun value for a critical (seconds)")
+    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                                   help="file containing the management credentials")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
 
     if args.filecred == "":
         exitnagios("CRITICAL","filecred is not specified")

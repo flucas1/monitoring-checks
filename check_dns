@@ -508,41 +508,53 @@ def check_zone(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, autho
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
-#    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                             help="use a proxy")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                 help="server to check")
-    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                             help="mode TCP/UDP")
-    parser.add_argument("-r", "--record",                                  dest="record",           default="",                             help="record to query (exclusive with zone)")
-    parser.add_argument("-p", "--type",                                    dest="kind",             default="A",                            help="query type for the record")
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                             help="expected record value")
-    parser.add_argument("-A", "--alternativeslogic", action="store_true",  dest="alternativeslogic",default=False,                          help="there is no need to match all the expected values")
-    parser.add_argument("-z", "--zone",                                    dest="zone",             default="",                             help="zone to test (exclusive with record)")
-    parser.add_argument("-y", "--consistency",       action="store_true",  dest="consistency",      default=False,                          help="test full consistency for zone at server with MNAME and NS")
-    parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                          help="test same serial for zone at server with MNAME and NS")
-    parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                          help="test transfer of zone at server")
-    parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                          help="the reply must be authoritative (not implemented)")
-    parser.add_argument("-q", "--quiet",             action="store_false", dest="verbose",          default=True,                           help="quiet operation")
-    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                         help="tolerance in zone serial before considering warning (integer or 'auto')")
-    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                         help="tolerance in zone serial before considering critical (integer or 'auto')")
-    parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                            help="minimun number of responding servers before considering warning")
-    parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",                            help="minimun number of responding servers before considering critical")
-    parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",                            help="tolerance in missing values in record before considering warning")
-    parser.add_argument("-N", "--recmissingcrit",                          dest="recmissingcrit",   default="0",                            help="tolerance in missing values in record before considering critical")
-    parser.add_argument("-U", "--recmincountwarn",                         dest="recmincountwarn",  default="0",                            help="minimun number of values in record before considering warning")
-    parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                            help="minimun number of values in record servers before considering critical")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+#    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
+    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                                   help="mode TCP/UDP")
+    parser.add_argument("-r", "--record",                                  dest="record",           default="",                                   help="record to query (exclusive with zone)")
+    parser.add_argument("-p", "--type",                                    dest="kind",             default="A",                                  help="query type for the record")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected record value")
+    parser.add_argument("-A", "--alternativeslogic", action="store_true",  dest="alternativeslogic",default=False,                                help="there is no need to match all the expected values")
+    parser.add_argument("-z", "--zone",                                    dest="zone",             default="",                                   help="zone to test (exclusive with record)")
+    parser.add_argument("-y", "--consistency",       action="store_true",  dest="consistency",      default=False,                                help="test full consistency for zone at server with MNAME and NS")
+    parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                                help="test same serial for zone at server with MNAME and NS")
+    parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                                help="test transfer of zone at server")
+    parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                                help="the reply must be authoritative (not implemented)")
+    parser.add_argument("-q", "--quiet",             action="store_false", dest="verbose",          default=True,                                 help="quiet operation")
+    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                               help="tolerance in zone serial before considering warning (integer or 'auto')")
+    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                               help="tolerance in zone serial before considering critical (integer or 'auto')")
+    parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                                  help="minimun number of responding servers before considering warning")
+    parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",                                  help="minimun number of responding servers before considering critical")
+    parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",                                  help="tolerance in missing values in record before considering warning")
+    parser.add_argument("-N", "--recmissingcrit",                          dest="recmissingcrit",   default="0",                                  help="tolerance in missing values in record before considering critical")
+    parser.add_argument("-U", "--recmincountwarn",                         dest="recmincountwarn",  default="0",                                  help="minimun number of values in record before considering warning")
+    parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                                  help="minimun number of values in record servers before considering critical")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
-    if (args.ipv4 == True) and (args.ipv6 == True):
-        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
-    if (args.ipv4 == False) and (args.ipv6 == False):
-        args.ipv4 = True
-    #infomsg(args.ipv4)
-    #infomsg(args.ipv6)
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
 
 #    if args.proxy != "":
 #        proxyparts = args.proxy.split("://",1)
