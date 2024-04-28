@@ -263,22 +263,6 @@ def main():
 
     setcandebug(args.debug)
 
-    protocol = None
-    exclist = 0
-    if args.ipv0 == True :
-        protocol = ""
-        exclist = exclist+1
-    if args.ipv4 == True :
-        protocol = "-4"
-        exclist = exclist+1
-    if args.ipv6 == True :
-        protocol = "-6"
-        exclist = exclist+1
-    if (exclist>1) :
-        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist<1) :
-        exitnagios("CRITICAL","no protocol selected")
-
     dodnsleakcall(protocol,args.proxy,args.expectedip,args.expecteddns)
 
 if __name__ == "__main__":
