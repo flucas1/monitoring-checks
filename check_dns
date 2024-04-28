@@ -97,14 +97,14 @@ def build_name(entry, zone):
         return entry+"."+zone
 
 def get_address(protocol, serverinfo):
-    parts = serverinfo.split(":")
+    parts = serverinfo.split("@")
     server = parts[0]
     if len(parts)>1:
         port = int(parts[1])
     else:
         port = 53
     if server == ".":
-        return "."+":"+str(port)
+        return "."+"@"+str(port)
     else:
         #infomsg(protocol)
         address = ""
@@ -115,7 +115,7 @@ def get_address(protocol, serverinfo):
                 address = ipaddress.IPv4Address(server).compressed
             else:
                 address = ipaddress.ip_address(server).compressed
-            return address+":"+str(port)
+            return address+"@"+str(port)
         except:
             pass
         
@@ -130,10 +130,10 @@ def get_address(protocol, serverinfo):
             exitnagios("CRITICAL","error during address resolution "+str(e))
         
         #infomsg(address)
-        return address+":"+str(port)
+        return address+"@"+str(port)
 
 def get_zone(useTcp, addressinfo, timeoutvalue, zone):
-    parts = addressinfo.split(":")
+    parts = addressinfo.split("@")
     address = parts[0]
     text = ""
     for i in range(3):
@@ -248,7 +248,7 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
         return result
 
 def get_resolver(addressinfo, timeoutvalue):
-    parts = addressinfo.split(":")
+    parts = addressinfo.split("@")
     address = parts[0]
     if len(parts)>1:
         port = int(parts[1])
