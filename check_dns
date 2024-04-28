@@ -53,14 +53,14 @@ def forced_ipv6_gai_family(*args, **kwargs):
     responses = original_getaddrinfo(*args, **kwargs)
     return [response
             for response in responses
-            if response[0] == socket.AF_INET]
+            if response[0] == socket.AF_INET6]
 
 def forced_ipv4_gai_family(*args, **kwargs):
     global original_getaddrinfo
     responses = original_getaddrinfo(*args, **kwargs)
     return [response
             for response in responses
-            if response[0] == socket.AF_INET6]
+            if response[0] == socket.AF_INET]
 
 #-------------------------------------------------------------------------------
 
@@ -97,16 +97,18 @@ def build_name(entry, zone):
         return entry+"."+zone
 
 def get_address(protocol, serverinfo):
+    infomsg("get_address using "+protocol+" for "+str(serverinfo))
+
     parts = serverinfo.split("@")
     server = parts[0]
     if len(parts)>1:
         port = int(parts[1])
     else:
         port = 53
+
     if server == ".":
-        return "."+"@"+str(port)
+        result = "."+"@"+str(port)
     else:
-        #infomsg(protocol)
         address = ""
         try:
             if protocol == "-6":
@@ -116,9 +118,9 @@ def get_address(protocol, serverinfo):
             else:
                 address = ipaddress.ip_address(server).compressed
             return address+"@"+str(port)
-        except:
+        except Exception as e:
             pass
-        
+
         try:
             if protocol == "-6":
                 address = socket.getaddrinfo(server, None, socket.AF_INET6)[0][4][0]
@@ -127,10 +129,12 @@ def get_address(protocol, serverinfo):
             else:
                 address = socket.getaddrinfo(server, None)[0][4][0]
         except Exception as e:
-            exitnagios("CRITICAL","error during address resolution "+str(e))
-        
-        #infomsg(address)
-        return address+"@"+str(port)
+            exitnagios("CRITICAL","error during address resolution - "+str(e))
+
+        result = address+"@"+str(port)
+
+    infomsg("evaluated as "+result)
+    return result
 
 def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     parts = addressinfo.split("@")
