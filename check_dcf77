@@ -82,7 +82,7 @@ def main():
 
     dodcf77call(args.warning,args.critical)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

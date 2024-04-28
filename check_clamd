@@ -71,7 +71,7 @@ def main():
     setcandebug(args.debug)
     doclamdcall(args.filetest)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

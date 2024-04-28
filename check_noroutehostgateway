@@ -98,7 +98,7 @@ def main():
     setcandebug(args.debug)
     donoroutehostgatewaycall(args.whitelist)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

@@ -70,8 +70,8 @@ infomsg(output)
 
 #and then check the response...
 if response == 0:
-  print("OK: "+args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent), flush=True)
-  sys.exit(0)
+  exitnagios("OK",args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent))
 else:
-  print("CRITICAL: "+args.hostname+" is not responding to ARP! | average=1 percent=0", flush=True)
-  sys.exit(2)
+  exitnagios("CRITICAL",args.hostname+" is not responding to ARP! | average=1 percent=0")
+
+#-------------------------------------------------------------------------------
