@@ -49,24 +49,6 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-original_getaddrinfo = socket.getaddrinfo
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-#-------------------------------------------------------------------------------
-
 def check_page_loaded(driver):
     #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script('return document.readyState;')
@@ -205,9 +187,6 @@ def dodevolouptimecall(password, warningmin, criticalmin, warningmax, criticalma
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-w", "--warning-min",                             dest="warningmin",       default="",                                   help="minimun value for a warning (seconds)")
