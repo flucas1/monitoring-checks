@@ -15,6 +15,7 @@ import difflib
 import ipaddress
 import socks
 import traceback
+import random
 
 #-------------------------------------------------------------------------------
 
@@ -82,7 +83,7 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
         except Exception as e:
             infomsg("returning None - "+type(e).__name__+" - "+str(e))
             responses = None
-        infomsg(responses)
+        infomsg("responses for type "+str(field)+" -> "+str(responses))
         if responses == None:
             time.sleep(0.1)
         else:
@@ -237,18 +238,29 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
             else:
                 # not None and not CNAME answer, ready to resolve A/AAAA
                 break
+    alternatives = []
     if protocol == "-6":
         responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
+        for response in responses:
+            alternatives.append(response)
     elif protocol == "-4":
         responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+        for response in responses:
+            alternatives.append(response)
     else:
-        responses = resolvewithretries(customresolver, canonical_name, "ANY", useTcp)
-    if responses == None:
+        responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
+        for response in responses:
+            alternatives.append(response)
+        responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+        for response in responses:
+            alternatives.append(response)
+    if alternatives == None:
         return ""
     else:
         result = ""
-        if len(responses)>0:
-            result = responses[0].to_text()
+        if len(alternatives)>0:
+            randpos = random.randrange(len(alternatives))
+            result = alternatives[randpos].to_text()
         return result
 
 def get_resolver(addressinfo, timeoutvalue):
@@ -278,6 +290,7 @@ def get_resolver(addressinfo, timeoutvalue):
                 time.sleep(1)
         customresolver.port = port
     customresolver.timeout = timeoutvalue
+    infomsg("found resolver "+str(customresolver._nameservers))
     return customresolver
 
 #-------------------------------------------------------------------------------
