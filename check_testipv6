@@ -82,7 +82,7 @@ def extractvalue(driver,entryname):
     infomsg(value)
     return value
 
-def dotestipv6call(protocol,proxy):
+def dotestipv6call(proxy):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -140,7 +140,7 @@ def main():
 
     setcandebug(args.debug)
 
-    dotestipv6call(protocol,args.proxy)
+    dotestipv6call(args.proxy)
 
 if __name__ == "__main__":
     main()
