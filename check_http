@@ -402,12 +402,6 @@ def main():
     elif (exclist<1) :
         exitnagios("CRITICAL","no protocol selected")
 
-    if args.filecred == "":
-        exitnagios("CRITICAL","filecred is not specified")
-    else:
-        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
-        password=filecontentslines[0]
-
     retries = 3
 
     parts = args.timeout.split(":")
