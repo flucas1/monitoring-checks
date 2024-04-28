@@ -55,14 +55,14 @@ def forced_ipv6_gai_family(*args, **kwargs):
     responses = original_getaddrinfo(*args, **kwargs)
     return [response
             for response in responses
-            if response[0] == socket.AF_INET]
+            if response[0] == socket.AF_INET6]
 
 def forced_ipv4_gai_family(*args, **kwargs):
     global original_getaddrinfo
     responses = original_getaddrinfo(*args, **kwargs)
     return [response
             for response in responses
-            if response[0] == socket.AF_INET6]
+            if response[0] == socket.AF_INET]
 
 #-------------------------------------------------------------------------------
 
