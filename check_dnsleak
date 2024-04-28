@@ -130,7 +130,7 @@ def comparetriplet(value,expected):
         else:
             return False
 
-def dodnsleakcall(protocol,proxy,expectedip,expecteddns):
+def dodnsleakcall(proxy,expectedip,expecteddns):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -263,7 +263,7 @@ def main():
 
     setcandebug(args.debug)
 
-    dodnsleakcall(protocol,args.proxy,args.expectedip,args.expecteddns)
+    dodnsleakcall(args.proxy,args.expectedip,args.expecteddns)
 
 if __name__ == "__main__":
     main()
