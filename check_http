@@ -48,6 +48,24 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+#-------------------------------------------------------------------------------
+
 _preheaders = []
 _headers = {}
 def _header_function(header_line):
@@ -374,16 +392,21 @@ def main():
     if args.ipv4 == True :
         protocol = "-4"
         exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True :
         protocol = "-6"
         exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist>1) :
         exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist<1) :
         exitnagios("CRITICAL","no protocol selected")
 
-    if (args.hostname == ""):
-        exitnagios("CRITICAL","hostname not defined")
+    if args.filecred == "":
+        exitnagios("CRITICAL","filecred is not specified")
+    else:
+        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
+        password=filecontentslines[0]
 
     retries = 3
 
