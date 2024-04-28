@@ -46,27 +46,30 @@ def checkifaddress(test):
         pass
     return (converted != None)
 
-def donoroutehostgatewaycall(whitelist):
-    cmdline = ["/usr/bin/ip","route"]
+def donoroutehostgatewaycall(protocol,whitelist):
+    cmdline = ["/usr/bin/ip",protocol,"route"]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8")
     errors = completedproc.stderr.decode("utf-8")
     exitcode = completedproc.returncode
     if exitcode!=0:
-        exitnagios("CRITICAL","cannot read routes table")
+        return [protocol+": cannot read routes table"]
 
     exclusion = []
     for item in whitelist.lower().split(","):
         exclusion.append(item.split("/"))
 
+    errormsgs = []
     for line in output.strip().splitlines():
         if line.startswith(" ") == False:
             parts = line.split()
             if (len(parts)>0) and (checkifaddress(parts[0]) == True):
+                infomsg("found address: "+str(parts))
                 if parts[len(parts)-1].lower() != "linkdown":
+                    infomsg("found candidate: "+str(parts))
                     if len(parts)>1 and parts[1].lower() == "via":
-                        infomsg(parts)
+                        infomsg("checking if this is an exception: "+str(parts))
                         exception = False
                         for item in exclusion:
                             if len(item)>0 and item[0]==parts[0]:
@@ -80,9 +83,10 @@ def donoroutehostgatewaycall(whitelist):
                                 else:
                                     exception = True
                         if exception == False:
-                            exitnagios("CRITICAL","found UGH route: "+parts[0]+"/"+parts[2]+"/"+parts[4])
+                            errormsgs.append(protocol+": found UGH route "+parts[0]+"/"+parts[2]+"/"+parts[4])
 
-    exitnagios("OK","routes table looks normal")
+    return errormsgs
+
 
 #-------------------------------------------------------------------------------
 
@@ -96,7 +100,15 @@ def parse_args():
 def main():
     args = parse_args()
     setcandebug(args.debug)
-    donoroutehostgatewaycall(args.whitelist)
+
+    errormsgs = []
+    errormsgs = errormsgs + donoroutehostgatewaycall("-4",args.whitelist)
+    errormsgs = errormsgs + donoroutehostgatewaycall("-6",args.whitelist)
+
+    if len(errormsgs)==0:
+        exitnagios("OK","routes table looks normal")
+    else:
+        exitnagios("CRITICAL",str(errormsgs))
 
 if __name__ == "__main__":
     main()
