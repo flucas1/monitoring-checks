@@ -4,6 +4,7 @@
 import cups
 import argparse
 import sys
+import socket
 
 #-------------------------------------------------------------------------------
 
