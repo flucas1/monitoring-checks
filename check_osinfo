@@ -54,9 +54,9 @@ def doexpectedcall(expectedarchitecture, expectedreleasename):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--architecture",      action="store",                                default="",                             help="expected machine architecture")
-    parser.add_argument("-r", "--releasename",       action="store",                                default="",                             help="expected OS release name")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-a", "--architecture",      action="store",                                default="",                                   help="expected machine architecture")
+    parser.add_argument("-r", "--releasename",       action="store",                                default="",                                   help="expected OS release name")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
 
     args = parser.parse_args()
     

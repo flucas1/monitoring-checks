@@ -68,10 +68,10 @@ def oom_check(criticallevel, warninglevel, short=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",                                                          default="",                             help="Number of occurences to trigger a warning")
-    parser.add_argument("-c", "--critical",                                                         default="1",                            help="Number of occurences to trigger a warning")
-    parser.add_argument("-s", "--short",             action="store_true",                                                                   help="If this option is specified, check ignores dmesg OOM problems older then 24 hours")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-w", "--warning",                                                          default="",                                   help="Number of occurences to trigger a warning")
+    parser.add_argument("-c", "--critical",                                                         default="1",                                  help="Number of occurences to trigger a warning")
+    parser.add_argument("-s", "--short",             action="store_true",                                                                         help="If this option is specified, check ignores dmesg OOM problems older then 24 hours")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)

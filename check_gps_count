@@ -40,10 +40,10 @@ def exitnagios(status,message):
 #collect arguments
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",           action="store",       type=int,                default=3,                              help="if this number or less, it becomes warning state (default 3, 3D FIX requires 4)")
-    parser.add_argument("-c", "--critical",          action="store",       type=int,                default=2,                              help="if this number or less, it becomes critical state (default 2, 2D FIX requires 3)")
-    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=90,                             help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-w", "--warning",           action="store",       type=int,                default=3,                                    help="if this number or less, it becomes warning state (default 3, 3D FIX requires 4)")
+    parser.add_argument("-c", "--critical",          action="store",       type=int,                default=2,                                    help="if this number or less, it becomes critical state (default 2, 2D FIX requires 3)")
+    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=90,                                   help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     return args

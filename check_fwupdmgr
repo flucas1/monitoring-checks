@@ -61,7 +61,7 @@ def dofwupdmgrcall():
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
     return args
 
