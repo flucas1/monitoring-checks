@@ -96,7 +96,7 @@ def build_name(entry, zone):
     else:
         return entry+"."+zone
 
-def get_address(ipv6, serverinfo):
+def get_address(protocol, serverinfo):
     parts = serverinfo.split(":")
     server = parts[0]
     if len(parts)>1:
@@ -106,22 +106,26 @@ def get_address(ipv6, serverinfo):
     if server == ".":
         return "."+":"+str(port)
     else:
-        #infomsg(ipv6)
+        #infomsg(protocol)
         address = ""
         try:
-            if ipv6 == True:
+            if protocol == "-6":
                 address = ipaddress.IPv6Address(server).compressed
-            else:
+            elif protocol == "-4":
                 address = ipaddress.IPv4Address(server).compressed
+            else:
+                address = ipaddress.ip_address(server).compressed
             return address+":"+str(port)
         except:
             pass
         
         try:
-            if ipv6 == True:
+            if protocol == "-6":
                 address = socket.getaddrinfo(server, None, socket.AF_INET6)[0][4][0]
-            else:
+            elif protocol == "-4":
                 address = socket.getaddrinfo(server, None, socket.AF_INET)[0][4][0]
+            else:
+                address = socket.getaddrinfo(server, None)[0][4][0]
         except Exception as e:
             exitnagios("CRITICAL","error during address resolution "+str(e))
         
@@ -207,7 +211,7 @@ def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
         result = ",".join(temp)
         return result
 
-def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
+def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
     customresolver = get_resolver(addressinfo,timeoutvalue)
     canonical_name = entry
     counter = 0
@@ -229,10 +233,12 @@ def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
             else:
                 # not None and not CNAME answer, ready to resolve A/AAAA
                 break
-    if ipv6 == True:
+    if protocol == "-6":
         responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-    else:
+    elif protocol == "-4":
         responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+    else:
+        responses = resolvewithretries(customresolver, canonical_name, "ANY", useTcp)
     if responses == None:
         return ""
     else:
@@ -272,9 +278,9 @@ def get_resolver(addressinfo, timeoutvalue):
 
 #-------------------------------------------------------------------------------
 
-def check_record(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
+def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             found = get_records(useTcp, addressinfo, timeoutvalue, record, kind)
             #infomsg(found)
@@ -337,14 +343,14 @@ def check_record(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritativ
         else:
             exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
 
-def check_consistency(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
+def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
-            text_mname = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
+            text_mname = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
             if text_mname=="":
                 exitnagios(timeoutstatus,"no response when trying to transfer zone from mname")
             text_server = get_zone(useTcp, addressinfo, timeoutvalue, zone)
@@ -363,7 +369,7 @@ def check_consistency(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authori
                 for test in ns:
                     #infomsg(test)
                     try:
-                        text_test = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        text_test = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if text_test=="":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -394,9 +400,9 @@ def check_consistency(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authori
         infomsg(traceback.format_exc())
         exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
-def check_serial(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             automode = tolerancewarn<0 or tolerancecrit<0
 
@@ -412,7 +418,7 @@ def check_serial(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritativ
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
-            principalserver = get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone))
+            principalserver = get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
             serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
@@ -451,7 +457,7 @@ def check_serial(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritativ
                 for test in ns:
                     #infomsg(test)
                     try:
-                        serial_test = get_serial(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        serial_test = get_serial(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if serial_test == "":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -490,9 +496,9 @@ def check_serial(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritativ
         exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
 
 
-def check_transfer(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone):
+def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             start = datetime.datetime.now(datetime.UTC)
             text = get_zone(useTcp, addressinfo, timeoutvalue, zone)
@@ -512,13 +518,13 @@ def check_transfer(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritat
     except Exception as e:
         exitnagios("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
 
-def check_zone(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        check_consistency(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
     elif serial:
-        check_serial(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
     elif transfer:
-        check_transfer(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
     else:
         exitnagios("CRITICAL","unknown check for zone")
 
@@ -608,9 +614,9 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            check_zone(useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
-            check_record(useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
