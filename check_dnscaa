@@ -38,7 +38,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dotorcall(protocol,domain):
+def dodnscaacall(domain):
     try:
         url = "https://caatest.co.uk/"+domain
         br = mechanize.Browser()
@@ -74,7 +74,7 @@ def main():
     if (args.host == ""):
         exitnagios("CRITICAL","specify a host/domain to check")
     
-    dotorcall(protocol,args.host)
+    dodnscaacall(args.host)
 
 if __name__ == "__main__":
     main()

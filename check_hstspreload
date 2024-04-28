@@ -76,9 +76,8 @@ def wait_page_loaded(driver):
 
 #-------------------------------------------------------------------------------
 
-def dotorcall(proxy,protocol,domain):
+def dohstspreloadcall(proxy,domain):
     infomsg(proxy)
-    infomsg(protocol)
     infomsg(domain)
     try:
         driver = generatedriver(proxy)
@@ -149,7 +148,7 @@ def main():
         exitnagios("CRITICAL","specify a host/domain to check")
 
     proxy = ""
-    dotorcall(proxy,protocol,args.host)
+    dohstspreloadcall(proxy,args.host)
 
 if __name__ == "__main__":
     main()
