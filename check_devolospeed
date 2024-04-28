@@ -38,20 +38,23 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host",                                    dest="host",                                                     help="Hostname")
-    parser.add_argument("-m", "--mac",                                     dest="mac",              default=None,                           help="MAC address of remote station")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default=None,                           help="Warning level")
-    parser.add_argument("-c", "--critical",                                dest="critical" ,        default=None,                           help="Critical level")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
-    args = parser.parse_args()
-    
-    if not args.hostname:
-        parser.error("Must give a hostname.\n use --help for options")
-    else:
-        return args
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+#-------------------------------------------------------------------------------
 
 def getmacfromip(remoteIP):
     command = ["/usr/sbin/arp","-n",str(remoteIP)]
@@ -102,12 +105,48 @@ def change_mac(base, offset):
 
 #-------------------------------------------------------------------------------
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-H", "--host",                                    dest="host",                                                           help="Hostname")
+    parser.add_argument("-m", "--mac",                                     dest="mac",              default=None,                                 help="MAC address of remote station")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default=None,                                 help="Warning level")
+    parser.add_argument("-c", "--critical",                                dest="critical" ,        default=None,                                 help="Critical level")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+    
+    return args
+
 def main():
     args = parse_args()
     
     setcandebug(args.debug)
 
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
+
+    if not args.host:
+        exitnagios("CRITICAL","Must give a hostname.")
     hostname = args.host
+    
     if (args.warning == None):
         warning = 0
     else:

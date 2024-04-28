@@ -46,10 +46,6 @@ def parse_args():
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
     args = parser.parse_args()
 
-    #if not args.hostname:
-    #    parser.error("Must give a hostname.\n use --help for options")
-    #else:
-    #    return args
     return args
 
 args = parse_args()
