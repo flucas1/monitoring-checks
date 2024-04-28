@@ -389,7 +389,7 @@ def main():
     setcandebug(args.debug)
     dorecentmaildircall(args.username,args.warning,args.critical)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

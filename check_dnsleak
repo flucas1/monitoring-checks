@@ -302,7 +302,7 @@ def main():
 
     dodnsleakcall(protocol,args.proxy,args.expectedip,args.expecteddns)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

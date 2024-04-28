@@ -97,7 +97,7 @@ def main():
     
     docheckjenkinsjobs(args.directory)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

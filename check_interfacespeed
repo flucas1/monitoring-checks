@@ -92,7 +92,7 @@ def main():
 
     doospfroutescall(interface,expectedspeeds,warningspeeds,["Full"],["Half"])
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

@@ -181,7 +181,7 @@ def main():
 
     dotestipv6call(protocol,args.proxy)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

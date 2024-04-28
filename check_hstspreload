@@ -190,7 +190,7 @@ def main():
     proxy = ""
     dotorcall(proxy,protocol,args.host)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

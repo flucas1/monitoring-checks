@@ -272,7 +272,7 @@ def get_resolver(addressinfo, timeoutvalue):
 
 #-------------------------------------------------------------------------------
 
-def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
+def check_record(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
         addressinfo = get_address(ipv6, server)
         try:
@@ -337,7 +337,7 @@ def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
         else:
             exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
 
-def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
+def check_consistency(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(ipv6, server)
         try:
@@ -394,7 +394,7 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
         infomsg(traceback.format_exc())
         exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
-def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_serial(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(ipv6, server)
         try:
@@ -490,7 +490,7 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
         exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
 
 
-def check_transfer(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone):
+def check_transfer(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
         addressinfo = get_address(ipv6, server)
         try:
@@ -512,13 +512,13 @@ def check_transfer(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, a
     except Exception as e:
         exitnagios("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
 
-def check_zone(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_zone(useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        check_consistency(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        check_consistency(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
     elif serial:
-        check_serial(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        check_serial(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
     elif transfer:
-        check_transfer(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        check_transfer(useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone)
     else:
         exitnagios("CRITICAL","unknown check for zone")
 
@@ -541,7 +541,6 @@ def main():
     parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                                help="test same serial for zone at server with MNAME and NS")
     parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                                help="test transfer of zone at server")
     parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                                help="the reply must be authoritative (not implemented)")
-    parser.add_argument("-q", "--quiet",             action="store_false", dest="verbose",          default=True,                                 help="quiet operation")
     parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                               help="tolerance in zone serial before considering warning (integer or 'auto')")
     parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                               help="tolerance in zone serial before considering critical (integer or 'auto')")
     parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                                  help="minimun number of responding servers before considering warning")
@@ -609,9 +608,9 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            check_zone(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            check_zone(useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
-            check_record(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            check_record(useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

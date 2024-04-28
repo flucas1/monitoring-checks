@@ -113,7 +113,7 @@ def main():
     setcandebug(args.debug)
     domailaliasescall()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

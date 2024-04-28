@@ -223,7 +223,7 @@ def main():
 
     donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

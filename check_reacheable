@@ -211,7 +211,7 @@ def main():
     criticalpercent = int(float(criticalparts[1].replace("%","")))
     dopingtestmulti(protocols, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimun, warningms, warningpercent, criticalms, criticalpercent)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

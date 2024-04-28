@@ -111,7 +111,7 @@ def main():
     else:
         exitnagios("CRITICAL",args.hostname+" is reacheable!")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

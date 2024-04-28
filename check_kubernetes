@@ -330,7 +330,7 @@ def main():
     else:
         exitnagios("CRITICAL","cannot find kubeconfig file '"+kubeconfig+"'")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

@@ -117,7 +117,7 @@ def main():
 
     dotorcall(protocol,args.response)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------
