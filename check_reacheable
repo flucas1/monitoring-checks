@@ -107,7 +107,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
             infomsg(reason)
             return [0,avgms,percent,reason]
 
-def dopingtestmulti(protocols, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent):
+def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent):
     hosts = hostname.replace(","," ").split()
     valid = 0
     warning = 0
@@ -117,10 +117,19 @@ def dopingtestmulti(protocols, interface, packets, timeoutvalue, timeoutstatus, 
     warnreasons = []
     critreasons = []
 
+    if protocol=="":
+        protocolslist = ["-4","-6"]
+    elif protocol=="-4":
+        protocolslist = ["-4"]
+    elif protocol=="-6":
+        protocolslist = ["-6"]
+    else:
+        protocolslist = []
+
     executor = concurrent.futures.ThreadPoolExecutor()
     futures = []
     for hostsingle in hosts:
-        for protocol in protocols:
+        for protocol in protocolslist:
             future = executor.submit(dopingtestsingle, protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
             futures.append(future)
     for future in concurrent.futures.as_completed(futures):
@@ -145,7 +154,7 @@ def dopingtestmulti(protocols, interface, packets, timeoutvalue, timeoutstatus, 
     average = float(average)/len(hosts)
     percentloss = float(percentloss)/len(hosts)
     percent = 100-percentloss
-    valid = float(valid)/len(protocols)
+    valid = float(valid)/len(protocolslist)
     if valid >= minimun:
         exitnagios("OK",hostname+" - "+str(valid)+" of at lest "+str(minimun)+" entries are reacheable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     elif valid+warning >= minimun:
@@ -210,7 +219,7 @@ def main():
     criticalparts = args.critical.split(",")
     criticalms = int(float(criticalparts[0]))
     criticalpercent = int(float(criticalparts[1].replace("%","")))
-    dopingtestmulti(protocols, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimun, warningms, warningpercent, criticalms, criticalpercent)
+    dopingtestmulti(protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimun, warningms, warningpercent, criticalms, criticalpercent)
 
 if __name__ == "__main__":
     main()
