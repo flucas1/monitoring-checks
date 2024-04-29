@@ -91,7 +91,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     criticals = []
     total = -1
     if output == None:
-        warnings.append("the network on interface "+interface+" does not have any dhcp server")
+        warnings.append("the network on interface '"+interface+"' does not have any dhcp server")
     else:
         lines = output.splitlines()
         responses = []
@@ -103,16 +103,16 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
                 foundip = parts[9]
                 responses.append(foundserver)
                 if foundserver not in validservers:
-                    criticals.append("bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
+                    criticals.append("bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
                 elif expectedip.match(foundip) == False:
-                    criticals.append("bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
+                    criticals.append("bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
                 else:
                     goodones.append(foundserver)
         if len(criticals)==0:
             if len(goodones)<=warning:
-                warnings.append("difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on "+interface)
+                warnings.append("difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on interface '"+interface+"'")
             else:
-                sucesses.append("foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on "+interface)
+                sucesses.append("foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
         total = len(responses)
 
     return sucesses,warnings,criticals,total
