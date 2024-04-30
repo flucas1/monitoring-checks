@@ -75,9 +75,9 @@ def split_threshold(value, level, convert):
         if many == 2:
             return (convert(items[0],False), convert(items[1],True))
         else:
-            nagiosexit("CRITICAL","Malformed "+str(levle)+" value: "+str(value))
+            exitnagios("CRITICAL","Malformed "+str(levle)+" value: "+str(value))
     except:
-        nagiosexit("CRITICAL","invalid value passed as %s parameter: %s" % (level, value))
+        exitnagios("CRITICAL","invalid value passed as %s parameter: %s" % (level, value))
 
 def check_limits(state, low, high, name, return_code):
     #infosmg(str(state))
@@ -111,21 +111,21 @@ class Thresholds:
                 try:
                     self.compiled_regex_ok = re.compile(args.string_ok)
                 except:
-                    nagiosexit("CRITICAL","Unable to compile string OK regex: "+args.string_ok)
+                    exitnagios("CRITICAL","Unable to compile string OK regex: "+args.string_ok)
             else:
                 self.compiled_regex_ok = None
             if args.string_warn:
                 try:
                     self.compiled_regex_warn = re.compile(args.string_warn)
                 except:
-                    nagiosexit("CRITICAL","Unable to compile string WARNING regex: "+args.string_warn)
+                    exitnagios("CRITICAL","Unable to compile string WARNING regex: "+args.string_warn)
             else:
                 self.compiled_regex_warn = None
             if args.string_crit:
                 try:
                     self.compiled_regex_crit = re.compile(args.string_crit)
                 except:
-                    nagiosexit("CRITICAL"," Unable to compile string CRITICAL regex: "+args.string_crit)
+                    exitnagios("CRITICAL"," Unable to compile string CRITICAL regex: "+args.string_crit)
             else:
                 self.compiled_regex_crit = None
 
@@ -227,7 +227,7 @@ def fetch_object(item_url, args, timeoutstatus):
         auth_params = args.authorization.split(":")
         if len(auth_params) != 2:
             if not os.path.isfile(args.authorization):
-                nagiosexit("CRITICAL","Authorization parameters not in username:password format, nor an existing file")
+                exitnagios("CRITICAL","Authorization parameters not in username:password format, nor an existing file")
             else:
                 filecontentslines=pathlib.Path(args.authorization).read_text().splitlines()
                 auth_params = []
@@ -245,11 +245,11 @@ def fetch_object(item_url, args, timeoutstatus):
         item_raw = urllib.request.urlopen(item_request)
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            nagiosexit(timeoutstatus,"item %s does not exist." % item_url)
+            exitnagios(timeoutstatus,"item %s does not exist." % item_url)
         else:
-            nagiosexit(timeoutstatus,"exception fetching item data - "+str(e))
+            exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
     except Exception as e:
-        nagiosexit(timeoutstatus,"exception fetching item data - "+str(e))
+        exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
 
     object_json = json.load(item_raw)
     infomsg("# "+str(json.dumps(object_json)))
@@ -290,13 +290,13 @@ def main():
     thresholds = Thresholds(args)
 
     if args.item is None and args.thing is None:
-        nagiosexit("CRITICAL","Item or Thing is mandatory.")
+        exitnagios("CRITICAL","Item or Thing is mandatory.")
 
     if args.item is not None and args.thing is not None:
-        nagiosexit("CRITICAL","Item and Thing cannot be combined.")
+        exitnagios("CRITICAL","Item and Thing cannot be combined.")
 
     if args.thing is not None and args.group is not None:
-        nagiosexit("CRITICAL"," Group functionality can only be used with item checks.")
+        exitnagios("CRITICAL"," Group functionality can only be used with item checks.")
 
     object_type = "items" if args.item else "things"
     object_name = args.item if args.item else args.thing
