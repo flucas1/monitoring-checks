@@ -3,6 +3,7 @@
 
 import sys
 import os
+import certifi
 import subprocess
 import argparse
 import io
@@ -210,8 +211,9 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         buffer = io.BytesIO()
         curl = pycurl.Curl()
         curl.reset()
-        curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt");
-        curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/");
+        #curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
+        #curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
+        curl.setopt(pycurl.CAINFO, certifi.where())
         curl.setopt(pycurl.URL, url)
         curl.setopt(pycurl.WRITEDATA, buffer)
         curl.setopt(pycurl.HTTP_VERSION, curlhttpcode)
