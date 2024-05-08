@@ -38,7 +38,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dointerfacenetworkcheck(interface,segment,address,existence):
+def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
     interfaces = netifaces.interfaces()
 
     found_addrs = []
@@ -58,7 +58,12 @@ def dointerfacenetworkcheck(interface,segment,address,existence):
 
     infomsg(found_addrs)
 
-    if segment=="" and address=="":
+    if notexists == True:
+        if (found_interface == False):
+            exitnagios("WARNING","interface "+interface+" exists, but it should not exists")
+        else:
+            exitnagios("OK","interface "+interface+" does not exists")
+    elif segment=="" and address=="":
         if (found_interface == True) and (existence == True):
             exitnagios("OK","interface "+interface+" exists")
         else:
@@ -113,6 +118,7 @@ def main():
     parser.add_argument("-s", "--segment",                                 dest="segment",          default="",                                   help="expected network segment")
     parser.add_argument("-a", "--address",                                 dest="address",          default="",                                   help="expected network address")
     parser.add_argument("-x", "--existence",         action="store_true",  dest="existence",        default=False,                                help="check only for interface exitence")
+    parser.add_argument("-t", "--notexists",         action="store_true",  dest="notexists",        default=False,                                help="check only for interface not exitence")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -121,7 +127,7 @@ def main():
     if (args.interface == ""):
         exitnagios("CRITICAL","interface not defined")
 
-    dointerfacenetworkcheck(args.interface,args.segment,args.address,args.existence)
+    dointerfacenetworkcheck(args.interface,args.segment,args.address,args.existence,args.notexists)
 
 main()
 
