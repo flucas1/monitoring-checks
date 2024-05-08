@@ -59,7 +59,7 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
     infomsg(found_addrs)
 
     if notexists == True:
-        if (found_interface == False):
+        if found_interface:
             exitnagios("WARNING","interface "+interface+" exists, but it should not exists")
         else:
             exitnagios("OK","interface "+interface+" does not exists")
