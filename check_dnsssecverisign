@@ -167,22 +167,19 @@ def dodnssecverisigncall(domain,proxy,ignoremessages):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host',                                    dest="host",                                                     help="Hostname")
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                        help="expected true/false")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
     
     setcandebug(args.debug)
-
-    if (args.host == ""):
-        exitnagios("CRITICAL","specify a host/domain to check")
 
     proxy = ""
     ignoremessages = []
     #ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
     dodnssecverisigncall(args.host,proxy,ignoremessages)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

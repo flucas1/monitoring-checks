@@ -15,6 +15,7 @@ import difflib
 import ipaddress
 import socks
 import traceback
+import random
 
 #-------------------------------------------------------------------------------
 
@@ -46,6 +47,24 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
+
 def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
     responses = None
     # [] means that the record does not exists
@@ -64,7 +83,7 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
         except Exception as e:
             infomsg("returning None - "+type(e).__name__+" - "+str(e))
             responses = None
-        infomsg(responses)
+        infomsg("responses for type "+str(field)+" -> "+str(responses))
         if responses == None:
             time.sleep(i*5)
         else:
@@ -78,40 +97,48 @@ def build_name(entry, zone):
     else:
         return entry+"."+zone
 
-def get_address(ipv6, serverinfo):
-    parts = serverinfo.split(":")
+def get_address(protocol, serverinfo):
+    infomsg("get_address using "+protocol+" for "+str(serverinfo))
+
+    parts = serverinfo.split("@")
     server = parts[0]
     if len(parts)>1:
         port = int(parts[1])
     else:
         port = 53
+
     if server == ".":
-        return "."+":"+str(port)
+        result = "."+"@"+str(port)
     else:
-        #infomsg(ipv6)
         address = ""
         try:
-            if ipv6 == True:
+            if protocol == "-6":
                 address = ipaddress.IPv6Address(server).compressed
-            else:
+            elif protocol == "-4":
                 address = ipaddress.IPv4Address(server).compressed
-            return address+":"+str(port)
-        except:
-            pass
-        
-        try:
-            if ipv6 == True:
-                address = socket.getaddrinfo(server, None, socket.AF_INET6)[0][4][0]
             else:
-                address = socket.getaddrinfo(server, None, socket.AF_INET)[0][4][0]
+                address = ipaddress.ip_address(server).compressed
+            return address+"@"+str(port)
         except Exception as e:
-            exitnagios("CRITICAL","error during address resolution "+str(e))
-        
-        #infomsg(address)
-        return address+":"+str(port)
+            pass
+
+        try:
+            if protocol == "-6":
+                address = socket.getaddrinfo(server, None, socket.AF_INET6)[0][4][0]
+            elif protocol == "-4":
+                address = socket.getaddrinfo(server, None, socket.AF_INET)[0][4][0]
+            else:
+                address = socket.getaddrinfo(server, None)[0][4][0]
+        except Exception as e:
+            exitnagios("CRITICAL","error during address resolution - "+str(e))
+
+        result = address+"@"+str(port)
+
+    infomsg("evaluated as "+result)
+    return result
 
 def get_zone(useTcp, addressinfo, timeoutvalue, zone):
-    parts = addressinfo.split(":")
+    parts = addressinfo.split("@")
     address = parts[0]
     text = ""
     for i in range(3):
@@ -189,7 +216,7 @@ def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
         result = ",".join(temp)
         return result
 
-def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
+def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
     customresolver = get_resolver(addressinfo,timeoutvalue)
     canonical_name = entry
     counter = 0
@@ -211,20 +238,33 @@ def get_query(useTcp, ipv6, addressinfo, timeoutvalue, entry):
             else:
                 # not None and not CNAME answer, ready to resolve A/AAAA
                 break
-    if ipv6 == True:
+    alternatives = []
+    if protocol == "-6":
         responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-    else:
+        for response in responses:
+            alternatives.append(response)
+    elif protocol == "-4":
         responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
-    if responses == None:
+        for response in responses:
+            alternatives.append(response)
+    else:
+        responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
+        for response in responses:
+            alternatives.append(response)
+        responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+        for response in responses:
+            alternatives.append(response)
+    if alternatives == None:
         return ""
     else:
         result = ""
-        if len(responses)>0:
-            result = responses[0].to_text()
+        if len(alternatives)>0:
+            randpos = random.randrange(len(alternatives))
+            result = alternatives[randpos].to_text()
         return result
 
 def get_resolver(addressinfo, timeoutvalue):
-    parts = addressinfo.split(":")
+    parts = addressinfo.split("@")
     address = parts[0]
     if len(parts)>1:
         port = int(parts[1])
@@ -250,13 +290,14 @@ def get_resolver(addressinfo, timeoutvalue):
                 time.sleep(1)
         customresolver.port = port
     customresolver.timeout = timeoutvalue
+    infomsg("found resolver "+str(customresolver._nameservers))
     return customresolver
 
 #-------------------------------------------------------------------------------
 
-def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
+def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             found = get_records(useTcp, addressinfo, timeoutvalue, record, kind)
             #infomsg(found)
@@ -319,14 +360,14 @@ def check_record(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
         else:
             exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
 
-def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
+def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
-            text_mname = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
+            text_mname = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
             if text_mname=="":
                 exitnagios(timeoutstatus,"no response when trying to transfer zone from mname")
             text_server = get_zone(useTcp, addressinfo, timeoutvalue, zone)
@@ -345,7 +386,7 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
                 for test in ns:
                     #infomsg(test)
                     try:
-                        text_test = get_zone(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        text_test = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if text_test=="":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -376,9 +417,9 @@ def check_consistency(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus
         infomsg(traceback.format_exc())
         exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
-def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             automode = tolerancewarn<0 or tolerancecrit<0
 
@@ -394,7 +435,7 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
-            principalserver = get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(mname, zone))
+            principalserver = get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
             serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
@@ -433,7 +474,7 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
                 for test in ns:
                     #infomsg(test)
                     try:
-                        serial_test = get_serial(useTcp, get_query(useTcp, ipv6, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        serial_test = get_serial(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
                         if serial_test == "":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -472,9 +513,9 @@ def check_serial(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, aut
         exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
 
 
-def check_transfer(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone):
+def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
-        addressinfo = get_address(ipv6, server)
+        addressinfo = get_address(protocol, server)
         try:
             start = datetime.datetime.now(datetime.UTC)
             text = get_zone(useTcp, addressinfo, timeoutvalue, zone)
@@ -494,13 +535,13 @@ def check_transfer(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, a
     except Exception as e:
         exitnagios("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
 
-def check_zone(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        check_consistency(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
     elif serial:
-        check_serial(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
     elif transfer:
-        check_transfer(verbose,useTcp,ipv6,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
     else:
         exitnagios("CRITICAL","unknown check for zone")
 
@@ -508,41 +549,52 @@ def check_zone(verbose, useTcp, ipv6, server, timeoutvalue, timeoutstatus, autho
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
-#    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                             help="use a proxy")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                 help="server to check")
-    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                             help="mode TCP/UDP")
-    parser.add_argument("-r", "--record",                                  dest="record",           default="",                             help="record to query (exclusive with zone)")
-    parser.add_argument("-p", "--type",                                    dest="kind",             default="A",                            help="query type for the record")
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                             help="expected record value")
-    parser.add_argument("-A", "--alternativeslogic", action="store_true",  dest="alternativeslogic",default=False,                          help="there is no need to match all the expected values")
-    parser.add_argument("-z", "--zone",                                    dest="zone",             default="",                             help="zone to test (exclusive with record)")
-    parser.add_argument("-y", "--consistency",       action="store_true",  dest="consistency",      default=False,                          help="test full consistency for zone at server with MNAME and NS")
-    parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                          help="test same serial for zone at server with MNAME and NS")
-    parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                          help="test transfer of zone at server")
-    parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                          help="the reply must be authoritative (not implemented)")
-    parser.add_argument("-q", "--quiet",             action="store_false", dest="verbose",          default=True,                           help="quiet operation")
-    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                         help="tolerance in zone serial before considering warning (integer or 'auto')")
-    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                         help="tolerance in zone serial before considering critical (integer or 'auto')")
-    parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                            help="minimun number of responding servers before considering warning")
-    parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",                            help="minimun number of responding servers before considering critical")
-    parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",                            help="tolerance in missing values in record before considering warning")
-    parser.add_argument("-N", "--recmissingcrit",                          dest="recmissingcrit",   default="0",                            help="tolerance in missing values in record before considering critical")
-    parser.add_argument("-U", "--recmincountwarn",                         dest="recmincountwarn",  default="0",                            help="minimun number of values in record before considering warning")
-    parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                            help="minimun number of values in record servers before considering critical")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+#    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
+    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                                   help="mode TCP/UDP")
+    parser.add_argument("-r", "--record",                                  dest="record",           default="",                                   help="record to query (exclusive with zone)")
+    parser.add_argument("-p", "--type",                                    dest="kind",             default="A",                                  help="query type for the record")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected record value")
+    parser.add_argument("-A", "--alternativeslogic", action="store_true",  dest="alternativeslogic",default=False,                                help="there is no need to match all the expected values")
+    parser.add_argument("-z", "--zone",                                    dest="zone",             default="",                                   help="zone to test (exclusive with record)")
+    parser.add_argument("-y", "--consistency",       action="store_true",  dest="consistency",      default=False,                                help="test full consistency for zone at server with MNAME and NS")
+    parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                                help="test same serial for zone at server with MNAME and NS")
+    parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                                help="test transfer of zone at server")
+    parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                                help="the reply must be authoritative (not implemented)")
+    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                               help="tolerance in zone serial before considering warning (integer or 'auto')")
+    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                               help="tolerance in zone serial before considering critical (integer or 'auto')")
+    parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                                  help="minimun number of responding servers before considering warning")
+    parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",                                  help="minimun number of responding servers before considering critical")
+    parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",                                  help="tolerance in missing values in record before considering warning")
+    parser.add_argument("-N", "--recmissingcrit",                          dest="recmissingcrit",   default="0",                                  help="tolerance in missing values in record before considering critical")
+    parser.add_argument("-U", "--recmincountwarn",                         dest="recmincountwarn",  default="0",                                  help="minimun number of values in record before considering warning")
+    parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                                  help="minimun number of values in record servers before considering critical")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
-    if (args.ipv4 == True) and (args.ipv6 == True):
-        exitnagios("CRITICAL","choose ipv4 or ipv6, not both")
-    if (args.ipv4 == False) and (args.ipv6 == False):
-        args.ipv4 = True
-    #infomsg(args.ipv4)
-    #infomsg(args.ipv6)
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
 
 #    if args.proxy != "":
 #        proxyparts = args.proxy.split("://",1)
@@ -579,9 +631,9 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            check_zone(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
-            check_record(args.verbose,useTcp,args.ipv6,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

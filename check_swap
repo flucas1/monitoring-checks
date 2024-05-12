@@ -90,7 +90,7 @@ def main():
 
     dofreeswapscall(args.warning,args.critical,args.minimun)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

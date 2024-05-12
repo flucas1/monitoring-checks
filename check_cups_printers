@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import cups
+import argparse
+import sys
+import socket
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
+
+def connect_cups(socket):
+    cups.setServer(socket)
+    return cups.Connection()
+
+def get_printers_states(conn, printers_names=None, all_printers=False):
+    printer_valid = []
+    printers_failed = []
+    found = False
+    printers = conn.getPrinters()
+    if all_printers:
+        printers_names = printers.keys()
+    for printer_name in printers_names:
+        for cprinter_name, cprinter_attributes in printers.items():
+            if printer_name == cprinter_name:
+                cprinter_state = cprinter_attributes["printer-state"]
+                if cprinter_state == 3:
+                    printer_valid.append("%s (idle)" % printer_name)
+                elif cprinter_state == 4:
+                    printer_valid.append("%s (printing)" % printer_name)
+                elif cprinter_state == 5:
+                    printers_failed.append("%s (stopped)" % printer_name)
+                else:
+                    printers_failed.append("%s (error %s)" % (printer_name, cprinter_state))
+                found = True
+        if not found:
+            printers_failed.append(printer_name + " (not found)")
+        found = False
+    return printer_valid, printers_failed
+
+#-------------------------------------------------------------------------------
+
+def parse_options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--socket",            action="store",                                                                              help="socket file (hot compatible with --hostname)")
+    parser.add_argument("-r", "--printers",          action="store",                                                                              help="A comma separated list of printers")
+    parser.add_argument("-a", "--all-printers",      action="store_true",                           default=False,                                help="Test all printers (not compatible with --printers)")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    return args
+
+def main():
+    args = parse_options()
+    
+    setcandebug(args.debug)
+    
+    if args.printers is not None:
+        args.printers = args.printers.split(",")
+
+    if args.socket == "":
+        exitnagios("CRITICAL","No socket specified.")
+
+    try:
+        conn = connect_cups(args.socket)
+    except RuntimeError as e:
+        exitnagios("UNKNOWN",str(e))
+
+    printers_valid, printers_failed = get_printers_states(conn, args.printers, args.all_printers)
+    if printers_failed:
+        exitnagios("CRITICAL",", ".join(printers_failed)+" | valid="+str(len(printers_valid))+" invalid="+str(len(printers_failed)))
+    if printers_valid:
+        exitnagios("OK",", ".join(printers_valid)+" | valid="+str(len(printers_valid))+" invalid="+str(len(printers_failed)))
+    else:
+        exitnagios("UNKNOWN","No printer found | valid=-1 invalid=-1")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------

@@ -45,7 +45,7 @@ def get_ip_address(ifname):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         infomsg(s)
-        i = fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', ifname[:15].encode('utf-8')))
+        i = fcntl.ioctl(s.fileno(), 0x8915, struct.pack("256s", ifname[:15].encode("utf-8")))
         infomsg(i)
         a = socket.inet_ntoa(i[20:24])
         infomsg(a)
@@ -56,29 +56,29 @@ def get_ip_address(ifname):
 def allinterfaces():
     interfaces = []
     for card in socket.if_nameindex():
-        if (card[1] != 'lo'):
+        if (card[1] != "lo"):
             interfaces.append(card[1])
     infomsg(interfaces)
     return interfaces
 
 def findservers(interface,requestmac,timeout):
 
-    command = ['/usr/lib/nagios/plugins/check_dhcp', '-i', interface, '-m', requestmac, '-t', str(timeout), '-v']
+    command = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
     infomsg(" ".join(command))
 
     try:
         result = subprocess.check_output(command)
-        output = result.decode('utf-8')
+        output = result.decode("utf-8")
         return output
     except Exception as e:
         return None
 
-def checkdhcp(interface, chaddr, ciaddr, servers, timeout):
+def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     interfaceaddress = get_ip_address(interface)
     infomsg(interfaceaddress)
     requestmac = chaddr
     expectedip = re.compile(ciaddr)
-    validservers = servers.split(',')
+    validservers = servers.split(",")
     for testaddress in interfaceaddress:
         if testaddress in validservers:
             validservers.remove(testaddress)
@@ -86,48 +86,73 @@ def checkdhcp(interface, chaddr, ciaddr, servers, timeout):
     output = findservers(interface,requestmac,timeout)
     infomsg(output)
 
+    sucesses = []
+    warnings = []
+    criticals = []
+    total = -1
     if output == None:
-        print("OK: the network on interface "+interface+" does not have any dhcp server | count=0")
-        return True
+        warnings.append("the network on interface '"+interface+"' does not have any dhcp server")
     else:
         lines = output.splitlines()
         responses = []
-        isok = True
+        goodones = []
         for line in lines:
-            if  line.startswith('Added offer from server'):
+            if  line.startswith("Added offer from server"):
                 parts = line.split()
                 foundserver = parts[5]
                 foundip = parts[9]
-                if foundserver not in validservers:
-                    isok = False
-                    print("CRITICAL: bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
-                if expectedip.match(foundip) == False:
-                    isok = False
-                    print("CRITICAL: bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on "+interface)
                 responses.append(foundserver)
-        if ((responses.sort() != validservers.sort()) or (len(responses) != len(validservers))):
-            isok = False
-            print("WARNING: Difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on "+interface+" | count="+str(len(responses)))
-        if isok == True:
-            print("OK: foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on "+interface+" | count="+str(len(responses)))
-        return isok
+                if foundserver not in validservers:
+                    criticals.append("bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
+                elif expectedip.match(foundip) == False:
+                    criticals.append("bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
+                else:
+                    goodones.append(foundserver)
+        if len(criticals)==0:
+            if len(goodones)<=warning:
+                warnings.append("difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on interface '"+interface+"'")
+            else:
+                sucesses.append("foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
+        total = len(responses)
 
-def checkall(interfaces, chaddr, ciaddr, servers, timeout):
+    return sucesses,warnings,criticals,total
+
+def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     result = True
     infomsg("List of interfaces: "+" ".join(interfaces))
+
+    sucesses = []
+    warnings = []
+    criticals = []
+    performance = []
     for interface in interfaces:
-        current = checkdhcp(interface, chaddr, ciaddr, servers, timeout)
-        result = result or current
-    return result
+        infomsg("evaluating: "+interface)
+        temp_sucesses,temp_warnings,temp_criticals,temp_total = checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
+        sucesses = sucesses+temp_sucesses
+        warnings = warnings+temp_warnings
+        criticals = criticals+temp_criticals
+        performance = performance+[interface+"="+str(temp_total)]
+
+    if len(criticals)>0:
+        exitnagios("CRITICAL"," - ".join(criticals)+" | "+" ".join(performance))
+    if len(warnings)>0:
+        exitnagios("WARNING"," - ".join(warnings)+" | "+" ".join(performance))
+    if len(sucesses)>0:
+        exitnagios("OK"," - ".join(sucesses)+" | "+" ".join(performance))
+
+    exitnagios("UNKNOWN","unexpected scenario - sucesses: "+str(sucesses)+" - warnings: "+str(warnings)+" - criticals: "+str(criticals)+" | "+" ".join(performance))
+
+#-------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--servers",                                 dest="servers",          default='0.0.0.0',                      help="DHCP server IP (default %default)")
-    parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default='FF:FF:FF:FF:FF:FF',            help="chaddr: Client's MAC address (default %default)")
-    parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default='0.0.0.0',                      help="ciaddr: Client's desired IP address (default %default)")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default='10',                           help="UDP timeout (default %default)")
-    parser.add_argument("-i", "--interfaces",                              dest="interfaces",       default='',                             help="comma separated interfaces where to listen")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-s", "--servers",                                 dest="servers",          default="0.0.0.0",                            help="DHCP server IP (default %default)")
+    parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default="FF:FF:FF:FF:FF:FF",                  help="chaddr: Client's MAC address (default %default)")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="3",                                  help="if less or equal than this value raise a warning")
+    parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default="0.0.0.0",                            help="ciaddr: Client's desired IP address (default %default)")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10",                                 help="UDP timeout (default %default)")
+    parser.add_argument("-i", "--interfaces",                              dest="interfaces",       default="",                                   help="comma separated interfaces where to listen")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
@@ -137,14 +162,9 @@ def main():
     else:
         interfaces = args.interfaces.split(",")
 
-    result = checkall(interfaces, args.chaddr, args.ciaddr, args.servers, args.timeout)
-    if result == True:
-        infomsg("OK")
-        sys.exit(0)
-    else:
-        infomsg("KO")
-        sys.exit(2)
+    checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
+#-------------------------------------------------------------------------------

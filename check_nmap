@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import argparse
+import socket
 
 #-------------------------------------------------------------------------------
 
@@ -33,6 +34,24 @@ def exitnagios(status,message):
         exitcode = 4
     print(status+": "+message, flush=True)
     sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
 
 #-------------------------------------------------------------------------------
 
@@ -149,23 +168,20 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                          help="use ipv4 (default, exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                          help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                          help="do not specify ip protocol version")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                             help="server to check")
-    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                             help="mode TCP/UDP")
-    parser.add_argument("-p", "--port",                                    dest="port",             default="" ,                            help="port number to check")
-    parser.add_argument("-s", "--service",                                 dest="service",          default="",                             help="Name of the service that should be listening on the port")
-    parser.add_argument("-r", "--response",                                dest="response",         default="notclosed",                    help="respose: open,filtered,open+filtered,notclosed,closed")
-    parser.add_argument("-f", "--filtered",                                dest="filtered",         default="WARNING",                      help="OK,WARNING,CRITICAL,UNKNOWN")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
+    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                                   help="mode TCP/UDP")
+    parser.add_argument("-p", "--port",                                    dest="port",             default="" ,                                  help="port number to check")
+    parser.add_argument("-s", "--service",                                 dest="service",          default="",                                   help="Name of the service that should be listening on the port")
+    parser.add_argument("-r", "--response",                                dest="response",         default="notclosed",                          help="respose: open,filtered,open+filtered,notclosed,closed")
+    parser.add_argument("-f", "--filtered",                                dest="filtered",         default="WARNING",                            help="OK,WARNING,CRITICAL,UNKNOWN")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
-
-    if (args.hostname == ""):
-        exitnagios("CRITICAL","hostname not defined")
 
     protocol = None
     exclist = 0
@@ -175,13 +191,18 @@ def main():
     if args.ipv4 == True :
         protocol = "-4"
         exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True :
         protocol = "-6"
         exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist>1) :
         exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist<1) :
         exitnagios("CRITICAL","no protocol selected")
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
 
     if (args.mode == ""):
         exitnagios("CRITICAL","mode not defined")
@@ -203,7 +224,7 @@ def main():
 
     donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

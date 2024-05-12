@@ -39,18 +39,18 @@ def exitnagios(status,message):
 #collect arguments
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--hostname",          action="store",                                                                        help="target IP or hostname")
-    parser.add_argument("-p", "--packets",           action="store",       type=int,                default=1,                              help="number of pings")
-    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=10,                             help="timeout")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-H", "--hostname",          action="store",                                                                              help="target IP or hostname")
+    parser.add_argument("-p", "--packets",           action="store",       type=int,                default=1,                                    help="number of pings")
+    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=10,                                   help="timeout")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
-    if not args.hostname:
-        parser.error("Must give a hostname.\n use --help for options")
-    else:
-        return args
+    return args
 
 args = parse_args()
+
+if not args.hostname:
+    exitnagios("CRITICAL","Must give a hostname.")
 
 setcandebug(args.debug)
 
@@ -70,8 +70,8 @@ infomsg(output)
 
 #and then check the response...
 if response == 0:
-  print("OK: "+args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent), flush=True)
-  sys.exit(0)
+  exitnagios("OK",args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent))
 else:
-  print("CRITICAL: "+args.hostname+" is not responding to ARP! | average=1 percent=0", flush=True)
-  sys.exit(2)
+  exitnagios("CRITICAL",args.hostname+" is not responding to ARP! | average=1 percent=0")
+
+#-------------------------------------------------------------------------------

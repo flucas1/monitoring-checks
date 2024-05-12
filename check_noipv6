@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import netifaces
+import ipaddress
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dointerfacenetworkcheck(interface):
+    interfaces = netifaces.interfaces()
+    found_addrs = []
+    for item in interfaces:
+        if item == interface:
+            addrs = netifaces.ifaddresses(interface)
+            if netifaces.AF_INET6 in addrs.keys():
+                for entry in addrs[netifaces.AF_INET6]:
+                    address = ipaddress.IPv6Address(entry["addr"])
+                    found_addrs.append(address)
+            break
+    infomsg(str(found_addrs))
+
+    if len(found_addrs)==0:
+        exitnagios("OK","no IPv6 addresses for interface "+interface+" | total=0")
+    else:
+        invalid_addrs = []
+        for item in found_addrs:
+            infomsg(str(item))
+            if item.is_global:
+                invalid_addrs.append(str(item))
+
+        if len(invalid_addrs)==0:
+            exitnagios("OK","no global IPv6 addresses for interface "+interface+" | total="+str(len(invalid_addrs)))
+        else:
+            exitnagios("CRITICAL","there are global IPv6 addresses for interface "+interface+" - "+str(invalid_addrs)+" | total="+str(len(invalid_addrs)))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="interface to check")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if (args.interface == ""):
+        exitnagios("CRITICAL","interface not defined")
+
+    dointerfacenetworkcheck(args.interface)
+
+main()
+
+#-------------------------------------------------------------------------------

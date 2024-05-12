@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import subprocess
+import socket
 import argparse
 
 from selenium import webdriver
@@ -46,6 +47,24 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
+
 def generatedriver(proxy):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -76,7 +95,7 @@ def wait_page_loaded(driver):
 
 #-------------------------------------------------------------------------------
 
-def dodnsleakcall(expected,proxy):
+def doisvpncall(expected,proxy):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -117,11 +136,32 @@ def dodnsleakcall(expected,proxy):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                        help="expected true/false")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
 
     if args.expected.lower() in ["1","yes","true"]:
         expected = True
@@ -129,9 +169,9 @@ def main():
         expected = False
     proxy = ""
 
-    dodnsleakcall(expected,proxy)
+    doisvpncall(expected,proxy)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------

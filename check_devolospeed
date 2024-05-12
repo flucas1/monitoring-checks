@@ -38,20 +38,23 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host",                                    dest="host",                                                     help="Hostname")
-    parser.add_argument("-m", "--mac",                                     dest="mac",              default=None,                           help="MAC address of remote station")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default=None,                           help="Warning level")
-    parser.add_argument("-c", "--critical",                                dest="critical" ,        default=None,                           help="Critical level")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                  help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                          help="be more verbose")
-    args = parser.parse_args()
-    
-    if not args.hostname:
-        parser.error("Must give a hostname.\n use --help for options")
-    else:
-        return args
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
 
 def getmacfromip(remoteIP):
     command = ["/usr/sbin/arp","-n",str(remoteIP)]
@@ -100,12 +103,29 @@ def change_mac(base, offset):
     new_string = ":".join(s for s in re.split(r"(\w{2})", old_string.upper()) if s.isalnum())
     return new_string
 
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--host",                                    dest="host",                                                           help="Hostname")
+    parser.add_argument("-m", "--mac",                                     dest="mac",              default=None,                                 help="MAC address of remote station")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default=None,                                 help="Warning level")
+    parser.add_argument("-c", "--critical",                                dest="critical" ,        default=None,                                 help="Critical level")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+    
+    return args
+
 def main():
     args = parse_args()
     
     setcandebug(args.debug)
 
+    if not args.host:
+        exitnagios("CRITICAL","Must give a hostname.")
     hostname = args.host
+    
     if (args.warning == None):
         warning = 0
     else:
@@ -158,6 +178,7 @@ def main():
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
-
 if __name__ == "__main__":
     main()
+
+#-------------------------------------------------------------------------------
