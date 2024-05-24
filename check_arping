@@ -36,6 +36,29 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
+def doarpingcall(hostname,packets,timeout):
+    cmdline = ["/usr/sbin/arping","-C",str(packets),"-w",str(timeout),hostname]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8")
+    errors = completedproc.stderr.decode("utf-8")
+    response = completedproc.returncode
+
+    infomsg(output)
+
+    #and then check the response...
+    if response == 0:
+        alllines = output.splitlines()
+        linems = alllines[-1]
+        linepercent = alllines[-2]
+        avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
+        percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
+
+        exitnagios("OK",hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent))
+    else:
+        exitnagios("CRITICAL",hostname+" is not responding to ARP! | average=1 percent=0")
+
+#-------------------------------------------------------------------------------
+
 #collect arguments
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -47,31 +70,16 @@ def parse_args():
 
     return args
 
-args = parse_args()
+def main():
+    args = parse_args()
+    setcandebug(args.debug)
 
-if not args.hostname:
-    exitnagios("CRITICAL","Must give a hostname.")
+    if not args.hostname:
+        exitnagios("CRITICAL","Must give a hostname.")
 
-setcandebug(args.debug)
+    doarpingcall(args.hostname,args.packets,args.timeout)
 
-cmdline = ["/usr/sbin/arping","-C",str(args.packets),"-w",str(args.timeout),args.hostname]
-completedproc = subprocess.run(cmdline,capture_output=True)
-output = completedproc.stdout.decode("utf-8")
-errors = completedproc.stderr.decode("utf-8")
-response = completedproc.returncode
-
-alllines = output.splitlines()
-linems = alllines[-1]
-linepercent = alllines[-2]
-avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
-percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
-
-infomsg(output)
-
-#and then check the response...
-if response == 0:
-  exitnagios("OK",args.hostname+" is respoding to ARP! | average="+str(avgms)+" percent="+str(percent))
-else:
-  exitnagios("CRITICAL",args.hostname+" is not responding to ARP! | average=1 percent=0")
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------
