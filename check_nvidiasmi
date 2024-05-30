@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import xml.etree.ElementTree
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def extract_element(rootobj,blockname,entryname):
+    if rootobj!=None:
+        try:
+            blockobj = rootobj.find(blockname)
+        except:
+            blockobj = None
+        if blockobj!=None:
+            try:
+                entryobj = blockobj.find(entryname)
+            except:
+                entryobj = None
+            if entryobj!=None:
+                return entryobj.text
+    return None
+
+def parse_element(rootobj,blockname,entryname):
+    rawvalue = extract_element(rootobj,blockname,entryname)
+    if rawvalue!=None:
+        parts = rawvalue.split()
+        if len(parts)>0:
+            try:
+                candidate = float(parts[0])
+            except:
+                candidate = None
+            return candidate
+    return None
+
+def checklimits(value,warning,critical,text):
+    status = ""
+    issues = []
+    if value>=critical:
+        status = "CRITICAL"
+        issues.append("The "+text+" with value "+str(value)+" is over the critical limit "+str(critical))
+    elif value>=warning:
+        status = "WARNING"
+        issues.append("The "+text+" with value "+str(value)+" is over the warning limit "+str(warning))
+    else:
+        status = "OK"
+    return status,issues
+
+def mergestatus(final,partial):
+    if partial=="CRITICAL":
+        return "CRITICAL"
+    if partial=="UNKNOWN" and final not in ["CRITICAL"]:
+        return "UNKNOWN"
+    if partial=="WARNING" and final not in ["CRITICAL","UNKNOWN"]:
+        return "WARNING"
+    if partial=="OK" and final not in ["CRITICAL","UNKNOWN","WARNING"]:
+        return "OK"
+
+def nvidiasmicheck(gpu_warning, gpu_critical, mem_warning, mem_critical, temperature_warning, temperature_critical, device):
+    cmdline = ["/usr/bin/nvidia-smi", "-q", "-x", "-i", str(device)]
+    infomsg(cmdline)
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode != 0:
+        infomsg(output)
+        infomsg(errors)
+        exitnagios("CRITICAL","error retrieving the information from nvidia-smi")
+    else:
+        xml_root = xml.etree.ElementTree.fromstring(output)
+        gpu = xml_root.find("gpu")
+        if gpu==None:
+            exitnagios("CRITICAL","no gpu information for device "+str(device))
+        else:
+            status_gpu = parse_element(gpu,"utilization","gpu_util")
+            infomsg("GPU: "+str(status_gpu))
+            status_memory = parse_element(gpu,"utilization","memory_util")
+            infomsg("MEMORY: "+str(status_memory))
+            status_temperature = parse_element(gpu,"temperature","gpu_temp")
+            infomsg("TEMPERATURE: "+str(status_temperature))
+
+            finalstatus = ""
+            issues = []
+            if status_gpu!=None:
+                partialstatus,partialissues = checklimits(status_gpu,gpu_warning,gpu_critical,"gpuload")
+                finalstatus = mergestatus(finalstatus,partialstatus)
+                issues = issues+partialissues
+            if status_memory!=None:
+                partialstatus,partialissues = checklimits(status_memory,memory_warning,memory_critical,"memoryload")
+                finalstatus = mergestatus(finalstatus,partialstatus)
+                issues = issues+partialissues
+            if status_temperature!=None:
+                partialstatus,partialissues = checklimits(status_temperature,temperature_warning,temperature_critical,"temperature")
+                finalstatus = mergestatus(finalstatus,partialstatus)
+                issues = issues+partialissues
+
+            performance = "gpuload="+str(status_gpu)+" memoryload="+str(status_memory)+" temperature="+str(status_temperature)
+            if len(issues)==0 and finalstatus in ["","OK"]:
+                exitnagios("OK","no issues found | "+performance)
+            else:
+                exitnagios(finalstatus," ".join(issues)+" | "+performance)
+
+    exitnagios("CRITICAL","unexpected case")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--gpu_warning",                             dest="gpu_warning",          default=0,                                help="warning if threshold is outside low,high" )
+    parser.add_argument("-c", "--gpu_critical",                            dest="gpu_critical",         default=0,                                help="critical if threshold is outside low,high")
+    parser.add_argument("-W", "--mem_warning",                             dest="mem_warning",          default=0,                                help="warning if threshold is outside low,high" )
+    parser.add_argument("-C", "--mem_critical",                            dest="mem_critical",         default=0,                                help="critical if threshold is outside low,high")
+    parser.add_argument("-t", "--temp_warning",                            dest="temp_warning",         default=0,                                help="warning if threshold is outside low,high" )
+    parser.add_argument("-T", "--temp_critical",                           dest="temp_critical",        default=0,                                help="critical if threshold is outside low,high")
+    parser.add_argument("-d", "--device",                                  dest="device",               default=0,                                help="Device ID (starting from 0)"              )
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",                default=False,                            help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    nvidiasmicheck(float(args.gpu_warning), float(args.gpu_critical), float(args.mem_warning), float(args.mem_critical), float(args.temp_warning), float(args.temp_critical), args.device)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
