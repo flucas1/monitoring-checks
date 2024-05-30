@@ -76,7 +76,7 @@ def do_sensors_call(expected):
         if countalarms>0:
             exitnagios("CRITICAL","There are alarms "+str(alarms)+" | count="+str(countalarms))
         else:
-            exitnagios("CRITICAL","No alarms found | count=0")
+            exitnagios("OK","No alarms found | count=0")
     else:
         exitnagios("CRITICAL","issue retrieving sensors data")
 
