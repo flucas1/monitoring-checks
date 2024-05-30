@@ -139,14 +139,14 @@ def nvidiasmicheck(gpu_warning, gpu_critical, mem_warning, mem_critical, tempera
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--gpu_warning",                             dest="gpu_warning",          default=0,                                help="warning if threshold is outside low,high" )
-    parser.add_argument("-c", "--gpu_critical",                            dest="gpu_critical",         default=0,                                help="critical if threshold is outside low,high")
-    parser.add_argument("-W", "--mem_warning",                             dest="mem_warning",          default=0,                                help="warning if threshold is outside low,high" )
-    parser.add_argument("-C", "--mem_critical",                            dest="mem_critical",         default=0,                                help="critical if threshold is outside low,high")
-    parser.add_argument("-t", "--temp_warning",                            dest="temp_warning",         default=0,                                help="warning if threshold is outside low,high" )
-    parser.add_argument("-T", "--temp_critical",                           dest="temp_critical",        default=0,                                help="critical if threshold is outside low,high")
-    parser.add_argument("-d", "--device",                                  dest="device",               default=0,                                help="Device ID (starting from 0)"              )
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",                default=False,                            help="be more verbose")
+    parser.add_argument("-w", "--gpu_warning",                             dest="gpu_warning",      default=0,                                    help="warning if threshold is outside low,high" )
+    parser.add_argument("-c", "--gpu_critical",                            dest="gpu_critical",     default=0,                                    help="critical if threshold is outside low,high")
+    parser.add_argument("-W", "--mem_warning",                             dest="mem_warning",      default=0,                                    help="warning if threshold is outside low,high" )
+    parser.add_argument("-C", "--mem_critical",                            dest="mem_critical",     default=0,                                    help="critical if threshold is outside low,high")
+    parser.add_argument("-t", "--temp_warning",                            dest="temp_warning",     default=0,                                    help="warning if threshold is outside low,high" )
+    parser.add_argument("-T", "--temp_critical",                           dest="temp_critical",    default=0,                                    help="critical if threshold is outside low,high")
+    parser.add_argument("-d", "--device",                                  dest="device",           default=0,                                    help="Device ID (starting from 0)"              )
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
