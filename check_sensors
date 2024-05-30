@@ -55,7 +55,7 @@ def do_sensors_call(expected):
         if jsondata==None:
             exitnagios("CRITICAL","invalid json data")
 
-        alarms = []
+        alarms = {}
         for bus_name, bus_info in jsondata.items():
             if isinstance(bus_info,dict):
                 for device_name, device_info in bus_info.items():
@@ -63,18 +63,33 @@ def do_sensors_call(expected):
                         for value_name, value_info in device_info.items():
                             parts = value_name.split("_")
                             if parts[-1]=="alarm":
-                                chain = str(bus_name)+" "+str(device_name)+" "+str(value_name)
-                                infomsg(chain+" -> "+str(value_info))
+                                alarmkey = str(bus_name)+"__"+str(device_name)+"__"+str(value_name)
+                                infomsg(alarmkey+" -> "+str(value_info))
                                 try:
-                                    parsed = float(value_info)
+                                    alarmvalue = float(value_info)
                                 except:
-                                    parsed = -1
-                                if parsed!=0:
-                                    alarms.append(chain)
+                                    alarmvalue = -1
+                                if alarmvalue!=0:
+                                    inputname = str(value_name).replace("alarm","input")
+                                    inputkey = str(bus_name)+"__"+str(device_name)+"__"+inputname
+                                    try:
+                                        inputvalue = device_info[inputname]
+                                        inputvalue = float(inputvalue)
+                                    except:
+                                        inputvalue = None
+                                    if inputvalue != None:
+                                        infomsg(inputkey+" -> "+str(inputvalue))
+                                        alarms[inputkey] = str(inputvalue)
+                                    else:
+                                        infomsg(alarmkey+" -> "+str(alarmvalue))
+                                        alarms[alarmkey] = str(alarmvalue)
 
         countalarms = len(alarms)
         if countalarms>0:
-            exitnagios("CRITICAL","There are alarms "+str(alarms)+" | count="+str(countalarms))
+            performance = "count="+str(countalarms)
+            for key,value in alarms.items():
+                performance = performance+" "+key+"="+value
+            exitnagios("CRITICAL","There are alarms "+str(alarms)+" | "+performance)
         else:
             exitnagios("OK","No alarms found | count=0")
     else:
