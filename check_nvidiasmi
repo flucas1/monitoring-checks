@@ -87,7 +87,7 @@ def mergestatus(final,partial):
     if partial=="OK" and final not in ["CRITICAL","UNKNOWN","WARNING"]:
         return "OK"
 
-def nvidiasmicheck(gpu_warning, gpu_critical, mem_warning, mem_critical, temperature_warning, temperature_critical, device):
+def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_critical, temperature_warning, temperature_critical, device):
     cmdline = ["/usr/bin/nvidia-smi", "-q", "-x", "-i", str(device)]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
