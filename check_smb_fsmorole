@@ -39,10 +39,18 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 def getroles():
-    command = ["/usr/bin/samba-tool","fsmo","show"]
-    output = subprocess.check_output(command, stderr=subprocess.PIPE).decode('utf-8')
-    rows = output.split('\n')
-    return rows
+    cmdline = ["/usr/bin/samba-tool","fsmo","show"]
+    infomsg(" ".join(cmdline))
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode()
+    errors = completedproc.stderr.decode()
+    if completedproc.returncode != 0:
+        print(output, flush=True)
+        print(errors, flush=True)
+        return []
+    else:
+        rows = output.split("\n")
+        return rows
 
 def extractmaster(role, lines):
     for line in lines:
@@ -61,7 +69,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+
     setcandebug(args.debug)
 
     if (args.master == ""):
