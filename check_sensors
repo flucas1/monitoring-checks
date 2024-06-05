@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import json
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def do_sensors_call(expected):
+    cmdline = ["/usr/bin/sensors","-j"]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    if exitcode == 0:
+        try:
+            jsondata = json.loads(output)
+        except Exception as e:
+            infomsg("exception - "+str(e))
+            infomsg(output)
+            jsondata = None
+
+        if jsondata==None:
+            exitnagios("CRITICAL","invalid json data")
+
+        alarms = {}
+        for bus_name, bus_info in jsondata.items():
+            if isinstance(bus_info,dict):
+                for device_name, device_info in bus_info.items():
+                    if isinstance(device_info,dict):
+                        for value_name, value_info in device_info.items():
+                            parts = value_name.split("_")
+                            if parts[-1]=="alarm":
+                                alarmkey = str(bus_name)+"__"+str(device_name)+"__"+str(value_name)
+                                infomsg(alarmkey+" -> "+str(value_info))
+                                try:
+                                    alarmvalue = float(value_info)
+                                except:
+                                    alarmvalue = -1
+                                if alarmvalue!=0:
+                                    inputname = str(value_name).replace("alarm","input")
+                                    inputkey = str(bus_name)+"__"+str(device_name)+"__"+inputname
+                                    try:
+                                        inputvalue = device_info[inputname]
+                                        inputvalue = float(inputvalue)
+                                    except:
+                                        inputvalue = None
+                                    if inputvalue != None:
+                                        infomsg(inputkey+" -> "+str(inputvalue))
+                                        alarms[inputkey] = str(inputvalue)
+                                    else:
+                                        infomsg(alarmkey+" -> "+str(alarmvalue))
+                                        alarms[alarmkey] = str(alarmvalue)
+
+        countalarms = len(alarms)
+        if countalarms>0:
+            performance = "count="+str(countalarms)
+            for key,value in alarms.items():
+                performance = performance+" "+key+"="+value
+            exitnagios("CRITICAL","There are alarms "+str(alarms)+" | "+performance)
+        else:
+            exitnagios("OK","No alarms found | count=0")
+    else:
+        exitnagios("CRITICAL","issue retrieving sensors data")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected values")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    parts = args.expected.split(";")
+    clean = []
+    for part in parts:
+        clean.append(part.strip())
+    expected = " ; ".join(clean)
+
+    do_sensors_call(expected)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------

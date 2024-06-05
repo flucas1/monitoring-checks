@@ -41,8 +41,8 @@ def isfinal(parts):
     finals = ["localaccount"]
     return parts[0] in finals
 
-def isexclusion(parts):
-    exceptions = []
+def isexclusion(parts,customlines):
+    exceptions = []+customlines
     exceptions.append(["mailer-daemon", "postmaster"])
     exceptions.append(["root", "localaccount"])
     #infomsg(exceptions)
@@ -54,7 +54,7 @@ def isexclusion(parts):
 def isexpected(parts):
     return parts[1] == "root"
 
-def domailaliasescall():
+def domailaliasescall(customlines):
     try:
         aliasesfile = "/etc/aliases"
         if os.path.isfile(aliasesfile):
@@ -75,7 +75,7 @@ def domailaliasescall():
                                 if isfinal(parts) == True:
                                     infomsg("ERROR -> "+str(parts))
                                     errors.append(line)
-                                elif isexclusion(parts):
+                                elif isexclusion(parts,customlines):
                                     infomsg("EXCLUSION -> "+str(parts))
                                     exclusion.append(line)
                                 elif isexpected(parts):
@@ -103,6 +103,7 @@ def domailaliasescall():
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-l", "--customlines",                             dest="customlines",      default="",                                   help="expected custom lines")
 
     args = parser.parse_args()
     
@@ -111,7 +112,11 @@ def parse_args():
 def main():
     args = parse_args()
     setcandebug(args.debug)
-    domailaliasescall()
+    customlines = []
+    for entry in args.customlines.split(","):
+        customlines.append(entry.strip().split(":"))
+    infomsg("The custom lines are "+str(customlines))
+    domailaliasescall(customlines)
 
 if __name__ == "__main__":
     main()

@@ -7,6 +7,7 @@ import os
 import subprocess
 import datetime
 import dateutil.parser
+import time
 
 #-------------------------------------------------------------------------------
 
@@ -38,21 +39,57 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dolastloginscall(warning,critical):
-    cmdline = ["/usr/bin/last","--system","--ip","--time-format=iso","--since=-7days","shutdown","reboot"]
+def get_wtmp_entries():
+    today = datetime.datetime.now(datetime.UTC)
+    seven_days_ago = today - datetime.timedelta(days=7)
+    formatted_date = seven_days_ago.strftime("%Y-%m-%d")
+    infomsg(formatted_date)
+
+    cmdline = ["/usr/bin/last","--system","--ip","--time-format=iso","--since="+formatted_date,"shutdown","reboot"]
+    infomsg(" ".join(cmdline))
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
-
+    infomsg("----------")
     infomsg(output)
+    infomsg("----------")
+
+    cleared = []
     if exitcode == 0:
         lines = output.splitlines()
+
+        for line in lines:
+            line = line.strip()
+            if line=="":
+                break
+            elif (line.startswith("wtmp begins ") or line.startswith("/var/lib/wtmpdb/wtmp.db begins ")):
+                break
+            else:
+                cleared.append(line)
+
+    return cleared
+
+def dolastloginscall(warning,critical):
+    counter = 0
+    retries = 10
+    cleared = []
+    while counter<retries:
+        cleared = get_wtmp_entries()
+        if len(cleared)>0:
+            break
+        else:
+            counter = counter+1
+            time.sleep(1)
+            infomsg("sleeping and will do retry "+str(counter))
+    infomsg(cleared)
+
+    if len(cleared)>0:
         crashed = True
         crashdate = datetime.datetime.now(datetime.UTC)
-        if len(lines)>1:
-            linereboot = lines[0].split()
-            lineshutdown = lines[1].split()
+        if len(cleared)>1:
+            linereboot = cleared[0].split()
+            lineshutdown = cleared[1].split()
             if len(linereboot)==0 or len(lineshutdown)==0:
                 crashed = False
             elif linereboot[0]=="reboot" and lineshutdown[0]=="shutdown":
@@ -62,7 +99,7 @@ def dolastloginscall(warning,critical):
                     crashdate = dateutil.parser.parse(linereboot[4])
                 except:
                     pass
-        elif len(lines)>0 and lines[0].startswith("wtmp begins "):
+        else:
             crashed = False
 
         if not crashed:
