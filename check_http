@@ -67,8 +67,18 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
+_debuginfo = []
 _preheaders = []
 _headers = {}
+
+def _debug_function(debug_type, debug_msg):
+    global _debuginfo
+    try:
+        debug_msg = debug_msg.decode().strip()
+        infomsg(str(debug_type)+" -> "+debug_msg)
+    except:
+        pass
+
 def _header_function(header_line):
     global _preheaders
     global _headers
@@ -80,7 +90,7 @@ def _header_function(header_line):
     # Header lines include the first status line (HTTP/1.x ...).
     # We are going to ignore all lines that don't have a colon in them.
     # This will botch headers that are split on multiple lines...
-    if ':' not in header_line:
+    if ":" not in header_line:
         if header_line!="" and len(_headers)==0:
             _preheaders.append(header_line.strip())
         return
@@ -154,9 +164,11 @@ def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutsta
     exitnagios(exitlevel,exitmessage)
 
 def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
+    global _debuginfo
     global _preheaders
     global _headers
 
+    _debuginfo = []
     _preheaders = []
     _headers = {}
     curl = None
@@ -213,6 +225,8 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         curl.reset()
         #curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
         #curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
+        curl.setopt(pycurl.VERBOSE, 1)
+        curl.setopt(pycurl.DEBUGFUNCTION, _debug_function)
         curl.setopt(pycurl.CAINFO, certifi.where())
         curl.setopt(pycurl.URL, url)
         curl.setopt(pycurl.WRITEDATA, buffer)
@@ -301,10 +315,14 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         certexpirationraw = None
         certexpirationparsed = None
         try:
-            certvars = certinfo[0]
+            infomsg("certinfo is "+str(certinfo))
+            if len(certinfo)>0:
+                certvars = certinfo[0]
+            else:
+                certvars = []
             for certvar in certvars:
                 certvarname, certvarvalue = certvar
-                if certvarname == "Expire Date":
+                if certvarname in ["Expire Date", "Expire date"]:
                     certexpirationraw = certvarvalue
                     break
             if certexpirationraw!=None:
