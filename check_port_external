@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import subprocess
+import argparse
+import mechanize
+import socket
+from bs4 import BeautifulSoup
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dointernalcall(ipprotocol,tcporudp,hostname,port):
+    try:
+        if ipprotocol=="4":
+            sfamily = socket.AF_INET
+        elif ipprotocol=="6":
+            sfamily = socket.AF_INET6
+        else:
+            return "ERROR: invalid ip version protocol '"+ipprotocol+"'"
+        try:
+            info = socket.getaddrinfo(hostname, None, sfamily)
+            ip_address = info[0][4][0]
+            infomsg("The ip address is "+ip_address)
+        except:
+            return "ERROR: issue resolving ip address"
+
+        sock = None
+        if tcporudp == "tcp":
+            sock = socket.socket(sfamily, socket.SOCK_STREAM)
+        elif tcporudp == "udp":
+            sock = socket.socket(sfamily, socket.SOCK_DGRAM)
+        else:
+            return "ERROR: specify the protocol as tcp or udp instead of '"+tcporudp+"'"
+
+        timeout = 5
+        sock.settimeout(timeout)
+
+        content = "ERROR: uninitialized"
+
+        if tcporudp == "tcp":
+            try:
+                status = sock.connect_ex((ip_address, port))
+                infomsg("the tcp status is "+str(status))
+                if status==0:
+                    content = "OPEN"
+                elif status in [110,113,11]:
+                    content = "TIMEOUT"
+                elif status in [111]:
+                    content = "CLOSED"
+                else:
+                    content = "ERROR: "+str(status)
+            except TimeoutError as e:
+                content = "TIMEOUT"
+            except Exception as e:
+                infomsg("socket exception -> "+str(e))
+        elif tcporudp == "udp":
+            try:
+                sock.sendto("", (ip_address, port))
+                content = "OPEN"
+            except socket.error as e:
+                content = "CLOSED"
+            except Exception as e:
+                infomsg("socket exception -> "+str(e))
+
+        if sock!=None:
+            sock.close()
+    except Exception as e:
+        infomsg("block exception -> "+str(e))
+        content=""
+
+    return content
+
+def dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port):
+    try:
+        url = baseurl+"?accesstoken="+accesstoken+"&hostname="+hostname+"&protocol="+tcporudp+"&port="+str(port)
+        if ipprotocol != "":
+            url = url+"&ipv="+ipprotocol
+        infomsg(url)
+        br = mechanize.Browser()
+        br.set_handle_robots(False) # ignore robots file
+        #br.addheaders = [("User-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")]
+        br.addheaders = [("User-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0")]
+        res = br.open(url)
+        content = res.read().decode()
+    except Exception as e:
+        content=""
+
+    return content
+
+#-------------------------------------------------------------------------------
+
+def doportexternalcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port,responses,timeoutvalue,timeoutstatus):
+    try:
+        ipprotocol = ipprotocol.strip().replace("-","")
+        tcporudp = tcporudp.lower().strip()
+        if baseurl=="":
+            content = dointernalcall(ipprotocol,tcporudp,hostname,port)
+        else:
+            content = dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port)
+        infomsg(content)
+        if content == None:
+            exitnagios("CRITICAL","no result from page")
+
+        lines = content.splitlines()
+        if len(lines)>0:
+            status = lines[0].split(":")[0].lower()
+            infomsg(status)
+            if status not in ["open","closed","timeout"]:
+                exitnagios("CRITICAL","not valid check status: "+content)
+            else:
+                if status in responses:
+                    exitnagios("OK","the result "+status+" for port "+str(port)+" was as the expected "+str(responses))
+                else:
+                    if status == "timeout":
+                        exitstatus = timeoutstatus
+                    else:
+                        exitstatus = "CRITICAL"
+                    exitnagios(exitstatus,"the result "+status+" for port "+str(port)+" was not the in the expected "+str(responses))
+        else:
+            exitnagios("CRITICAL","empty output in check")
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",            action="store_true",  dest="ipv4",            default=False,         help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",            action="store_true",  dest="ipv6",            default=False,         help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",            action="store_true",  dest="ipv0",            default=False,         help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                              dest="hostname",        default="",            help="server to check")
+    parser.add_argument("-p", "--port",                                  dest="port",            default="",            help="TCP port number to check")
+    parser.add_argument("-r", "--responses",                             dest="responses",       default="open",        help="respose: open,closed,timeout")
+    parser.add_argument("-t", "--timeout",                               dest="timeout",         default="30:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-k", "--accesstokenfile",                       dest="accesstokenfile", default="",            help="file containing the authentication token for the remote service")
+    parser.add_argument("-u", "--baseurl",                               dest="baseurl",         default="",            help="url to use")
+    parser.add_argument("-®", "--debug",           action="store_true",  dest="debug",           default=False,         help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
+
+    tcporudp = "tcp"
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        if args.accesstokenfile=="":
+            accesstoken = ""
+        else:
+            with open(args.accesstokenfile) as handle:
+               accesstoken=handle.read().splitlines()[0]
+        baseurl = args.baseurl
+#        if baseurl=="":
+#            baseurl = "https://www.bigbroeyes.com/external_checks/check_port.php"
+        doportexternalcall(baseurl,accesstoken,protocol,tcporudp,args.hostname,int(args.port),args.responses.split(","),timeoutvalue,timeoutstatus)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
