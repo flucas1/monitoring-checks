@@ -91,7 +91,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
             infomsg(reason)
             return [2,avgms,percent,reason]
         elif percent >= criticalpercent:
-            reason = "ciritical ping loss"
+            reason = "critical ping loss"
             infomsg(reason)
             return [2,avgms,percent,reason]
         elif avgms >= warningms:
