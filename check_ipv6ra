@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+def candebug():
+    global _candebug
+    return _candebug
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def doipv6racall(interface,expected):
+
+    cmdline = ["/usr/bin/rdisc6","--numeric","--quiet","--multiple","10",interface]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8")
+    errors = completedproc.stderr.decode("utf-8")
+    response = completedproc.returncode
+    infomsg(output)
+    rafound = []
+    if response == 0:
+        alllines = output.splitlines()
+        for line in alllines:
+            line = line.strip()
+            if line!="":
+                rafound.append(line)
+    infomsg(rafound)
+
+    missing = []
+    for item in expected:
+        if item not in rafound:
+            missing.append(item)
+
+    unexpected = []
+    for item in rafound:
+        if item not in expected:
+            unexpected.append(item)
+
+    count_missing = len(missing)
+    count_unexpected = len(unexpected)
+    if count_missing==0 and count_unexpected==0:
+        exitnagios("OK","The found ipv6 RA are as expected - "+str(expected)+" | missing=0 unexpected=0")
+    else:
+        messages = []
+        if count_missing>0:
+            messages.append("There are missing RA - "+str(missing))
+        if count_unexpected>0:
+            messages.append("There are unexpected RA - "+str(unexpected))
+        exitnagios("CRITICAL"," --- ".join(messages)+" | missing="+str(count_missing)+" unexpected="+str(count_unexpected))
+
+#-------------------------------------------------------------------------------
+
+#collect arguments
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--interface",         action="store",       dest="interface",        default="",                                   help="interface to evaluate")
+    parser.add_argument("-e", "--expected",          action="store",       dest="expected",         default="",                                   help="expected RA prefixes")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    return args
+
+def main():
+    args = parse_args()
+    setcandebug(args.debug)
+
+    if args.interface=="":
+        exitnagios("CRITICAL","no interface selected")
+
+    doipv6racall(args.interface,args.expected.split(","))
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
