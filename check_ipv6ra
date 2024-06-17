@@ -50,7 +50,8 @@ def doipv6racall(interface,expected):
         for line in alllines:
             line = line.strip()
             if line!="":
-                rafound.append(line)
+                if line not in rafound:
+                    rafound.append(line)
     infomsg(rafound)
 
     missing = []
