@@ -94,7 +94,12 @@ def main():
     if args.interface=="":
         exitnagios("CRITICAL","no interface selected")
 
-    doipv6racall(args.interface,args.expected.split(","))
+    expected = args.expected.split(",")
+    if "" in expected:
+        expected.remove("")
+    if None in expected:
+        expected.remove(None)
+    doipv6racall(args.interface,expected)
 
 if __name__ == "__main__":
     main()
