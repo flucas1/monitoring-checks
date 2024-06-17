@@ -36,7 +36,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doarpingcall(hostname):
+def dondisc6call(hostname):
     cmdline = ["/usr/sbin/ip","route","get",hostname]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8")
@@ -92,10 +92,9 @@ def main():
     if not args.hostname:
         exitnagios("CRITICAL","Must give a hostname.")
 
-    doarpingcall(args.hostname)
+    dondisc6call(args.hostname)
 
 if __name__ == "__main__":
     main()
 
 #-------------------------------------------------------------------------------
-
