@@ -36,7 +36,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doipv6racall(interface,expected):
+def doipv6racall(interface,expected,ignored):
 
     cmdline = ["/usr/bin/rdisc6","--numeric","--quiet","--multiple","10",interface]
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -56,12 +56,12 @@ def doipv6racall(interface,expected):
 
     missing = []
     for item in expected:
-        if item not in rafound:
+        if (item not in rafound) and (item not in ignored):
             missing.append(item)
 
     unexpected = []
     for item in rafound:
-        if item not in expected:
+        if (item not in expected) and (item not in ignored):
             unexpected.append(item)
 
     count_missing = len(missing)
@@ -83,6 +83,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interface",         action="store",       dest="interface",        default="",                                   help="interface to evaluate")
     parser.add_argument("-e", "--expected",          action="store",       dest="expected",         default="",                                   help="expected RA prefixes")
+    parser.add_argument("-g", "--ignored",           action="store",       dest="ignored",           default="",                                   help="ignore these RA prefixes")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -100,7 +101,12 @@ def main():
         expected.remove("")
     if None in expected:
         expected.remove(None)
-    doipv6racall(args.interface,expected)
+    ignored = args.expected.split(",")
+    if "" in ignored:
+        ignored.remove("")
+    if None in ignored:
+        ignored.remove(None)
+    doipv6racall(args.interface,expected,ignored)
 
 if __name__ == "__main__":
     main()
