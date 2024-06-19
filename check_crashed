@@ -84,12 +84,15 @@ def dolastloginscall(warning,critical):
             infomsg("sleeping and will do retry "+str(counter))
     infomsg(cleared)
 
+    infomsg("----------")
     if len(cleared)>0:
         crashed = True
         crashdate = datetime.datetime.now(datetime.UTC)
         if len(cleared)>1:
             linereboot = cleared[0].split()
+            infomsg("linereboot is "+str(linereboot))
             lineshutdown = cleared[1].split()
+            infomsg("lineshutdown is "+str(lineshutdown))
             if len(linereboot)==0 or len(lineshutdown)==0:
                 crashed = False
             elif linereboot[0]=="reboot" and lineshutdown[0]=="shutdown":

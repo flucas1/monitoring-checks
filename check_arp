@@ -38,7 +38,9 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doarpcall(whitelist):
+def doarpcall(exclusion):
+    infomsg(exclusion)
+
     cmdline = ["/usr/bin/ip","neighbour","show"]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -47,8 +49,6 @@ def doarpcall(whitelist):
     exitcode = completedproc.returncode
     if exitcode!=0:
         exitnagios("CRITICAL","cannot read ARP table | total_v6=-1 total_v4=-1 duplicated_v6=-1 duplicated_v4=-1")
-
-    exclusion = whitelist.lower().split(",")
 
     arptable4 = {}
     arptable6 = {}
@@ -60,12 +60,12 @@ def doarpcall(whitelist):
                 key = parts[4].lower()
                 value = parts[0].lower()
                 infomsg(key+" "+value)
-                
+
                 try:
                     parsed = ipaddress.ip_address(value)
                 except:
                     parsed = None
-                
+
                 typeparsed = type(parsed)
                 if typeparsed is ipaddress.IPv4Address:
                     if key not in arptable4:
@@ -78,7 +78,7 @@ def doarpcall(whitelist):
                     if value not in arptable6[key]:
                         arptable6[key].append(value)
                 else:
-                    print("failed parsing "+value,flush=True)
+                    infomsg("failed parsing "+value)
 
     infomsg(str(arptable4))
     infomsg(str(arptable6))
@@ -134,7 +134,7 @@ def doarpcall(whitelist):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--whitelist",         action="store",       dest="whitelist",        default="",                                   help="MACs to whitelist")
+    parser.add_argument("-l", "--whitelist",         action="store",       dest="whitelist",        default="",                                   help="IP addresses to whitelist")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
     return args
@@ -142,7 +142,8 @@ def parse_args():
 def main():
     args = parse_args()
     setcandebug(args.debug)
-    doarpcall(args.whitelist)
+    exclusion = args.whitelist.lower().split(",")
+    doarpcall(exclusion)
 
 if __name__ == "__main__":
     main()

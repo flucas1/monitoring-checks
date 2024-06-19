@@ -36,26 +36,43 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doarpingcall(hostname,packets,timeout):
-    cmdline = ["/usr/sbin/arping","-C",str(packets),"-w",str(timeout),hostname]
+def dondisc6call(hostname):
+    cmdline = ["/usr/sbin/ip","route","get",hostname]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8")
     errors = completedproc.stderr.decode("utf-8")
     response = completedproc.returncode
-
     infomsg(output)
+    interface = None
+    if response == 0:
+        routeparts = output.split()
+        if len(routeparts)>4:
+            interface = routeparts[4]
+    if interface == None:
+        exitnagios("CRITICAL","Cannot identify iterface for discovery")
+    infomsg("interface -> "+interface)
 
-    #and then check the response...
+    cmdline = ["/usr/bin/ndisc6",hostname,interface]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8")
+    errors = completedproc.stderr.decode("utf-8")
+    response = completedproc.returncode
+    infomsg(output)
+    macfound = None
     if response == 0:
         alllines = output.splitlines()
-        linems = alllines[-1]
-        linepercent = alllines[-2]
-        avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
-        percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
+        if len(alllines)>1:
+            line = alllines[1]
+            infomsg(line)
+            parts = line.split()
+            if len(parts)>3:
+                macfound = parts[3]
+                infomsg(macfound)
 
-        exitnagios("OK",hostname+" is respoding to ARP | average="+str(avgms)+" percent="+str(percent))
+    if macfound!=None:
+        exitnagios("OK",hostname+" is respoding to NDD with mac "+macfound)
     else:
-        exitnagios("CRITICAL",hostname+" is not responding to ARP | average=0 percent=0")
+        exitnagios("CRITICAL",hostname+" is not responding to NDD")
 
 #-------------------------------------------------------------------------------
 
@@ -63,8 +80,6 @@ def doarpingcall(hostname,packets,timeout):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",          action="store",                                                                              help="target IP or hostname")
-    parser.add_argument("-p", "--packets",           action="store",       type=int,                default=1,                                    help="number of pings")
-    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=10,                                   help="timeout")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -77,7 +92,7 @@ def main():
     if not args.hostname:
         exitnagios("CRITICAL","Must give a hostname.")
 
-    doarpingcall(args.hostname,args.packets,args.timeout)
+    dondisc6call(args.hostname)
 
 if __name__ == "__main__":
     main()
