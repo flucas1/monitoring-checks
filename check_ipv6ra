@@ -37,6 +37,8 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 def doipv6racall(interface,expected,ignored):
+    infomsg("expected: "+str(expected))
+    infomsg("ignored: "+str(ignored))
 
     cmdline = ["/usr/bin/rdisc6","--numeric","--quiet","--multiple","10",interface]
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -83,7 +85,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interface",         action="store",       dest="interface",        default="",                                   help="interface to evaluate")
     parser.add_argument("-e", "--expected",          action="store",       dest="expected",         default="",                                   help="expected RA prefixes")
-    parser.add_argument("-g", "--ignored",           action="store",       dest="ignored",           default="",                                   help="ignore these RA prefixes")
+    parser.add_argument("-g", "--ignored",           action="store",       dest="ignored",          default="",                                   help="ignore these RA prefixes")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -101,7 +103,7 @@ def main():
         expected.remove("")
     if None in expected:
         expected.remove(None)
-    ignored = args.expected.split(",")
+    ignored = args.ignored.split(",")
     if "" in ignored:
         ignored.remove("")
     if None in ignored:
