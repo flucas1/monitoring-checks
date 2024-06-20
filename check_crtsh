@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 #-------------------------------------------------------------------------------
 
-#https://crt.sh/?q=*.randomizer.space&output=json
+#https://crt.sh/?q=*.google.com&output=json
 #and check that issuer+name and issuer_ca_id in list
-#wget "https://crt.sh/?q=randomizer.space&output=json" -O - -q | jq
+#wget "https://crt.sh/?q=google.com&output=json" -O - -q | jq
 
 import urllib.error
 import urllib.request
