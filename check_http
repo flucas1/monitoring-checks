@@ -121,22 +121,29 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
         listdnsservers = dnsservers.split(",")
         infomsg("listdnsservers: "+str(listdnsservers))
 
-        try:
-            customresolver = dns.resolver.Resolver(configure=False)
-            customresolver.nameservers = listdnsservers
-            customresolver.retry_servfail = True
-            customresolver.edns = True
+        maxretries = 3
+        for i in range(maxretries):
+            try:
+                if i>1:
+                    time.sleep(i)
+                
+                customresolver = dns.resolver.Resolver(configure=False)
+                customresolver.nameservers = listdnsservers
+                customresolver.retry_servfail = True
+                customresolver.edns = True
 
-            recordtype = ""
-            if ipprotocol in ["4","-4"]:
-                recordtype = "A"
-            elif ipprotocol in ["6","-6"]:
-                recordtype = "AAAA"
-            infomsg(recordtype)
+                recordtype = ""
+                if ipprotocol in ["4","-4"]:
+                    recordtype = "A"
+                elif ipprotocol in ["6","-6"]:
+                    recordtype = "AAAA"
+                infomsg(recordtype)
 
-            result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
-        except:
-            pass
+                result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
+                
+                break
+            except:
+                pass
 
         infomsg(result)
     return result
