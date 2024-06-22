@@ -233,8 +233,9 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         curl.reset()
         #curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
         #curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
-        curl.setopt(pycurl.VERBOSE, 1)
-        curl.setopt(pycurl.DEBUGFUNCTION, _debug_function)
+        if candebug() == True:
+            curl.setopt(pycurl.VERBOSE, 1)
+            curl.setopt(pycurl.DEBUGFUNCTION, _debug_function)
         curl.setopt(pycurl.CAINFO, certifi.where())
         curl.setopt(pycurl.URL, url)
         curl.setopt(pycurl.WRITEDATA, buffer)
