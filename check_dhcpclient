@@ -109,7 +109,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
                 else:
                     goodones.append(foundserver)
         if len(criticals)==0:
-            if len(goodones)<=warning:
+            if len(goodones)<warning:
                 warnings.append("difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on interface '"+interface+"'")
             else:
                 sucesses.append("foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
@@ -148,7 +148,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--servers",                                 dest="servers",          default="0.0.0.0",                            help="DHCP server IP (default %default)")
     parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default="FF:FF:FF:FF:FF:FF",                  help="chaddr: Client's MAC address (default %default)")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default="3",                                  help="if less or equal than this value raise a warning")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="3",                                  help="if less than this value raise a warning")
     parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default="0.0.0.0",                            help="ciaddr: Client's desired IP address (default %default)")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10",                                 help="UDP timeout (default %default)")
     parser.add_argument("-i", "--interfaces",                              dest="interfaces",       default="",                                   help="comma separated interfaces where to listen")
