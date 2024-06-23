@@ -144,10 +144,14 @@ def docrtshcall(mode,hostname,valid,timeoutvalue,retries):
                     valid = False
                     problems.append(item)
                     infomsg(item)
-        if valid == True:
+        if totalfound==0:
+            exitnagios("WARNING","no certificates in crt.sh | found="+str(totalfound)+" duration="+str(duration))
+        elif valid==True:
             exitnagios("OK","no issues found | found="+str(totalfound)+" duration="+str(duration))
         else:
             exitnagios("CRITICAL","found problems --- "+str(problems)+" | found="+str(totalfound)+" duration="+str(duration))
+
+    exitnagios("WARNING","crt.sh does not answer properly")
 
 #-------------------------------------------------------------------------------
 
