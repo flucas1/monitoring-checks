@@ -240,7 +240,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
                 if successip:
                     successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is as expected. "
                 else:
-                    errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is not as expected '"+expectedip+"'. "
+                    errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is not as expected '"+" § ".join(expectedip)+"'. "
 
         if resulteddns == "":
             warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddns)+"'. "
