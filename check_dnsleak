@@ -276,8 +276,8 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
-    parser.add_argument("-x", "--problematicip",                           dest="probematicip"      default="",                                   help="raise critical if this IP is found")
-    parser.add_argument("-r", "--problematicdns",                          dest="probematicdns"     default="",                                   help="raise critical if this DNS is found")
+    parser.add_argument("-x", "--problematicip",                           dest="problematicip",    default="",                                   help="raise critical if this IP is found")
+    parser.add_argument("-r", "--problematicdns",                          dest="problematicdns",   default="",                                   help="raise critical if this DNS is found")
     parser.add_argument("-i", "--expectedip",                              dest="expectedip",       default="",                                   help="expected response for the IP")
     parser.add_argument("-d", "--expecteddns",                             dest="expecteddns",      default="",                                   help="expected response for the DNS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -285,20 +285,20 @@ def main():
 
     setcandebug(args.debug)
 
-    if ((problematicip!="") and (expectedip!="")) or ((problematicdns!="") and (expecteddns!="")):
+    problematicip = parseip(args.problematicip)
+    infomsg(problematicip)
+    problematicdns = parsedns(args.problematicdns)
+    infomsg(problematicdns)
+    expectedip = parseip(args.expectedip)
+    infomsg(expectedip)
+    expecteddns = parsedns(args.expecteddns)
+    infomsg(expecteddns)
+
+    if ((len(problematicip)!=0) and (len(expectedip)!=0)) or ((len(problematicdns)!=0) and (len(expecteddns)!=0)):
         exitnagios("CRITICAL","problematic and expected flags are mutually exclusive")
 
     if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
         exitnagios("CRITICAL","a problematic or expected flat must be specified")
-
-    problematicipparts = parseip(args.problematicip)
-    infomsg(problematicipparts)
-    problematicdns = parsedns(args.problematicdns)
-    infomsg(problematicdns)
-    expectedipparts = parseip(args.expectedip)
-    infomsg(expectedipparts)
-    expecteddns = parsedns(args.expecteddns)
-    infomsg(expecteddns)
 
     dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns)
 
