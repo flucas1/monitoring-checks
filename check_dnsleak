@@ -130,7 +130,49 @@ def comparetriplet(value,expected):
         else:
             return False
 
-def dodnsleakcall(proxy,expectedip,expecteddns):
+def parseip(inputvalue):
+    result = []
+    inputvalue = inputvalue.strip()
+    if inputvalue!="":
+        for item in inputvalue.split("§"):
+            item = item.strip()
+            if item not in result:
+                result.append(item)
+    return result
+
+def parsedns(inputvalue):
+    result = []
+    inputvalue = inputvalue.strip()
+    if inputvalue!="":
+        for item in inputvalue.split("§"):
+            item = item.strip()
+            if item not in result:
+                result.append(item)
+    return result
+
+def findtripletsmatching(inputtriplets,expectedtriplets):
+    result = []
+    for testinputtriplet in inputtriplets:
+        for testexpectedtriplet in expectedtriplets:
+            if comparetriplet(testinputtriplet.strip(),testexpectedtriplet.strip()):
+                result.append(testinputtriplet)
+    return result
+
+def alltripletsmatching(inputtriplets,expectedtriplets):
+    successmatching = True
+    for testinputtriplet in inputtriplets:
+        partial = False
+        for testexpectedtriplet in expectedtriplets:
+            infomsg(testinputtriplet.strip())
+            infomsg(testexpectedtriplet.strip())
+            if comparetriplet(testinputtriplet.strip(),testexpectedtriplet.strip()):
+                partial = True
+                break
+        infomsg(partial)
+        successmatching = successmatching and partial
+    return successmatching
+
+def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -180,67 +222,45 @@ def dodnsleakcall(proxy,expectedip,expecteddns):
         warningmsg = ""
         errormsg = ""
 
-        expectedipparts = []
-        for item in expectedip.split("§"):
-            item = item.strip()
-            if item not in expectedipparts:
-                expectedipparts.append(item)
-        infomsg(expectedipparts)
         if resultedip == "":
-            warningmsg += "The IP response is empty, and was expected '"+" § ".join(expectedipparts)+"'. "
+            warningmsg += "The IP response is empty, and was expected '"+" § ".join(expectedip)+"'. "
         else:
-            successip = True
-            resultedipparts = []
-            for item in resultedip.split("§"):
-                item = item.strip()
-                if item not in resultedipparts:
-                    resultedipparts.append(item)
-            for testresultedip in resultedipparts:
-                partial = False
-                for testexpectedip in expectedipparts:
-                    infomsg(testresultedip.strip())
-                    infomsg(testexpectedip.strip())
-                    if comparetriplet(testresultedip.strip(),testexpectedip.strip()):
-                        partial = True
-                        break
-                infomsg(partial)
-                successip = successip and partial
-            if successip:
-                successmsg += "The IP response '"+resultedip+"' is as expected. "
+            # if something problematic is defined, find it and report it,
+            # ifnot,... all the resulted dns should be in the expected dns
+            resultedipparts = parseip(resultedip)
+            infomsg(resultedipparts)
+            if len(problematicip)>0:
+                failureip = findtripletsmatching(resultedipparts,problematicip)
+                if len(failureip)>0:
+                    errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is problematic. "
+                else:
+                    successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is not problematic. "
             else:
-                errormsg += "The IP response '"+resultedip+"' is not as expected '"+expectedip+"'. "
+                successip = alltripletsmatching(resultedipparts,expectedip)
+                if successip:
+                    successmsg += "The IP response '"+resultedip+"' is as expected. "
+                else:
+                    errormsg += "The IP response '"+resultedip+"' is not as expected '"+expectedip+"'. "
 
-        expecteddnsparts = []
-        for item in expecteddns.split("§"):
-            item = item.strip()
-            if item not in expecteddnsparts:
-                expecteddnsparts.append(item)
-        infomsg(expecteddnsparts)
         if resulteddns == "":
-            warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddnsparts)+"'. "
+            warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddns)+"'. "
         else:
-            successdns = True
-            resulteddnsparts = []
-            for item in resulteddns.split("§"):
-                item = item.strip()
-                if item not in resulteddnsparts:
-                    resulteddnsparts.append(item)
-            # all the resulted dns should pass the test for at least one option in expeted dns
+            # if something problematic is defined, find it and report it,
+            # ifnot,... all the resulted dns should be in the expected dns
+            resulteddnsparts = parsedns(resulteddns)
             infomsg(resulteddnsparts)
-            for testresulteddns in resulteddnsparts:
-                partial = False
-                for testexpecteddns in expecteddnsparts:
-                    infomsg(testresulteddns.strip())
-                    infomsg(testexpecteddns.strip())
-                    if comparetriplet(testresulteddns.strip(),testexpecteddns.strip()):
-                        partial = True
-                        break
-                infomsg(partial)
-                successdns = successdns and partial
-            if successdns:
-                successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
+            if len(problematicdns)>0:
+                failuredns = findtripletsmatching(resulteddnsparts,problematicdns)
+                if len(failuredns)>0:
+                    errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is problematic. "
+                else:
+                    successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
-                errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddnsparts)+"'. "
+                successdns = alltripletsmatching(resulteddnsparts,expecteddns)
+                if successdns:
+                    successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
+                else:
+                    errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddns)+"'. "
 
         if errormsg != "":
             exitnagios("CRITICAL",errormsg)
@@ -256,6 +276,8 @@ def dodnsleakcall(proxy,expectedip,expecteddns):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
+    parser.add_argument("-x", "--problematicip",                           dest="probematicip"      default="",                                   help="raise critical if this IP is found")
+    parser.add_argument("-r", "--problematicdns",                          dest="probematicdns"     default="",                                   help="raise critical if this DNS is found")
     parser.add_argument("-i", "--expectedip",                              dest="expectedip",       default="",                                   help="expected response for the IP")
     parser.add_argument("-d", "--expecteddns",                             dest="expecteddns",      default="",                                   help="expected response for the DNS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -263,7 +285,22 @@ def main():
 
     setcandebug(args.debug)
 
-    dodnsleakcall(args.proxy,args.expectedip,args.expecteddns)
+    if ((problematicip!="") and (expectedip!="")) or ((problematicdns!="") and (expecteddns!="")):
+        exitnagios("CRITICAL","problematic and expected flags are mutually exclusive")
+
+    if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
+        exitnagios("CRITICAL","a problematic or expected flat must be specified")
+
+    problematicipparts = parseip(args.problematicip)
+    infomsg(problematicipparts)
+    problematicdns = parsedns(args.problematicdns)
+    infomsg(problematicdns)
+    expectedipparts = parseip(args.expectedip)
+    infomsg(expectedipparts)
+    expecteddns = parsedns(args.expecteddns)
+    infomsg(expecteddns)
+
+    dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns)
 
 if __name__ == "__main__":
     main()
