@@ -38,13 +38,13 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 def isfinal(parts):
-    finals = ["localaccount"]
+    finals = ["localaccount@localhost"]
     return parts[0] in finals
 
 def isexclusion(parts,customlines):
     exceptions = []+customlines
-    exceptions.append(["mailer-daemon", "postmaster"])
-    exceptions.append(["root", "localaccount"])
+    exceptions.append(["mailer-daemon", "postmaster@localhost"])
+    exceptions.append(["root", "localaccount@localhost"])
     #infomsg(exceptions)
     for exception in exceptions:
         if (exception[0] == parts[0]) and (exception[1] == parts[1]):
@@ -72,7 +72,10 @@ def domailaliasescall(customlines):
                             if len(parts)==2:
                                 parts[0] = parts[0].strip()
                                 parts[1] = parts[1].strip()
-                                if isfinal(parts) == True:
+                                if parts[1].endswith("@localhost") == False:
+                                    infomsg("ERROR -> "+str(parts))
+                                    errors.append(line)
+                                elif isfinal(parts) == True:
                                     infomsg("ERROR -> "+str(parts))
                                     errors.append(line)
                                 elif isexclusion(parts,customlines):
