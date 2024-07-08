@@ -94,7 +94,7 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
             exitnagios("CRITICAL","initial check, unexpected state - "+str(response)+": "+message.decode()+" | time=-1 validity=-1")
 
         warningmsg= ""
-        testemailaddress = "postmaster@google.com"
+        testemailaddress = "mailing-probe@example.net"
         response,message = smtpconnection.docmd("MAIL FROM:",testemailaddress)
         if response in [250]:
             response,message = smtpconnection.docmd("RCPT TO:",testemailaddress)
