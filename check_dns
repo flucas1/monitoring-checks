@@ -212,7 +212,13 @@ def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
         temp = []
         if len(responses)>0:
             for rdata in responses:
-                temp.append(rdata.to_text())
+                if kind=="TXT":
+                    joint = ""
+                    for parttxt in rdata.strings:
+                        joint = joint+parttxt.decode()
+                    temp.append("\""+joint+"\"")
+                else:
+                    temp.append(rdata.to_text())
         result = ",".join(temp)
         return result
 
