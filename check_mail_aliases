@@ -52,7 +52,7 @@ def isexclusion(parts,customlines):
     return False
 
 def isexpected(parts):
-    return parts[1] == "root"
+    return parts[1] == "root@localhost"
 
 def domailaliasescall(customlines):
     try:
