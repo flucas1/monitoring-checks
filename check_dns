@@ -247,20 +247,24 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
     alternatives = []
     if protocol == "-6":
         responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-        for response in responses:
-            alternatives.append(response)
+        if responses!=None:
+            for response in responses:
+                alternatives.append(response)
     elif protocol == "-4":
         responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
-        for response in responses:
-            alternatives.append(response)
+        if responses!=None:
+            for response in responses:
+                alternatives.append(response)
     else:
         responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-        for response in responses:
-            alternatives.append(response)
+        if responses!=None:
+            for response in responses:
+                alternatives.append(response)
         responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
-        for response in responses:
-            alternatives.append(response)
-    if alternatives == None:
+        if responses!=None:
+            for response in responses:
+                alternatives.append(response)
+    if alternatives==None:
         return ""
     else:
         result = ""
