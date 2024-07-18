@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import re
+import subprocess
+import datetime
+import socket
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
+
+def extractvalue(rawdata):
+    result = None
+    parts = rawdata.split("=",1)
+    if len(parts)>1:
+        encoded = parts[1].strip()
+        elements = encoded.split(":",1)
+        if len(elements)>1:
+            result = elements[1].strip()
+    return result
+
+def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalue, timeoutstatus):
+    version = "1"
+
+    parameters = {}
+    parameters["signal"] = ".1.3.6.1.4.1.41112.1.4.5.1.5.1"
+    parameters["noise" ] = ".1.3.6.1.4.1.41112.1.4.5.1.8.1"
+
+    values = {}
+    for key,oid in parameters.items():
+        mycode, stdout = snmpget(hostname, port, version, community, oid)
+        if mycode==0:
+            values[key] = extractvalue(stdout)
+        else:
+            values[key] = None
+    infomsg(values)
+
+    signal = None
+    try:
+        signal = float(values["signal"])
+    except:
+        pass
+    noise = None
+    try:
+        noise = float(values["noise"])
+    except:
+        pass
+
+    if signal==None:
+        exitnagios("CRITICAL","Cannot get the signal value")
+    elif (critical != "") and (signal < float(critical)):
+        exitnagios("CRITICAL","The signal is less than "+str(critical)+" - currently "+str(signal)+" | signal="+str(signal)+" noise="+str(noise))
+    elif (warning != "") and (signal < float(warning)):
+        exitnagios("WARNING","The signal is less than "+str(warning)+" - currently "+str(signal)+" | signal="+str(signal)+" noise="+str(noise))
+    else:
+        exitnagios("OK","The signal is "+str(signal)+" | signal="+str(signal)+" noise="+str(noise))
+
+def snmpget(hostname, port, version, community, oid):
+    cmdline = ["/usr/bin/snmpget","-v",version,"-c",community,hostname+":"+str(port),oid]
+    infomsg("[ '"+("' '".join(cmdline))+"' ]")
+
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    if errors.startswith("Timeout: No Response from "):
+        exitcode = None
+        output = None
+
+    return (exitcode, output)
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
+    parser.add_argument("-p", "--port",                                    dest="port",             default=161,                                  help="port to use, usually 143 or 993")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-m", "--community",                               dest="community",        default="public",                             help="private/public")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="-75",                                help="if signal less than this, it is a warning")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="-85",                                help="if signal less than this, it is a critical")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if args.hostname == "":
+        exitnagios("CRITICAL","no hostname specified")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        dosnmpwifilinkcall(args.warning,args.critical,args.hostname,int(args.port),args.community,timeoutvalue,timeoutstatus)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
+
+#timeout
+#warning
