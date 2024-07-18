@@ -58,8 +58,8 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hostname, port, community, timeoutvalue, timeoutstatus):
     alternatives = {}
-    alternatives["engine"   ] = (".1.3.6.1.6.3.10.2.1.3.0","INTEGER:\W*(\d+)\W*seconds",1   )
-    alternatives["sysUptime"] = (".1.3.6.1.2.1.1.3.0",     "Timeticks:\W*\((\d+)\)\W*", 0.01)
+    alternatives["engine"   ] = (".1.3.6.1.6.3.10.2.1.3.0","INTEGER:\\W*(\\d+)\\W*seconds", 1   )
+    alternatives["sysUptime"] = (".1.3.6.1.2.1.1.3.0",     "Timeticks:\\W*\\((\\d+)\\)\\W*",0.01)
 
     uptime_min = None
     method = None
