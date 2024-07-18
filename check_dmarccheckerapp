@@ -111,7 +111,7 @@ def tryfindbytagname(driver,tagname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(mailfrom,proxy):
+def dodnssecverisigncall(mailfrom,tolerate,proxy):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -157,26 +157,30 @@ def dodnssecverisigncall(mailfrom,proxy):
 
         infomsg("extracting errors")
         errors = tryfindbyclassname(driver,"error")
+        infomsg(len(errors))
         countError = 0
         for item in errors:
-            words = item.text.strip()
+            words = item.text.split()
+            infomsg(words)
             if len(words)==2:
                 partial=None
                 try:
-                    partial = int(words[1])
+                    partial = int(words[0])
                 except:
                     pass
                 if partial!=None:
                     countError=countError+partial
         infomsg("extracting warns")
         warns = tryfindbyclassname(driver,"warn")
+        infomsg(len(warns))
         countWarning = 0
         for item in warns:
-            words = item.text.strip()
+            words = item.text.split()
+            infomsg(words)
             if len(words)==2:
                 partial=None
                 try:
-                    partial = int(words[1])
+                    partial = int(words[0])
                 except:
                     pass
                 if partial!=None:
@@ -184,7 +188,7 @@ def dodnssecverisigncall(mailfrom,proxy):
 
         if countError>0:
             exitnagios("CRITICAL","There are errors for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
-        elif countWarning>0:
+        elif countWarning>tolerate:
             exitnagios("WARNING","There are warnings for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
         else:
             exitnagios("OK","No issues found for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
@@ -197,13 +201,15 @@ def dodnssecverisigncall(mailfrom,proxy):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
+    parser.add_argument("-l", "--tolerate",                                dest="tolerate",         default="0",                                  help="number of warnings to tolerate")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
     proxy = ""
-    dodnssecverisigncall(args.mailfrom,proxy)
+    tolerate = int(args.tolerate)
+    dodnssecverisigncall(args.mailfrom,tolerate,proxy)
 
 if __name__ == "__main__":
     main()
