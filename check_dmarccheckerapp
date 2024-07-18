@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import subprocess
+import argparse
+import datetime
+import smtplib
+from email.mime.text import MIMEText
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script('return document.readyState;')
+    return page_state == 'complete'
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+def tryfindbyxpath(driver,xpath):
+    result = []
+    try:
+        result = driver.find_elements(By.XPATH, xpath)
+    except:
+        pass
+    return result
+
+def tryfindbyid(driver,idname):
+    result = []
+    try:
+        result = driver.find_elements(By.ID, idname)
+    except:
+        pass
+    return result
+
+def tryfindbyclassname(driver,classname):
+    result = []
+    try:
+        result = driver.find_elements(By.CLASS_NAME, classname)
+    except:
+        pass
+    return result
+
+def tryfindbytagname(driver,tagname):
+    result = []
+    try:
+        result = driver.find_elements(By.TAG_NAME, tagname)
+    except:
+        pass
+    return result
+
+#-------------------------------------------------------------------------------
+
+def dodnssecverisigncall(mailfrom,proxy):
+    try:
+        driver = generatedriver(proxy)
+        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+        wait = WebDriverWait(driver,20)
+        action=ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://dmarcchecker.app"
+        driver.get(url)
+        infomsg("asking for navigating "+url)
+
+        time.sleep(2)
+        wait_page_loaded(driver)
+        infomsg("page loaded")
+
+        infomsg("waiting for element")
+        wait.until(EC.presence_of_element_located((By.ID, "email-address")))
+
+        infomsg("finding base element")
+        elements = tryfindbyxpath(driver,".//*[@id='email-address']//a")
+        if len(elements)==0:
+            exitnagios("CRITICAL","no result from page")
+
+        infomsg("extracting email")
+        targetemail = elements[0].text
+        me = mailfrom
+        dummystring = "TEST email to "+url+" at "+datetime.datetime.now(datetime.UTC).isoformat()
+
+        email_body = dummystring
+        email_message = MIMEText(email_body)
+        email_message["Subject"] = dummystring
+        email_message["From"] = me
+        email_message["To"] = targetemail
+
+        infomsg("sending email")
+        s = smtplib.SMTP("localhost")
+        s.sendmail(me, [targetemail], email_message.as_string())
+        s.quit()
+
+        time.sleep(5)
+        infomsg("waiting for element")
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "report-details-table")))
+
+        infomsg("extracting errors")
+        errors = tryfindbyclassname(driver,"error")
+        countError = 0
+        for item in errors:
+            words = item.text.strip()
+            if len(words)==2:
+                partial=None
+                try:
+                    partial = int(words[1])
+                except:
+                    pass
+                if partial!=None:
+                    countError=countError+partial
+        infomsg("extracting warns")
+        warns = tryfindbyclassname(driver,"warn")
+        countWarning = 0
+        for item in warns:
+            words = item.text.strip()
+            if len(words)==2:
+                partial=None
+                try:
+                    partial = int(words[1])
+                except:
+                    pass
+                if partial!=None:
+                    countWarning=countWarning+partial
+
+        if countError>0:
+            exitnagios("CRITICAL","There are errors for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
+        elif countWarning>0:
+            exitnagios("WARNING","There are warnings for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
+        else:
+            exitnagios("OK","No issues found for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    proxy = ""
+    dodnssecverisigncall(args.mailfrom,proxy)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
