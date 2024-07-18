@@ -118,6 +118,12 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
         wait = WebDriverWait(driver,20)
         action=ActionChains(driver)
 
+        # OTHER ALTERNATIVES, BUT DO NOT CHECK DMARC
+        # https://dkimvalidator.com/
+        # https://dmarcchecker.app/
+        # https://www.mailreach.co/dkim-checker
+        # https://wander.science/projects/email/dkimtest/
+
         infomsg("browser OK")
         url = "https://dmarcchecker.app"
         driver.get(url)
