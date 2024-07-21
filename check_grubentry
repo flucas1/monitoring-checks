@@ -38,7 +38,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dogrubentrycall(expected):
+def dogrubentrycall(expectedpos):
     try:
         lines = []
         handle = open("/boot/grub/grub.cfg", "r")
@@ -60,9 +60,11 @@ def dogrubentrycall(expected):
                         allcandidates.append(doublequotes[0])
         validcandidates = []
         for item in allcandidates:
-            if item.startswith("Debian GNU/Linux, with Linux "):
+            if item.startswith("Debian GNU/Linux"):
                 validcandidates.append(item)
         infomsg(validcandidates)
+        expectedstring = validcandidates[expectedpos]
+        infomsg("expected -> "+expectedstring)
 
         cmdline = ["/usr/bin/uname","--kernel-release"]
         completedproc = subprocess.run(cmdline,capture_output=True)
@@ -72,14 +74,13 @@ def dogrubentrycall(expected):
         version = ""
         if exitcode == 0:
             version = output.strip()
-        currententry = "Debian GNU/Linux, with Linux "+version
-        infomsg(currententry)
+        runningending = ", with Linux "+version
+        infomsg("running -> "+runningending)
 
-        foundindex = validcandidates.index(currententry)
-        if foundindex==expected:
-            exitnagios("OK","running grub entry '"+currententry+"'")
+        if expectedstring.endswith(runningending):
+            exitnagios("OK","grub entry '"+str(expectedpos)+" - "+expectedstring+"' matches the running version '"+version+"'")
         else:
-            exitnagios("WARNING","running grub entry '"+currententry+"' but it was expected '"+validcandidates[expected]+"'")
+            exitnagios("WARNING","running grub entry with version '"+version+"' but it was expected '"+expectedstring+"'")
     except Exception as e:
         exitnagios("CRITICAL","internal issue - "+str(e))
 
