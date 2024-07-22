@@ -214,6 +214,8 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
             infomsg(sslversion) # 1.2+
         else:
             httpprotocol = "http"
+        if path.startswith("/")==False:
+            path = "/"+path
         url = httpprotocol+"://"+hostname+":"+str(port)+path
         infomsg("url "+url)
         httpversionparts = httpversion.split(",")
@@ -405,7 +407,7 @@ def main():
     parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
     parser.add_argument("-A", "--path",                                    dest="path",             default="",                                   help="path to check")
-    parser.add_argument("-p", "--port",                                    dest="port",             default=80,                                   help="port to use, usually 80 or 443")
+    parser.add_argument("-p", "--port",                                    dest="port",             default="80",                                 help="port to use, usually 80 or 443")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-S", "--sslversion",                              dest="sslversion",       default=None,                                 help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
     parser.add_argument("-e", "--expect",                                  dest="expect",           default="",                                   help="first (status) line of the server response (default: HTTP/1.)")
@@ -439,6 +441,7 @@ def main():
         exitnagios("CRITICAL","no protocol selected")
 
     retries = 3
+    port = int(args.port)
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
@@ -448,8 +451,8 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         infomsg("precall")
-        infomsg(str(args.hostname)+" "+str(args.port)+" "+str(args.httpversion)+" "+str(args.sslversion))
-        dolibcurlcheck_retries(protocol,args.hostname,args.port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
+        infomsg(str(args.hostname)+" "+str(port)+" "+str(args.httpversion)+" "+str(args.sslversion))
+        dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
