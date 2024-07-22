@@ -95,7 +95,7 @@ def wait_page_loaded(driver):
 
 #-------------------------------------------------------------------------------
 
-def doisvpncall(expected,proxy):
+def doisvpncall(expected,severity,proxy):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -119,14 +119,14 @@ def doisvpncall(expected,proxy):
         value = element.text.strip()
         if value in ["It seems that this address is not a VPN", "Good IP (residential or business)"]:
             if expected:
-                exitnagios("CRITICAL","this is not a VPN, but it was expected to be")
+                exitnagios(severity,"this is not a VPN, but it was expected to be")
             else:
                 exitnagios("OK","this is not a VPN")
         elif value in ["It seems that this address is a VPN", "Hosting, proxy or bad IP"]:
             if expected:
                 exitnagios("OK","this is a VPN as expected")
             else:
-                exitnagios("CRITICAL","this is unexpectedly a VPN")
+                exitnagios(severity,"this is unexpectedly a VPN")
         else:
             exitnagios("CRITICAL","cannot interpret output - "+value)
     except Exception as e:
@@ -140,6 +140,7 @@ def main():
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
+    parser.add_argument("-s", "--severity",                                dest="severity",         default="CRITICAL",                           help="severity of failure")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -169,7 +170,10 @@ def main():
         expected = False
     proxy = ""
 
-    doisvpncall(expected,proxy)
+    if args.severity not in ["CRITICAL","WARNING"] :
+        exitnagios("CRITICAL","the severity '"+args.severity+"' is not valid")
+
+    doisvpncall(expected,args.severity,proxy)
 
 if __name__ == "__main__":
     main()
