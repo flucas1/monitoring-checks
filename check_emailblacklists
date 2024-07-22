@@ -7,6 +7,7 @@ import time
 import subprocess
 import argparse
 import datetime
+import dns.resolver
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -14,6 +15,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver import ActionChains
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -109,8 +111,32 @@ def tryfindbytagname(driver,tagname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(protocol,hostname,ignorelist,proxy):
+def resolverecord(protocol,hostname):
+    result = []
     try:
+        record = None
+        if protocol in ["-4","4"]:
+            record = "A"
+        if protocol in ["-6","6"]:
+            record = "AAAA"
+        if record!=None:
+            answers = dns.resolver.resolve(hostname, record)
+            for rdata in answers:
+                result.append(rdata.to_text())
+    except Exception as e:
+        infomsg("exception "+str(e))
+    return result
+
+def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
+    try:
+        ips = resolverecord(protocol,hostname)
+        if len(ips)==0:
+            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
+        if len(ips)>1:
+            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        targetip = ips[0]
+        infomsg("The IP to test is "+targetip)
+
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
         wait = WebDriverWait(driver,20)
@@ -127,40 +153,61 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
+        infomsg("manual delay")
         time.sleep(2)
+
         wait_page_loaded(driver)
         infomsg("page loaded")
 
-        infomsg("waiting for element")
+        infomsg("waiting for submit")
         wait.until(EC.presence_of_element_located((By.ID, "ipbc_submit")))
 
-        infomsg("finding base element")
-        elements = tryfindbyxpath(driver,".//*[@id='email-address']//a")
+        infomsg("finding textbox element")
+        elements = tryfindbyid(driver,"ipbc_host")
         if len(elements)==0:
-            exitnagios("CRITICAL","no result from page")
-
-        infomsg("extracting errors")
-        errors = tryfindbyclassname(driver,"error")
-        infomsg(len(errors))
-        countError = 0
-        for item in errors:
-            words = item.text.split()
-            infomsg(words)
-            if len(words)==2:
-                partial=None
-                try:
-                    partial = int(words[0])
-                except:
-                    pass
-                if partial!=None:
-                    countError=countError+partial
-
-        if countError>0:
-            exitnagios("CRITICAL","There are errors for "+" | warnings="+str(countWarning)+" errors="+str(countError))
-        elif countWarning>ignore:
-            exitnagios("WARNING","There are warnings for "+" | warnings="+str(countWarning)+" errors="+str(countError))
+            exitnagios("CRITICAL","cannot find textbox")
         else:
-            exitnagios("OK","No issues found for "+" | warnings="+str(countWarning)+" errors="+str(countError))
+            infomsg("sending ip")
+            elements[0].send_keys(targetip)
+            elements[0].send_keys(Keys.RETURN)
+
+        infomsg("manual delay")
+        time.sleep(10)
+
+        infomsg("waiting for result")
+        wait.until(EC.presence_of_element_located((By.ID, "blacklist_count")))
+
+        infomsg("extracting listed")
+        blocks = tryfindbyid(driver,"ipbc_results_dnsbl")
+        lists = tryfindbytagname(blocks[0],"tr")
+        infomsg("row canidates: "+str(len(lists)))
+        issues=[]
+        for item in lists:
+            providers = tryfindbytagname(item,"th")
+            if len(providers)==1:
+                provider = providers[0].text
+            else:
+                provider = ""
+            statuses = tryfindbytagname(item,"td")
+            if len(statuses)==2:
+                listed = statuses[0].text.split()[0]
+            else:
+                listed = ""
+            if provider!="" and listed!="":
+                infomsg("status "+provider+" "+listed)
+                if listed.lower()=="yes":
+                    if provider in ignorelist:
+                        infomsg("ignoring "+provider)
+                    else:
+                        infomsg("adding "+provider)
+                        issues.append(provider)
+
+        if len(issues)>tolerance:
+            exitnagios("CRITICAL","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        elif len(issues)>0:
+            exitnagios("WARNING","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        else:
+            exitnagios("OK","No issues found for the IP "+targetip+" | count="+str(len(issues)))
 
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check "+str(e))
@@ -174,6 +221,7 @@ def main():
     parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
     parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="lists to ignore")
+    parser.add_argument("-l", "--tolerance",                               dest="tolerance",        default="0",                                  help="number of listed databases to tolerate")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -200,7 +248,8 @@ def main():
 
     proxy = ""
     ignorelist = args.ignore.split(",")
-    dodnssecverisigncall(protocol,args.hostname,ignorelist,proxy)
+    tolerance = int(args.tolerance)
+    dodnssecverisigncall(protocol,args.hostname,ignorelist,tolerance,proxy)
 
 if __name__ == "__main__":
     main()
