@@ -109,7 +109,7 @@ def tryfindbytagname(driver,tagname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(targetip,ignore,proxy):
+def dodnssecverisigncall(protocol,hostname,ignorelist,proxy):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -169,16 +169,38 @@ def dodnssecverisigncall(targetip,ignore,proxy):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="0",                                  help="lists to ignore")
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
+    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="lists to ignore")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
-    targetip = ""
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
     proxy = ""
-    ignore = args.ignore
-    dodnssecverisigncall(targetip,ignore,proxy)
+    ignorelist = args.ignore.split(",")
+    dodnssecverisigncall(protocol,args.hostname,ignorelist,proxy)
 
 if __name__ == "__main__":
     main()
