@@ -57,18 +57,28 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays,relay):
+def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays,relay,blocked,source):
+    smtpconnection = None
     try:
         start = datetime.datetime.now(datetime.UTC)
-        smtpconnection = None
+        sourcetuple = None
+        if source!=None:
+            sourcetuple = (source,0)
+
         #socket.setdefaulttimeout(timeoutvalue)
         if dossl==True:
             ctx = ssl.create_default_context()
-            smtpconnection = smtplib.SMTP_SSL(host=hostname,port=port,timeout=timeoutvalue,context=ctx)
+            smtpconnection = smtplib.SMTP_SSL(host=hostname,port=port,timeout=timeoutvalue,context=ctx,source_address=sourcetuple)
         else:
-            smtpconnection = smtplib.SMTP(host=hostname,port=port,timeout=timeoutvalue)
+            smtpconnection = smtplib.SMTP(host=hostname,port=port,timeout=timeoutvalue,source_address=sourcetuple)
     except socket.error as e:
-        exitnagios(timeoutstatus,"socket error - "+str(e)+" | time=-1 validity=-1")
+        infomsg("socket error - "+str(e)+" | time=-1 validity=-1")
+
+    if blocked==True:
+        if smtpconnection == None:
+            exitnagios("OK","the connection is blocked as expected | time=-1 validity=-1")
+        else:
+            exitnagios(timeoutstatus,"the connection is responding but it was expected to be blocked | time=-1 validity=-1")
 
     if smtpconnection != None:
         certexpirationparsed = None
@@ -168,6 +178,8 @@ def main():
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-C", "--certificatedays",                         dest="certificatedays",  default="5,20",                               help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-r", "--relay",                                   dest="relay",            default="closed",                             help="open or closed relay")
+    parser.add_argument("-b", "--blocked",           action="store_true",  dest="blocked",          default=False,                                help="check if the connection is blocked")
+    parser.add_argument("-u", "--source",                                  dest="source",           default="",                                   help="source IP for the connection")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -194,6 +206,10 @@ def main():
     if (args.hostname == ""):
         exitnagios("CRITICAL","hostname not defined")
 
+    source=None
+    if args.source!="":
+        source=args.source
+
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
     if len(parts)>1:
@@ -201,14 +217,11 @@ def main():
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dosmtpcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays,args.relay)
+        dosmtpcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays,args.relay,args.blocked,source)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
-main()
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------
-
-
-#-------------------------------------------------------------------------------
-
