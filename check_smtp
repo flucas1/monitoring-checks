@@ -90,12 +90,14 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
         smtpconnection.ehlo_or_helo_if_needed()
         response,message = smtpconnection.noop()
         # 220 after connection stablished, 250 after EHLO or HELO
+        infomsg("initial response is "+str(response)+" "+str(message))
         if response not in [200,250]:
             exitnagios("CRITICAL","initial check, unexpected state - "+str(response)+": "+message.decode()+" | time=-1 validity=-1")
 
         warningmsg= ""
         testemailaddress = "mailing-probe@example.net"
         response,message = smtpconnection.docmd("MAIL FROM:",testemailaddress)
+        infomsg("mailfrom response is "+str(response)+" "+str(message))
         if response in [250]:
             response,message = smtpconnection.docmd("RCPT TO:",testemailaddress)
             infomsg(response)
@@ -107,6 +109,8 @@ def dosmtpcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeo
                 if relay != "closed":
                     exitnagios("CRITICAL","found an closed relay "+str(response)+", but it should be open | time=-1 validity=-1")
             warningmsg = "exitstaus "+str(response)+": "+message.decode()
+        elif response in [555] and relay == "closed":
+            exitnagios("OK","closed relay with response "+str(response)+" | time=-1 validity=-1")
         else:
             exitnagios("CRITICAL","sending test, unexpected state - "+str(response)+": "+message.decode()+" | time=-1 validity=-1")
 
