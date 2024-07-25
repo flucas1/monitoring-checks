@@ -37,7 +37,7 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 def dondisc6call(hostname):
-    cmdline = ["/usr/sbin/ip","route","get",hostname]
+    cmdline = ["/usr/bin/ip","route","get",hostname]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8")
     errors = completedproc.stderr.decode("utf-8")
