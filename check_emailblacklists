@@ -147,6 +147,9 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
         #https://www.dnsbl.info/dnsbl-database-check.php
         #https://blacklistchecker.com/check
         #https://www.uceprotect.net/en/rblcheck.php
+        
+        # OTHER OPTION
+        # https://manpages.debian.org/bookworm/amispammer/amispammer.1.en.html -- perl code gives warnings, and fails with IPv6
 
         infomsg("browser OK")
         url = "https://dnschecker.org/ip-blacklist-checker.php"
