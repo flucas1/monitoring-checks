@@ -158,7 +158,7 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
             else:
                 exitnagios("CRITICAL","unexpected response "+expectedresponse)
         except Exception as e:
-            exitnagios("CRITICAL","exception "+str(e))
+            exitnagios("CRITICAL","exception - "+str(e))
     else:
         exitnagios(timeoutstatus,"nmap respose is empty for command '"+" ".join(command)+"'")
 
