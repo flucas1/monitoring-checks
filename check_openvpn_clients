@@ -104,8 +104,8 @@ def main():
     sock=connexion(host, port, password, "status")
     data=sock.interact()
 
-    tab1=re.findall("(.+),(\d+\.\d+\.\d+\.\d+\:\d+),(\d+),(\d+),(.+)", data)
-    tab2=re.findall("(\d+\.\d+\.\d+\.\d+),(.+),(\d+\.\d+\.\d+\.\d+\:\d+),(.+)", data)
+    tab1=re.findall("(.+),(\\d+\\.\\d+\\.\\d+\\.\\d+\\:\\d+),(\\d+),(\\d+),(.+)", data)
+    tab2=re.findall("(\\d+\\.\\d+\\.\\d+\\.\\d+),(.+),(\\d+\\.\\d+\\.\\d+\\.\\d+\\:\\d+),(.+)", data)
 
     num=int((len(tab1)+len(tab2))/2)
 
