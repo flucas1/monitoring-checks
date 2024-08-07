@@ -120,7 +120,27 @@ def dodnssecverisigncall(domain,selector,proxy):
         wait.until(EC.presence_of_element_located((By.ID, "dkim_details")))
 
         infomsg("finding base element")
-        element = tryfindbyid(driver,"success")
+        element = []
+        retries = 5
+        counter = 0
+        waittexts = ["Inspecting record, just a moment".lower()]
+        while len(element)==0:
+            element = tryfindbyid(driver,"success")
+            if len(element)>0:
+                statustext = element[0].text.strip()
+                infomsg("--> "+statustext)
+                if statustext.lower() in waittexts:
+                    element = []
+                    if counter<retries:
+                        infomsg("waiting a bit")
+                        time.sleep(3)
+                        counter=counter+1
+                    else:
+                        infomsg("too many retries")
+                        break
+                else:
+                    infomsg("this is not registered as a waiting text, so advancing")
+                    break
         if len(element)==0:
             exitnagios("CRITICAL","no result from page")
 
@@ -131,7 +151,7 @@ def dodnssecverisigncall(domain,selector,proxy):
         else:
             infomsg("finding valid message")
             valid = tryfindbyclassname(driver,"tool_alert_success")
-            if len(valid):
+            if len(valid)>0:
                 exitnagios("OK",valid[0].text.strip())
             else:
                 infomsg(element[0].text.strip())
