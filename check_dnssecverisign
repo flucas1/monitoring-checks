@@ -85,7 +85,74 @@ def tryfindbyxpath(driver,xpath):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(domain,proxy,ignoremessages):
+def count_red_yellow_green(block,ignoremessages):
+    criticalmsg = []
+    warningmsg = []
+    okmsg = []
+    ignoredmsg = []
+
+    blocknameelement=tryfindbyxpath(block, "./td[@class=\"T1L\"]")
+    if len(blocknameelement)>0:
+        blocknametext=blocknameelement[0].text.strip()
+    else:
+        blocknametext=None
+    infomsg("======> Block name text -> "+str(blocknametext))
+
+    redxpath = ".//img[@src=\"/red.png\"]"
+    redelements=tryfindbyxpath(block, redxpath)
+    infomsg("Found "+str(len(redelements))+" red elements")
+    if len(redelements)>0:
+        for element in redelements:
+            try:
+                textelement=tryfindbyxpath(element, "../following-sibling::td")[0]
+                msgtext = textelement.text.strip()
+                if msgtext != "":
+                    if msgtext not in ignoremessages:
+                        criticalmsg.append(msgtext)
+                    else:
+                        ignoredmsg.append(msgtext)
+            except Exception as e:
+                infomsg("exception - "+str(e))
+
+    yellowxpath = ".//img[@src=\"/yellow.png\"]"
+    yellowelements=tryfindbyxpath(block, yellowxpath)
+    infomsg("Found "+str(len(yellowelements))+" yellow elements")
+    if len(yellowelements)>0:
+        for element in yellowelements:
+            try:
+                textelement=tryfindbyxpath(element, "../following-sibling::td")[0]
+                msgtext = textelement.text.strip()
+                if msgtext != "":
+                    if msgtext not in ignoremessages:
+                        warningmsg.append(msgtext)
+                    else:
+                        ignoredmsg.append(msgtext)
+            except Exception as e:
+                infomsg("exception - "+str(e))
+
+    greenxpath = ".//img[@src=\"/green.png\"]"
+    greenelements=tryfindbyxpath(block, greenxpath)
+    infomsg("Found "+str(len(greenelements))+" green elements")
+    if len(greenelements)>0:
+        for element in greenelements:
+            try:
+                textelement=tryfindbyxpath(element, "../following-sibling::td")[0]
+                msgtext = textelement.text.strip()
+                if msgtext != "":
+                    if msgtext not in ignoremessages:
+                        okmsg.append(msgtext)
+                    else:
+                        ignoredmsg.append(msgtext)
+            except Exception as e:
+                infomsg("exception - "+str(e))
+
+    infomsg("critical -> "+str(criticalmsg))
+    infomsg("warning -> "+str(warningmsg))
+    infomsg("ok -> "+str(okmsg))
+    infomsg("ignored -> "+str(ignoredmsg))
+    return blocknametext,criticalmsg,warningmsg,okmsg,ignoredmsg
+
+def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -110,56 +177,49 @@ def dodnssecverisigncall(domain,proxy,ignoremessages):
         if element == None:
             exitnagios("CRITICAL","no result from page")
 
-        redxpath = "//img[@src=\"/red.png\"]"
-        yellowxpath = "//img[@src=\"/yellow.png\"]"
+        blocks = tryfindbyxpath(driver, tablepath+"/tbody/tr")
+        infomsg("Found "+str(len(blocks)-1)+" blocks")
 
-        redelements=tryfindbyxpath(driver, redxpath)
-        if len(redelements)==0:
-            exitnagios("CRITICAL","internal issue - red")
-        yellowelements=tryfindbyxpath(driver, yellowxpath)
-        if len(yellowelements)==0:
-            exitnagios("CRITICAL","internal issue - yellow")
+        criticalmsg = []
+        warningmsg = []
+        okmsg = []
+        ignoredmsg = []
+        for block in blocks[1:]:
+            blocknametext,partcriticalmsg,partwarningmsg,partokmsg,partignoredmsg = count_red_yellow_green(block,ignoremessages)
+            if blocknametext==domain:
+                infomsg("This is a final zonename block")
+                unreacheabletext = "No response from "+domain+" nameservers"
+                if unreacheabletext in partcriticalmsg and tolerant:
+                    partcriticalmsg.remove(unreacheabletext)
+            criticalmsg=partcriticalmsg+criticalmsg
+            warningmsg=partwarningmsg+warningmsg
+            okmsg=partokmsg+okmsg
+            ignoredmsg=partignoredmsg+ignoredmsg
 
-        validmsg = []
+        extra = []
+        tempwarn = []
+        if tolerant:
+            for test in warningmsg:
+                if (test.startswith("All Queries to ")==False) and (test.endswith(domain+"/SOA timed out or failed")==False):
+                    tempwarn.append(test)
+                else:
+                    extra.append(test)
+        warningmsg = tempwarn
 
-        redelements=tryfindbyxpath(driver, tablepath+redxpath)
-        if len(redelements)>0:
-            outputmsg = []
-            for element in redelements:
-                try:
-                    textelement=tryfindbyxpath(element, "../following-sibling::td")[0]
-                    msgtext = textelement.text.strip()
-                    if msgtext != "":
-                        if msgtext not in ignoremessages:
-                            outputmsg.append(msgtext)
-                        else:
-                            validmsg.append(msgtext)
-                except:
-                    pass
-            if len(outputmsg)>0:
-                exitnagios("CRITICAL"," - ".join(outputmsg))
+        infomsg("final critical -> "+str(criticalmsg))
+        infomsg("final warning -> "+str(warningmsg))
+        infomsg("final ok -> "+str(okmsg))
+        infomsg("final ignored -> "+str(ignoredmsg))
 
-        yellowelements=tryfindbyxpath(driver, tablepath+yellowxpath)
-        if len(yellowelements)>0:
-            outputmsg = []
-            for element in yellowelements:
-                try:
-                    textelement=tryfindbyxpath(element, "../following-sibling::td")[0]
-                    msgtext = textelement.text.strip()
-                    if msgtext != "":
-                        if msgtext not in ignoremessages:
-                            outputmsg.append(msgtext)
-                        else:
-                            validmsg.append(msgtext)
-                except:
-                    pass
-            if len(outputmsg)>0:
-                exitnagios("WARNING"," - ".join(outputmsg))
+        if len(criticalmsg)>0:
+            exitnagios("CRITICAL"," - ".join(criticalmsg))
+        if len(warningmsg)>0:
+            exitnagios("WARNING"," - ".join(warningmsg))
 
-        if len(validmsg)>0:
-            exitnagios("OK","all seems good - but matching ignores - "+" - ".join(validmsg))
+        if len(ignoredmsg)>0:
+            exitnagios("OK","all seems good - but matching ignores - "+" - ".join(validmsg)+" - "+" ".join(extra))
         else:
-            exitnagios("OK","all seems good")
+            exitnagios("OK","all seems good - "+" ".join(extra))
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check "+str(e))
 
@@ -169,15 +229,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
+    parser.add_argument("-t", "--tolerant",          action="store_true",  dest="tolerant",         default=False,                                help="allow servers not responding")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
-    
+
     setcandebug(args.debug)
 
     proxy = ""
     ignoremessages = []
     #ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
-    dodnssecverisigncall(args.host,proxy,ignoremessages)
+    dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages)
 
 if __name__ == "__main__":
     main()
