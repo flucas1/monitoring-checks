@@ -93,8 +93,8 @@ def dolastloginscall(warning,critical):
             infomsg("linecurrent is "+str(linecurrent))
             lineprevious = cleared[1].split()
             infomsg("lineprevious is "+str(lineprevious))
-            lasttext = lineprevious[len(linecurrent)-1]
-            infomsg("evaluating txet '"+lasttext+"'")
+            lasttext = lineprevious[len(lineprevious)-1]
+            infomsg("evaluating text '"+lasttext+"'")
             if lasttext not in ["crash"]:
                 crashed = False
             else:
