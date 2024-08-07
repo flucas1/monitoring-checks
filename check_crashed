@@ -89,17 +89,17 @@ def dolastloginscall(warning,critical):
         crashed = True
         crashdate = datetime.datetime.now(datetime.UTC)
         if len(cleared)>1:
-            linereboot = cleared[0].split()
-            infomsg("linereboot is "+str(linereboot))
-            lineshutdown = cleared[1].split()
-            infomsg("lineshutdown is "+str(lineshutdown))
-            if len(linereboot)==0 or len(lineshutdown)==0:
-                crashed = False
-            elif linereboot[0]=="reboot" and lineshutdown[0]=="shutdown":
+            linecurrent = cleared[0].split()
+            infomsg("linecurrent is "+str(linecurrent))
+            lineprevious = cleared[1].split()
+            infomsg("lineprevious is "+str(lineprevious))
+            lasttext = lineprevious[len(linecurrent)-1]
+            infomsg("evaluating txet '"+lasttext+"'")
+            if lasttext not in ["crash"]:
                 crashed = False
             else:
                 try:
-                    crashdate = dateutil.parser.parse(linereboot[4])
+                    crashdate = dateutil.parser.parse(linecurrent[4])
                 except:
                     pass
         else:
