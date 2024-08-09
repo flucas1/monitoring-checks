@@ -237,7 +237,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
                     successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is not problematic. "
             else:
                 successip = alltripletsmatching(resultedipparts,expectedip)
-                if successip:
+                if successip or len(expectedip)==0:
                     successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is as expected. "
                 else:
                     errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is not as expected '"+" § ".join(expectedip)+"'. "
@@ -257,7 +257,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
                     successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
                 successdns = alltripletsmatching(resulteddnsparts,expecteddns)
-                if successdns:
+                if successdns or len(expecteddns)==0:
                     successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
                 else:
                     errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddns)+"'. "
