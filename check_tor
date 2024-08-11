@@ -82,7 +82,11 @@ def dotorcall(protocol,response):
             exitnagios("CRITICAL","the result '"+status+"' is not the expected value '"+response+"'")
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exceptionmsg = str(e)
+        if exceptionmsg in ["<urlopen error [Errno 104] Connection reset by peer>"]:
+            exitnagios("WARNING","cannot connect")
+        else:
+            exitnagios("CRITICAL","unexpected error during the check - "+exceptionmsg)
 
 #-------------------------------------------------------------------------------
 
