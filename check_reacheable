@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import socket
 import concurrent.futures
+import netifaces
 
 #-------------------------------------------------------------------------------
 
@@ -56,11 +57,32 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
+def interface_to_address(interface,protocol):
+    primary_ip = None
+    if interface!="":
+        try:
+            addresses = netifaces.ifaddresses(interface)
+            if protocol in ["-4","4"]:
+                ip_info = addresses.get(netifaces.AF_INET)
+            elif protocol in ["-6","6"]:
+                ip_info = addresses.get(netifaces.AF_INET6)
+            else:
+                ip_info = []
+            if len(ip_info)>0:
+                primary_ip = ip_info[0]["addr"]
+        except Exception as e:
+            infomsg("exception - "+str(e))
+    return primary_ip
+
 def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
+    source = interface_to_address(interface,protocol)
+
     cmdline = ["/usr/bin/ping"]
     if protocol not in ["",None]:
         cmdline = cmdline + [protocol]
-    if interface!="":
+    if source!=None:
+        cmdline = cmdline + ["-I", source]
+    elif interface!="":
         cmdline = cmdline + ["-I", interface]
     cmdline = cmdline + ["-c", str(packets)]
     cmdline = cmdline + ["-W", str(1)]
