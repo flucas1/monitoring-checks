@@ -449,7 +449,7 @@ def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
             #infomsg(principalserver)
             serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using server "+addressinfo)
+                exitnagios(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using found domain main server "+principalserver)
             if automode:
                 retry_mname = get_retry(useTcp, principalserver, timeoutvalue, zone)
                 if retry_mname == "":
