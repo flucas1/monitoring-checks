@@ -107,16 +107,27 @@ def dodnssecverisigncall(domain,selector,proxy):
         wait = WebDriverWait(driver,20)
         action=ActionChains(driver)
 
+        fullkey = selector+"._domainkey."+domain
+        infomsg("testing "+fullkey)
+
         infomsg("browser OK")
-        url = "https://www.mailhardener.com/tools/dkim-validator?domain="+selector+"._domainkey."+domain
+        #url = "https://www.mailhardener.com/tools/dkim-validator?domain="+fullkey
+        url = "https://www.mailhardener.com/tools/dkim-validator"
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
+        time.sleep(1)
         wait_page_loaded(driver)
         infomsg("page loaded")
 
-        infomsg("waiting for element")
+        infomsg("waiting for input element")
+        wait.until(EC.presence_of_element_located((By.ID, "inspectBtn")))
+
+        input_element = driver.find_element(By.ID, "address")
+        input_element.send_keys(fullkey)
+        input_element.send_keys(Keys.RETURN)
+
+        infomsg("waiting for result element")
         wait.until(EC.presence_of_element_located((By.ID, "dkim_details")))
 
         infomsg("finding base element")
@@ -125,6 +136,8 @@ def dodnssecverisigncall(domain,selector,proxy):
         counter = 0
         waittexts = ["Inspecting record, just a moment".lower()]
         while len(element)==0:
+            #plain_text = driver.find_element(By.TAG_NAME, "body").text
+            #print(plain_text,flush=True)
             element = tryfindbyid(driver,"success")
             if len(element)>0:
                 statustext = element[0].text.strip()
@@ -133,7 +146,7 @@ def dodnssecverisigncall(domain,selector,proxy):
                     element = []
                     if counter<retries:
                         infomsg("waiting a bit")
-                        time.sleep(3)
+                        time.sleep(5)
                         counter=counter+1
                     else:
                         infomsg("too many retries")
