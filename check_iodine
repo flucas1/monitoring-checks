@@ -49,16 +49,20 @@ def doportexternalcall(domain):
             counter = counter+1
             welldone = False
             try:
+                infomsg("initializing browser")
                 br = mechanize.Browser()
                 br.set_handle_robots(False) # ignore robots file
                 #br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
                 br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
                 br.open(url)
+                infomsg("page opened")
                 br.select_form(nr=0)
                 br["domain"] = str(domain)
+                infomsg("going to submit!")
                 res = br.submit()
+                infomsg("submitted")
                 content = res.read()
-
+                infomsg("the result is of length "+str(len(content)))
 
                 if content != None:
                     soup = BeautifulSoup(content, "html.parser")
