@@ -130,7 +130,11 @@ def doisvpncall(expected,severity,proxy):
         else:
             exitnagios("CRITICAL","cannot interpret output - "+value)
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exceptionmsg = str(e)
+        if exceptionmsg.startswith("Message: unknown error: net::ERR_CONNECTION_REFUSED "):
+            exitnagios("WARNING","no connection")
+        else:
+            exitnagios("CRITICAL","unexpected error during the check - "+exceptionmsg)
 
 #-------------------------------------------------------------------------------
 
