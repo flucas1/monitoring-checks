@@ -155,7 +155,7 @@ def dodnssecverisigncall(domain,selector,proxy):
                     infomsg("this is not registered as a waiting text, so advancing")
                     break
         if len(element)==0:
-            exitnagios("CRITICAL","no result from page")
+            exitnagios("WARNING","no result from page")
 
         infomsg("finding error message")
         error = tryfindbyclassname(driver,"tool_alert_error")
