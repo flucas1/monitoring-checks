@@ -36,7 +36,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def docheckjenkinsjobs(directory):
+def docheckjenkinsjobs(directory,critical):
     jobspath = os.path.join(directory,"jobs")
     if os.path.isdir(jobspath)==False:
         exitnagios("CRITICAL","the jobs path "+release+" does not exists")
@@ -47,15 +47,24 @@ def docheckjenkinsjobs(directory):
         if os.path.isdir(pathentry):
             listjobs.append(entry)
 
-    invalidjobs = []
+    issuesjobs = []
+    alertsjobs = []
     for entry in listjobs:
         if isvalidjob(jobspath,entry)==False:
-            invalidjobs.append(entry)
+            if entry in critical:
+                alertsjobs.append(entry)
+            else:
+                issuesjobs.append(entry)
 
-    if len(invalidjobs)>0:
-        exitnagios("CRITICAL","some jenkins jobs have issues: "+" ".join(invalidjobs)+" | issues="+str(len(invalidjobs)))
+    if len(alertsjobs)>0:
+        if len(issuesjobs)==0:
+            exitnagios("CRITICAL","some jenkins jobs have alerts: "+" ".join(alertsjobs)+" | alerts="+str(len(alertsjobs))+" issues=0")
+        else:
+            exitnagios("CRITICAL","some jenkins jobs have alerts: "+" ".join(alertsjobs)+" and some jenkins jobs have issues: "+" ".join(issuesjobs)+" | alerts="+str(len(alertsjobs))+" issues="+str(len(issuesjobs)))
+    elif len(issuesjobs)>0:
+        exitnagios("WARNING","some jenkins jobs have issues: "+" ".join(issuesjobs)+" | alerts=0 issues="+str(len(issuesjobs)))
     else:
-        exitnagios("OK","all jenkins jobs are in valid state | issues=0")
+        exitnagios("OK","all jenkins jobs are in valid state | alerts=0 issues=0")
 
 def isvalidjob(jobspath,entry):
     permalinks = os.path.join(jobspath,entry,"builds","permalinks")
@@ -86,6 +95,7 @@ def isvalidjob(jobspath,entry):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--directory",         action="store",                                default="/var/lib/jenkins",                   help="path for the jenkins working folder")
+    parser.add_argument("-c", "--critical",          action="store",                                default="",                                   help="jobs that will raise a critical")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
     return args
@@ -95,7 +105,10 @@ def main():
     
     setcandebug(args.debug)
     
-    docheckjenkinsjobs(args.directory)
+    critical = args.critical.split(",")
+    if "" in critical:
+        critical.remove("")
+    docheckjenkinsjobs(args.directory,critical)
 
 if __name__ == "__main__":
     main()
