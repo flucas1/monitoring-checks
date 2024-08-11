@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import pwd
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def execute_systemd_call(system,service,user):
+    cmdline = ["/usr/bin/systemctl"]
+    if not system:
+        cmdline = cmdline + ["-M",user+"@"]
+    if system:
+        cmdline = cmdline + ["--system"]
+    else:
+        cmdline = cmdline + ["--user"]
+    if service!=None:
+        cmdline = cmdline + ["is-active", service]
+    else:
+        cmdline = cmdline + ["--no-legend"]
+    infomsg(" ".join(cmdline))
+
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+    infomsg(output)
+    infomsg(errors)
+    infomsg(exitcode)
+
+    return output
+
+#-------------------------------------------------------------------------------
+
+def systemd_check(service,system,user,toleratelist):
+    output = execute_systemd_call(system,service,user)
+    if output=="":
+        exitnagios("CRITICAL","issue calling systemd")
+    else:
+        if service==None:
+            oks = {}
+            warnings = {}
+            criticals = {}
+            for line in output.splitlines():
+                parts = line[2:].split()
+                unit = parts[0]
+                status = parts[2]
+                if status == "active":
+                    oks[unit]=status
+                else:
+                    if unit in toleratelist:
+                        warnings[unit]=status
+                    else:
+                        criticals[unit]=status
+            infomsg("oks -> "+str(oks))
+            infomsg("warnings -> "+str(warnings))
+            infomsg("criticals -> "+str(criticals))
+            if len(criticals)>0:
+                if len(warnings)==0:
+                   exitnagios("CRITICAL","there are criticals "+str(criticals)+" | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
+                else:
+                   exitnagios("CRITICAL","there are criticals "+str(criticals)+" and warnings "+str(warnings)+" | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
+            elif len(warnings)>0:
+                exitnagios("WARNING","there are warnings "+str(warnings)+" | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
+            else:
+                exitnagios("OK","no issues found | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
+        else:
+            status = output
+            if status=="active":
+                exitnagios("OK","unit "+service+" is active")
+            else:
+                if service in toleratelist:
+                    exitnagios("WARNING","unit "+service+" is "+status+" instead of active")
+                else:
+                    exitnagios("CRITICAL","unit "+service+" is "+status+" instead of active")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--service",                                 dest="service",          default=None,                                 help="Name of the Service that is beeing tested")
+    parser.add_argument("-m", "--system",            action="store_true",  dest="system",           default=False,                                help="Check the gobal systemd (default)")
+    parser.add_argument("-u", "--user",                                    dest="user",             default="root",                               help="Check at userlevel (linger) systemd (default root)")
+    parser.add_argument("-l", "--tolerate",                                                         default="",                                   help="Systemd units to mark as warning instead of critical")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    toleratelist=args.tolerate.replace(" ",";").replace(",",";").split(";")
+
+    systemd_check(args.service, args.system, args.user, toleratelist)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
