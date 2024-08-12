@@ -83,8 +83,8 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
     infomsg(" ".join(command))
 
     result = subprocess.run(command,capture_output=True)
-    output = result.stdout.decode("utf-8").rstrip()
-    errors = result.stderr.decode("utf-8").rstrip()
+    output = result.stdout.decode("utf-8").strip()
+    errors = result.stderr.decode("utf-8").strip()
 
     response = ""
     for line in output.splitlines():

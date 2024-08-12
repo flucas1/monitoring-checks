@@ -59,20 +59,27 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dontptimecheck(protocol,hostname,warning,critical,timeoutvalue,timeoutstatus):
+def dobysshcheck(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept):
     retries = 3
     counter = 0
     while True:
         infomsg("executing retry "+str(counter))
         counter = counter+1
-        command = ["/usr/lib/nagios/plugins/check_ntp_time",protocol,"-H",hostname,"-w",warning,"-c",critical,"-t",str(10)]
+
+        command = ["/usr/lib/nagios/plugins/check_by_ssh", protocol]
+        if key!="" and key!=None:
+            command = command+["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
+        if autoaccept:
+            command = command+["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+        command = command+["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
         infomsg(" ".join(command))
+
         result = subprocess.run(command,capture_output=True)
         exitcode = result.returncode
         output = result.stdout.decode("utf-8").strip()
         errors = result.stderr.decode("utf-8").strip()
 
-        if output.endswith("No response from NTP server"):
+        if output in ["SSH connection failed: (no error output)"]:
             if counter>retries:
                 exitnagios(timeoutstatus,output+"\n"+errors)
             else:
@@ -97,9 +104,11 @@ def main():
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default=None,                                 help="Warning level")
-    parser.add_argument("-c", "--critical",                                dest="critical",         default=None,                                 help="Critical level")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-i", "--key",                                     dest="key",              default="",                                   help="ssh key to use")
+    parser.add_argument("-l", "--login",                                   dest="login",            default="",                                   help="username for login")
+    parser.add_argument("-C", "--remotecmdline",                           dest="remotecmdline",    default="",                                   help="remote commandline to execute")
+    parser.add_argument("-a", "--autoaccept",        action="store_true",  dest="autoaccept",       default=False,                                help="accept all remote keys")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -126,6 +135,12 @@ def main():
     if (args.hostname == ""):
         exitnagios("CRITICAL","hostname not defined")
 
+    if (args.remotecmdline == ""):
+        exitnagios("CRITICAL","remote cmdline not defined")
+
+    if (args.login == ""):
+        exitnagios("CRITICAL","login not defined")
+
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
     if len(parts)>1:
@@ -133,7 +148,7 @@ def main():
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dontptimecheck(protocol,args.hostname,args.warning,args.critical,timeoutvalue,timeoutstatus)
+        dobysshcheck(protocol,args.hostname,timeoutvalue,timeoutstatus,args.remotecmdline,args.key,args.login,args.autoaccept)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
