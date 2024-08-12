@@ -158,8 +158,10 @@ def findtripletsmatching(inputtriplets,expectedtriplets):
                 result.append(testinputtriplet)
     return result
 
-def alltripletsmatching(inputtriplets,expectedtriplets):
+def alltripletsmatching(inputtriplets,expectedtriplets,tolerance):
     successmatching = True
+    failed = []
+    tolerated = []
     for testinputtriplet in inputtriplets:
         partial = False
         for testexpectedtriplet in expectedtriplets:
@@ -169,10 +171,15 @@ def alltripletsmatching(inputtriplets,expectedtriplets):
                 partial = True
                 break
         infomsg(partial)
-        successmatching = successmatching and partial
-    return successmatching
+        if partial==False:
+            failed.append(testinputtriplet.strip())
+    if tolerance==len(failed):
+        tolerated = failed.copy()
+        failed = []
+    successmatching = (len(failed)==0)
+    return successmatching,tolerated
 
-def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
+def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns):
     try:
         driver = generatedriver(proxy)
         #driver.implicitly_Wait(10, TimeUnit.SECONDS)
@@ -188,17 +195,26 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
         wait_page_loaded(driver)
         infomsg("page loaded")
 
-        try:
-            wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"),"Found"))
-        except Exception as e:
-            pass
-        finally:
-            infomsg("found element dns-test")
+        counter=0
+        retries=3
+        while counter<retries:
+            infomsg("retry "+str(counter))
+            try:
+                wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"),"Found"))
+            except Exception as e:
+                pass
+            finally:
+                infomsg("found element dns-test")
+            try:
+                resume = driver.find_element(By.ID, "dns-test")
+            except Exception as e:
+                exitnagios("CRITICAL","cannot find result element")
+            if resume == None:
+                counter=counter+1
+                time.sleep(3)
+            else:
+                break
 
-        try:
-            resume = driver.find_element(By.ID, "dns-test")
-        except Exception as e:
-            exitnagios("CRITICAL","cannot find result element")
         if resume == None:
             exitnagios("CRITICAL","no result from page")
         infomsg("test with results")
@@ -236,7 +252,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
                 else:
                     successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is not problematic. "
             else:
-                successip = alltripletsmatching(resultedipparts,expectedip)
+                successip,toleratedip = alltripletsmatching(resultedipparts,expectedip,0)
                 if successip or len(expectedip)==0:
                     successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is as expected. "
                 else:
@@ -256,9 +272,12 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns):
                 else:
                     successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
-                successdns = alltripletsmatching(resulteddnsparts,expecteddns)
+                successdns,tolerateddns = alltripletsmatching(resulteddnsparts,expecteddns,tolerancedns)
                 if successdns or len(expecteddns)==0:
-                    successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
+                    if len(tolerateddns)==0:
+                        successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
+                    else:
+                        warningmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is tolerated. "
                 else:
                     errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddns)+"'. "
 
@@ -280,6 +299,7 @@ def main():
     parser.add_argument("-r", "--problematicdns",                          dest="problematicdns",   default="",                                   help="raise critical if this DNS is found")
     parser.add_argument("-i", "--expectedip",                              dest="expectedip",       default="",                                   help="expected response for the IP")
     parser.add_argument("-d", "--expecteddns",                             dest="expecteddns",      default="",                                   help="expected response for the DNS")
+    parser.add_argument("-t", "--tolerancedns",                            dest="tolerancedns",     default="0",                                  help="number of problematic DNS entries to tolerate")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -293,6 +313,8 @@ def main():
     infomsg(expectedip)
     expecteddns = parsedns(args.expecteddns)
     infomsg(expecteddns)
+    tolerancedns = int(args.tolerancedns)
+    infomsg(tolerancedns)
 
     if ((len(problematicip)!=0) and (len(expectedip)!=0)) or ((len(problematicdns)!=0) and (len(expecteddns)!=0)):
         exitnagios("CRITICAL","problematic and expected flags are mutually exclusive")
@@ -300,7 +322,7 @@ def main():
     if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
         exitnagios("CRITICAL","a problematic or expected flat must be specified")
 
-    dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns)
+    dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
 
 if __name__ == "__main__":
     main()
