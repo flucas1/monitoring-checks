@@ -81,8 +81,10 @@ def systemd_check(service,system,user,toleratelist):
                 else:
                     if unit in toleratelist:
                         warnings[unit]=status
-                    else:
+                    elif status in ["failed"]:
                         criticals[unit]=status
+                    else:
+                        warnings[unit]=status
             infomsg("oks -> "+str(oks))
             infomsg("warnings -> "+str(warnings))
             infomsg("criticals -> "+str(criticals))
