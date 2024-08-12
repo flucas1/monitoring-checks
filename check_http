@@ -126,7 +126,7 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
             try:
                 if i>1:
                     time.sleep(i)
-                
+
                 customresolver = dns.resolver.Resolver(configure=False)
                 customresolver.nameservers = listdnsservers
                 customresolver.retry_servfail = True
@@ -140,7 +140,7 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
                 infomsg(recordtype)
 
                 result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
-                
+
                 break
             except:
                 pass
@@ -417,6 +417,7 @@ def main():
     parser.add_argument("-P", "--httpversion",                             dest="httpversion",      default="",                                   help="0.9,1.0,1.1,2,3")
     parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="what interface to use")
     parser.add_argument("-D", "--dnsservers",                              dest="dnsservers",       default="",                                   help="dns servers to use")
+    parser.add_argument("-r", "--retries",                                 dest="retries",          default="3",                                  help="number of times to try")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -440,7 +441,7 @@ def main():
     elif (exclist<1) :
         exitnagios("CRITICAL","no protocol selected")
 
-    retries = 3
+    retries = int(args.retries)
     port = int(args.port)
 
     parts = args.timeout.split(":")
