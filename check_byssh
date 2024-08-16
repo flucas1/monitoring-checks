@@ -91,7 +91,7 @@ def dobysshcheck(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,
                 print(errors, file=sys.stderr, flush=True)
                 sys.exit(exitcode)
             else:
-                exitnagios(originalstatus,output+"\n"+errors)
+                exitnagios("UNKNOWN",output+"\n"+errors)
 
 #-------------------------------------------------------------------------------
 
