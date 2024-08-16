@@ -86,15 +86,12 @@ def dobysshcheck(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,
                 infomsg("sleeping for retry "+str(counter))
                 time.sleep(10)
         else:
-            if exitcode==0:
-                originalstatus = "OK"
-            elif exitcode==1:
-                originalstatus = "WARNING"
-            elif exitcode==2:
-                originalstatus = "CRITICAL"
+            if exitcode in [0,1,2,3]:
+                print(output, file=sys.stdout, flush=True)
+                print(errors, file=sys.stderr, flush=True)
+                sys.exit(exitcode)
             else:
-                originalstatus = "UNKNOWN"
-            exitnagios(originalstatus,output+"\n"+errors)
+                exitnagios(originalstatus,output+"\n"+errors)
 
 #-------------------------------------------------------------------------------
 
