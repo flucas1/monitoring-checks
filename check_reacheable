@@ -188,9 +188,9 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
 def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent):
     counter = 0
     while True:
-        exitcode,message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent)
-        if (exitcode==0) or (counter>=retries):
-            exitnagios(exitcode, message)
+        exitlevel,message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent)
+        if (exitlevel=="OK") or (counter>=retries):
+            exitnagios(exitlevel, message)
         else:
             counter = counter+1
             time.sleep(5)
