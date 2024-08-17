@@ -173,7 +173,7 @@ def alltripletsmatching(inputtriplets,expectedtriplets,tolerance):
         infomsg(partial)
         if partial==False:
             failed.append(testinputtriplet.strip())
-    if tolerance==len(failed):
+    if tolerance >= len(failed):
         tolerated = failed.copy()
         failed = []
     successmatching = (len(failed)==0)
