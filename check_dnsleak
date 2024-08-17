@@ -289,7 +289,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
             exitnagios("OK",successmsg)
     except Exception as e:
         exceptionmsg = str(e)
-        if (exceptionmsg.find("net::ERR_CONNECTION_REFUSED") > -1) or (exceptionmsg.find("net::ERR_SOCKS_CONNECTION_FAILED") > -1) of (exceptionmsg.find("net::ERR_ADDRESS_UNREACHABLE") > -1):
+        if (exceptionmsg.find("net::ERR_CONNECTION_REFUSED") > -1) or (exceptionmsg.find("net::ERR_SOCKS_CONNECTION_FAILED") > -1) or (exceptionmsg.find("net::ERR_ADDRESS_UNREACHABLE") > -1):
             exitnagios("WARNING","no connection")
         else:
             exitnagios("CRITICAL","unexpected error during the check - "+str(e))
