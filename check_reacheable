@@ -8,6 +8,7 @@ import subprocess
 import socket
 import concurrent.futures
 import netifaces
+import time
 
 #-------------------------------------------------------------------------------
 
@@ -178,11 +179,22 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
     percent = 100-percentloss
     valid = float(valid)/len(protocolslist)
     if valid >= minimun:
-        exitnagios("OK",hostname+" - "+str(valid)+" of at lest "+str(minimun)+" entries are reacheable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
+        return ("OK",hostname+" - "+str(valid)+" of at lest "+str(minimun)+" entries are reacheable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     elif valid+warning >= minimun:
-        exitnagios("WARNING",hostname+" - "+str(valid)+" of at lest "+str(minimun)+" entries are reacheable - "+str(warnreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
+        return ("WARNING",hostname+" - "+str(valid)+" of at lest "+str(minimun)+" entries are reacheable - "+str(warnreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     else:
-        exitnagios(timeoutstatus,hostname+" - only "+str(valid)+" of at least "+str(minimun)+" entries are reacheable - "+str(critreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average=-1 percent=0")
+        return (timeoutstatus,hostname+" - only "+str(valid)+" of at least "+str(minimun)+" entries are reacheable - "+str(critreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average=-1 percent=0")
+
+def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent):
+    counter = 0
+    while True:
+        exitcode,message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimun, warningms, warningpercent, criticalms, criticalpercent)
+        if (exitcode==0) or (counter>=retries):
+            exitnagios(exitcode, message)
+        else:
+            counter = counter+1
+            time.sleep(5)
+    exitnagios("CRITICAL","unexpected state")
 
 #-------------------------------------------------------------------------------
 
@@ -198,6 +210,7 @@ def parse_args():
     parser.add_argument("-t", "--timeout",           action="store",                                default="10:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-w", "--warning",           action="store",                                default="500,20%",                            help="ms,percent%")
     parser.add_argument("-c", "--critical",          action="store",                                default="1000,40%",                           help="ms,percent%")
+    parser.add_argument("-r", "--retries",           action="store",                                default="3",                                  help="number of times to retry the logic")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -241,7 +254,9 @@ def main():
     criticalparts = args.critical.split(",")
     criticalms = int(float(criticalparts[0]))
     criticalpercent = int(float(criticalparts[1].replace("%","")))
-    dopingtestmulti(protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimun, warningms, warningpercent, criticalms, criticalpercent)
+    retries = int(args.retries)
+
+    dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimun, warningms, warningpercent, criticalms, criticalpercent)
 
 if __name__ == "__main__":
     main()
