@@ -271,7 +271,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
                     errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is problematic. "
                 elif len(failuredns)>0:
                     warningmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is tolerated. "
-                else
+                else:
                     successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
                 successdns,tolerateddns = alltripletsmatching(resulteddnsparts,expecteddns,tolerancedns)
