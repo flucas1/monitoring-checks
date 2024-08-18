@@ -48,12 +48,16 @@ def doretrycall():
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
         if exitcode == 0:
-            print(output, file=sys.stdout, flush=True, end="")
-            print(errors, file=sys.stderr, flush=True, end="")
+            if output!="":
+                print(output, file=sys.stdout, flush=True, end="")
+            if errors!="":
+                print(errors, file=sys.stderr, flush=True, end="")
             exit(0)
         elif counter>=retries:
-            print(output, file=sys.stdout, flush=True, end="")
-            print(errors, file=sys.stderr, flush=True, end="")
+            if output!="":
+                print(output, file=sys.stdout, flush=True, end="")
+            if errors!="":
+                print(errors, file=sys.stderr, flush=True, end="")
             exit(exitcode)
         else:
             time.sleep(10)
