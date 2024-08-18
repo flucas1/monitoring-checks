@@ -51,8 +51,10 @@ def dodockerregistrycheck(port):
     errors = result.stderr.decode("utf-8").strip()
 
     if exitcode in [0,1,2,3]:
-        print(output, file=sys.stdout, flush=True)
-        print(errors, file=sys.stderr, flush=True)
+        if output!="":
+            print(output, file=sys.stdout, flush=True)
+        if errors!="":
+            print(errors, file=sys.stderr, flush=True)
         sys.exit(exitcode)
     else:
         exitnagios("UNKNOWN",output+"\n"+errors)
