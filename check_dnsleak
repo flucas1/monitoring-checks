@@ -267,9 +267,11 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
             infomsg(resulteddnsparts)
             if len(problematicdns)>0:
                 failuredns = findtripletsmatching(resulteddnsparts,problematicdns)
-                if len(failuredns)>0:
+                if len(failuredns)>tolerancedns:
                     errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is problematic. "
-                else:
+                elif len(failuredns)>0:
+                    warningmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is tolerated. "
+                else
                     successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
                 successdns,tolerateddns = alltripletsmatching(resulteddnsparts,expecteddns,tolerancedns)
