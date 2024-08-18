@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import socket
+import os
+import time
+import traceback
+import sys
+import datetime
+import subprocess
+import re
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dodockerregistrycheck(port):
+    command = ["/etc/nagios/scripts/check_http","-4","-H","127.0.0.1","-p","5000","-A","/v2/_catalog","-e","HTTP/1.1 200"]
+    infomsg(" ".join(command))
+
+    result = subprocess.run(command,capture_output=True)
+    exitcode = result.returncode
+    output = result.stdout.decode("utf-8").strip()
+    errors = result.stderr.decode("utf-8").strip()
+
+    if exitcode in [0,1,2,3]:
+        print(output, file=sys.stdout, flush=True)
+        print(errors, file=sys.stderr, flush=True)
+        sys.exit(exitcode)
+    else:
+        exitnagios("UNKNOWN",output+"\n"+errors)
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port",                                    dest="port",             default="0",                                  help="local port where the registry is running")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    port = int(args.port)
+    if port <= 0:
+        exitnagios("CRITICAL","port not valid")
+
+    dodockerregistrycheck(port)
+
+main()
+
+#-------------------------------------------------------------------------------
