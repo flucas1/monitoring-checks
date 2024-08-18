@@ -42,7 +42,7 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 def dodockerregistrycheck(port):
-    command = ["/etc/nagios/scripts/check_http","-4","-H","127.0.0.1","-p","5000","-A","/v2/_catalog","-e","HTTP/1.1 200"]
+    command = ["/etc/nagios/scripts/check_http","-4","-H","127.0.0.1","-p",str(port),"-A","/v2/_catalog","-e","HTTP/1.1 200"]
     infomsg(" ".join(command))
 
     result = subprocess.run(command,capture_output=True)
