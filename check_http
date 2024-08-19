@@ -162,7 +162,7 @@ def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutsta
             elif exitlevel == "OK":
                 break
             else:
-                time.sleep(10)
+                time.sleep(5*counter)
         except Exception as e:
             exitlevel = "CRITICAL"
             exitmessage = "exception - "+str(e)
@@ -417,7 +417,7 @@ def main():
     parser.add_argument("-P", "--httpversion",                             dest="httpversion",      default="",                                   help="0.9,1.0,1.1,2,3")
     parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="what interface to use")
     parser.add_argument("-D", "--dnsservers",                              dest="dnsservers",       default="",                                   help="dns servers to use")
-    parser.add_argument("-r", "--retries",                                 dest="retries",          default="3",                                  help="number of times to try")
+    parser.add_argument("-r", "--retries",                                 dest="retries",          default="5",                                  help="number of times to try")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
