@@ -6,6 +6,7 @@ import sys
 import os
 import subprocess
 import pwd
+import time
 
 #-------------------------------------------------------------------------------
 
@@ -63,28 +64,74 @@ def execute_systemd_call(system,service,user):
 
 #-------------------------------------------------------------------------------
 
-def systemd_check(service,system,user,toleratelist):
-    output = execute_systemd_call(system,service,user)
-    if output=="":
-        exitnagios("CRITICAL","issue calling systemd")
+def parse_systemd_list(output):
+    oks = {}
+    warnings = {}
+    criticals = {}
+    for line in output.splitlines():
+        parts = line[2:].split()
+        unit = parts[0]
+        status = parts[2]
+        if status == "active":
+            oks[unit]=status
+        else:
+            if unit in toleratelist:
+                warnings[unit]=status
+            elif status in ["failed"]:
+                criticals[unit]=status
+            else:
+                warnings[unit]=status
+    return oks,warnings,criticals
+
+def generate_dicts(system,service,user):
+    valid = True
+    oks = {}
+    warnings = {}
+    criticals = {}
+
+    infomsg("calling first")
+    firstoutput = execute_systemd_call(system,service,user)
+    if firstoutput=="":
+        valid = False
     else:
-        if service==None:
-            oks = {}
-            warnings = {}
-            criticals = {}
-            for line in output.splitlines():
-                parts = line[2:].split()
-                unit = parts[0]
-                status = parts[2]
-                if status == "active":
-                    oks[unit]=status
-                else:
-                    if unit in toleratelist:
-                        warnings[unit]=status
-                    elif status in ["failed"]:
-                        criticals[unit]=status
-                    else:
-                        warnings[unit]=status
+        infomsg("parsing first")
+        firstoks,firstwarnings,firstcriticals = parse_systemd_list(firstoutput)
+        if len(firstwarnings)>0 or len(firstcriticals)>0:
+            infomsg("waiting")
+            time.sleep(10)
+            infomsg("calling second")
+            secondoutput = execute_systemd_call(system,service,user)
+            if secondoutput=="":
+                valid = False
+            else:
+                infomsg("parsing second")
+                secondoks,secondwarnings,secondcriticals = parse_systemd_list(secondoutput)
+                infomsg("matching first and second")
+                for key,value in secondoks:
+                    if key in firstoks.keys():
+                        oks[key]=value
+                for key,value in secondwarnings:
+                    if key in firstwarnings.keys():
+                        oks[key]=value
+                for key,value in secondcriticals:
+                    if key in firstcriticals.keys():
+                        oks[key]=value
+        else:
+            infomsg("no need for second")
+            oks = firstoks
+            warnings = firstwarnings
+            criticals = firstcriticals
+
+    infomsg("finished matching dicts")
+    return valid,oks,warnings,criticals
+
+def systemd_check(service,system,user,toleratelist):
+
+    if service==None:
+        valid,oks,warnings,criticals = generate_dicts(system,service,user)
+        if valid!=True:
+            exitnagios("CRITICAL","issue calling systemd")
+        else:
             infomsg("oks -> "+str(oks))
             infomsg("warnings -> "+str(warnings))
             infomsg("criticals -> "+str(criticals))
@@ -97,6 +144,10 @@ def systemd_check(service,system,user,toleratelist):
                 exitnagios("WARNING","there are warnings "+str(warnings)+" | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
             else:
                 exitnagios("OK","no issues found | oks="+str(len(oks))+" warnings="+str(len(warnings))+" criticals="+str(len(criticals)))
+    else:
+        output = execute_systemd_call(system,service,user)
+        if output=="":
+            exitnagios("CRITICAL","issue calling systemd")
         else:
             status = output
             if status=="active":

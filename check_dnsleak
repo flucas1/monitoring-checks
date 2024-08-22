@@ -208,7 +208,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
             try:
                 resume = driver.find_element(By.ID, "dns-test")
             except Exception as e:
-                exitnagios("CRITICAL","cannot find result element")
+                exitnagios("WARNING","cannot find result element")
             if resume == None:
                 counter=counter+1
                 time.sleep(3)
@@ -216,7 +216,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
                 break
 
         if resume == None:
-            exitnagios("CRITICAL","no result from page")
+            exitnagios("WARNING","no result from page")
         infomsg("test with results")
 
         address = extractvalue(driver, "IP Address")

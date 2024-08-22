@@ -90,7 +90,7 @@ def doportexternalcall(domain):
         if valid == True:
             exitnagios("OK","the tunnel is well done")
         else:
-            exitnagios("CRITICAL","the tunnel is not valid")
+            exitnagios("WARNING","the tunnel is not valid")
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check "+str(e))
 
