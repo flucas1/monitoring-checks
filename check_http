@@ -277,7 +277,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
     except pycurl.error as e:
         infomsg(traceback.format_exc())
         code, msg = e.args
-        if msg.endswith(": Couldn't connect to server") or msg.startswith("Connection timed out after ") or msg.startswith("Operation timed out after "):
+        if msg.endswith(": Couldn't connect to server") or msg.endswith(": Could not connect to server") or msg.startswith("Connection timed out after ") or msg.startswith("Operation timed out after ") or msg.startswith("Failed to connect to "):
             timeoutmessage = msg
         else:
             failuremessage = msg
