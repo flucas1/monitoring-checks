@@ -112,10 +112,10 @@ def generate_dicts(system,service,user):
                         oks[key]=value
                 for key,value in secondwarnings:
                     if key in firstwarnings.keys():
-                        oks[key]=value
+                        warnings[key]=value
                 for key,value in secondcriticals:
                     if key in firstcriticals.keys():
-                        oks[key]=value
+                        criticals[key]=value
         else:
             infomsg("no need for second")
             oks = firstoks
