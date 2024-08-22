@@ -64,7 +64,7 @@ def execute_systemd_call(system,service,user):
 
 #-------------------------------------------------------------------------------
 
-def parse_systemd_list(output):
+def parse_systemd_list(output,toleratelist):
     oks = {}
     warnings = {}
     criticals = {}
@@ -83,7 +83,7 @@ def parse_systemd_list(output):
                 warnings[unit]=status
     return oks,warnings,criticals
 
-def generate_dicts(system,service,user):
+def generate_dicts(system,service,user,toleratelist):
     valid = True
     oks = {}
     warnings = {}
@@ -95,7 +95,7 @@ def generate_dicts(system,service,user):
         valid = False
     else:
         infomsg("parsing first")
-        firstoks,firstwarnings,firstcriticals = parse_systemd_list(firstoutput)
+        firstoks,firstwarnings,firstcriticals = parse_systemd_list(firstoutput,toleratelist)
         if len(firstwarnings)>0 or len(firstcriticals)>0:
             infomsg("waiting")
             time.sleep(10)
@@ -105,15 +105,15 @@ def generate_dicts(system,service,user):
                 valid = False
             else:
                 infomsg("parsing second")
-                secondoks,secondwarnings,secondcriticals = parse_systemd_list(secondoutput)
+                secondoks,secondwarnings,secondcriticals = parse_systemd_list(secondoutput,toleratelist)
                 infomsg("matching first and second")
-                for key,value in secondoks:
+                for key,value in secondoks.items():
                     if key in firstoks.keys():
                         oks[key]=value
-                for key,value in secondwarnings:
+                for key,value in secondwarnings.items():
                     if key in firstwarnings.keys():
                         warnings[key]=value
-                for key,value in secondcriticals:
+                for key,value in secondcriticals.items():
                     if key in firstcriticals.keys():
                         criticals[key]=value
         else:
@@ -128,7 +128,7 @@ def generate_dicts(system,service,user):
 def systemd_check(service,system,user,toleratelist):
 
     if service==None:
-        valid,oks,warnings,criticals = generate_dicts(system,service,user)
+        valid,oks,warnings,criticals = generate_dicts(system,service,user,toleratelist)
         if valid!=True:
             exitnagios("CRITICAL","issue calling systemd")
         else:
