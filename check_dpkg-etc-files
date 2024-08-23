@@ -90,7 +90,7 @@ def main():
 
     ignorelist = args.ignore.split(",")
     if "" in ignorelist:
-        ignorelist.delete("")
+        ignorelist.remove("")
     infomsg("ignorelist -> "+str(ignorelist))
 
     dodpkgetcfilescall(ignorelist)
