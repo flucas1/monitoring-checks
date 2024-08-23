@@ -56,15 +56,22 @@ def getfiles(basepath,extensions):
     foundfiles.sort()
     return foundfiles
 
-def dodpkgetcfilescall():
+def dodpkgetcfilescall(ignorelist):
     try:
         extensions = ["dpkg-dist", "dpkg-new", "dpkg-old", "ucf-dist", "update-old"]
         foundfiles = getfiles("/etc",extensions)
+        infomsg("foundfiles -> "+str(foundfiles))
 
-        if len(foundfiles)==0:
+        validatedfiles = []
+        for testfile in foundfiles:
+            if testfile not in ignorelist:
+                validatedfiles.append(testfile)
+        infomsg("validatedfiles -> "+str(validatedfiles))
+
+        if len(validatedfiles)==0:
             exitnagios("OK","there are no extra dpkg-etc files | total=0")
         else:
-            exitnagios("WARNING","please review extra dpkg-etc files: "+" ".join(foundfiles)+" | total="+str(len(foundfiles)))
+            exitnagios("WARNING","please review extra dpkg-etc files: "+" ".join(validatedfiles)+" | total="+str(len(validatedfiles)))
     except Exception as e:
         exitnagios("CRITICAL","issue retrieving extra dpkg-etc files - "+str(e)+" total=-1")
 
@@ -72,6 +79,7 @@ def dodpkgetcfilescall():
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="list of files to ignore")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
     return args
@@ -79,7 +87,13 @@ def parse_args():
 def main():
     args = parse_args()
     setcandebug(args.debug)
-    dodpkgetcfilescall()
+
+    ignorelist = args.ignore.split(",")
+    if "" in ignorelist:
+        ignorelist.delete("")
+    infomsg("ignorelist -> "+str(ignorelist))
+
+    dodpkgetcfilescall(ignorelist)
 
 if __name__ == "__main__":
     main()
