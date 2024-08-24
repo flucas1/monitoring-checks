@@ -376,15 +376,15 @@ def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, aut
         try:
             mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
+                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone '"+zone+"' using server "+addressinfo)
             text_mname = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
             if text_mname=="":
-                exitnagios(timeoutstatus,"no response when trying to transfer zone from mname")
+                exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from mname")
             text_server = get_zone(useTcp, addressinfo, timeoutvalue, zone)
             if text_server=="":
-                exitnagios(timeoutstatus,"no response when trying to transfer zone from server")
+                exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from server")
             if text_mname != text_server:
-                exitnagios("CRITICAL","zone in target server "+server+" and MNAME server "+mname+" are different.")
+                exitnagios("CRITICAL","zone '"+zone+"' in target server "+server+" and MNAME server "+mname+" are different.")
                 infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())))
             else:
                 ns = get_ns(useTcp, addressinfo, timeoutvalue, zone)
@@ -404,16 +404,16 @@ def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, aut
                             validservers.append(test)
                         else:
                             #zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
-                            exitnagios("CRITICAL","zone in target server "+server+" and NS server "+test+" are different.")
+                            exitnagios("CRITICAL","zone '"+zone+"' in target server "+server+" and NS server "+test+" are different.")
                     except Exception as e:
                         if test not in errorservers:
                             errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    exitnagios("CRITICAL","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    exitnagios("CRITICAL","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    exitnagios("WARNING","zone match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    exitnagios("WARNING","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 else:
-                    exitnagios("OK","zone in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    exitnagios("OK","zone '"+zone+"' in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
         except dns.exception.Timeout as e:
             exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
