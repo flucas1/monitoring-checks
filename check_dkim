@@ -179,13 +179,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-s", "--selector",                                dest="selector",         default="",                                   help="DKIM selector to test")
+    parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
     selector = args.selector
-    proxy = ""
+    proxy = args.proxy
 
     if selector=="":
         exitnagios("CRITICAL","the selector is empty")
