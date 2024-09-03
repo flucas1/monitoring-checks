@@ -48,10 +48,13 @@ def exitnagios(status,message):
 
 def generatedriver(proxy):
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--headless=new")
+    #chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--in-process-gpu")
+    chrome_options.add_argument("--use-gl=angle")
+    chrome_options.add_argument("--use-angle=swiftshader-webgl")
     chrome_options.add_argument("--proxy-server="+proxy)
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
@@ -63,8 +66,8 @@ def generatedriver(proxy):
 
 def check_page_loaded(driver):
     #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
-    page_state = driver.execute_script('return document.readyState;')
-    return page_state == 'complete'
+    page_state = driver.execute_script("return document.readyState;")
+    return page_state == "complete"
 
 def wait_page_loaded(driver):
     timestamp = time.time()
@@ -74,6 +77,8 @@ def wait_page_loaded(driver):
         if time.time() - timestamp > 20:
             break
 
+#-------------------------------------------------------------------------------
+
 def tryfindbyxpath(driver,xpath):
     result = None
     try:
@@ -81,7 +86,6 @@ def tryfindbyxpath(driver,xpath):
     except:
         pass
     return result
-
 
 #-------------------------------------------------------------------------------
 
@@ -155,7 +159,7 @@ def count_red_yellow_green(block,ignoremessages):
 def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
     try:
         driver = generatedriver(proxy)
-        #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
         wait = WebDriverWait(driver,20)
         action=ActionChains(driver)
 
