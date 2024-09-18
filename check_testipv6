@@ -115,9 +115,9 @@ def dotestipv6call(proxy):
         try:
             resume = driver.find_element(By.ID, "debugtable")
         except Exception as e:
-            exitnagios("CRITICAL","cannot find result element")
+            exitnagios("WARNING","cannot find result element")
         if resume == None:
-            exitnagios("CRITICAL","no result from page")
+            exitnagios("WARNING","no result from page")
         infomsg("test with results")
 
         rawresult = resume.text
