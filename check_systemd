@@ -64,7 +64,7 @@ def execute_systemd_call(system,service,user):
 
 #-------------------------------------------------------------------------------
 
-def parse_systemd_list(output,toleratelist):
+def parse_systemd_list(output,toleratelist,ignorelist):
     oks = {}
     warnings = {}
     criticals = {}
@@ -75,7 +75,9 @@ def parse_systemd_list(output,toleratelist):
         if status == "active":
             oks[unit]=status
         else:
-            if unit in toleratelist:
+            if unit in ignorelist:
+                pass
+            elif unit in toleratelist:
                 warnings[unit]=status
             elif status in ["failed"]:
                 criticals[unit]=status
@@ -83,7 +85,7 @@ def parse_systemd_list(output,toleratelist):
                 warnings[unit]=status
     return oks,warnings,criticals
 
-def generate_dicts(system,service,user,toleratelist):
+def generate_dicts(system,service,user,toleratelist,ignorelist):
     valid = True
     oks = {}
     warnings = {}
@@ -95,7 +97,7 @@ def generate_dicts(system,service,user,toleratelist):
         valid = False
     else:
         infomsg("parsing first")
-        firstoks,firstwarnings,firstcriticals = parse_systemd_list(firstoutput,toleratelist)
+        firstoks,firstwarnings,firstcriticals = parse_systemd_list(firstoutput,toleratelist,ignorelist)
         if len(firstwarnings)>0 or len(firstcriticals)>0:
             infomsg("waiting")
             time.sleep(10)
@@ -105,7 +107,7 @@ def generate_dicts(system,service,user,toleratelist):
                 valid = False
             else:
                 infomsg("parsing second")
-                secondoks,secondwarnings,secondcriticals = parse_systemd_list(secondoutput,toleratelist)
+                secondoks,secondwarnings,secondcriticals = parse_systemd_list(secondoutput,toleratelist,ignorelist)
                 infomsg("matching first and second")
                 for key,value in secondoks.items():
                     if key in firstoks.keys():
@@ -125,10 +127,10 @@ def generate_dicts(system,service,user,toleratelist):
     infomsg("finished matching dicts")
     return valid,oks,warnings,criticals
 
-def systemd_check(service,system,user,toleratelist):
+def systemd_check(service,system,user,toleratelist,ignorelist):
 
     if service==None:
-        valid,oks,warnings,criticals = generate_dicts(system,service,user,toleratelist)
+        valid,oks,warnings,criticals = generate_dicts(system,service,user,toleratelist,ignorelist)
         if valid!=True:
             exitnagios("CRITICAL","issue calling systemd")
         else:
@@ -152,11 +154,12 @@ def systemd_check(service,system,user,toleratelist):
             status = output
             if status=="active":
                 exitnagios("OK","unit "+service+" is active")
+            elif service in ignorelist:
+                exitnagios("OK","unit "+service+" is ignored")
+            elif service in toleratelist:
+                exitnagios("WARNING","unit "+service+" is "+status+" instead of active")
             else:
-                if service in toleratelist:
-                    exitnagios("WARNING","unit "+service+" is "+status+" instead of active")
-                else:
-                    exitnagios("CRITICAL","unit "+service+" is "+status+" instead of active")
+                exitnagios("CRITICAL","unit "+service+" is "+status+" instead of active")
 
 #-------------------------------------------------------------------------------
 
@@ -166,14 +169,16 @@ def main():
     parser.add_argument("-m", "--system",            action="store_true",  dest="system",           default=False,                                help="Check the gobal systemd (default)")
     parser.add_argument("-u", "--user",                                    dest="user",             default="root",                               help="Check at userlevel (linger) systemd (default root)")
     parser.add_argument("-l", "--tolerate",                                                         default="",                                   help="Systemd units to mark as warning instead of critical")
+    parser.add_argument("-g", "--ignore",                                                           default="",                                   help="Systemd units to fully ignore")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
     toleratelist=args.tolerate.replace(" ",";").replace(",",";").split(";")
+    ignorelist=args.ignore.replace(" ",";").replace(",",";").split(";")
 
-    systemd_check(args.service, args.system, args.user, toleratelist)
+    systemd_check(args.service, args.system, args.user, toleratelist, ignorelist)
 
 if __name__ == "__main__":
     main()
