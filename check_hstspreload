@@ -114,13 +114,19 @@ def dohstspreloadcall(proxy,domain):
         errors = driver.find_elements(By.CLASS_NAME, "error")
         errormsgs = []
         for error in errors:
-            errormsgs.append(error.text.strip().replace("\n"," "))
+            cleaned = error.text.strip().replace("\n"," ")
+            infomsg(cleaned)
+            if cleaned not in errormsgs:
+                errormsgs.append(cleaned)
         errormsg = ". ".join(errormsgs)
         infomsg("ERRORS: "+errormsg)
         warnings = driver.find_elements(By.CLASS_NAME, "warning")
         warningmsgs = []
         for warning in warnings:
-            warningmsgs.append(warning.text.strip().replace("\n"," "))
+            cleaned = warning.text.strip().replace("\n"," ")
+            infomsg(cleaned)
+            if cleaned not in warningmsgs:
+                warningmsgs.append(cleaned)
         warningmsg = ". ".join(warningmsgs)
         infomsg("WARNINGS: "+warningmsg)
 
@@ -129,7 +135,11 @@ def dohstspreloadcall(proxy,domain):
         elif statustext=="Status: "+domain+" is pending submission to the preload list.":
             exitnagios("WARNING","the domain is waiting to be included in the preload list")
         elif statustext=="Status: "+domain+" is currently preloaded, but no longer meets the requirements. It may be at risk of removal.":
-            if warningmsg == "" and errormsg == "Error: Too many redirects There are more than 3 redirects starting from `http://"+domain+"`.":
+            rest = errormsg
+            rest = rest.replace("Error: Too many redirects There are more than 3 redirects starting from `http://"+domain+"`.","")
+            rest = rest.replace("Error: Too many redirects There are more than 3 redirects starting from `https://"+domain+"`.","")
+            rest = rest.replace(". ","")
+            if warningmsg == "" and rest == "":
                 exitnagios("OK","warning about too many redirects")
             else:
                 exitnagios("WARNING","the domain is at risk of removal - "+errormsg+" - "+warningmsg)
@@ -148,7 +158,7 @@ def main():
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
-    
+
     setcandebug(args.debug)
 
     if (args.host == ""):
