@@ -255,7 +255,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         else:
             curl.setopt(pycurl.SSL_VERIFYPEER, 0)
             curl.setopt(pycurl.SSL_VERIFYHOST, 0)
-        if expect!="" or unknown!="" or len(headerstring)>0:
+        if len(expect)>0 or unknown!="" or len(headerstring)>0:
             curl.setopt(pycurl.HEADERFUNCTION, _header_function)
         if httpprotocol=="https" and certificatedays!="":
             curl.setopt(pycurl.OPT_CERTINFO, 1)
@@ -307,13 +307,14 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
                 foundunknown = True
         if foundunknown == True:
             return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
-    if expect!="":
+    if len(expect)>0:
         foundexpect = False
         for line in _preheaders:
-            if line.startswith(expect):
-                foundexpect = True
+            for test in expect:
+                if line.startswith(test):
+                    foundexpect = True
         if foundexpect == False:
-            return "CRITICAL","cannot match '"+expect+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
+            return "CRITICAL","cannot match '"+str(expect)+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
 
     infomsg(_headers)
     for hsitem in headerstring:
@@ -410,7 +411,7 @@ def main():
     parser.add_argument("-p", "--port",                                    dest="port",             default="80",                                 help="port to use, usually 80 or 443")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-S", "--sslversion",                              dest="sslversion",       default=None,                                 help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
-    parser.add_argument("-e", "--expect",                                  dest="expect",           default="",                                   help="first (status) line of the server response (default: HTTP/1.)")
+    parser.add_argument("-e", "--expect",            action="append",      dest="expect",           default=[],                                   help="first (status) line of the server response (default: HTTP/1.)")
     parser.add_argument("-K", "--unknown",                                 dest="unknown",          default="",                                   help="match this header to return unknown")
     parser.add_argument("-d", "--headerstring",      action="append",      dest="headerstring",     default=[],                                   help="string to expect in the response headers")
     parser.add_argument("-C", "--certificatedays",                         dest="certificatedays",  default="5,10",                               help="minimum number of days a certificate has to be valid crit,warn")
