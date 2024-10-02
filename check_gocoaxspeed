@@ -144,10 +144,13 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
 
             values = []
             rows = tableelem.find_elements(By.XPATH, ".//tr")
-            rows.pop(0)
+            if len(rows)>0:
+                rows.pop(0)
             for row in rows:
                 infomsg("row "+row.text)
                 cols = row.find_elements(By.TAG_NAME, "td")
+                if len(cols)>0:
+                    cols.pop(0)
                 cols.pop(0)
                 for col in cols:
                     text = col.text
