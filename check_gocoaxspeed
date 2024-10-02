@@ -1,0 +1,223 @@
+#!/usr/bin/python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import re
+import subprocess
+import datetime
+import socket
+import time
+import pathlib
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def generatedriver(proxy):
+    chrome_options = Options()
+    chrome_options.add_argument("--incognito")
+    chrome_options.add_argument("--disk-cache-size=0")
+    chrome_options.add_argument("--media-cache-size=0")
+    chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--in-process-gpu")
+    chrome_options.add_argument("--use-gl=angle")
+    chrome_options.add_argument("--use-angle=swiftshader-webgl")
+    chrome_options.add_argument("--proxy-server="+proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script("return document.readyState;")
+    return page_state == "complete"
+
+def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+
+#-------------------------------------------------------------------------------
+
+def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
+    driver = None
+    ip = None
+
+    try:
+        ip = socket.gethostbyname(hostname)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((ip,80))
+        if result == 0:
+            sock.close()
+        else:
+            sock.close()
+            raise Exception("Cannot reach target IP on port 80 "+ip)
+    except Exception as e:
+        exitnagios(timeoutstatus,str(e))
+
+    if ip != None:
+        try:
+            driver = generatedriver(proxy)
+
+            wait = WebDriverWait(driver,20)
+            action=ActionChains(driver)
+        except Exception as e:
+            exitnagios("CRITICAL",str(e))
+    else:
+        exitnagios("CRITICAL","The hostname "+hostname+" was not resolved")
+
+    if driver!=None:
+        try:
+            infomsg("browser OK")
+
+            url = "http://"+username+":"+password+"@"+ip+"/phyRates.html"
+            driver.get(url)
+            #time.sleep(5)
+            wait_page_loaded(driver)
+
+            infomsg("asking for logging "+"http://"+ip+"/phyRates.html")
+            wait.until(EC.visibility_of_element_located((By.ID, "pageContent")))
+            wait.until(EC.visibility_of_element_located((By.ID, "table_data")))
+
+            tableelem = driver.find_element(By.ID, "table_data")
+            tabletext = tableelem.text
+            infomsg(tabletext)
+
+            cells = []
+            counter=0
+            while(counter<15):
+                cells = tableelem.find_elements(By.TAG_NAME, "td")
+                if len(cells)==0:
+                    counter = counter+1
+                    time.sleep(1)
+                else:
+                    break
+            infomsg("found "+str(len(cells))+" cells")
+
+            values = []
+            rows = tableelem.find_elements(By.XPATH, ".//tr")
+            rows.pop(0)
+            for row in rows:
+                infomsg("row "+row.text)
+                cols = row.find_elements(By.TAG_NAME, "td")
+                cols.pop(0)
+                for col in cols:
+                    text = col.text
+                    infomsg("cell "+text)
+                    values.append(text)
+
+            speed=0
+            infomsg("values "+str(values))
+            if len(values)>0:
+                total = 0
+                for item in values:
+                    try:
+                        parsed = float(item)
+                    except:
+                        parsed = 0
+                    total = total+parsed
+                infomsg("total "+str(total))
+                average = total / len(values)
+                speed = round(average)
+
+            if (critical != "") and (speed < float(critical)):
+                exitnagios("CRITICAL","the speed is less than "+str(critical)+" - currently "+str(speed)+" | speed="+str(speed))
+            elif (warning != "") and (speed < float(warning)):
+                exitnagios("WARNING","the speed is less than "+str(warning)+" - currently "+str(speed)+" | speed="+str(speed))
+            else:
+                exitnagios("OK","The speed is "+str(speed)+" | speed="+str(speed))
+
+        except Exception as e:
+            exitnagios("CRITICAL",str(e))
+    else:
+        exitnagios("CRITICAL","the driver was not initialized")
+
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="1000",                               help="minimun value for a warning")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="500",                                help="maximun value for a critical")
+    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                                   help="file containing the management credentials")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    if args.filecred == "":
+        exitnagios("CRITICAL","filecred is not specified")
+    else:
+        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
+        username=filecontentslines[0]
+        password=filecontentslines[1]
+
+    if args.hostname == "":
+        exitnagios("CRITICAL","no hostname specified")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        proxy = ""
+        dogocoaxspeedcall(proxy,username,password,args.warning,args.critical,args.hostname,timeoutvalue,timeoutstatus)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
