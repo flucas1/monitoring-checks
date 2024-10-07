@@ -80,7 +80,7 @@ def load_json(domain,retries):
             item_request = urllib.request.Request(item_url)
             infomsg(item_url)
             item_request.add_header("Accept", "application/json")
-            item_request.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36")
+            item_request.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
             infomsg("sending request")
             item_raw = urllib.request.urlopen(item_request, timeout=3)
             infomsg("request done")
