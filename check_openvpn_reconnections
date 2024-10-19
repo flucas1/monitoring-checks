@@ -63,7 +63,10 @@ def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
         else:
             exitnagios("OK","No reconnection activity found in journalctl | counter=1")
     else:
-        exitnagios("CRITICAL","error retrieving the information from journalctl | counter=1")
+        if output=="-- No entries --":
+            exitnagios("OK","No reconnection activity found in journalctl | counter=0")
+        else:
+            exitnagios("CRITICAL","error retrieving the information from journalctl | counter=1")
 
 #-------------------------------------------------------------------------------
 
