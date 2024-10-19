@@ -38,8 +38,8 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def oom_check(criticallevel, warninglevel, short=False):
-    cmdline = ["/usr/bin/journalctl","--utc","--no-pager","-kq","-o","json","-b","-0","--output-fields=MESSAGE"]
+def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
+    cmdline = ["/usr/bin/journalctl","--utc","--no-pager","--unit","openvpn@"+profile,"-g","Started openvpn@","--since",str(time)+" hours ago"]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
@@ -50,33 +50,35 @@ def oom_check(criticallevel, warninglevel, short=False):
     if exitcode==0:
         counter=0
         for line in output.splitlines():
-            parsed = json.loads(line)
-            infomsg(parsed)
-            if "killed process" in parsed["MESSAGE"]:
-                counter = counter+1
+            line = line.strip()
+            infomsg(line)
+            if line!="":
+                if line.startswith("-- Boot ")==False:
+                    counter = counter+1
 
         if criticallevel!="" and counter > int(criticallevel):
-            exitnagios("CRITICAL",str(counter)+" processes was killed by OOM | counter="+str(counter))
+            exitnagios("CRITICAL",str(counter)+" reconnections | counter="+str(counter))
         elif warninglevel!="" and counter > int(warninglevel):
-            exitnagios("WARNING",str(counter)+" processes was killed by OOM | counter="+str(counter))
+            exitnagios("WARNING",str(counter)+" reconnections | counter="+str(counter))
         else:
-            exitnagios("OK","No OOM killer activity found in journalctl | counter=-1")
+            exitnagios("OK","No reconnection activity found in journalctl | counter=1")
     else:
-        exitnagios("CRITICAL","error retrieving the information from journalctl | counter=-1")
+        exitnagios("CRITICAL","error retrieving the information from journalctl | counter=1")
 
 #-------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",                                                          default="",                                   help="Number of occurences to trigger a warning")
-    parser.add_argument("-c", "--critical",                                                         default="1",                                  help="Number of occurences to trigger a warning")
-    parser.add_argument("-s", "--short",             action="store_true",                                                                         help="If this option is specified, check ignores dmesg OOM problems older then 24 hours")
+    parser.add_argument("-w", "--warning",                                                          default="12",                                 help="Number of occurences to trigger a warning")
+    parser.add_argument("-c", "--critical",                                                         default="24",                                 help="Number of occurences to trigger a warning")
+    parser.add_argument("-p", "--profile",                                 dest="profile",          default="",                                   help="Connection profile to check")
+    parser.add_argument("-t", "--time",                                    dest="time",             default="24",                                 help="Duration in hours to verify")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
 
-    oom_check(args.critical, args.warning, args.short)
+    openvpnreconnections_check(args.critical, args.warning, args.profile, args.time)
 
 
 if __name__ == "__main__":
