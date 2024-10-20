@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import socket
+import os
+import time
+import traceback
+import sys
+import datetime
+import subprocess
+import re
+import argparse
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+original_getaddrinfo = socket.getaddrinfo
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+#-------------------------------------------------------------------------------
+
+def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept):
+    exitmsg = None
+
+    retries = 3
+    counter = 0
+    while True:
+        infomsg("executing retry "+str(counter))
+        counter = counter+1
+
+        command = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
+        if key!="" and key!=None:
+            command = command+["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
+        if autoaccept:
+            command = command+["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+        command = command+["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
+        infomsg(" ".join(command))
+
+        result = subprocess.run(command,capture_output=True)
+        exitcode = result.returncode
+        output = result.stdout.decode("utf-8").strip()
+        errors = result.stderr.decode("utf-8").strip()
+
+        if output in ["SSH connection failed: (no error output)"]:
+            if counter>retries:
+                infomsg("too many retries, failing")
+                break
+            else:
+                infomsg("sleeping for retry "+str(counter))
+                time.sleep(10)
+        else:
+            if exitcode == 0:
+                infomsg("exitcode success "+str(exitcode))
+                exitmsg = output+"\n"+errors
+                exitmsg = exitmsg.strip()
+            else:
+                infomsg("exitcode failure "+str(exitcode))
+                if output!="":
+                    infomsg(output)
+                if errors!="":
+                    infomsg(errors)
+            break
+
+    return exitmsg
+
+def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,autoaccept):
+    serverv4 = None
+    serverv6 = None
+
+    dnslist = []
+    remotecmdline = "/usr/bin/sudo -u root /etc/automation/kubednsips-kubernetes"
+    output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+    if output == None:
+        exitnagios("CRITICAL","could not get the list of DNS service ips")
+    else:
+        dnslist = output.split()
+        if len(dnslist)>0:
+            serverv4 = dnslist[0]
+        if len(dnslist)>0:
+            serverv6 = dnslist[1]
+
+    nodelist = []
+    remotecmdline = "/usr/bin/sudo -u root /etc/automation/nodelist-kubernetes"
+    output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+    if output == None:
+        exitnagios("CRITICAL","could not get the list of kubernetes nodes")
+    else:
+        nodelist = output.split()
+
+    finalmessages = []
+
+    for nodename in nodelist:
+        infomsg("testing node "+nodename)
+
+        if serverv4!=None:
+            remotecmdline = "nslookup www.google.com "+serverv4
+            output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+            if output == None:
+                messages.append("could not validate IPv4 DNS traffic for node "+nodename)
+
+        if serverv6!=None:
+            remotecmdline = "nslookup www.google.com "+serverv6
+            output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+            if output == None:
+                messages.append("could not validate IPv6 DNS traffic for node "+nodename)
+
+    if len(finalmessages)==0:
+        exitnagios("OK","no issues found | nodecount="+str(len(nodelist)))
+    else:
+        exitnagios("WARNING"," - ".join(finalmessages)" | nodecount="+str(len(nodelist)))
+
+#-------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-i", "--key",                                     dest="key",              default="",                                   help="ssh key to use")
+    parser.add_argument("-l", "--login",                                   dest="login",            default="",                                   help="username for login")
+    parser.add_argument("-a", "--autoaccept",        action="store_true",  dest="autoaccept",       default=False,                                help="accept all remote keys")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+
+    setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True :
+        protocol = ""
+        exclist = exclist+1
+    if args.ipv4 == True :
+        protocol = "-4"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv4_gai_family
+    if args.ipv6 == True :
+        protocol = "-6"
+        exclist = exclist+1
+        socket.getaddrinfo = forced_ipv6_gai_family
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL","hostname not defined")
+
+    if (args.login == ""):
+        exitnagios("CRITICAL","login not defined")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts)>1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        dokubernetesdnscheck(protocol,args.hostname,timeoutvalue,timeoutstatus,args.key,args.login,args.autoaccept)
+    else:
+        exitnagios("CRITICAL","timeout status is not valid")
+
+main()
+
+#-------------------------------------------------------------------------------
