@@ -68,12 +68,12 @@ def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,k
         infomsg("executing retry "+str(counter))
         counter = counter+1
 
-        command = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
+        command = ["/usr/bin/ssh", protocol, login+"@"+hostname]
         if key!="" and key!=None:
             command = command+["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
         if autoaccept:
             command = command+["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
-        command = command+["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
+        command = command+["-o","ConnectTimeout="+str(timeoutvalue),remotecmdline]
         infomsg(" ".join(command))
 
         result = subprocess.run(command,capture_output=True)
@@ -81,7 +81,7 @@ def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,k
         output = result.stdout.decode("utf-8").strip()
         errors = result.stderr.decode("utf-8").strip()
 
-        if output in ["SSH connection failed: (no error output)"]:
+        if output.endswith(": Connection timed out"):
             if counter>retries:
                 infomsg("too many retries, failing")
                 break
