@@ -59,7 +59,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept):
+def doremotecommand(protocol,hostname,timeoutvalue,remotecmdline,key,login,autoaccept):
     exitmsg = None
 
     retries = 3
@@ -68,7 +68,9 @@ def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,k
         infomsg("executing retry "+str(counter))
         counter = counter+1
 
-        command = ["/usr/bin/ssh", protocol, login+"@"+hostname]
+        command = ["/usr/bin/ssh", login+"@"+hostname]
+        if protocol!="" and protocol!=None:
+            command = command+[protocol]
         if key!="" and key!=None:
             command = command+["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
         if autoaccept:
@@ -91,8 +93,9 @@ def doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,k
         else:
             if exitcode == 0:
                 infomsg("exitcode success "+str(exitcode))
-                exitmsg = output+"\n"+errors
-                exitmsg = exitmsg.strip()
+                #exitmsg = output+"\n"+errors
+                #exitmsg = exitmsg.strip()
+                exitmsg = output
             else:
                 infomsg("exitcode failure "+str(exitcode))
                 if output!="":
@@ -109,9 +112,9 @@ def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,
 
     dnslist = []
     remotecmdline = "/usr/bin/sudo -u root /etc/automation/kubednsips-kubernetes"
-    output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+    output = doremotecommand(protocol,hostname,timeoutvalue,remotecmdline,key,login,autoaccept)
     if output == None:
-        exitnagios("CRITICAL","could not get the list of DNS service ips")
+        exitnagios(timeoutstatus,"could not get the list of DNS service ips")
     else:
         dnslist = output.split()
         if len(dnslist)>0:
@@ -121,9 +124,9 @@ def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,
 
     nodelist = []
     remotecmdline = "/usr/bin/sudo -u root /etc/automation/nodelist-kubernetes"
-    output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+    output = doremotecommand(protocol,hostname,timeoutvalue,remotecmdline,key,login,autoaccept)
     if output == None:
-        exitnagios("CRITICAL","could not get the list of kubernetes nodes")
+        exitnagios(timeoutstatus,"could not get the list of kubernetes nodes")
     else:
         nodelist = output.split()
 
@@ -134,15 +137,15 @@ def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,
 
         if serverv4!=None:
             remotecmdline = "nslookup www.google.com "+serverv4
-            output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+            output = doremotecommand(protocol,nodename,timeoutvalue,remotecmdline,key,login,autoaccept)
             if output == None:
-                messages.append("could not validate IPv4 DNS traffic for node "+nodename)
+                finalmessages.append("could not validate IPv4 DNS traffic for node "+nodename)
 
         if serverv6!=None:
             remotecmdline = "nslookup www.google.com "+serverv6
-            output = doremotecommand(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept)
+            output = doremotecommand(protocol,nodename,timeoutvalue,remotecmdline,key,login,autoaccept)
             if output == None:
-                messages.append("could not validate IPv6 DNS traffic for node "+nodename)
+                finalmessages.append("could not validate IPv6 DNS traffic for node "+nodename)
 
     if len(finalmessages)==0:
         exitnagios("OK","no issues found | nodecount="+str(len(nodelist)))
