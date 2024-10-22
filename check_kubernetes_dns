@@ -148,9 +148,9 @@ def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,
                 finalmessages.append("could not validate IPv6 DNS traffic for node "+nodename)
 
     if len(finalmessages)==0:
-        exitnagios("OK","no issues found | nodecount="+str(len(nodelist)))
+        exitnagios("OK","no issues found | nodecount="+str(len(nodelist))+" errorcount=0")
     else:
-        exitnagios("WARNING"," - ".join(finalmessages)+" | nodecount="+str(len(nodelist)))
+        exitnagios("WARNING"," - ".join(finalmessages)+" | nodecount="+str(len(nodelist))+" errorcount="+str(len(finalmessages)))
 
 #-------------------------------------------------------------------------------
 
