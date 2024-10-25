@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import pathlib
+import xml.etree.ElementTree as ET
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def docheckjenkinsnodes(directory,critical):
+    nodespath = os.path.join(directory,"nodes")
+    if os.path.isdir(nodespath)==False:
+        exitnagios("CRITICAL","the nodes path "+release+" does not exists")
+
+    listnodes = []
+    for entry in os.listdir(nodespath):
+        pathentry = os.path.join(nodespath,entry)
+        if os.path.isdir(pathentry):
+            listnodes.append(entry)
+
+    issuesnodes = []
+    alertsnodes = []
+    for entry in listnodes:
+        if isvalidnode(nodespath,entry)==False:
+            if entry in critical:
+                alertsnodes.append(entry)
+            else:
+                issuesnodes.append(entry)
+
+    if len(alertsnodes)>0:
+        if len(issuesnodes)==0:
+            exitnagios("CRITICAL","some jenkins nodes have alerts: "+" ".join(alertsnodes)+" | alerts="+str(len(alertsnodes))+" issues=0")
+        else:
+            exitnagios("CRITICAL","some jenkins nodes have alerts: "+" ".join(alertsnodes)+" and some jenkins nodes have issues: "+" ".join(issuesnodes)+" | alerts="+str(len(alertsnodes))+" issues="+str(len(issuesnodes)))
+    elif len(issuesnodes)>0:
+        exitnagios("WARNING","some jenkins nodes have issues: "+" ".join(issuesnodes)+" | alerts=0 issues="+str(len(issuesnodes)))
+    else:
+        exitnagios("OK","all jenkins nodes are in valid state | alerts=0 issues=0")
+
+def isvalidnode(nodespath,entry):
+    configfile = os.path.join(nodespath,entry,"config.xml")
+    if os.path.isfile(configfile)==False:
+        return False
+    else:
+        isOK = False
+
+        tree = ET.parse(configfile)
+        root = tree.getroot()
+
+        tempOffline = root.findall("temporaryOfflineCause")
+        if len(tempOffline)==0:
+            isOK = True
+
+        return isOK
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--directory",         action="store",                                default="/var/lib/jenkins",                   help="path for the jenkins working folder")
+    parser.add_argument("-c", "--critical",          action="store",                                default="",                                   help="nodes that will raise a critical")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    
+    setcandebug(args.debug)
+    
+    critical = args.critical.split(",")
+    if "" in critical:
+        critical.remove("")
+    docheckjenkinsnodes(args.directory,critical)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
