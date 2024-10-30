@@ -48,11 +48,11 @@ def dopostgresclustercountcall(expected):
         lines = output.splitlines()
         found = len(lines)
         if found==expected:
-            exitnagios("OK","there are "+str(found)+" postgres clusters as expected")
+            exitnagios("OK","there are "+str(found)+" postgres clusters as expected | count="+str(found))
         else:
-            exitnagios("CRITICAL","there are "+str(found)+" postgres clusters, but it was expected "+str(expected))
+            exitnagios("CRITICAL","there are "+str(found)+" postgres clusters, but it was expected to find "+str(expected)+" - "+str(lines)+" | count="+str(found))
     else:
-        exitnagios("CRITICAL","issue retrieving the list of postgres clusters")
+        exitnagios("CRITICAL","issue retrieving the list of postgres clusters | count=-1")
 
 #-------------------------------------------------------------------------------
 

@@ -39,6 +39,7 @@ def exitnagios(status,message):
 
 def doospfroutescall():
     cmdline = ["/usr/bin/vtysh","-c","show ip route"]
+    infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
