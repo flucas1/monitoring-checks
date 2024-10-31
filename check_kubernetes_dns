@@ -150,7 +150,7 @@ def dokubernetesdnscheck(protocol,hostname,timeoutvalue,timeoutstatus,key,login,
     if len(finalmessages)==0:
         exitnagios("OK","no issues found | nodecount="+str(len(nodelist))+" errorcount=0")
     else:
-        exitnagios("WARNING"," - ".join(finalmessages)+" | nodecount="+str(len(nodelist))+" errorcount="+str(len(finalmessages)))
+        exitnagios("CRITICAL"," - ".join(finalmessages)+" | nodecount="+str(len(nodelist))+" errorcount="+str(len(finalmessages)))
 
 #-------------------------------------------------------------------------------
 
