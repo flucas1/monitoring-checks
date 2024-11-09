@@ -53,9 +53,11 @@ def doospfroutescall(interface,expectedspeeds,warningspeeds,expectedduplex,warni
             tokenspeed = "\tSpeed:"
             if line.startswith(tokenspeed):
                 foundspeed = line[len(tokenspeed)+1:]
+                foundspeed = foundspeed.lower()
             tokenduplex = "\tDuplex:"
             if line.startswith(tokenduplex):
                 foundduplex = line[len(tokenduplex)+1:]
+                foundduplex = foundduplex.lower()
 
         if (foundspeed!="" and len(expectedspeeds)==0) and (foundduplex!="" and len(expectedduplex)==0):
             exitnagios("OK","the interface speed is "+foundspeed+" and duplex is "+foundduplex)
@@ -75,9 +77,10 @@ def main():
     parser.add_argument("-i", "--interface",                               dest="interface",        default="",                                   help="wan,lan,eth0")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="1000Mb/s",                           help="1000Mb/s")
     parser.add_argument("-w", "--warning",                                 dest="warning",          default="100Mb/s",                            help="100Mb/s")
+    parser.add_argument("-u", "--duplex",                                  dest="duplex",           default="full",                               help="full or half")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
-    
+
     setcandebug(args.debug)
 
     interface = args.interface
@@ -85,12 +88,12 @@ def main():
         exitnagios("CRITICAL","no interface selected")
     expectedspeeds = []
     for item in args.expected.split("¶"):
-        expectedspeeds.append(item.strip())
+        expectedspeeds.append(item.strip().lower())
     warningspeeds = []
     for item in args.warning.split("¶"):
-        warningspeeds.append(item.strip())
+        warningspeeds.append(item.strip().lower())
 
-    doospfroutescall(interface,expectedspeeds,warningspeeds,["Full"],["Half"])
+    doospfroutescall(interface,expectedspeeds,warningspeeds,[args.duplex.lower()],[])
 
 if __name__ == "__main__":
     main()
