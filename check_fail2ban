@@ -6,6 +6,8 @@ import sys
 import os
 import subprocess
 import platform
+import ipaddress
+import GeoIP
 
 #-------------------------------------------------------------------------------
 
@@ -77,6 +79,27 @@ def get_banned_ips(jail_name):
             return banned_ips
     return []
 
+def is_ipv6(ip):
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        return isinstance(ip_obj, ipaddress.IPv6Address)
+    except ValueError:
+        return False
+
+def get_city_country(ip_address):
+    if is_ipv6(ip_address):
+        database = "/usr/share/GeoIP/GeoIP6.dat"
+    else:
+        database = "/usr/share/GeoIP/GeoIP.dat"
+    gi = GeoIP.open(database, GeoIP.GEOIP_STANDARD)
+    if gi is not None:
+        city = ""
+        country = gi.country_name_by_addr(ip_address)
+    else:
+        city = None
+        country = None
+    return country, city
+
 #-------------------------------------------------------------------------------
 
 def main():
@@ -109,7 +132,8 @@ def main():
         infomsg("DEBUG: Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
         for banned_ip in banned_ips:
             if banned_ip not in dict_banned.keys():
-                dict_banned[banned_ip] = ""
+                country, city = get_city_country(banned_ip)
+                dict_banned[banned_ip] = [city,country]
 
     countjails = len(jails)
     countbanned = len(dict_banned)
