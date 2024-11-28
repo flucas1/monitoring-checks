@@ -136,6 +136,9 @@ class Thresholds:
                 state_float = float(state.split()[0])
             except ValueError as e:
                 return ("CRITICAL", "Numeric thresholds given for non-numeric state: "+str(state)+" | value="+str(state))
+            rc, message = check_limits(state_float, self.number_unkn_low, self.number_unkn_high, name, "UNKNOWN")
+            if rc is not None:
+                return (rc, message)
             rc, message = check_limits(state_float, self.number_crit_low, self.number_crit_high, name, "CRITICAL")
             if rc is not None:
                 return (rc, message)
