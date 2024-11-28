@@ -93,17 +93,18 @@ def check_limits(state, low, high, name, return_code):
 
 class Thresholds:
     def __init__(self, args):
-        self.numeric_limits = args.number_warn is not None or args.number_crit is not None
+        self.numeric_limits = args.number_warn is not None or args.number_crit is not None or args.number_unkn is not None
         if self.numeric_limits:
             self.number_warn_low, self.number_warn_high = split_threshold(args.number_warn, "number_warn", lambda i, f: float(i))
             self.number_crit_low, self.number_crit_high = split_threshold(args.number_crit, "number_crit", lambda i, f: float(i))
-            infomsg("# numeric thresholds: %s << %s < x > %s >> %s" % (self.number_crit_low, self.number_warn_low, self.number_warn_high, self.number_crit_high))
+            self.number_unkn_low, self.number_unkn_high = split_threshold(args.number_unkn, "number_unkn", lambda i, f: float(i))
+            infomsg("# numeric thresholds: %s <<< %s << %s < x > %s >> %s >>> %s" % (self.number_unkn_low, self.number_crit_low, self.number_warn_low, self.number_warn_high, self.number_crit_high, self.number_unkn_high))
 
         self.datetime_limits = args.datetime_warn is not None or args.datetime_crit is not None
         if self.datetime_limits:
-            self.datetime_number_warn_low, self.datetime_number_warn_high = split_threshold(args.datetime_warn, "datetime_warn", lambda i, f: parse_iso8601(i, f))
-            self.datetime_number_crit_low, self.datetime_number_crit_high = split_threshold(args.datetime_crit, "datetime_crit", lambda i, f: parse_iso8601(i, f))
-            infomsg("# time thresholds: %s << %s < x > %s >> %s" % (self.datetime_number_crit_low, self.datetime_number_warn_low, self.datetime_number_warn_high, self.datetime_number_crit_high))
+            self.datetime_warn_low, self.datetime_warn_high = split_threshold(args.datetime_warn, "datetime_warn", lambda i, f: parse_iso8601(i, f))
+            self.datetime_crit_low, self.datetime_crit_high = split_threshold(args.datetime_crit, "datetime_crit", lambda i, f: parse_iso8601(i, f))
+            infomsg("# time thresholds: %s << %s < x > %s >> %s" % (self.datetime_crit_low, self.datetime_warn_low, self.datetime_warn_high, self.datetime_crit_high))
 
         self.string_limits = args.string_ok is not None or args.string_warn is not None or args.string_crit is not None
         if self.string_limits:
@@ -148,10 +149,10 @@ class Thresholds:
                 state_time = dateutil.parser.parse(state)
             except ValueError as e:
                 return ("CRITICAL", "Time thresholds given for non-time state: %s | value=%s" % (state,state))
-            rc, message = check_limits(state_time, self.datetime_number_crit_low, self.datetime_number_crit_high, name, "CRITICAL")
+            rc, message = check_limits(state_time, self.datetime_crit_low, self.datetime_crit_high, name, "CRITICAL")
             if rc is not None:
                 return (rc, message)
-            rc, message = check_limits(state_time, self.datetime_number_warn_low, self.datetime_number_warn_high, name, "WARNING")
+            rc, message = check_limits(state_time, self.datetime_warn_low, self.datetime_warn_high, name, "WARNING")
             if rc is not None:
                 return (rc, message)
             return ("OK", "%s state within valid datetime range: %s" % (name, state, state))
@@ -271,8 +272,9 @@ def main():
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:UNKNOWN",                         help="timeout value:STATUS")
     parser.add_argument("-W", "--datetime-warn",                           dest="datetime_warn",    default=None,                                 help="low:high pair of timestamps or time periods which constitute WARNING thresholds for DateTime items.  See below for information on formatting.")
     parser.add_argument("-C", "--datetime-crit",                           dest="datetime_crit",    default=None,                                 help="low:high pair of timestamps or time periods which constitute CRITICAL thresholds for DateTime items.  See below for information on formatting.")
-    parser.add_argument("-w", "--number-warn",                             dest="number_warn",      default=None,                                 help="low:high pair of numbers to set thresholds for a WARNING status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
-    parser.add_argument("-c", "--number-crit",                             dest="number_crit",      default=None,                                 help="low:high pair of numbers to set thresholds for a CRITICAL status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-w", "--number-warn",                             dest="number_warn",      default=None,                                 help="low:high pair of numbers to set thresholds for the WARNING status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-c", "--number-crit",                             dest="number_crit",      default=None,                                 help="low:high pair of numbers to set thresholds for the CRITICAL status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-k", "--number-unkn",                             dest="number_unkn",      default=None,                                 help="low:high pair of numbers to set thresholds for the UNKNOWN status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
     parser.add_argument("-O", "--string-ok",                               dest="string_ok",        default=None,                                 help="Regular expression to search for in string values.  Returns OK if pattern is found.")
     parser.add_argument("-g", "--string-warn",                             dest="string_warn",      default=None,                                 help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
     parser.add_argument("-l", "--string-crit",                             dest="string_crit",      default=None,                                 help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
