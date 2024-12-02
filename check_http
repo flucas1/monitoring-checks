@@ -75,7 +75,7 @@ def _debug_function(debug_type, debug_msg):
     global _debuginfo
     try:
         debug_msg = debug_msg.decode().strip()
-        infomsg(str(debug_type)+" -> "+debug_msg)
+        infomsg("debug -> "+str(debug_type)+" -> "+debug_msg)
     except:
         pass
 
@@ -85,7 +85,7 @@ def _header_function(header_line):
 
     # HTTP standard specifies that headers are encoded in iso-8859-1.
     header_line = header_line.decode('iso-8859-1')
-    infomsg(header_line)
+    infomsg("raw response -> "+header_line)
 
     # Header lines include the first status line (HTTP/1.x ...).
     # We are going to ignore all lines that don't have a colon in them.
@@ -108,7 +108,7 @@ def _header_function(header_line):
     # Lowercase name here.
     name = name.lower()
 
-    infomsg(name+": "+value)
+    infomsg("header -> "+name+": "+value)
     # Now we can actually record the header name and value.
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
@@ -292,14 +292,28 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         if curl!=None:
             curl.close()
 
+    infomsg("----- start of preheaders")
+    infomsg(_preheaders)
+    infomsg("----- end of preheaders")
+
+    infomsg("----- start of headers")
+    infomsg(_headers)
+    infomsg("----- end of headers")
+
+    infomsg("----- checks stage 1")
+
     infomsg("timeoutmsg: "+str(timeoutmessage))
     infomsg("failuremsg: "+str(failuremessage))
     if failuremessage!=None:
-        return "CRITICAL","error - "+str(failuremessage)+" | totaltime="+str(totaltime)
+        toleratedfailures = []
+        toleratedfailures.append("Invalid HTTP header field was received: frame type: 1, stream: 1, name: [upgrade], value: [h2,h2c]")
+        if failuremessage not in toleratedfailures:
+            return "CRITICAL","error - "+str(failuremessage)+" | totaltime="+str(totaltime)
     if timeoutmessage!=None:
         return timeoutstatus,"error - "+str(timeoutmessage)+" | totaltime="+str(totaltime)
 
-    infomsg(_preheaders)
+    infomsg("----- checks stage 2")
+
     if unknown!="":
         foundunknown = False
         for line in _preheaders:
@@ -316,7 +330,8 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         if foundexpect == False:
             return "CRITICAL","cannot match '"+str(expect)+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
 
-    infomsg(_headers)
+    infomsg("----- checks stage 3")
+
     for hsitem in headerstring:
         headermatchparts = hsitem.split(":",1)
         headermatchkey = headermatchparts[0].strip().lower()
@@ -327,13 +342,17 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         else:
             return "CRITICAL","cannot locate headerstring '"+headermatchkey+"' | totaltime="+str(totaltime)
 
+    infomsg("----- checks stage 4")
+
     daysremaining = -1
     if httpprotocol=="https" and certificatedays!="":
         certexpirationraw = None
         certexpirationparsed = None
         try:
             infomsg("certinfo is "+str(certinfo))
-            if len(certinfo)>0:
+            if certinfo==None:
+                certvars = []
+            elif len(certinfo)>0:
                 certvars = certinfo[0]
             else:
                 certvars = []
@@ -366,8 +385,12 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
             elif daysremaining<warningdays:
                 return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
 
+    infomsg("----- checks stage 5")
+
     if responsecode>=500:
         return "WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)
+
+    infomsg("----- checks stage 6")
 
     return "OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
 
