@@ -249,7 +249,7 @@ def test_kubernetes_pods(kubeconfig):
 def test_kubernetes_replicasets(kubeconfig):
     return generic_compare_columns(kubeconfig,"replicasets",[2,3,4])
 
-#kubectl get statefulsets --no-headers --all-namespaces
+#kubectl --kubeconfig=/etc/kubernetes/admin.conf get statefulsets --no-headers --all-namespaces
 
 def test_kubernetes_daemonsets(kubeconfig):
     return generic_compare_columns(kubeconfig,"daemonsets",[2,3,4,5,6])
@@ -257,9 +257,9 @@ def test_kubernetes_daemonsets(kubeconfig):
 def test_kubernetes_deployments(kubeconfig):
     return generic_compare_columns(kubeconfig,"deployments",[2,3,4])
 
-#kubectl get persistentvolumeclaims --no-headers --all-namespaces
-#kubectl get jobs --no-headers --all-namespaces
-#kubectl get cronjobs --no-headers --all-namespaces
+#kubectl --kubeconfig=/etc/kubernetes/admin.conf get persistentvolumeclaims --no-headers --all-namespaces
+#kubectl --kubeconfig=/etc/kubernetes/admin.conf get jobs --no-headers --all-namespaces
+#kubectl --kubeconfig=/etc/kubernetes/admin.conf get cronjobs --no-headers --all-namespaces
 
 #-------------------------------------------------------------------------------
 
