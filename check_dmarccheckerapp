@@ -8,6 +8,7 @@ import subprocess
 import argparse
 import datetime
 import smtplib
+import time
 from email.mime.text import MIMEText
 
 from selenium import webdriver
@@ -161,45 +162,63 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
         email_message["From"] = me
         email_message["To"] = targetemail
 
-        infomsg("sending email")
+        infomsg("sending email to "+targetemail)
         s = smtplib.SMTP("localhost")
         s.sendmail(me, [targetemail], email_message.as_string())
         s.quit()
 
         time.sleep(5)
         infomsg("waiting for element")
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "report-details-table")))
+        start_time = time.time()
+        max_duration = 180
+        retry_interval = 5
+        gotanswer = False
+        while time.time() - start_time < max_duration:
+            founddetails = tryfindbyclassname(driver,"report-details-table")
+            if len(founddetails)>0:
+                infomsg("found details!")
+                gotanswer = True
+                break
+            else:
+                foundcheck = tryfindbyid(driver,"check-status")
+                if len(foundcheck)>0:
+                    infomsg("the check status is "+foundcheck[0].text)
+                infomsg("extra wait for mail arrival")
+                time.sleep(retry_interval)
 
-        infomsg("extracting errors")
-        errors = tryfindbyclassname(driver,"error")
-        infomsg(len(errors))
-        countError = 0
-        for item in errors:
-            words = item.text.split()
-            infomsg(words)
-            if len(words)==2:
-                partial=None
-                try:
-                    partial = int(words[0])
-                except:
-                    pass
-                if partial!=None:
-                    countError=countError+partial
-        infomsg("extracting warns")
-        warns = tryfindbyclassname(driver,"warn")
-        infomsg(len(warns))
-        countWarning = 0
-        for item in warns:
-            words = item.text.split()
-            infomsg(words)
-            if len(words)==2:
-                partial=None
-                try:
-                    partial = int(words[0])
-                except:
-                    pass
-                if partial!=None:
-                    countWarning=countWarning+partial
+        if gotanswer==False:
+            exitnagios("CRITICAL","could not find answer from remote website")
+        else:
+            infomsg("extracting errors")
+            errors = tryfindbyclassname(driver,"error")
+            infomsg(len(errors))
+            countError = 0
+            for item in errors:
+                words = item.text.split()
+                infomsg(words)
+                if len(words)==2:
+                    partial=None
+                    try:
+                        partial = int(words[0])
+                    except:
+                        pass
+                    if partial!=None:
+                        countError=countError+partial
+            infomsg("extracting warns")
+            warns = tryfindbyclassname(driver,"warn")
+            infomsg(len(warns))
+            countWarning = 0
+            for item in warns:
+                words = item.text.split()
+                infomsg(words)
+                if len(words)==2:
+                    partial=None
+                    try:
+                        partial = int(words[0])
+                    except:
+                        pass
+                    if partial!=None:
+                        countWarning=countWarning+partial
 
         if countError>0:
             exitnagios("CRITICAL","There are errors for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
@@ -209,7 +228,7 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
             exitnagios("OK","No issues found for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL","unexpected error during the check - "+str(e))
 
 #-------------------------------------------------------------------------------
 
