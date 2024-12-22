@@ -9,6 +9,7 @@ import socket
 import concurrent.futures
 import netifaces
 import time
+import random
 
 #-------------------------------------------------------------------------------
 
@@ -69,10 +70,18 @@ def interface_to_address(interface,protocol):
                 ip_info = addresses.get(netifaces.AF_INET6)
             else:
                 ip_info = []
-            if len(ip_info)>0:
-                primary_ip = ip_info[0]["addr"]
+                ip_info = ip_info+addresses.get(netifaces.AF_INET)
+                ip_info = ip_info+addresses.get(netifaces.AF_INET6)
+                random.shuffle(ip_info)
+            if ip_info!=None and len(ip_info)>0:
+                chosen = ip_info[0]
+                infomsg(str(chosen))
+                primary_ip = chosen[0]["addr"]
+            else:
+                infomsg("could not get interface ip for "+interface)
         except Exception as e:
             infomsg("exception - "+str(e))
+    infomsg("The ip for interface "+interface+" is "+str(primary_ip))
     return primary_ip
 
 def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
@@ -86,7 +95,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
     elif interface!="":
         cmdline = cmdline + ["-I", interface]
     cmdline = cmdline + ["-c", str(packets)]
-    cmdline = cmdline + ["-W", str(1)]
+    cmdline = cmdline + ["-W", str(2)]
     cmdline = cmdline + [hostname]
     infomsg(cmdline)
     try:
