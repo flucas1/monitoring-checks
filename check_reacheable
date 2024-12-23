@@ -69,24 +69,22 @@ def interface_to_address(interface,protocol):
             if protocol in ["-4","4"]:
                 ip_info4 = addresses.get(netifaces.AF_INET)
                 if ip_info4!=None:
-                    ip_info = ip_info+[ip_info4[0]["addr"]]
+                    ip_info.append(ip_info4[0]["addr"])
             elif protocol in ["-6","6"]:
                 ip_info6 = addresses.get(netifaces.AF_INET6)
                 if ip_info6!=None:
-                    ip_info = ip_info+[ip_info6[0]["addr"]]
+                    ip_info.append(ip_info6[0]["addr"])
             else:
                 ip_info4 = addresses.get(netifaces.AF_INET)
                 if ip_info4!=None:
-                    ip_info = ip_info+[ip_info4[0]["addr"]]
+                    ip_info.append(ip_info4[0]["addr"])
                 ip_info6 = addresses.get(netifaces.AF_INET6)
                 if ip_info6!=None:
-                    ip_info = ip_info+[ip_info6[0]["addr"]]
+                    ip_info.append(ip_info6[0]["addr"])
                 random.shuffle(ip_info)
             infomsg("------> "+str(ip_info))
             if ip_info!=None and len(ip_info)>0:
-                chosen = ip_info[0]
-                infomsg(str(chosen))
-                primary_ip = chosen
+                primary_ip = ip_info[0]
             else:
                 infomsg("could not get interface ip for "+interface)
         except Exception as e:
