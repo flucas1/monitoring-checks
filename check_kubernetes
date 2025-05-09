@@ -59,7 +59,7 @@ def mostseverestatus(current,candidate):
 
 #-------------------------------------------------------------------------------
 
-def generic_compare_columns(kubeconfig,resource,columns):
+def generic_compare_columns(kubeconfig,namespace,resource,columns):
     status = ""
     message = ""
     perf = ""
@@ -199,7 +199,7 @@ def test_kubernetes_nodes(kubeconfig):
 
     return status,message,perf
 
-def test_kubernetes_pods(kubeconfig):
+def test_kubernetes_pods(kubeconfig,namespace):
     status = ""
     message = ""
     perf = ""
@@ -246,16 +246,16 @@ def test_kubernetes_pods(kubeconfig):
 
     return status,message,perf
 
-def test_kubernetes_replicasets(kubeconfig):
-    return generic_compare_columns(kubeconfig,"replicasets",[2,3,4])
+def test_kubernetes_replicasets(kubeconfig,namespace):
+    return generic_compare_columns(kubeconfig,namespace,"replicasets",[2,3,4])
 
 #kubectl --kubeconfig=/etc/kubernetes/admin.conf get statefulsets --no-headers --all-namespaces
 
-def test_kubernetes_daemonsets(kubeconfig):
-    return generic_compare_columns(kubeconfig,"daemonsets",[2,3,4,5,6])
+def test_kubernetes_daemonsets(kubeconfig,namespace):
+    return generic_compare_columns(kubeconfig,namespace,"daemonsets",[2,3,4,5,6])
 
-def test_kubernetes_deployments(kubeconfig):
-    return generic_compare_columns(kubeconfig,"deployments",[2,3,4])
+def test_kubernetes_deployments(kubeconfig,namespace):
+    return generic_compare_columns(kubeconfig,namespace,"deployments",[2,3,4])
 
 #kubectl --kubeconfig=/etc/kubernetes/admin.conf get persistentvolumeclaims --no-headers --all-namespaces
 #kubectl --kubeconfig=/etc/kubernetes/admin.conf get jobs --no-headers --all-namespaces
@@ -263,7 +263,7 @@ def test_kubernetes_deployments(kubeconfig):
 
 #-------------------------------------------------------------------------------
 
-def dokubernetescall(kubeconfig):
+def dokubernetescall(kubeconfig,namespace):
     status = ""
     message = ""
     perf = ""
@@ -281,25 +281,25 @@ def dokubernetescall(kubeconfig):
     perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'pods'")
-    tempstatus,tempmessage,tempperf = test_kubernetes_pods(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_pods(kubeconfig,namespace)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
     perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'replicasets'")
-    tempstatus,tempmessage,tempperf = test_kubernetes_replicasets(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_replicasets(kubeconfig,namespace)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
     perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'daemonsets'")
-    tempstatus,tempmessage,tempperf = test_kubernetes_daemonsets(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_daemonsets(kubeconfig,namespace)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
     perf = perf.strip()+" "+tempperf.strip()
 
     infomsg("--- RUNNING STEP: 'deployments'")
-    tempstatus,tempmessage,tempperf = test_kubernetes_deployments(kubeconfig)
+    tempstatus,tempmessage,tempperf = test_kubernetes_deployments(kubeconfig,namespace)
     status = mostseverestatus(status,tempstatus)
     message = message.strip()+"\n"+tempmessage.strip()
     perf = perf.strip()+" "+tempperf.strip()
@@ -316,7 +316,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode",              action="store",       dest="mode",             default="pipeline",                           help="choose one of: monitoring,pipeline"        )
     parser.add_argument("-k", "--kubeconfig",        action="store",       dest="kubeconfig",       default="/etc/kubernetes/admin.conf",         help="path to kubeconfig admin file"             )
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-n", "--namespace",         action="store",       dest="namespace",        default="",                                   help="only check this namespace"                 )
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose"                           )
     args = parser.parse_args()
 
     if args.mode.strip().lower() == "pipeline":
@@ -325,8 +326,9 @@ def main():
         setcandebug(args.debug)
 
     kubeconfig = args.kubeconfig
+    namespace = args.namespace
     if os.path.isfile(kubeconfig):
-        dokubernetescall(kubeconfig)
+        dokubernetescall(kubeconfig,namespace)
     else:
         exitnagios("CRITICAL","cannot find kubeconfig file '"+kubeconfig+"'")
 
