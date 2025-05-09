@@ -59,13 +59,21 @@ def mostseverestatus(current,candidate):
 
 #-------------------------------------------------------------------------------
 
+def get_namespace_flag(namespace):
+    if namespace==None or namespace=="":
+        return "--all-namespaces"
+    else:
+        return "--namespace " + namespace
+
+#-------------------------------------------------------------------------------
+
 def generic_compare_columns(kubeconfig,namespace,resource,columns):
     status = ""
     message = ""
     perf = ""
 
     try:
-        cmdline = ["/usr/bin/kubectl","get",resource,"--all-namespaces","--kubeconfig",kubeconfig]
+        cmdline = ["/usr/bin/kubectl","get",resource,get_namespace_flag(namespace),"--kubeconfig",kubeconfig]
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
@@ -205,7 +213,7 @@ def test_kubernetes_pods(kubeconfig,namespace):
     perf = ""
 
     try:
-        cmdline = ["/usr/bin/kubectl","get","pods","--all-namespaces","--kubeconfig",kubeconfig]
+        cmdline = ["/usr/bin/kubectl","get","pods",get_namespace_flag(namespace),"--kubeconfig",kubeconfig]
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
