@@ -59,66 +59,67 @@ def mostseverestatus(current,candidate):
 
 #-------------------------------------------------------------------------------
 
-def get_namespace_flag(namespace):
-    if namespace==None or namespace=="":
-        return "--all-namespaces"
-    else:
-        return "--namespace " + namespace
-
-#-------------------------------------------------------------------------------
-
 def generic_compare_columns(kubeconfig,namespace,resource,columns):
     status = ""
     message = ""
     perf = ""
 
     try:
-        cmdline = ["/usr/bin/kubectl","get",resource,get_namespace_flag(namespace),"--kubeconfig",kubeconfig]
+        cmdline = ["/usr/bin/kubectl","get",resource,"--all-namespaces","--kubeconfig",kubeconfig]
+        #infomsg(" ".join(cmdline))
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
 
         if exitcode == 0:
-            lines = output.splitlines()
-            header = lines.pop(0)
-            infomsg(header)
-            haserror = False
-            hasvalid = False
             counterrors = 0
-            for line in lines:
-                parts = line.split()
-                infomsg(columns)
-                identical = True
-                reference = None
-                for column in columns:
-                    value = parts[column]
-                    infomsg(value)
-                    exploded = value.split("/")
-                    infomsg(exploded)
-                    for test in exploded:
-                        infomsg(test)
-                        if reference==None:
-                            reference = test
-                        elif test!=reference:
-                            identical = False
-                            infomsg("break")
-                            break
-                if identical == True:
-                    hasvalid = True
-                else:
-                    haserror = True
-                    counterrors = counterrors+1
-            if hasvalid:
-                if haserror:
-                    status = "WARNING"
-                    message = "some "+resource+" in error"
-                else:
+            lines = output.splitlines()
+            if len(lines)>0:
+                header = lines.pop(0)
+                #infomsg(header)
+                haserror = False
+                hasvalid = False
+                foundtotal = 0
+                for line in lines:
+                    parts = line.split()
+                    #infomsg(parts)
+                    if parts[0]==namespace or namespace=="":
+                        foundtotal = foundtotal+1
+                        identical = True
+                        reference = None
+                        for column in columns:
+                            value = parts[column]
+                            #infomsg(value)
+                            exploded = value.split("/")
+                            #infomsg(exploded)
+                            for test in exploded:
+                                #infomsg(test)
+                                if reference==None:
+                                    reference = test
+                                elif test!=reference:
+                                    identical = False
+                                    #infomsg("break")
+                                    break
+                        if identical == True:
+                            hasvalid = True
+                        else:
+                            haserror = True
+                            counterrors = counterrors+1
+                if foundtotal==0:
                     status = "OK"
+                elif hasvalid:
+                    if haserror:
+                        status = "WARNING"
+                        message = "some "+resource+" in error"
+                    else:
+                        status = "OK"
+                else:
+                    status = "CRITICAL"
+                    message = "all "+resource+" in error"
             else:
-                status = "CRITICAL"
-                message = "all "+resource+" in error"
-            perf = resource+"_total="+str(len(lines))+" "+resource+"_err="+str(counterrors)
+                status = "OK"
+            perf = resource+"_total="+str(foundtotal)+" "+resource+"_err="+str(counterrors)
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
@@ -213,7 +214,8 @@ def test_kubernetes_pods(kubeconfig,namespace):
     perf = ""
 
     try:
-        cmdline = ["/usr/bin/kubectl","get","pods",get_namespace_flag(namespace),"--kubeconfig",kubeconfig]
+        cmdline = ["/usr/bin/kubectl","get","pods","--all-namespaces","--kubeconfig",kubeconfig]
+        #infomsg(" ".join(cmdline))
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
@@ -224,15 +226,21 @@ def test_kubernetes_pods(kubeconfig,namespace):
             header = lines.pop(0)
             haserror = False
             hasvalid = False
+            foundtotal = 0
             counterrors = 0
             for line in lines:
                 parts = line.split()
-                if parts[3].lower() == "running":
-                    hasvalid = True
-                else:
-                    haserror = True
-                    counterrors = counterrors+1
-            if hasvalid:
+                #infomsg(parts)
+                if parts[0]==namespace or namespace=="":
+                    foundtotal = foundtotal+1
+                    if parts[3].lower() == "running":
+                        hasvalid = True
+                    else:
+                        haserror = True
+                        counterrors = counterrors+1
+            if foundtotal==0:
+                status = "OK"
+            elif hasvalid:
                 if haserror:
                     status = "WARNING"
                     message = "some pods in error"
@@ -241,7 +249,7 @@ def test_kubernetes_pods(kubeconfig,namespace):
             else:
                 status = "CRITICAL"
                 message = "all pods in error"
-            perf = "pods_total="+str(len(lines))+" pods_err="+str(counterrors)
+            perf = "pods_total="+str(foundtotal)+" pods_err="+str(counterrors)
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
