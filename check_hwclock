@@ -54,15 +54,15 @@ def check_rtc_utc():
         filehandle = open(adjfilename,"rt")
         hwclockdata = filehandle.read().splitlines()
         filehandle.close()
-        
+
         is_rtc_utc = (hwclockdata[2].strip().upper() == "UTC")
         if is_rtc_utc == False:
-            print("CRITICAL:","hwclock is not UTC", flush=True)
-            sys.exit(2)
+            exitnagios("CRITICAL","hwclock is not UTC")
 
 def get_rtc_data():
     filehandle = open("/proc/driver/rtc","rt")
     rtcdata = filehandle.read().splitlines()
+    infomsg(rtcdata)
     filehandle.close()
 
     date = ""
@@ -77,10 +77,13 @@ def get_rtc_data():
             time = value.split(":")
         if key == "batt_status":
             if value != "okay":
-                print("CRITICAL:","rtc battery not OKAY", flush=True)
-                sys.exit(2)
+                exitnagios("CRITICAL","RTC battery not valid")
 
-    rtctime = datetime.datetime(int(date[0]),int(date[1]),int(date[2]),int(time[0]),int(time[1]),int(time[2]),tzinfo=datetime.timezone.utc)
+    if len(date)==3 and len(time)==3:
+        rtctime = datetime.datetime(int(date[0]),int(date[1]),int(date[2]),int(time[0]),int(time[1]),int(time[2]),tzinfo=datetime.timezone.utc)
+    else:
+        exitnagios("CRITICAL","could not parse RTC data")
+
     return int(rtctime.timestamp())
 
 def evaluate(difference):
@@ -89,14 +92,11 @@ def evaluate(difference):
     setcandebug(args.debug)
 
     if (difference>=args.critical):
-        print("CRITICAL:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
-        sys.exit(2)
+        exitnagios("CRITICAL","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
     elif (difference>=args.warning):
-        print("WARNING:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
-        sys.exit(1)
+        exitnagios("WARNING","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
     else:
-        print("OK:","The hwclock offset is "+str(difference)+"s | difference="+str(difference), flush=True)
-        sys.exit(0)
+        exitnagios("OK","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
 
 check_rtc_utc()
 rtctime = get_rtc_data()
@@ -106,5 +106,4 @@ infomsg(systime)
 difference = abs(rtctime - systime)
 evaluate(difference)
 
-print("CRITICAL:","Internal error", flush=True)
-sys.exit(2)
+exitnagios("CRITICAL","Internal error")
