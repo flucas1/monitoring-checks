@@ -433,7 +433,7 @@ def main():
     parser.add_argument("-A", "--path",                                    dest="path",             default="",                                   help="path to check")
     parser.add_argument("-p", "--port",                                    dest="port",             default="80",                                 help="port to use, usually 80 or 443")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
-    parser.add_argument("-S", "--sslversion",                              dest="sslversion",       default=None,                                 help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+")
+    parser.add_argument("-S", "--sslversion",                              dest="sslversion",       default=None,                                 help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+, TLSv1.3")
     parser.add_argument("-e", "--expect",            action="append",      dest="expect",           default=[],                                   help="first (status) line of the server response (default: HTTP/1.)")
     parser.add_argument("-K", "--unknown",                                 dest="unknown",          default="",                                   help="match this header to return unknown")
     parser.add_argument("-d", "--headerstring",      action="append",      dest="headerstring",     default=[],                                   help="string to expect in the response headers")
