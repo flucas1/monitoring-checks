@@ -337,7 +337,7 @@ def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
                         msgunexpected = "there were issues with the query of record "+record+" to "+addressinfo+" - Result "+" ".join(listunexpected)+" were not in expected "+expected+" | found="+str(len(listfound))+" unexpected="+str(len(listunexpected))
                         if len(listunexpected)>0:
                             exitnagios("CRITICAL",msgunexpected)
-                        
+
                         listmissing = []
                         for test in listexpected:
                             if test not in listfound:
@@ -349,13 +349,13 @@ def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
                             exitnagios("CRITICAL",msgmissing)
                         if len(listmissing)>recmissingwarn:
                             exitnagios("WARNING",msgmissing)
-                        
+
                         msgfound = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is not reaching the minimum count of values | found="+str(len(listfound))+" unexpected=0 missing=0"
                         if len(listfound)<recmincountcrit:
                             exitnagios("CRITICAL",msgfound)
                         if len(listfound)<recmincountwarn:
                             exitnagios("WARNING",msgfound)
-                        
+
                         exitnagios("CRITICAL","unexpected situation")
         except dns.exception.Timeout as e:
             exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
