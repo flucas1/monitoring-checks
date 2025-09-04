@@ -38,7 +38,9 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def oom_check(criticallevel, warninglevel, short=False):
+def oom_kernel_check(criticallevel, warninglevel, short=False):
+    infomsg("KERNEL")
+
     cmdline = ["/usr/bin/journalctl","--utc","--no-pager","-kq","-o","json","-b","-0","--output-fields=MESSAGE"]
     infomsg(cmdline)
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -47,22 +49,67 @@ def oom_check(criticallevel, warninglevel, short=False):
     exitcode = completedproc.returncode
 
     infomsg(output)
+
     if exitcode==0:
         counter=0
         for line in output.splitlines():
-            parsed = json.loads(line)
-            infomsg(parsed)
-            if "killed process" in parsed["MESSAGE"]:
-                counter = counter+1
+            try:
+                parsed = json.loads(line)
+                infomsg(parsed)
+                if "killed process" in parsed["MESSAGE"]:
+                    counter = counter+1
+            except json.JSONDecodeError:
+                continue
 
+        return counter
+    else:
+        return None
+
+
+def oom_systemd_check(criticallevel, warninglevel, short=False):
+    infomsg("SYSTEMD")
+
+    cmdline = ["/usr/bin/journalctl", "-u", "systemd-oomd.service", "--utc", "--no-pager", "-o", "json", "-b", "-0", "--output-fields=MESSAGE"]
+    infomsg(cmdline)
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
+
+    infomsg(output)
+
+    if exitcode==0:
+        counter=0
+        for line in output.splitlines():
+            try:
+                parsed = json.loads(line)
+                infomsg(parsed)
+                # Check for "Killed" messages from systemd-oomd
+                if "Killed " in parsed.get("MESSAGE", ""):
+                    counter += 1
+            except json.JSONDecodeError:
+                continue
+
+        return counter
+    else:
+        return None
+
+def oom_check(criticallevel, warninglevel, short=False):
+    kernel = oom_kernel_check(criticallevel, warninglevel, short)
+    systemd = oom_systemd_check(criticallevel, warninglevel, short)
+
+    if kernel==None:
+        exitnagios("CRITICAL","error retrieving the information from kernel oom journalctl | counter=-1")
+    elif systemd==None:
+        exitnagios("CRITICAL","error retrieving the information from systemd oomd journalctl | counter=-1")
+    else:
+        counter = kernel+systemd
         if criticallevel!="" and counter > int(criticallevel):
             exitnagios("CRITICAL",str(counter)+" processes was killed by OOM | counter="+str(counter))
         elif warninglevel!="" and counter > int(warninglevel):
             exitnagios("WARNING",str(counter)+" processes was killed by OOM | counter="+str(counter))
         else:
-            exitnagios("OK","No OOM killer activity found in journalctl | counter=-1")
-    else:
-        exitnagios("CRITICAL","error retrieving the information from journalctl | counter=-1")
+            exitnagios("OK","No OOM killer activity found | counter=-1")
 
 #-------------------------------------------------------------------------------
 
