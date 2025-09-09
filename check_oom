@@ -48,22 +48,26 @@ def oom_kernel_check(criticallevel, warninglevel, short=False):
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    infomsg(output)
+    #infomsg(output)
 
+    logs = []
     if exitcode==0:
         counter=0
         for line in output.splitlines():
             try:
                 parsed = json.loads(line)
-                infomsg(parsed)
-                if "killed process" in parsed["MESSAGE"]:
+                #infomsg(parsed)
+                message = parsed["MESSAGE"]
+                if "killed process" in message:
+                    infomsg(parsed)
+                    logs.append(message)
                     counter = counter+1
             except json.JSONDecodeError:
                 continue
 
-        return counter
+        return counter,logs
     else:
-        return None
+        return None,logs
 
 
 def oom_systemd_check(criticallevel, warninglevel, short=False):
@@ -76,38 +80,42 @@ def oom_systemd_check(criticallevel, warninglevel, short=False):
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    infomsg(output)
+    #infomsg(output)
 
+    logs = []
     if exitcode==0:
         counter=0
         for line in output.splitlines():
             try:
                 parsed = json.loads(line)
-                infomsg(parsed)
-                # Check for "Killed" messages from systemd-oomd
-                if "Killed " in parsed.get("MESSAGE", ""):
+                #infomsg(parsed)
+                message = parsed["MESSAGE"]
+                if "Killed " in message:
+                    infomsg(parsed)
+                    logs.append(message)
                     counter += 1
             except json.JSONDecodeError:
                 continue
 
-        return counter
+        return counter,logs
     else:
-        return None
+        return None,logs
 
 def oom_check(criticallevel, warninglevel, short=False):
-    kernel = oom_kernel_check(criticallevel, warninglevel, short)
-    systemd = oom_systemd_check(criticallevel, warninglevel, short)
+    kernelcounter,kernellogs = oom_kernel_check(criticallevel, warninglevel, short)
+    systemdcounter,systemdlogs = oom_systemd_check(criticallevel, warninglevel, short)
 
-    if kernel==None:
+    if kernelcounter==None:
         exitnagios("CRITICAL","error retrieving the information from kernel oom journalctl | counter=-1")
-    elif systemd==None:
+    elif systemdcounter==None:
         exitnagios("CRITICAL","error retrieving the information from systemd oomd journalctl | counter=-1")
     else:
-        counter = kernel+systemd
+        counter = kernelcounter+systemdcounter
+        logs = kernellogs+systemdlogs
         if criticallevel!="" and counter > int(criticallevel):
-            exitnagios("CRITICAL",str(counter)+" processes was killed by OOM | counter="+str(counter))
+            exitnagios("CRITICAL",str(counter)+" processes was killed by OOM - "+str(logs)+" | counter="+str(counter))
         elif warninglevel!="" and counter > int(warninglevel):
-            exitnagios("WARNING",str(counter)+" processes was killed by OOM | counter="+str(counter))
+            exitnagios("WARNING",str(counter)+" processes was killed by OOM - "+str(logs)+" | counter="+str(counter))
         else:
             exitnagios("OK","No OOM killer activity found | counter=-1")
 
