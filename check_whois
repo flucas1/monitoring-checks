@@ -1,1 +1,108 @@
-rdap <domain> --json
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import subprocess
+import json
+import dateutil
+import datetime
+
+#-------------------------------------------------------------------------------
+
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def exitnagios(status,message):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
+
+#-------------------------------------------------------------------------------
+
+def dordapcall(domain,warning,critical):
+    if domain in [None,""]:
+        exitnagios("CRITICAL","no domain specified")
+    else:
+        cmdline = ["/usr/bin/rdap","--json",domain]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+
+        infomsg(output)
+        if exitcode == 0:
+            object_json = json.loads(output)
+
+            events = object_json.get("events",None)
+            if events != None:
+                expiration = None
+                for item in events:
+                    action = item.get("eventAction",None)
+                    if action == "expiration":
+                        expiration = item.get("eventDate",None)
+
+                if expiration == None:
+                    exitnagios("CRITICAL","could not retrieve data for 'expiration'")
+                else:
+                    parsed = dateutil.parser.parse(expiration)
+                    if parsed == None:
+                        exitnagios("CRITICAL","could not parse '"+expiration+"'")
+                    else:
+                        now_utc = datetime.datetime.now(datetime.timezone.utc)
+                        interval = parsed.astimezone(datetime.timezone.utc).timestamp() - now_utc.timestamp()
+                        days = int(interval / 86400)
+                        if critical!="" and days<float(critical):
+                            exitnagios("CRITICAL","the domain will expire in "+str(days)+" days | days="+str(days))
+                        elif warning!="" and days<float(warning):
+                            exitnagios("WARNING","the domain will expire in "+str(days)+" days | days="+str(days))
+                        else:
+                            exitnagios("OK","the domain will expire in "+str(days)+" days | days="+str(days))
+            else:
+                exitnagios("CRITICAL","could not retrieve block 'events'")
+        else:
+            exitnagios("CRITICAL","issue calling rdap tool")
+
+    exitnagios("CRITICAL","unexpected case")
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--domain",                                  dest="domain",           default="",                                   help="domain to check")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="remaining days for warning")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="remaining days for critical")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+
+    args = parser.parse_args()
+
+    return args
+
+def main():
+    args = parse_args()
+    setcandebug(args.debug)
+    dordapcall(args.domain, args.warning, args.critical)
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
