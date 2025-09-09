@@ -65,6 +65,31 @@ def forced_ipv4_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET]
 
+def ipv6_default_route_exists() -> bool:
+    try:
+        with open("/proc/net/ipv6_route") as f:
+            for line in f:
+                parts = line.split()
+                # parts[0] = destination (32 hex chars), parts[1] = prefix length
+                if parts[0] == "00000000000000000000000000000000" and parts[1] == "00" and parts[9] != "lo":
+                    return True
+        return False
+    except FileNotFoundError:
+        # /proc not available (non-Linux system)
+        return False
+
+def ipv4_default_route_exists() -> bool:
+    try:
+        with open("/proc/net/route") as f:
+            next(f)  # skip header
+            for line in f:
+                parts = line.split()
+                if parts[1] == "00000000" and parts[7] == "00000000":
+                    return True
+        return False
+    except FileNotFoundError:
+        return False
+
 #-------------------------------------------------------------------------------
 
 def load_json(domain,retries):
@@ -217,8 +242,12 @@ def main():
         timeoutstatus = "WARNING"
 
     start = datetime.datetime.now(datetime.UTC)
-    docrtshcall("ipv6",args.hostname,args.valid,timeoutvalue,5)
-    docrtshcall("ipv4",args.hostname,args.valid,timeoutvalue,5)
+    if ipv6_default_route_exists():
+        infomsg("ipv6")
+        docrtshcall("ipv6",args.hostname,args.valid,timeoutvalue,5)
+    if ipv4_default_route_exists():
+        infomsg("ipv4")
+        docrtshcall("ipv4",args.hostname,args.valid,timeoutvalue,5)
     elapsed = datetime.datetime.now(datetime.UTC)-start
     duration = elapsed.total_seconds()
 
