@@ -83,7 +83,7 @@ def getmaxspeed(device):
 def printinfo(device):
     status = False
     try:
-        version     = pathlib.Path(os.path.join(device,"version")).read_text().strip()
+        version = pathlib.Path(os.path.join(device,"version")).read_text().strip()
         parts = version.split(".")
         major = int(parts[0])
         infomsg("USB major version for "+device+" is "+str(major))
@@ -92,9 +92,11 @@ def printinfo(device):
             actualspeed = pathlib.Path(os.path.join(device,"speed"  )).read_text().strip()
             actualspeed = int(actualspeed)
             reference   = speedfromversion(version)
-            infomsg(version+" "+str(reference)+" "+str(actualspeed))
-            infomsg(str(actualspeed))
-            if maxspeed==actualspeed:
+            infomsg("\tusb version: "+version)
+            infomsg("\tmax speed: "+str(maxspeed))
+            infomsg("\tactual speed: "+str(actualspeed))
+            infomsg("\treference speed: "+str(reference))
+            if maxspeed <= actualspeed:
                 status = True
             elif maxspeed==-1:
                 status = True
@@ -102,6 +104,7 @@ def printinfo(device):
             status = True
     except Exception as e:
         infomsg("exception - "+str(e))
+    infomsg("\tstatus: "+str(status))
     return status
 
 def listdevices():
