@@ -15,6 +15,9 @@ import datetime
 import dateutil.parser
 import time
 import socket
+import gzip
+import zlib
+import io
 
 #-------------------------------------------------------------------------------
 
@@ -74,18 +77,53 @@ def load_json(domain,retries):
     item_url = "https://crt.sh/?q="+domain+"&output=json"
 
     counter = 0
+    object_json = None
     while True:
         try:
             counter = counter+1
             item_request = urllib.request.Request(item_url)
             infomsg(item_url)
-            item_request.add_header("Accept", "application/json")
-            item_request.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
+
+            version = 139
+
+            item_request.add_header("Upgrade-Insecure-Requests", "1")
+            item_request.add_header("Dnt", "1")
+            item_request.add_header("Priority", "u=0,1")
+            item_request.add_header("Cache-Control", "max-age=0")
+            item_request.add_header("Accept-Language", "en-US")
+            item_request.add_header("Accept-Encodinng", "gzip, deflate")
+            item_request.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+            item_request.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+str(version)+".0.0.0 Safari/537.36")
+            item_request.add_header("Sec-Ch-Ua", "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\""+str(version)+"\", \"Chromium\";v=\""+str(version)+"\"")
+            item_request.add_header("Sec-Ch-Ua-Mobile", "?0")
+            item_request.add_header("Sec-Ch-Ua-Platform", "Windows")
+            item_request.add_header("Sec-Fetch-Dest", "document")
+            item_request.add_header("Sec-Fetch-Mode", "navigate")
+            item_request.add_header("Sec-Fetch-Site", "none")
+            item_request.add_header("Sec-Fetch-User", "?1")
+
             infomsg("sending request")
-            item_raw = urllib.request.urlopen(item_request, timeout=3)
+            response = urllib.request.urlopen(item_request, timeout=10)
             infomsg("request done")
-            object_json = json.load(item_raw)
-            infomsg("json don")
+
+            encoding = response.headers.get("Content-Encoding")
+            raw_data = response.read()
+            if encoding == "gzip":
+                with gzip.GzipFile(fileobj=io.BytesIO(raw_data)) as gz:
+                    decoded_data = gz.read().decode("utf-8")
+            elif encoding == "deflate":
+                try:
+                    decoded_data = zlib.decompress(raw_data).decode("utf-8")
+                except zlib.error:
+                    # Some servers use raw deflate (no zlib headers)
+                    decoded_data = zlib.decompress(raw_data, -zlib.MAX_WBITS).decode("utf-8")
+            else:
+                decoded_data = raw_data.decode("utf-8")
+            infomsg("decoding done")
+
+            object_json = json.loads(decoded_data)
+            infomsg("json done")
+
         except Exception as e:
             object_json = None
             message = str(e)
@@ -97,6 +135,7 @@ def load_json(domain,retries):
                 infomsg(parsederrorcode)
                 if parsederrorcode >= 500:
                     exitnagios("WARNING","server error "+str(parsederrorcode))
+
         if object_json != None:
             break
         elif counter > retries:
