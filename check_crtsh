@@ -74,7 +74,7 @@ def load_json(domain,retries):
     #    ssl_opener = urllib.request.build_opener(ssl_handler)
     #    urllib.request.install_opener(ssl_opener)
 
-    item_url = "https://crt.sh/?q="+domain+"&output=json"
+    item_url = "https://crt.sh/?Identity="+domain+"&exclude=expired&output=json"
 
     counter = 0
     object_json = None
