@@ -172,7 +172,7 @@ def load_json(domain,retries):
 
 #-------------------------------------------------------------------------------
 
-def docrtshcall(mode,hostname,valid,timeoutvalue,retries):
+def docrtshcall(mode,hostname,validcas,ignorecerts,timeoutvalue,retries):
 
     mode=mode.lower()
     if mode=="ipv6":
@@ -188,7 +188,9 @@ def docrtshcall(mode,hostname,valid,timeoutvalue,retries):
     if len(hostnameparts)==2:
         hostnameparts.insert(0,"*")
     hostname = ".".join(hostnameparts)
-    issuers = valid.split(";")
+    issuers = validcas.split(";")
+    ignored = ignorecerts.split(";")
+
 
     start = datetime.datetime.now(datetime.UTC)
     parsed = load_json(hostname,retries)
@@ -200,7 +202,8 @@ def docrtshcall(mode,hostname,valid,timeoutvalue,retries):
         totalfound = len(parsed)
         for item in parsed:
             issuerid = str(item["issuer_ca_id"])
-            if issuerid not in issuers:
+            certificateid = str(item["id"])
+            if (issuerid not in issuers) and (certificateid not in ignored):
                 rawnotafter = str(item["not_after"])
                 parsednotafter = dateutil.parser.parse(rawnotafter)
                 infomsg(parsednotafter)
@@ -222,7 +225,8 @@ def docrtshcall(mode,hostname,valid,timeoutvalue,retries):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="domain to check")
-    parser.add_argument("-v", "--valid",                                   dest="valid",            default="",                                   help="valid ids")
+    parser.add_argument("-v", "--valid",                                   dest="valid",            default="",                                   help="valid CA ids")
+    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="ignore certificate ids")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:WARNING",                         help="timeout value:STATUS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
@@ -244,10 +248,10 @@ def main():
     start = datetime.datetime.now(datetime.UTC)
     if ipv6_default_route_exists():
         infomsg("ipv6")
-        docrtshcall("ipv6",args.hostname,args.valid,timeoutvalue,5)
+        docrtshcall("ipv6",args.hostname,args.valid,args.ignore,timeoutvalue,5)
     if ipv4_default_route_exists():
         infomsg("ipv4")
-        docrtshcall("ipv4",args.hostname,args.valid,timeoutvalue,5)
+        docrtshcall("ipv4",args.hostname,args.valid,args.ignore,timeoutvalue,5)
     elapsed = datetime.datetime.now(datetime.UTC)-start
     duration = elapsed.total_seconds()
 
