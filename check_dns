@@ -65,7 +65,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
+async def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
     responses = None
     # [] means that the record does not exists
     # None means error contacting the server
@@ -85,7 +85,7 @@ def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
             responses = None
         infomsg("responses for type "+str(field)+" -> "+str(responses))
         if responses == None:
-            time.sleep(i*5)
+            await asyncio.sleep(i*5)
         else:
             break
     infomsg(zone+" -> "+str(responses))
@@ -137,7 +137,7 @@ def get_address(protocol, serverinfo):
     infomsg("evaluated as "+result)
     return result
 
-def get_zone(useTcp, addressinfo, timeoutvalue, zone):
+async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     parts = addressinfo.split("@")
     address = parts[0]
     text = ""
@@ -158,38 +158,38 @@ def get_zone(useTcp, addressinfo, timeoutvalue, zone):
             text = ""
             pass
         if text == "":
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
         else:
             break
     return text
 
-def get_mname(useTcp, addressinfo, timeoutvalue, zone):
-    customresolver = get_resolver(addressinfo, timeoutvalue)
-    responses = resolvewithretries(customresolver, zone, "SOA", useTcp, retries=9)
+async def get_mname(useTcp, addressinfo, timeoutvalue, zone):
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
+    responses = await resolvewithretries(customresolver, zone, "SOA", useTcp, retries=9)
     if responses == None:
         return ""
     else:
         return (responses[0]).mname.to_text()
 
-def get_serial(useTcp, addressinfo, timeoutvalue, zone):
-    customresolver = get_resolver(addressinfo, timeoutvalue)
-    responses = resolvewithretries(customresolver, zone, "SOA", useTcp)
+async def get_serial(useTcp, addressinfo, timeoutvalue, zone):
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
+    responses = await resolvewithretries(customresolver, zone, "SOA", useTcp)
     if responses == None:
         return ""
     else:
         return (responses[0]).serial
 
-def get_retry(useTcp, addressinfo, timeoutvalue, zone):
-    customresolver = get_resolver(addressinfo, timeoutvalue)
-    responses = resolvewithretries(customresolver, zone, "SOA", useTcp)
+async def get_retry(useTcp, addressinfo, timeoutvalue, zone):
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
+    responses = await resolvewithretries(customresolver, zone, "SOA", useTcp)
     if responses == None:
         return ""
     else:
         return (responses[0]).retry
 
-def get_ns(useTcp, addressinfo, timeoutvalue, zone):
-    customresolver = get_resolver(addressinfo, timeoutvalue)
-    responses = resolvewithretries(customresolver, zone, "NS", useTcp)
+async def get_ns(useTcp, addressinfo, timeoutvalue, zone):
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
+    responses = await resolvewithretries(customresolver, zone, "NS", useTcp)
     if responses == None:
         return ""
     else:
@@ -201,9 +201,9 @@ def get_ns(useTcp, addressinfo, timeoutvalue, zone):
                     result.append(finalname)
         return result
 
-def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
-    customresolver = get_resolver(addressinfo,timeoutvalue)
-    responses = resolvewithretries(customresolver, record, kind, useTcp)
+async def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
+    customresolver = await get_resolver(addressinfo,timeoutvalue)
+    responses = await resolvewithretries(customresolver, record, kind, useTcp)
     if responses == None:
         #server is not responding
         return None
@@ -222,8 +222,8 @@ def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
         result = ",".join(temp)
         return result
 
-def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
-    customresolver = get_resolver(addressinfo,timeoutvalue)
+async def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
+    customresolver = await get_resolver(addressinfo,timeoutvalue)
     canonical_name = entry
     counter = 0
     infomsg(canonical_name)
@@ -234,7 +234,7 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
             canonical_name = ""
             break
         else:
-            answer = resolvewithretries(customresolver, canonical_name, "CNAME", useTcp)
+            answer = await resolvewithretries(customresolver, canonical_name, "CNAME", useTcp)
             infomsg(answer)
             if answer == None:
                 canonical_name = ""
@@ -246,21 +246,21 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
                 break
     alternatives = []
     if protocol == "-6":
-        responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
+        responses = await resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
         if responses!=None:
             for response in responses:
                 alternatives.append(response)
     elif protocol == "-4":
-        responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+        responses = await resolvewithretries(customresolver, canonical_name, "A", useTcp)
         if responses!=None:
             for response in responses:
                 alternatives.append(response)
     else:
-        responses = resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
+        responses = await resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
         if responses!=None:
             for response in responses:
                 alternatives.append(response)
-        responses = resolvewithretries(customresolver, canonical_name, "A", useTcp)
+        responses = await resolvewithretries(customresolver, canonical_name, "A", useTcp)
         if responses!=None:
             for response in responses:
                 alternatives.append(response)
@@ -273,7 +273,7 @@ def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
             result = alternatives[randpos].to_text()
         return result
 
-def get_resolver(addressinfo, timeoutvalue):
+async def get_resolver(addressinfo, timeoutvalue):
     parts = addressinfo.split("@")
     address = parts[0]
     if len(parts)>1:
@@ -297,7 +297,7 @@ def get_resolver(addressinfo, timeoutvalue):
             if validparsing:
                 break
             else:
-                time.sleep(1)
+                await asyncio.sleep(1)
         customresolver.port = port
     customresolver.timeout = timeoutvalue
     infomsg("found resolver "+str(customresolver._nameservers))
@@ -305,11 +305,11 @@ def get_resolver(addressinfo, timeoutvalue):
 
 #-------------------------------------------------------------------------------
 
-def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
+async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         try:
-            found = get_records(useTcp, addressinfo, timeoutvalue, record, kind)
+            found = await get_records(useTcp, addressinfo, timeoutvalue, record, kind)
             #infomsg(found)
 
             if found == None:
@@ -370,24 +370,27 @@ def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
         else:
             exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
 
-def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
+#-------------------------------------------------------------------------------
+
+async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         try:
-            mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
+            mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone '"+zone+"' using server "+addressinfo)
-            text_mname = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone)), timeoutvalue, zone)
+            querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
+            text_mname = await get_zone(useTcp, querydata, timeoutvalue, zone)
             if text_mname=="":
                 exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from mname")
-            text_server = get_zone(useTcp, addressinfo, timeoutvalue, zone)
+            text_server = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
             if text_server=="":
                 exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from server")
             if text_mname != text_server:
                 exitnagios("CRITICAL","zone '"+zone+"' in target server "+server+" and MNAME server "+mname+" are different.")
                 infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())))
             else:
-                ns = get_ns(useTcp, addressinfo, timeoutvalue, zone)
+                ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
                     exitnagios(timeoutstatus,"no response when trying to resolve ns")
                 #infomsg(ns)
@@ -396,7 +399,8 @@ def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, aut
                 for test in ns:
                     #infomsg(test)
                     try:
-                        text_test = get_zone(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        querydata = get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
+                        text_test = await get_zone(useTcp, querydata, timeoutvalue, zone)
                         if text_test=="":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -427,31 +431,31 @@ def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, aut
         infomsg(traceback.format_exc())
         exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
-def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         try:
             automode = tolerancewarn<0 or tolerancecrit<0
 
-            serial_server = get_serial(useTcp, addressinfo, timeoutvalue, zone)
+            serial_server = await get_serial(useTcp, addressinfo, timeoutvalue, zone)
             if serial_server == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve serial_server "+addressinfo)
             if automode:
-                retry_server = get_retry(useTcp, addressinfo, timeoutvalue, zone)
+                retry_server = await get_retry(useTcp, addressinfo, timeoutvalue, zone)
                 if retry_server == "":
                     exitnagios(timeoutstatus,"no response when trying to resolve retry_server "+addressinfo)
             #infomsg(serial_server)
 
-            mname = get_mname(useTcp, addressinfo, timeoutvalue, zone)
+            mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
-            principalserver = get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
+            principalserver = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
-            serial_mname = get_serial(useTcp, principalserver, timeoutvalue, zone)
+            serial_mname = await get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
                 exitnagios(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using found domain main server "+principalserver)
             if automode:
-                retry_mname = get_retry(useTcp, principalserver, timeoutvalue, zone)
+                retry_mname = await get_retry(useTcp, principalserver, timeoutvalue, zone)
                 if retry_mname == "":
                     exitnagios(timeoutstatus,"no response when trying to resolve retry_mname")
             #infomsg(serial_mname)
@@ -474,7 +478,7 @@ def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
             else:
                 if difference > 0:
                     identical = False
-                ns = get_ns(useTcp, addressinfo, timeoutvalue, zone)
+                ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
                     exitnagios(timeoutstatus,"no response when trying to resolve ns")
                 #infomsg(ns)
@@ -484,7 +488,8 @@ def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
                 for test in ns:
                     #infomsg(test)
                     try:
-                        serial_test = get_serial(useTcp, get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone)), timeoutvalue, zone)
+                        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
+                        serial_test = await get_serial(useTcp, querydata, timeoutvalue, zone)
                         if serial_test == "":
                             if test not in errorservers:
                                 errorservers.append(test)
@@ -523,12 +528,12 @@ def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authorit
         exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
 
 
-def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
+async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
         addressinfo = get_address(protocol, server)
         try:
             start = datetime.datetime.now(datetime.UTC)
-            text = get_zone(useTcp, addressinfo, timeoutvalue, zone)
+            text = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
             elapsed = datetime.datetime.now(datetime.UTC)-start
             duration = elapsed.total_seconds()
             if text!="":
@@ -545,19 +550,19 @@ def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, author
     except Exception as e:
         exitnagios("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
 
-def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
+async def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        await check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
     elif serial:
-        check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        await check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
     elif transfer:
-        check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        await check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
     else:
         exitnagios("CRITICAL","unknown check for zone")
 
 #-------------------------------------------------------------------------------
 
-def main():
+async def main_async():
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -641,15 +646,18 @@ def main():
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            await check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
-            check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            await check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
     exitnagios("CRITICAL","no zone or record defined")
 
-if __name__ == "__main__":
+def main():
+    asyncio.run(main_async())
+
+if __name__=="__main__":
     main()
 
 #-------------------------------------------------------------------------------
