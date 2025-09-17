@@ -4,7 +4,6 @@
 import sys
 import os
 import certifi
-import subprocess
 import argparse
 import io
 import pycurl
@@ -13,10 +12,8 @@ import ssl
 import collections
 import traceback
 import datetime
-import dns.query
-import dns.zone
 import dns.resolver
-import dns.exception
+import asyncio
 import time
 
 #-------------------------------------------------------------------------------
@@ -113,7 +110,7 @@ def _header_function(header_line):
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
 
-def generate_resolves(hostname,ipprotocol,port,dnsservers):
+async def generate_resolves(hostname,ipprotocol,port,dnsservers):
     result = []
 
     infomsg("generate_resolves: "+str(dnsservers))
@@ -125,8 +122,7 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
         for i in range(maxretries):
             try:
                 if i>1:
-                    time.sleep(i)
-
+                    asyncio.run(asyncio.sleep(i))
                 customresolver = dns.resolver.Resolver(configure=False)
                 customresolver.nameservers = listdnsservers
                 customresolver.retry_servfail = True
@@ -148,7 +144,7 @@ def generate_resolves(hostname,ipprotocol,port,dnsservers):
         infomsg(result)
     return result
 
-def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,retries):
+async def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,retries):
     exitlevel = "UNKNOWN"
     exitmessage = "not executed"
     counter = 0
@@ -162,7 +158,7 @@ def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutsta
             elif exitlevel == "OK":
                 break
             else:
-                time.sleep(5*counter)
+                await asyncio.sleep(5*counter)
         except Exception as e:
             exitlevel = "CRITICAL"
             exitmessage = "exception - "+str(e)
@@ -424,7 +420,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
 
 #-------------------------------------------------------------------------------
 
-def main():
+async def main_async():
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -442,7 +438,7 @@ def main():
     parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="what interface to use")
     parser.add_argument("-D", "--dnsservers",                              dest="dnsservers",       default="",                                   help="dns servers to use")
     parser.add_argument("-r", "--retries",                                 dest="retries",          default="5",                                  help="number of times to try")
-    parser.add_argument("-Â®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
     setcandebug(args.debug)
@@ -477,10 +473,14 @@ def main():
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         infomsg("precall")
         infomsg(str(args.hostname)+" "+str(port)+" "+str(args.httpversion)+" "+str(args.sslversion))
-        dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
+        await dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
-main()
+def main():
+    asyncio.run(main_async())
+
+if __name__=="__main__":
+    main()
 
 #-------------------------------------------------------------------------------
