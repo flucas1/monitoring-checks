@@ -400,7 +400,7 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
                 for test in ns:
                     #infomsg(test)
                     try:
-                        querydata = get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
+                        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
                         text_test = await get_zone(useTcp, querydata, timeoutvalue, zone)
                         if text_test=="":
                             if test not in errorservers:
