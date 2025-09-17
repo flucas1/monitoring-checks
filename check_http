@@ -151,7 +151,7 @@ async def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,time
     while True:
         try:
             infomsg("retry "+str(counter))
-            exitlevel,exitmessage = dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers)
+            exitlevel,exitmessage = await dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers)
             counter = counter+1
             if counter>retries:
                 break
@@ -166,7 +166,7 @@ async def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,time
 
     exitnagios(exitlevel,exitmessage)
 
-def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
+async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
     global _debuginfo
     global _preheaders
     global _headers
@@ -260,7 +260,7 @@ def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstat
         if interface!="":
             curl.setopt(pycurl.INTERFACE, interface)
         if len(dnsservers)>0:
-            resolves = generate_resolves(hostname,ipprotocol,port,dnsservers)
+            resolves = await generate_resolves(hostname,ipprotocol,port,dnsservers)
             infomsg("resolves "+str(resolves))
             if len(resolves)>0:
                 curl.setopt(pycurl.RESOLVE, resolves)
