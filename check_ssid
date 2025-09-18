@@ -53,7 +53,7 @@ def match_ssid(ssid,listregex):
             return True
     return False
 
-def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
+def dossidcall(interface,passive,ignoredlist,alertlist,expected,utilwarn,utilcrit):
     cmdline = ["/usr/sbin/iw","dev",interface,"info"]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
@@ -70,6 +70,8 @@ def dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit):
                     return ("UNKNOWN","The interface "+interface+" is mode "+parts[1]+".")
 
     cmdline = ["/usr/bin/jc","iw","dev",interface,"scan"]
+    if passive:
+        cmdline.append("passive")
     infomsg(" ".join(cmdline))
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
@@ -137,6 +139,7 @@ def main():
     parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected mac addresses for ssids")
     parser.add_argument("-u", "--utilization",                             dest="utilization",      default="70;90",                              help="max utilization of expected ssids warning;critical")
     parser.add_argument("-i", "--interface",                               dest="interface",        default="",                                   help="interface to use")
+    parser.add_argument("-p", "--passive",           action="store_true",  dest="passive",          default=False,                                help="skips sending probe requests and only listens to beacons - faster but may miss hidden SSIDs")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args()
 
@@ -151,6 +154,8 @@ def main():
             if os.path.isdir(os.path.join(searchpath,entry,"wireless")):
                 interfacelist.append(entry)
     infomsg(str(interfacelist))
+
+    passive = args.passive
 
     ignoredlist = args.ignored.split("¶")
     if "" in ignoredlist:
@@ -180,7 +185,7 @@ def main():
     finalstatus = ""
     finalmessages = []
     for interface in interfacelist:
-        status, message = dossidcall(interface,ignoredlist,alertlist,expected,utilwarn,utilcrit)
+        status, message = dossidcall(interface,passive,ignoredlist,alertlist,expected,utilwarn,utilcrit)
         finalstatus = mergestatus(finalstatus,status)
         if message != "":
             finalmessages.append(message)
