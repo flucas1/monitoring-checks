@@ -69,12 +69,12 @@ def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,util
                 if parts[1] not in ["managed"]:
                     return ("UNKNOWN","The interface "+interface+" is mode "+parts[1]+".")
 
-    cmdline = ["/usr/bin/jc","iw","dev",interface,"scan"]
+    cmdline = ["/usr/bin/jc","iw","dev",interface,"scan","duration",str(timeoutsecs)]
     if passive:
         cmdline.append("passive")
     infomsg(" ".join(cmdline))
     try:
-        completedproc = subprocess.run(cmdline,capture_output=True,timeout=timeoutsecs)
+        completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
