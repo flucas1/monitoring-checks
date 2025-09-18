@@ -53,7 +53,7 @@ def match_ssid(ssid,listregex):
             return True
     return False
 
-def dossidcall(interface,passive,ignoredlist,alertlist,expected,utilwarn,utilcrit):
+def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit):
     cmdline = ["/usr/sbin/iw","dev",interface,"info"]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
@@ -73,12 +73,15 @@ def dossidcall(interface,passive,ignoredlist,alertlist,expected,utilwarn,utilcri
     if passive:
         cmdline.append("passive")
     infomsg(" ".join(cmdline))
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    try:
+        completedproc = subprocess.run(cmdline,capture_output=True,timeout=timeoutsecs)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+    except Exception as e:
+        return ("WARNING","Cannot get the wireless info for the interface "+interface+" - "+str(e))
     if exitcode != 0:
-        return ("WARNING","Cannot get the wireless info for the interface "+interface+".")
+        return ("WARNING","Cannot get the wireless info for the interface "+interface+" - exitcode "+str(exitcode))
 
     resultstatus = ""
     resultmessages = []
@@ -157,6 +160,8 @@ def main():
 
     passive = args.passive
 
+    timeoutsecs = 120
+
     ignoredlist = args.ignored.split("¶")
     if "" in ignoredlist:
         ignoredlist.remove("")
@@ -185,7 +190,7 @@ def main():
     finalstatus = ""
     finalmessages = []
     for interface in interfacelist:
-        status, message = dossidcall(interface,passive,ignoredlist,alertlist,expected,utilwarn,utilcrit)
+        status, message = dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit)
         finalstatus = mergestatus(finalstatus,status)
         if message != "":
             finalmessages.append(message)
