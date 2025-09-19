@@ -37,16 +37,82 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-#collect arguments
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",           action="store",       type=int,                default=5,                                    help="if this number or more, it becomes warning state (default 5")
-    parser.add_argument("-c", "--critical",          action="store",       type=int,                default=10,                                   help="if this number or more, it becomes critical state (default 10")
-    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=90,                                   help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+def list_rtc_devices():
+    rtc_path = "/sys/class/rtc"
+    devices = []
+    if os.path.exists(rtc_path):
+        for entry in os.listdir(rtc_path):
+            if entry.startswith("rtc"):
+                devices.append(entry)
+    return devices
 
-    return args
+def read_rtc(rtc_name):
+    if rtc_name.startswith("/sys/class/rtc/"):
+        rtc_device = rtc_name
+    else:
+        rtc_device = "/sys/class/rtc/" + rtc_name
+
+    time_file = rtc_device + "/time"
+    date_file = rtc_device + "/date"
+
+    if not os.path.exists(time_file) or not os.path.exists(date_file):
+        return (None, None)
+
+    f_time = None
+    f_date = None
+    time_str = None
+    date_str = None
+
+    # Read time
+    try:
+        f_time = open(time_file, "r")
+        time_str = f_time.read().strip()
+    except:
+        pass
+    finally:
+        if f_time is not None:
+            f_time.close()
+
+    # Read date
+    try:
+        f_date = open(date_file, "r")
+        date_str = f_date.read().strip()
+    except:
+        pass
+    finally:
+        if f_date is not None:
+            f_date.close()
+
+    return (date_str, time_str)
+
+def check_rtc_device(rtc_name):
+    date1, time1 = read_rtc(rtc_name)
+    if date1 is None or time1 is None:
+        return False
+
+    time.sleep(2)
+
+    date2, time2 = read_rtc(rtc_name)
+    if date2 is None or time2 is None:
+        return False
+
+    if date1 != date2 or time1 != time2:
+        return True
+    else:
+        return False
+
+def finddevice():
+    alldevices = list_rtc_devices()
+    if len(alldevices)==0:
+        return "rtc"
+    else:
+        for device in alldevices:
+            valid = check_rtc_device(device)
+            if valid:
+                return device
+        return "rtc"
+
+#-------------------------------------------------------------------------------
 
 def check_rtc_utc():
     adjfilename = "/etc/adjtime"
@@ -59,51 +125,82 @@ def check_rtc_utc():
         if is_rtc_utc == False:
             exitnagios("CRITICAL","hwclock is not UTC")
 
-def get_rtc_data():
-    filehandle = open("/proc/driver/rtc","rt")
-    rtcdata = filehandle.read().splitlines()
-    infomsg(rtcdata)
-    filehandle.close()
+def get_rtc_data(device):
+    # Validate device
+    rtc_sys_path = f"/sys/class/rtc/{device}"
+    if not os.path.exists(rtc_sys_path):
+        exitnagios("CRITICAL", f"{device} does not exist on this system")
 
-    date = ""
-    time = ""
-    for line in rtcdata:
-        parts = line.split(":",1)
-        key = parts[0].strip()
-        value = parts[1].strip()
-        if key == "rtc_date":
-            date = value.split("-")
-        if key == "rtc_time":
-            time = value.split(":")
-        if key == "batt_status":
-            if value != "okay":
-                exitnagios("CRITICAL","RTC battery not valid")
+    try:
+        # Read date
+        with open(os.path.join(rtc_sys_path, "date"), "rt") as f:
+            date_str = f.read().strip()  # format: YYYY-MM-DD
 
-    if len(date)==3 and len(time)==3:
-        rtctime = datetime.datetime(int(date[0]),int(date[1]),int(date[2]),int(time[0]),int(time[1]),int(time[2]),tzinfo=datetime.timezone.utc)
-    else:
-        exitnagios("CRITICAL","could not parse RTC data")
+        # Read time
+        with open(os.path.join(rtc_sys_path, "time"), "rt") as f:
+            time_str = f.read().strip()  # format: HH:MM:SS
 
-    return int(rtctime.timestamp())
+        # Optional: check battery status
+        batt_file = os.path.join(rtc_sys_path, "batt_status")
+        if os.path.exists(batt_file):
+            with open(batt_file, "rt") as f:
+                batt_status = f.read().strip()
+            if batt_status != "okay":
+                exitnagios("CRITICAL", f"RTC battery not valid for {device}")
 
-def evaluate(difference):
-    args = parse_args()
+        # Parse date and time
+        date_parts = date_str.split("-")
+        time_parts = time_str.split(":")
+        if len(date_parts) != 3 or len(time_parts) != 3:
+            exitnagios("CRITICAL", f"Could not parse RTC data for {device}")
 
-    setcandebug(args.debug)
+        rtctime = datetime.datetime(
+            int(date_parts[0]), int(date_parts[1]), int(date_parts[2]),
+            int(time_parts[0]), int(time_parts[1]), int(time_parts[2]),
+            tzinfo=datetime.timezone.utc
+        )
 
-    if (difference>=args.critical):
+        return int(rtctime.timestamp())
+
+    except Exception as e:
+        exitnagios("CRITICAL", f"Error reading RTC data for {device}: {e}")
+
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-w", "--warning",           action="store",       type=int,                default=5,                                    help="if this number or more, it becomes warning state (default 5")
+    parser.add_argument("-c", "--critical",          action="store",       type=int,                default=10,                                   help="if this number or more, it becomes critical state (default 10")
+    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=90,                                   help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    args = parser.parse_args()
+    return args
+
+
+def evaluate(difference,warning,critical):
+    if (difference>=critical):
         exitnagios("CRITICAL","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
-    elif (difference>=args.warning):
+    elif (difference>=warning):
         exitnagios("WARNING","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
     else:
         exitnagios("OK","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
 
-check_rtc_utc()
-rtctime = get_rtc_data()
-infomsg(rtctime)
-systime = int(time.time())
-infomsg(systime)
-difference = abs(rtctime - systime)
-evaluate(difference)
+def main():
+    args = parse_args()
+    setcandebug(args.debug)
 
-exitnagios("CRITICAL","Internal error")
+    device = finddevice()
+    infomsg("The selected rtc defice is "+device)
+    check_rtc_utc()
+    rtctime = get_rtc_data(device)
+    infomsg(rtctime)
+    systime = int(time.time())
+    infomsg(systime)
+    difference = abs(rtctime - systime)
+    evaluate(difference,args.warning,args.critical)
+    exitnagios("CRITICAL","Internal error")
+
+main()
+
+#-------------------------------------------------------------------------------
