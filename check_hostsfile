@@ -95,6 +95,7 @@ def testvalue(ipo,dnsquery,recordtype,customresolver):
 
 def testentry(ipo,canonical,aliases,searchlist,customresolver):
     result = True
+    reason = None
 
     recordtype = None
     if ipo.version == 4:
@@ -114,12 +115,14 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
                 infomsg(alias+" "+str(foundusingsearch))
                 if foundusingsearch == False:
                     result = False
+                    reason = "Entry not found"
                     break
     else:
         infomsg("Test value False for "+str(ipo))
         result = False
+        reason = "Error in DNS resolving of "+canonical
 
-    return result
+    return result,reason
 
 def dohostsfilecheck():
     searchlist = extractsearchlist()
@@ -137,11 +140,11 @@ def dohostsfilecheck():
             infomsg("Evaluating for "+str(ipo))
             canonical = value[0]
             aliases = value[1:]
-            valid = testentry(ipo,canonical,aliases,searchlist,customresolver)
+            valid,reason = testentry(ipo,canonical,aliases,searchlist,customresolver)
             allvalid = allvalid and valid
             if not valid:
-                failing[key] = value
-    
+                failing[key] = [value,reason]
+
     if allvalid:
         exitnagios("OK","the hosts file seems valid")
     else:
