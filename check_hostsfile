@@ -78,19 +78,20 @@ def extracthostslist():
     return result
 
 def testvalue(ipo,dnsquery,recordtype,customresolver):
-    result = True
+    result = False
     try:
         queryrr = customresolver.resolve(dnsquery,recordtype,search=False)
         infomsg(queryrr.rrset)
-        if len(queryrr.rrset)==1:
-            resolvedip = ipaddress.ip_address(queryrr.rrset[0])
-            if resolvedip != ipo:
-                result = False
-        else:
-            result = False
+        if len(queryrr.rrset)>0:
+            for rr in queryrr.rrset:
+                foundip = ipaddress.ip_address(rr)
+                #infomsg("--> "+str(foundip))
+                #infomsg("--> "+str(ipo))
+                if str(foundip) == str(ipo):
+                    result = True
+                    break
     except:
         infomsg("Error resolving "+dnsquery+" "+recordtype)
-        result = False
     return result
 
 def testentry(ipo,canonical,aliases,searchlist,customresolver):
@@ -104,7 +105,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
         recordtype = "AAAA"
 
     if testvalue(ipo,canonical,recordtype,customresolver):
-        infomsg("Test value True for "+str(ipo))
+        infomsg("Test value is True for "+str(ipo))
         for alias in aliases:
             if testvalue(ipo,alias,recordtype,customresolver)==False:
                 foundusingsearch = False
@@ -118,7 +119,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
                     reason = "Entry not found"
                     break
     else:
-        infomsg("Test value False for "+str(ipo))
+        infomsg("Test value is False for "+str(ipo))
         result = False
         reason = "Error in DNS resolving of "+canonical
 
