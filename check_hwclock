@@ -190,7 +190,7 @@ def main():
     args = parse_args()
     setcandebug(args.debug)
 
-    device = finddevice
+    device = finddevice()
     if device == None:
         exitnagios("CRITICAL","Could not find any rtc device")
     else:
