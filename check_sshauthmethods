@@ -61,21 +61,21 @@ def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlis
     try:
         t = paramiko.Transport((host, port))
         t.connect()
-    except paramiko.ssh_exception.SSHException as err:
+    except Exception as e:
         if t != None:
            t.close()
-        exitnagios(timeoutstatus,"SSH connection failed "+host+":"+str(port)+" - cause: "+str(err))
+        exitnagios(timeoutstatus,"SSH connection failed "+host+":"+str(port)+" - cause: "+str(e))
 
     try:
         t.auth_none("")
-    except paramiko.BadAuthenticationType as err:
-        if len(expectedlist)==len(err.allowed_types):
+    except paramiko.BadAuthenticationType as e:
+        if len(expectedlist)==len(e.allowed_types):
             for item in expectedlist:
-                if item not in err.allowed_types:
-                    exitnagios("WARNING","The allowed methods are "+str(err.allowed_types)+" but it was expected "+str(expectedlist))
-            exitnagios("OK","The allowed methods are "+str(err.allowed_types)+" as expected")
+                if item not in e.allowed_types:
+                    exitnagios("WARNING","The allowed methods are "+str(e.allowed_types)+" but it was expected "+str(expectedlist))
+            exitnagios("OK","The allowed methods are "+str(e.allowed_types)+" as expected")
         else:
-           exitnagios("CRITICAL","The allowed methods are "+str(err.allowed_types)+" but it was expected "+str(expectedlist))
+           exitnagios("CRITICAL","The allowed methods are "+str(e.allowed_types)+" but it was expected "+str(expectedlist))
     finally:
         t.close()
 
