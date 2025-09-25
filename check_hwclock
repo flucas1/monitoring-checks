@@ -42,7 +42,7 @@ def list_rtc_devices():
     devices = []
     if os.path.exists(rtc_path):
         for entry in os.listdir(rtc_path):
-            if entry.startswith("rtc"):
+            if entry.startswith("rtc") and entry != "rtc":
                 devices.append(entry)
     return devices
 
@@ -104,13 +104,13 @@ def check_rtc_device(rtc_name):
 def finddevice():
     alldevices = list_rtc_devices()
     if len(alldevices)==0:
-        return "rtc"
+        return None
     else:
         for device in alldevices:
             valid = check_rtc_device(device)
             if valid:
                 return device
-        return "rtc"
+        return None
 
 #-------------------------------------------------------------------------------
 
@@ -190,16 +190,19 @@ def main():
     args = parse_args()
     setcandebug(args.debug)
 
-    device = finddevice()
-    infomsg("The selected rtc defice is "+device)
-    check_rtc_utc()
-    rtctime = get_rtc_data(device)
-    infomsg(rtctime)
-    systime = int(time.time())
-    infomsg(systime)
-    difference = abs(rtctime - systime)
-    evaluate(difference,args.warning,args.critical)
-    exitnagios("CRITICAL","Internal error")
+    device = finddevice
+    if device == None:
+        exitnagios("CRITICAL","Could not find any rtc device")
+    else:
+        infomsg("The selected rtc device is "+device)
+        check_rtc_utc()
+        rtctime = get_rtc_data(device)
+        infomsg(rtctime)
+        systime = int(time.time())
+        infomsg(systime)
+        difference = abs(rtctime - systime)
+        evaluate(difference,args.warning,args.critical)
+        exitnagios("CRITICAL","Internal error")
 
 main()
 
