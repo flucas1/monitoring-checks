@@ -103,6 +103,7 @@ def check_rtc_device(rtc_name):
 
 def finddevice():
     alldevices = list_rtc_devices()
+    infomsg("The list of found devices is "+str(alldevices))
     if len(alldevices)==0:
         return None
     else:
@@ -178,13 +179,13 @@ def parse_args():
     return args
 
 
-def evaluate(difference,warning,critical):
+def evaluate(device,difference,warning,critical):
     if (difference>=critical):
-        exitnagios("CRITICAL","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
+        exitnagios("CRITICAL","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
     elif (difference>=warning):
-        exitnagios("WARNING","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
+        exitnagios("WARNING","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
     else:
-        exitnagios("OK","The hwclock offset is "+str(difference)+"s | difference="+str(difference))
+        exitnagios("OK","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
 
 def main():
     args = parse_args()
@@ -201,7 +202,7 @@ def main():
         systime = int(time.time())
         infomsg(systime)
         difference = abs(rtctime - systime)
-        evaluate(difference,args.warning,args.critical)
+        evaluate(device,difference,args.warning,args.critical)
         exitnagios("CRITICAL","Internal error")
 
 main()
