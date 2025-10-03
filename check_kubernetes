@@ -51,7 +51,7 @@ def mostseverestatus(current,candidate):
    elif (current=="WARNING") or (candidate=="WARNING"):
        return "WARNING"
    elif (current=="UNKNOWN") or (candidate=="UNKNOWN"):
-       return "UNKOWN"
+       return "UNKNOWN"
    elif (current=="OK") or (candidate=="OK"):
        return "OK"
    else:
