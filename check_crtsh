@@ -18,6 +18,7 @@ import socket
 import gzip
 import zlib
 import io
+import random
 
 #-------------------------------------------------------------------------------
 
@@ -154,7 +155,7 @@ def load_json(proxy,domain,retries):
             counter = counter+1
 
             infomsg("sending request")
-            response = opener.open(item_request, timeout=10)
+            response = opener.open(item_request, timeout=15)
             infomsg("request done")
 
             if response.getcode() == 429:
@@ -200,7 +201,7 @@ def load_json(proxy,domain,retries):
         elif counter > retries:
             break
         else:
-            time.sleep(5+(counter*2))
+            time.sleep(5+(counter*2)+random.uniform(1, 5))
 
     return object_json
 
@@ -284,6 +285,7 @@ def main():
     proxies = []
 
     start = datetime.datetime.now(datetime.UTC)
+    time.sleep(random.uniform(1, 5))
     if ipv6_default_route_exists():
         infomsg("call ipv6")
         docrtshcall("ipv6",None,args.hostname,args.valid,args.ignore,timeoutvalue,5)
