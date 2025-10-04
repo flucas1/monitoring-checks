@@ -66,57 +66,7 @@ def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutv
 
 #-------------------------------------------------------------------------------
 
-def main():
-    multitimeoutparts = sys.argv[1].split(":")
-    multitimeoutvalue = int(multitimeoutparts[0])
-    multitimeoutstatus = "CRITICAL"
-    if len(multitimeoutparts)>1:
-        multitimeoutstatus = multitimeoutparts[1]
-    multihostnames = ""
-    multiargs = []
-    childtimeout = ""
-    lastarghostname = False
-    lastargtimeout = False
-    infomsg(len(sys.argv))
-    for i in range(2,len(sys.argv)):
-        argument = sys.argv[i]
-        if argument.startswith("--hostname=")==True:
-            multihostnames = argument[len("--hostname="):]
-        elif lastarghostname==True:
-            lastarghostname = False
-            multihostnames = argument
-        elif argument=="-H":
-            lastarghostname=True
-        elif argument.startswith("--timeout=")==True:
-            childtimeout = argument[len("--timeout="):]
-        elif lastargtimeout==True:
-            lastargtimeout = False
-            childtimeout = argument
-        elif argument=="-t":
-            lastargtimeout=True
-        else:
-            multiargs.append(argument)
-
-    infomsg("timeoutvalue: "+str(multitimeoutvalue))
-    infomsg("timeoutstatus: "+str(multitimeoutstatus))
-    infomsg("childtimeout: "+str(childtimeout))
-    infomsg("hostnames: "+multihostnames)
-    infomsg("args: "+str(multiargs))
-
-    allhosts = multihostnames.split(",")
-    childtimeoutvalue = None
-    childtimeoutstatus = None
-    if childtimeout != "":
-        childtimeoutparts = childtimeout.split(":")
-        infomsg(childtimeoutparts)
-        childtimeoutvalue = int(childtimeoutparts[0])
-        if len(childtimeoutparts)>1:
-            childtimeoutstatus = childtimeoutparts[1]
-    if childtimeoutstatus == None:
-        childtimeoutstatus = "CRITICAL"
-    infomsg(childtimeoutvalue)
-    infomsg(childtimeoutstatus)
-
+def domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,childtimeoutstatus,multihostnames,multiargs):
     executor = concurrent.futures.ProcessPoolExecutor()
     futures = []
     mappings = {}
@@ -192,6 +142,63 @@ def main():
         exitnagios(childtimeoutstatus,finalmsg)
 
     exitnagios("CRITICAL","unexpected multiaddr case")
+
+#-------------------------------------------------------------------------------
+
+def main():
+    multitimeoutparts = sys.argv[1].split(":")
+    multitimeoutvalue = int(multitimeoutparts[0])
+    multitimeoutstatus = "CRITICAL"
+    if len(multitimeoutparts)>1:
+        multitimeoutstatus = multitimeoutparts[1]
+    multihostnames = ""
+    multiargs = []
+    childtimeout = ""
+    lastarghostname = False
+    lastargtimeout = False
+    infomsg(len(sys.argv))
+    for i in range(2,len(sys.argv)):
+        argument = sys.argv[i]
+        if argument.startswith("--hostname=")==True:
+            multihostnames = argument[len("--hostname="):]
+        elif lastarghostname==True:
+            lastarghostname = False
+            multihostnames = argument
+        elif argument=="-H":
+            lastarghostname=True
+        elif argument.startswith("--timeout=")==True:
+            childtimeout = argument[len("--timeout="):]
+        elif lastargtimeout==True:
+            lastargtimeout = False
+            childtimeout = argument
+        elif argument=="-t":
+            lastargtimeout=True
+        else:
+            multiargs.append(argument)
+    
+    allhosts = multihostnames.split(",")
+    
+    childtimeoutvalue = None
+    childtimeoutstatus = None
+    if childtimeout != "":
+        childtimeoutparts = childtimeout.split(":")
+        infomsg(childtimeoutparts)
+        childtimeoutvalue = int(childtimeoutparts[0])
+        if len(childtimeoutparts)>1:
+            childtimeoutstatus = childtimeoutparts[1]
+    if childtimeoutstatus == None:
+        childtimeoutstatus = "CRITICAL"
+    infomsg(childtimeoutvalue)
+    infomsg(childtimeoutstatus)
+    
+    infomsg("multitimeoutvalue: "+str(multitimeoutvalue))
+    infomsg("multitimeoutstatus: "+str(multitimeoutstatus))
+    infomsg("childtimeoutvalue: "+str(childtimeoutvalue))
+    infomsg("childtimeoutstatus: "+str(childtimeoutstatus))
+    infomsg("allhosts: "+str(allhosts))
+    infomsg("multiargs: "+str(multiargs))
+    
+    domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,childtimeoutstatus,allhosts,multiargs)
 
 #-------------------------------------------------------------------------------
 

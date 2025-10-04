@@ -58,8 +58,7 @@ def dogpscountcall(timeout,warning,critical):
             else:
                 time.sleep(1)
     except Exception as e:
-        print("UNKNOWN:","internal error - "+ str(e), flush=True)
-        sys.exit(3)
+        exitnagios("UNKNOWN","internal error - "+ str(e))
     finally:
         average_used = 0
         counter = 0
@@ -79,14 +78,11 @@ def dogpscountcall(timeout,warning,critical):
         
         message = "Total used: "+str(average_used)+" ; Total seen: "+str(average_seen)+" | used="+str(average_used)+" seen="+str(average_seen)
         if (average_used<=critical):
-            print("CRITICAL:",message, flush=True)
-            sys.exit(2)
+            exitnagios("CRITICAL",message)
         elif (average_used<=warning):
-            print("WARNING:",message, flush=True)
-            sys.exit(1)
+            exitnagios("WARNING",message)
         else:
-            print("OK:",message, flush=True)
-            sys.exit(0)
+            exitnagios("OK",message)
 
 #-------------------------------------------------------------------------------
 

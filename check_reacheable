@@ -36,7 +36,7 @@ def exitnagios(status,message):
         exitcode = 3
     else:
         exitcode = 4
-    print(status+": "+message)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------

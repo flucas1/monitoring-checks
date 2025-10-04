@@ -36,8 +36,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doretrycall():
-    cmdline = sys.argv[1:]
+def doretrycall(cmdline):
     counter = 0
     retries = 3
     while True:
@@ -65,7 +64,8 @@ def doretrycall():
 #-------------------------------------------------------------------------------
 
 def main():
-    doretrycall()
+    cmdline = sys.argv[1:]
+    doretrycall(cmdline)
 
 #-------------------------------------------------------------------------------
 
