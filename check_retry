@@ -63,8 +63,10 @@ def doretrycall(cmdline):
 
 #-------------------------------------------------------------------------------
 
-def main():
-    cmdline = sys.argv[1:]
+def main(forcedargs=None):
+    if forcedargs==None:
+        forcedargs = sys.argv[1:]
+    cmdline = forcedargs
     doretrycall(cmdline)
 
 #-------------------------------------------------------------------------------
