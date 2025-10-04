@@ -668,15 +668,16 @@ async def main(forcedargs=None):
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
+
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
             exitinfo = await check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
-        if (args.record != ""):
+        elif (args.record != ""):
             exitinfo = await check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+        else exitinfo==None:
+            exitinfo = build_exitinfo("CRITICAL","no zone or record defined")
     else:
         exitinfo = build_exitinfo("CRITICAL","timeout status is not valid")
-
-    exitinfo = build_exitinfo("CRITICAL","no zone or record defined")
 
     return exitinfo
 
