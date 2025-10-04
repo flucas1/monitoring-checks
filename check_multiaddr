@@ -66,7 +66,7 @@ def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutv
 
 #-------------------------------------------------------------------------------
 
-def domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,childtimeoutstatus,multihostnames,multiargs):
+def domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,childtimeoutstatus,allhosts,multiargs):
     executor = concurrent.futures.ProcessPoolExecutor()
     futures = []
     mappings = {}
