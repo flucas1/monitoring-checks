@@ -46,6 +46,12 @@ def exitnagios(status,message):
     print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
+def build_exitinfo(status,message):
+    exitinfo = {}
+    exitinfo["status"] = status
+    exitinfo["message"] = message
+    return exitinfo
+
 #-------------------------------------------------------------------------------
 
 original_getaddrinfo = socket.getaddrinfo
@@ -315,21 +321,21 @@ async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
 
             if found == None:
                 #server not responding
-                exitnagios(timeoutstatus,"no response when trying to resolve records")
+                return build_exitinfo(timeoutstatus,"no response when trying to resolve records")
             elif found=="":
                 #server responding, but no results
                 if expected==".":
-                    exitnagios("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
+                    return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
                 else:
-                    exitnagios("CRITICAL","the server is not returning any value for the record")
+                    return build_exitinfo("CRITICAL","the server is not returning any value for the record")
             else:
                 if expected == "":
-                    exitnagios("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" - no specific result was expected")
+                    return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" - no specific result was expected")
                 else:
                     listexpected = sorted(expected.split(","))
                     listfound = sorted(found.split(","))
                     if (",".join(listexpected) == ",".join(listfound)):
-                        exitnagios("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" as expected | found="+str(len(listfound)))
+                        return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" as expected | found="+str(len(listfound)))
                     else:
                         listunexpected = []
                         for test in listfound:
@@ -337,7 +343,7 @@ async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                                 listunexpected.append(test)
                         msgunexpected = "there were issues with the query of record "+record+" to "+addressinfo+" - Result "+" ".join(listunexpected)+" were not in expected "+expected+" | found="+str(len(listfound))+" unexpected="+str(len(listunexpected))
                         if len(listunexpected)>0:
-                            exitnagios("CRITICAL",msgunexpected)
+                            return build_exitinfo("CRITICAL",msgunexpected)
 
                         listmissing = []
                         for test in listexpected:
@@ -345,31 +351,31 @@ async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                                 listmissing.append(test)
                         msgmissing = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is missing "+" ".join(listmissing)+" as in "+expected+" | found="+str(len(listfound))+" missing="+str(len(listmissing))
                         if alternativeslogic == True:
-                           exitnagios("OK",msgmissing)
+                           return build_exitinfo("OK",msgmissing)
                         if len(listmissing)>recmissingcrit:
-                            exitnagios("CRITICAL",msgmissing)
+                            return build_exitinfo("CRITICAL",msgmissing)
                         if len(listmissing)>recmissingwarn:
-                            exitnagios("WARNING",msgmissing)
+                            return build_exitinfo("WARNING",msgmissing)
 
                         msgfound = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is not reaching the minimum count of values | found="+str(len(listfound))+" unexpected=0 missing=0"
                         if len(listfound)<recmincountcrit:
-                            exitnagios("CRITICAL",msgfound)
+                            return build_exitinfo("CRITICAL",msgfound)
                         if len(listfound)<recmincountwarn:
-                            exitnagios("WARNING",msgfound)
+                            return build_exitinfo("WARNING",msgfound)
 
-                        exitnagios("CRITICAL","unexpected situation")
+                        return build_exitinfo("CRITICAL","unexpected situation")
         except dns.exception.Timeout as e:
-            exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            exitnagios(timeoutstatus,"error during check record - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus,"error during check record - noroute - "+str(e))
         else:
-            exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
     except Exception as e:
         if (expected == "."):
-            exitnagios("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
+            return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
         else:
-            exitnagios("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
 
 #-------------------------------------------------------------------------------
 
@@ -379,21 +385,21 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
         try:
             mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone '"+zone+"' using server "+addressinfo)
+                return build_exitinfo(timeoutstatus,"no response when trying to resolve mname for zone '"+zone+"' using server "+addressinfo)
             querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             text_mname = await get_zone(useTcp, querydata, timeoutvalue, zone)
             if text_mname=="":
-                exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from mname")
+                return build_exitinfo(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from mname")
             text_server = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
             if text_server=="":
-                exitnagios(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from server")
+                return build_exitinfo(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from server")
             if text_mname != text_server:
-                exitnagios("CRITICAL","zone '"+zone+"' in target server "+server+" and MNAME server "+mname+" are different.")
+                return build_exitinfo("CRITICAL","zone '"+zone+"' in target server "+server+" and MNAME server "+mname+" are different.")
                 infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())))
             else:
                 ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
-                    exitnagios(timeoutstatus,"no response when trying to resolve ns")
+                    return build_exitinfo(timeoutstatus,"no response when trying to resolve ns")
                 #infomsg(ns)
                 validservers = []
                 errorservers = []
@@ -409,28 +415,28 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
                             validservers.append(test)
                         else:
                             #zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
-                            exitnagios("CRITICAL","zone '"+zone+"' in target server "+server+" and NS server "+test+" are different.")
+                            return build_exitinfo("CRITICAL","zone '"+zone+"' in target server "+server+" and NS server "+test+" are different.")
                     except Exception as e:
                         if test not in errorservers:
                             errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    exitnagios("CRITICAL","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    return build_exitinfo("CRITICAL","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    exitnagios("WARNING","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    return build_exitinfo("WARNING","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
                 else:
-                    exitnagios("OK","zone '"+zone+"' in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    return build_exitinfo("OK","zone '"+zone+"' in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
         except dns.exception.Timeout as e:
-            exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
             infomsg(traceback.format_exc())
-            exitnagios(timeoutstatus,"error during check consistency - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus,"error during check consistency - noroute - "+str(e))
         else:
             infomsg(traceback.format_exc())
-            exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+"  - "+str(e))
+            return build_exitinfo("CRITICAL","error during check consistency - "+type(e).__name__+"  - "+str(e))
     except Exception as e:
         infomsg(traceback.format_exc())
-        exitnagios("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
 
 async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
@@ -440,25 +446,25 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
 
             serial_server = await get_serial(useTcp, addressinfo, timeoutvalue, zone)
             if serial_server == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve serial_server "+addressinfo)
+                return build_exitinfo(timeoutstatus,"no response when trying to resolve serial_server "+addressinfo)
             if automode:
                 retry_server = await get_retry(useTcp, addressinfo, timeoutvalue, zone)
                 if retry_server == "":
-                    exitnagios(timeoutstatus,"no response when trying to resolve retry_server "+addressinfo)
+                    return build_exitinfo(timeoutstatus,"no response when trying to resolve retry_server "+addressinfo)
             #infomsg(serial_server)
 
             mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
+                return build_exitinfo(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
             principalserver = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             #infomsg(principalserver)
             serial_mname = await get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
-                exitnagios(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using found domain main server "+principalserver)
+                return build_exitinfo(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using found domain main server "+principalserver)
             if automode:
                 retry_mname = await get_retry(useTcp, principalserver, timeoutvalue, zone)
                 if retry_mname == "":
-                    exitnagios(timeoutstatus,"no response when trying to resolve retry_mname")
+                    return build_exitinfo(timeoutstatus,"no response when trying to resolve retry_mname")
             #infomsg(serial_mname)
 
             difference = abs(serial_mname-serial_server)
@@ -473,15 +479,15 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
                 if difference > tolerancecrit:
-                    exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                    return build_exitinfo("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                 elif difference > tolerancewarn:
-                    exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                    return build_exitinfo("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
             else:
                 if difference > 0:
                     identical = False
                 ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
-                    exitnagios(timeoutstatus,"no response when trying to resolve ns")
+                    return build_exitinfo(timeoutstatus,"no response when trying to resolve ns")
                 #infomsg(ns)
                 validservers = []
                 errorservers = []
@@ -501,9 +507,9 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                         if (difference > tolerancecrit) or (difference > tolerancewarn):
                             identical = False
                             if difference > tolerancecrit:
-                                exitnagios("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                                return build_exitinfo("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                             elif difference > tolerancewarn:
-                                exitnagios("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                                return build_exitinfo("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
                         if difference > 0:
                             identical = False
                         validservers.append(test)
@@ -511,22 +517,22 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                         if test not in errorservers:
                             errorservers.append(test)
                 if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    exitnagios("CRITICAL","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                    return build_exitinfo("CRITICAL","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
                 elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    exitnagios("WARNING","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                    return build_exitinfo("WARNING","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
             if identical == True:
-                exitnagios("OK","zone in target server has identical serial "+str(serial_server)+" than the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                return build_exitinfo("OK","zone in target server has identical serial "+str(serial_server)+" than the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
             else:
-                exitnagios("OK","zone in target server withing the tolerance "+str(tolerancewarn)+" of the serial "+str(serial_server)+" from the MNAME and NS entries - errors: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                return build_exitinfo("OK","zone in target server withing the tolerance "+str(tolerancewarn)+" of the serial "+str(serial_server)+" from the MNAME and NS entries - errors: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
         except dns.exception.Timeout as e:
-            exitnagios(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            exitnagios(timeoutstatus,"error during check serial - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus,"error during check serial - noroute - "+str(e))
         else:
-            exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
     except Exception as e:
-        exitnagios("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
 
 
 async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
@@ -538,32 +544,34 @@ async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, 
             elapsed = datetime.datetime.now(datetime.UTC)-start
             duration = elapsed.total_seconds()
             if text!="":
-                exitnagios("OK","transfer of zone "+zone+" from "+addressinfo+" successful | duration="+str(duration))
+                return build_exitinfo("OK","transfer of zone "+zone+" from "+addressinfo+" successful | duration="+str(duration))
             else:
-                exitnagios("CRITICAL","there were issues with the transfer of zone "+zone+" from "+addressinfo)
+                return build_exitinfo("CRITICAL","there were issues with the transfer of zone "+zone+" from "+addressinfo)
         except dns.exception.Timeout as e:
             infomsg(timeoutstatus+": timeout reaching "+addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            exitnagios(timeoutstatus,"error during check transfer - "+type(e).__name__+"  - "+str(e))
+            return build_exitinfo(timeoutstatus,"error during check transfer - "+type(e).__name__+"  - "+str(e))
         else:
             raise
     except Exception as e:
-        exitnagios("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
 
 async def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        await check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        return await check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
     elif serial:
-        await check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        return await check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
     elif transfer:
-        await check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        return await check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
     else:
-        exitnagios("CRITICAL","unknown check for zone")
+        return build_exitinfo("CRITICAL","unknown check for zone")
 
 #-------------------------------------------------------------------------------
 
 async def main(forcedargs=None):
+    exitinfo = None
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -608,9 +616,9 @@ async def main(forcedargs=None):
         exclist = exclist+1
         socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist>1) :
-        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+        exitinfo = build_exitinfo("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist<1) :
-        exitnagios("CRITICAL","no protocol selected")
+        exitinfo = build_exitinfo("CRITICAL","no protocol selected")
 
 #    if args.proxy != "":
 #        proxyparts = args.proxy.split("://",1)
@@ -620,10 +628,10 @@ async def main(forcedargs=None):
 #            dns.query.socket_factory = socks.socksocket
 
     if (args.record != "") and (args.zone != ""):
-        exitnagios("CRITICAL","parameters zone, record and consistency are exclusive")
+        exitinfo = build_exitinfo("CRITICAL","parameters zone, record and consistency are exclusive")
 
     if (args.consistency == False) and (args.serial == False) and (args.transfer == False) and (args.zone != ""):
-        exitnagios("CRITICAL","choose consistency serial or transfer when using a zone")
+        exitinfo = build_exitinfo("CRITICAL","choose consistency serial or transfer when using a zone")
 
     if args.mode == "tcp":
         useTcp=True
@@ -647,17 +655,20 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            await check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            exitinfo = await check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
         if (args.record != ""):
-            await check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            exitinfo = await check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
     else:
-        exitnagios("CRITICAL","timeout status is not valid")
+        exitinfo = build_exitinfo("CRITICAL","timeout status is not valid")
 
-    exitnagios("CRITICAL","no zone or record defined")
+    exitinfo = build_exitinfo("CRITICAL","no zone or record defined")
+
+    return exitinfo
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    exitinfo = asyncio.run(main())
+    exitnagios(exitinfo)
 
 #-------------------------------------------------------------------------------

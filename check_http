@@ -44,6 +44,12 @@ def exitnagios(status,message):
     print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
+def build_exitinfo(status,message):
+    exitinfo = {}
+    exitinfo["status"] = status
+    exitinfo["message"] = message
+    return exitinfo
+
 #-------------------------------------------------------------------------------
 
 original_getaddrinfo = socket.getaddrinfo
@@ -164,7 +170,7 @@ async def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,time
             exitmessage = "exception - "+str(e)
             break
 
-    exitnagios(exitlevel,exitmessage)
+    return build_exitinfo(exitlevel,exitmessage)
 
 async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers):
     global _debuginfo
@@ -421,6 +427,8 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
 #-------------------------------------------------------------------------------
 
 async def main(forcedargs=None):
+    exitinfo = None
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -457,9 +465,9 @@ async def main(forcedargs=None):
         exclist = exclist+1
         socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist>1) :
-        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+        exitinfo = build_exitinfo("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist<1) :
-        exitnagios("CRITICAL","no protocol selected")
+        exitinfo = build_exitinfo("CRITICAL","no protocol selected")
 
     retries = int(args.retries)
     port = int(args.port)
@@ -473,13 +481,16 @@ async def main(forcedargs=None):
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         infomsg("precall")
         infomsg(str(args.hostname)+" "+str(port)+" "+str(args.httpversion)+" "+str(args.sslversion))
-        await dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
+        exitinfo = await dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries)
     else:
-        exitnagios("CRITICAL","timeout status is not valid")
+        exitinfo = build_exitinfo("CRITICAL","timeout status is not valid")
+
+    return exitinfo
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    exitinfo = asyncio.run(main())
+    exitnagios(exitinfo)
 
 #-------------------------------------------------------------------------------
