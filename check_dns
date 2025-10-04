@@ -563,7 +563,7 @@ async def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, auth
 
 #-------------------------------------------------------------------------------
 
-async def main_async(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -655,12 +655,9 @@ async def main_async(forcedargs=None):
 
     exitnagios("CRITICAL","no zone or record defined")
 
-def main(forcedargs=None):
-    asyncio.run(main_async(forcedargs))
-
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
