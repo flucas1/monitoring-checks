@@ -21,21 +21,21 @@ def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
-def status_to_code(status):
-    if status in ["OK","0",0]:
+def mapstatustoexitcode(status):
+    if status=="OK":
         exitcode = 0
-    elif status in ["WARNING","1",1]:
+    elif status=="WARNING":
         exitcode = 1
-    elif status in ["CRITICAL","2",2]:
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status in ["UNKNOWN","3",3]:
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
 def exitnagios(status,message):
-    exitcode = status_to_code(status)
+    exitcode = mapstatustoexitcode(status)
     print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
