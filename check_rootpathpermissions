@@ -19,7 +19,7 @@ def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
-def exitnagios(status,message):
+def mapstatustoexitcode(status):
     if status=="OK":
         exitcode = 0
     elif status=="WARNING":
@@ -30,6 +30,10 @@ def exitnagios(status,message):
         exitcode = 3
     else:
         exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = mapstatustoexitcode(status)
     print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
