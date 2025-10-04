@@ -73,6 +73,8 @@ def main():
     setcandebug(args.debug)
     doospfroutescall()
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

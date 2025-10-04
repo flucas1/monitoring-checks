@@ -89,6 +89,8 @@ def main():
 
     result = checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

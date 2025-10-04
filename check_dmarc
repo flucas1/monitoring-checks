@@ -183,6 +183,8 @@ def main():
     proxy = ""
     dodnssecverisigncall(args.host,proxy)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -102,6 +102,8 @@ def main():
     setcandebug(args.debug)
     dordapcall(args.hostname, args.warning, args.critical)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

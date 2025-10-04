@@ -180,6 +180,8 @@ def main():
 
     systemd_check(args.service, args.system, args.user, toleratelist, ignorelist)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -92,6 +92,8 @@ def main():
 
     doarpingcall(args.hostname,args.packets,args.timeout)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -263,6 +263,8 @@ def main():
     tolerance = int(args.tolerance)
     dodnssecverisigncall(protocol,args.hostname,ignorelist,tolerance,proxy)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

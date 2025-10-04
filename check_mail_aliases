@@ -121,6 +121,8 @@ def main():
     infomsg("The custom lines are "+str(customlines))
     domailaliasescall(customlines)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

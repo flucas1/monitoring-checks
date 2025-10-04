@@ -205,6 +205,9 @@ def main():
         evaluate(device,difference,args.warning,args.critical)
         exitnagios("CRITICAL","Internal error")
 
-main()
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------

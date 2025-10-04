@@ -146,6 +146,8 @@ def main():
 
     exitnagios(state,str(countjails)+" detected jails with "+str(countbanned)+" banned IPs: " + str(dict_banned)+" | banned="+str(countbanned)+" jails="+str(countjails))
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

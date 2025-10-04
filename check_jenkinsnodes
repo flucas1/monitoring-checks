@@ -103,6 +103,8 @@ def main():
         critical.remove("")
     docheckjenkinsnodes(args.directory,critical)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

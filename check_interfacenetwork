@@ -129,6 +129,9 @@ def main():
 
     dointerfacenetworkcheck(args.interface,args.segment,args.address,args.existence,args.notexists)
 
-main()
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------

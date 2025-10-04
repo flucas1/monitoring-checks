@@ -76,6 +76,8 @@ def main():
     setcandebug(args.debug)
     doconnectionscall(args.warning,args.critical)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

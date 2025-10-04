@@ -67,6 +67,8 @@ def main():
     setcandebug(args.debug)
     doexpectedcall(args.architecture, args.releasename)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

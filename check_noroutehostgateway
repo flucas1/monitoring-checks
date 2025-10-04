@@ -110,6 +110,8 @@ def main():
     else:
         exitnagios("CRITICAL",str(errormsgs))
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

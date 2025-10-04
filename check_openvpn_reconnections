@@ -83,6 +83,7 @@ def main():
 
     openvpnreconnections_check(args.critical, args.warning, args.profile, args.time)
 
+#-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     main()

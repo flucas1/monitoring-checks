@@ -134,6 +134,8 @@ def main():
 
     is_usb_connected(args.devices,args.messages,args.expected)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -66,130 +66,136 @@ def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutv
 
 #-------------------------------------------------------------------------------
 
-multitimeoutparts = sys.argv[1].split(":")
-multitimeoutvalue = int(multitimeoutparts[0])
-multitimeoutstatus = "CRITICAL"
-if len(multitimeoutparts)>1:
-    multitimeoutstatus = multitimeoutparts[1]
-multihostnames = ""
-multiargs = []
-childtimeout = ""
-lastarghostname = False
-lastargtimeout = False
-infomsg(len(sys.argv))
-for i in range(2,len(sys.argv)):
-    argument = sys.argv[i]
-    if argument.startswith("--hostname=")==True:
-        multihostnames = argument[len("--hostname="):]
-    elif lastarghostname==True:
-        lastarghostname = False
-        multihostnames = argument
-    elif argument=="-H":
-        lastarghostname=True
-    elif argument.startswith("--timeout=")==True:
-        childtimeout = argument[len("--timeout="):]
-    elif lastargtimeout==True:
-        lastargtimeout = False
-        childtimeout = argument
-    elif argument=="-t":
-        lastargtimeout=True
-    else:
-        multiargs.append(argument)
-
-infomsg("timeoutvalue: "+str(multitimeoutvalue))
-infomsg("timeoutstatus: "+str(multitimeoutstatus))
-infomsg("childtimeout: "+str(childtimeout))
-infomsg("hostnames: "+multihostnames)
-infomsg("args: "+str(multiargs))
-
-allhosts = multihostnames.split(",")
-childtimeoutvalue = None
-childtimeoutstatus = None
-if childtimeout != "":
-    childtimeoutparts = childtimeout.split(":")
-    infomsg(childtimeoutparts)
-    childtimeoutvalue = int(childtimeoutparts[0])
-    if len(childtimeoutparts)>1:
-        childtimeoutstatus = childtimeoutparts[1]
-if childtimeoutstatus == None:
-    childtimeoutstatus = "CRITICAL"
-infomsg(childtimeoutvalue)
-infomsg(childtimeoutstatus)
-
-executor = concurrent.futures.ProcessPoolExecutor()
-futures = []
-mappings = {}
-for host in allhosts:
-    future = executor.submit(dotest, host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, "UNKNOWN")
-    futures.append(future)
-    mappings[future] = host
-for future in concurrent.futures.as_completed(futures):
-    (exitcode,output,errors) = future.result()
-    infomsg(str(exitcode)+"\n"+output+"\n"+errors)
-    if exitcode==0:
-        for test in futures:
-            test.cancel()
-        for pid, proc in executor._processes.items():
-            if proc!=None:
-                proc.terminate()
-        executor.shutdown(wait=False, cancel_futures=True)
-        parts = output.split("|",1)
-        if len(parts)>1:
-            perfdata = parts[1]
+def main():
+    multitimeoutparts = sys.argv[1].split(":")
+    multitimeoutvalue = int(multitimeoutparts[0])
+    multitimeoutstatus = "CRITICAL"
+    if len(multitimeoutparts)>1:
+        multitimeoutstatus = multitimeoutparts[1]
+    multihostnames = ""
+    multiargs = []
+    childtimeout = ""
+    lastarghostname = False
+    lastargtimeout = False
+    infomsg(len(sys.argv))
+    for i in range(2,len(sys.argv)):
+        argument = sys.argv[i]
+        if argument.startswith("--hostname=")==True:
+            multihostnames = argument[len("--hostname="):]
+        elif lastarghostname==True:
+            lastarghostname = False
+            multihostnames = argument
+        elif argument=="-H":
+            lastarghostname=True
+        elif argument.startswith("--timeout=")==True:
+            childtimeout = argument[len("--timeout="):]
+        elif lastargtimeout==True:
+            lastargtimeout = False
+            childtimeout = argument
+        elif argument=="-t":
+            lastargtimeout=True
         else:
-            perfdata = ""
-        finalmsg = mappings[future]+" -> '"+perfdata+"'"
-        if errors!="":
-            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
-        if perfdata!="":
-            finalmsg = finalmsg+"\n| "+perfdata
-        exitnagios("OK",finalmsg)
+            multiargs.append(argument)
 
-# in this moment, nothing has returned an OK, so it must be CRITICAL WARNING or UNKNOWN
+    infomsg("timeoutvalue: "+str(multitimeoutvalue))
+    infomsg("timeoutstatus: "+str(multitimeoutstatus))
+    infomsg("childtimeout: "+str(childtimeout))
+    infomsg("hostnames: "+multihostnames)
+    infomsg("args: "+str(multiargs))
 
-for future in futures:
-    (exitcode,output,errors) = future.result()
-    if exitcode==2:
-        parts = output.split("|",1)
-        if len(parts)>1:
-            perfdata = parts[1]
+    allhosts = multihostnames.split(",")
+    childtimeoutvalue = None
+    childtimeoutstatus = None
+    if childtimeout != "":
+        childtimeoutparts = childtimeout.split(":")
+        infomsg(childtimeoutparts)
+        childtimeoutvalue = int(childtimeoutparts[0])
+        if len(childtimeoutparts)>1:
+            childtimeoutstatus = childtimeoutparts[1]
+    if childtimeoutstatus == None:
+        childtimeoutstatus = "CRITICAL"
+    infomsg(childtimeoutvalue)
+    infomsg(childtimeoutstatus)
+
+    executor = concurrent.futures.ProcessPoolExecutor()
+    futures = []
+    mappings = {}
+    for host in allhosts:
+        future = executor.submit(dotest, host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, "UNKNOWN")
+        futures.append(future)
+        mappings[future] = host
+    for future in concurrent.futures.as_completed(futures):
+        (exitcode,output,errors) = future.result()
+        infomsg(str(exitcode)+"\n"+output+"\n"+errors)
+        if exitcode==0:
+            for test in futures:
+                test.cancel()
+            for pid, proc in executor._processes.items():
+                if proc!=None:
+                    proc.terminate()
+            executor.shutdown(wait=False, cancel_futures=True)
+            parts = output.split("|",1)
+            if len(parts)>1:
+                perfdata = parts[1]
+            else:
+                perfdata = ""
+            finalmsg = mappings[future]+" -> '"+perfdata+"'"
+            if errors!="":
+                finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+            if perfdata!="":
+                finalmsg = finalmsg+"\n| "+perfdata
+            exitnagios("OK",finalmsg)
+
+    # in this moment, nothing has returned an OK, so it must be CRITICAL WARNING or UNKNOWN
+
+    for future in futures:
+        (exitcode,output,errors) = future.result()
+        if exitcode==2:
+            parts = output.split("|",1)
+            if len(parts)>1:
+                perfdata = parts[1]
+            else:
+                perfdata = ""
+            finalmsg = mappings[future]+" -> '"+perfdata+"'"
+            if errors!="":
+                finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+            if perfdata!="":
+                finalmsg = finalmsg+"\n| "+perfdata
+            exitnagios("CRITICAL",finalmsg)
+    for future in futures:
+        (exitcode,output,errors) = future.result()
+        if exitcode==1:
+            parts = output.split("|",1)
+            if len(parts)>1:
+                perfdata = parts[1]
+            else:
+                perfdata = ""
+            finalmsg = mappings[future]+" -> '"+perfdata+"'"
+            if errors!="":
+                finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
+            if perfdata!="":
+                finalmsg = finalmsg+"\n| "+perfdata
+            exitnagios("WARNING",finalmsg)
+
+    allunknown = True
+    finalmsg = "all alternatives return unknown"
+    for future in futures:
+        (exitcode,output,errors) = future.result()
+        if exitcode!=3:
+            allunknown = False
+            break
         else:
-            perfdata = ""
-        finalmsg = mappings[future]+" -> '"+perfdata+"'"
-        if errors!="":
-            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
-        if perfdata!="":
-            finalmsg = finalmsg+"\n| "+perfdata
-        exitnagios("CRITICAL",finalmsg)
-for future in futures:
-    (exitcode,output,errors) = future.result()
-    if exitcode==1:
-        parts = output.split("|",1)
-        if len(parts)>1:
-            perfdata = parts[1]
-        else:
-            perfdata = ""
-        finalmsg = mappings[future]+" -> '"+perfdata+"'"
-        if errors!="":
-            finalmsg = finalmsg+"\n\n"+errors.replace("|","#")
-        if perfdata!="":
-            finalmsg = finalmsg+"\n| "+perfdata
-        exitnagios("WARNING",finalmsg)
+            if len(finalmsg)>0:
+                finalmsg = finalmsg+" "
+            finalmsg = finalmsg+mappings[future]+" -> "+output
+    if allunknown == True:
+        exitnagios(childtimeoutstatus,finalmsg)
 
-allunknown = True
-finalmsg = "all alternatives return unknown"
-for future in futures:
-    (exitcode,output,errors) = future.result()
-    if exitcode!=3:
-        allunknown = False
-        break
-    else:
-        if len(finalmsg)>0:
-            finalmsg = finalmsg+" "
-        finalmsg = finalmsg+mappings[future]+" -> "+output
-if allunknown == True:
-    exitnagios(childtimeoutstatus,finalmsg)
+    exitnagios("CRITICAL","unexpected multiaddr case")
 
-exitnagios("CRITICAL","unexpected multiaddr case")
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------

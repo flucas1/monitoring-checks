@@ -61,6 +61,8 @@ def main():
     setcandebug(args.debug)
     dorootpathpermissionscall()
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

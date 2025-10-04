@@ -37,6 +37,59 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
+def dogpscountcall(timeout,warning,critical):
+    gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE|gps.watch_options.WATCH_NEWSTYLE)
+    total_used = []
+    total_seen = []
+    try:
+        start = time.time()
+        while True:
+            if gpsd.waiting():
+                if gpsd.read():
+                    report = gpsd.data
+                    infomsg(report)
+                    if report["class"] == "SKY":
+                        total_used.append(gpsd.satellites_used)
+                        total_seen.append(len(gpsd.satellites))
+                        break
+            if time.time() > start + timeout:
+                #total_seen = len(gpsd.satellites)
+                break
+            else:
+                time.sleep(1)
+    except Exception as e:
+        print("UNKNOWN:","internal error - "+ str(e), flush=True)
+        sys.exit(3)
+    finally:
+        average_used = 0
+        counter = 0
+        while (counter<len(total_used)):
+            average_used = average_used + total_used[counter]
+            counter = counter+1
+        if counter>0:
+            average_used = average_used/counter
+        
+        average_seen = 0
+        counter = 0
+        while (counter<len(total_seen)):
+            average_seen = average_seen + total_seen[counter]
+            counter = counter+1
+        if counter>0:
+            average_seen = average_seen/counter
+        
+        message = "Total used: "+str(average_used)+" ; Total seen: "+str(average_seen)+" | used="+str(average_used)+" seen="+str(average_seen)
+        if (average_used<=critical):
+            print("CRITICAL:",message, flush=True)
+            sys.exit(2)
+        elif (average_used<=warning):
+            print("WARNING:",message, flush=True)
+            sys.exit(1)
+        else:
+            print("OK:",message, flush=True)
+            sys.exit(0)
+
+#-------------------------------------------------------------------------------
+
 #collect arguments
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -48,54 +101,14 @@ def parse_args():
 
     return args
 
-args = parse_args()
-setcandebug(args.debug)
-gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE|gps.watch_options.WATCH_NEWSTYLE)
-total_used = []
-total_seen = []
-try:
-    start = time.time()
-    while True:
-        if gpsd.waiting():
-            if gpsd.read():
-                report = gpsd.data
-                infomsg(report)
-                if report["class"] == "SKY":
-                    total_used.append(gpsd.satellites_used)
-                    total_seen.append(len(gpsd.satellites))
-                    break
-        if time.time() > start + args.timeout:
-            #total_seen = len(gpsd.satellites)
-            break
-        else:
-            time.sleep(1)
-except Exception as e:
-    print("UNKNOWN:","internal error - "+ str(e), flush=True)
-    sys.exit(3)
-finally:
-    average_used = 0
-    counter = 0
-    while (counter<len(total_used)):
-        average_used = average_used + total_used[counter]
-        counter = counter+1
-    if counter>0:
-        average_used = average_used/counter
-    
-    average_seen = 0
-    counter = 0
-    while (counter<len(total_seen)):
-        average_seen = average_seen + total_seen[counter]
-        counter = counter+1
-    if counter>0:
-        average_seen = average_seen/counter
-    
-    message = "Total used: "+str(average_used)+" ; Total seen: "+str(average_seen)+" | used="+str(average_used)+" seen="+str(average_seen)
-    if (average_used<=args.critical):
-        print("CRITICAL:",message, flush=True)
-        sys.exit(2)
-    elif (average_used<=args.warning):
-        print("WARNING:",message, flush=True)
-        sys.exit(1)
-    else:
-        print("OK:",message, flush=True)
-        sys.exit(0)
+def main():
+    args = parse_args()
+    setcandebug(args.debug)
+    dogpscountcall(args.timeout,args.warning,args.critical)
+
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------

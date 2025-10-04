@@ -70,6 +70,8 @@ def main():
     setcandebug(args.debug)
     dofwupdmgrcall()
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

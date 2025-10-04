@@ -110,6 +110,8 @@ def main():
         critical.remove("")
     docheckjenkinsjobs(args.directory,critical)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

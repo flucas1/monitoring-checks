@@ -138,6 +138,8 @@ def main():
     retries=3
     makedohtest(retries,args.targetdohurl,args.testquery)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

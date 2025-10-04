@@ -329,6 +329,8 @@ def main():
         rc, message = check_thing(object_json, args)
         exitnagios(rc,message)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

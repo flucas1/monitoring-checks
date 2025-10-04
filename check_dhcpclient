@@ -164,6 +164,8 @@ def main():
 
     checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

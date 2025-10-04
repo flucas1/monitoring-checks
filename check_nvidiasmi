@@ -153,6 +153,8 @@ def main():
 
     nvidiasmicheck(float(args.gpu_warning), float(args.gpu_critical), float(args.mem_warning), float(args.mem_critical), float(args.temp_warning), float(args.temp_critical), args.device)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

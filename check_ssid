@@ -200,6 +200,8 @@ def main():
     else:
         exitnagios(finalstatus," ".join(finalmessages))
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

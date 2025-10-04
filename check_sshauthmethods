@@ -130,6 +130,9 @@ def main():
 
     test_ssh_auth(protocol, args.host, int(args.port), timeoutvalue, timeoutstatus, expectedlist)
 
-main()
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
 
 #-------------------------------------------------------------------------------

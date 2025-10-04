@@ -167,6 +167,8 @@ def main():
     proxy = ""
     dohstspreloadcall(proxy,args.host)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

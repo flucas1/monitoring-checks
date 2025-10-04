@@ -248,6 +248,8 @@ def main():
     #ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
     dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

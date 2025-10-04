@@ -186,6 +186,8 @@ def main():
 
     doisvpncall(expected,args.severity,proxy)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

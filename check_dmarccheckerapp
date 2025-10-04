@@ -246,6 +246,8 @@ def main():
     tolerate = int(args.tolerate)
     dodnssecverisigncall(args.mailfrom,tolerate,proxy)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

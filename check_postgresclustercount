@@ -67,6 +67,8 @@ def main():
     expected = int(args.expected)
     dopostgresclustercountcall(expected)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

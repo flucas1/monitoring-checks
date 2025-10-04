@@ -300,6 +300,8 @@ def main():
 
     exitnagios(timeoutstatus,"cannot get crt.sh data | found=0 duration="+str(duration))
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

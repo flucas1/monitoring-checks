@@ -95,6 +95,8 @@ def main():
     else:
         exitnagios("CRITICAL","not all FSMO roles are not matching "+args.master+" -- "+" -- ".join(roles))
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -110,6 +110,8 @@ def main():
         ignored.remove(None)
     doipv6racall(args.interface,expected,ignored)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

@@ -95,6 +95,8 @@ def main():
 
     doospfroutescall(interface,expectedspeeds,warningspeeds,[args.duplex.lower()],[])
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

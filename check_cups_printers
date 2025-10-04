@@ -119,6 +119,8 @@ def main():
     else:
         exitnagios("UNKNOWN","No printer found | valid=-1 invalid=-1")
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 

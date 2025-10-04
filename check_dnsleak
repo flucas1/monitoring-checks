@@ -337,6 +337,8 @@ def main():
 
     dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
 
+#-------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
 
