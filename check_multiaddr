@@ -148,7 +148,7 @@ def domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,child
 def main(forcedargs=None):
     if forcedargs==None:
         forcedargs = sys.argv[1:]
-    multitimeoutparts = forcedargs[1].split(":")
+    multitimeoutparts = forcedargs[0].split(":")
     multitimeoutvalue = int(multitimeoutparts[0])
     multitimeoutstatus = "CRITICAL"
     if len(multitimeoutparts)>1:
@@ -158,8 +158,8 @@ def main(forcedargs=None):
     childtimeout = ""
     lastarghostname = False
     lastargtimeout = False
-    infomsg("size of forcedargs: "+len(forcedargs))
-    for i in range(2,len(forcedargs)):
+    infomsg("size of forcedargs: "+str(len(forcedargs)))
+    for i in range(1,len(forcedargs)):
         argument = forcedargs[i]
         if argument.startswith("--hostname=")==True:
             multihostnames = argument[len("--hostname="):]
@@ -177,9 +177,9 @@ def main(forcedargs=None):
             lastargtimeout=True
         else:
             multiargs.append(argument)
-    
+
     allhosts = multihostnames.split(",")
-    
+
     childtimeoutvalue = None
     childtimeoutstatus = None
     if childtimeout != "":
@@ -192,14 +192,14 @@ def main(forcedargs=None):
         childtimeoutstatus = "CRITICAL"
     infomsg(childtimeoutvalue)
     infomsg(childtimeoutstatus)
-    
+
     infomsg("multitimeoutvalue: "+str(multitimeoutvalue))
     infomsg("multitimeoutstatus: "+str(multitimeoutstatus))
     infomsg("childtimeoutvalue: "+str(childtimeoutvalue))
     infomsg("childtimeoutstatus: "+str(childtimeoutstatus))
     infomsg("allhosts: "+str(allhosts))
     infomsg("multiargs: "+str(multiargs))
-    
+
     domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,childtimeoutstatus,allhosts,multiargs)
 
 #-------------------------------------------------------------------------------
