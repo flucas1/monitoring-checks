@@ -70,14 +70,14 @@ def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                                          default="12",                                 help="Number of occurences to trigger a warning")
     parser.add_argument("-c", "--critical",                                                         default="24",                                 help="Number of occurences to trigger a warning")
     parser.add_argument("-p", "--profile",                                 dest="profile",          default="",                                   help="Connection profile to check")
     parser.add_argument("-t", "--time",                                    dest="time",             default="24",                                 help="Duration in hours to verify")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

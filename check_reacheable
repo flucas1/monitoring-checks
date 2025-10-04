@@ -215,7 +215,7 @@ def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeout
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -229,12 +229,12 @@ def parse_args():
     parser.add_argument("-c", "--critical",          action="store",                                default="1000,40%",                           help="ms,percent%")
     parser.add_argument("-r", "--retries",           action="store",                                default="3",                                  help="number of times to retry the logic")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     return args
 
-def main():
-    args = parse_args()
+def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 

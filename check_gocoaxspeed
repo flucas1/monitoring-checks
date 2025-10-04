@@ -186,7 +186,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
@@ -194,7 +194,7 @@ def main():
     parser.add_argument("-c", "--critical",                                dest="critical",         default="500",                                help="maximun value for a critical")
     parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                                   help="file containing the management credentials")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

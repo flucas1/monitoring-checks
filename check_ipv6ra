@@ -81,18 +81,18 @@ def doipv6racall(interface,expected,ignored):
 #-------------------------------------------------------------------------------
 
 #collect arguments
-def parse_args():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interface",         action="store",       dest="interface",        default="",                                   help="interface to evaluate")
     parser.add_argument("-e", "--expected",          action="store",       dest="expected",         default="",                                   help="expected RA prefixes")
     parser.add_argument("-g", "--ignored",           action="store",       dest="ignored",          default="",                                   help="ignore these RA prefixes")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     return args
 
-def main():
-    args = parse_args()
+def main(forcedargs=None):
+    args = parse_args(forcedargs)
     setcandebug(args.debug)
 
     if args.interface=="":

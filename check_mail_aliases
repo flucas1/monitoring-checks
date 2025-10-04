@@ -103,17 +103,17 @@ def domailaliasescall(customlines):
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     parser.add_argument("-l", "--customlines",                             dest="customlines",      default="",                                   help="expected custom lines")
 
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
     
     return args
 
-def main():
-    args = parse_args()
+def main(forcedargs=None):
+    args = parse_args(forcedargs)
     setcandebug(args.debug)
     customlines = []
     for entry in args.customlines.split(","):

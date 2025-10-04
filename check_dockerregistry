@@ -61,11 +61,11 @@ def dodockerregistrycheck(port):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--port",                                    dest="port",             default="0",                                  help="local port where the registry is running")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

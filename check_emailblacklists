@@ -226,7 +226,7 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -235,7 +235,7 @@ def main():
     parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="lists to ignore")
     parser.add_argument("-l", "--tolerance",                               dest="tolerance",        default="0",                                  help="number of listed databases to tolerate")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

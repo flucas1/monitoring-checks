@@ -85,16 +85,16 @@ def isvalidnode(nodespath,entry):
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--directory",         action="store",                                default="/var/lib/jenkins",                   help="path for the jenkins working folder")
     parser.add_argument("-c", "--critical",          action="store",                                default="",                                   help="nodes that will raise a critical")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
     return args
 
-def main():
-    args = parse_args()
+def main(forcedargs=None):
+    args = parse_args(forcedargs)
     
     setcandebug(args.debug)
     

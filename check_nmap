@@ -166,7 +166,7 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -179,7 +179,7 @@ def main():
     parser.add_argument("-f", "--filtered",                                dest="filtered",         default="WARNING",                            help="OK,WARNING,CRITICAL,UNKNOWN")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

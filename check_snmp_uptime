@@ -107,7 +107,7 @@ def snmpget(hostname, port, version, community, oid):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
     parser.add_argument("-p", "--port",                                    dest="port",             default=161,                                  help="port to use, usually 143 or 993")
@@ -118,7 +118,7 @@ def main():
     parser.add_argument("-W", "--warning-max",                             dest="warningmax",       default="",                                   help="minimun value for a warning (minutes)")
     parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                                   help="maximun value for a critical (minutes)")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

@@ -261,7 +261,7 @@ def fetch_object(item_url, args, timeoutstatus):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--item",                                    dest="item",                                                           help="The item to check. Either this or --thing is required.")
     parser.add_argument("-T", "--thing",                                   dest="thing",                                                          help="The thing to check. Will check thing's status. Either this or --item is required.")
@@ -282,7 +282,7 @@ def main():
     parser.add_argument("-g", "--string-warn",                             dest="string_warn",      default=None,                                 help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
     parser.add_argument("-l", "--string-crit",                             dest="string_crit",      default=None,                                 help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

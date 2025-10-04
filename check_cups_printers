@@ -91,11 +91,11 @@ def parse_options():
     parser.add_argument("-r", "--printers",          action="store",                                                                              help="A comma separated list of printers")
     parser.add_argument("-a", "--all-printers",      action="store_true",                           default=False,                                help="Test all printers (not compatible with --printers)")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     return args
 
-def main():
+def main(forcedargs=None):
     args = parse_options()
     
     setcandebug(args.debug)

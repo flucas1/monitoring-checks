@@ -233,12 +233,12 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
     parser.add_argument("-l", "--tolerate",                                dest="tolerate",         default="0",                                  help="number of warnings to tolerate")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

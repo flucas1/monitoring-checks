@@ -328,13 +328,13 @@ def dokubernetescall(kubeconfig,namespace):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode",              action="store",       dest="mode",             default="pipeline",                           help="choose one of: monitoring,pipeline"        )
     parser.add_argument("-k", "--kubeconfig",        action="store",       dest="kubeconfig",       default="/etc/kubernetes/admin.conf",         help="path to kubeconfig admin file"             )
     parser.add_argument("-n", "--namespace",         action="store",       dest="namespace",        default="",                                   help="only check this namespace"                 )
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose"                           )
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     if args.mode.strip().lower() == "pipeline":
         setcandebug(True)

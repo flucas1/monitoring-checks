@@ -590,7 +590,7 @@ async def main_async():
     parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                                  help="minimun number of values in record servers before considering critical")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -655,7 +655,7 @@ async def main_async():
 
     exitnagios("CRITICAL","no zone or record defined")
 
-def main():
+def main(forcedargs=None):
     asyncio.run(main_async())
 
 #-------------------------------------------------------------------------------

@@ -163,7 +163,7 @@ def systemd_check(service,system,user,toleratelist,ignorelist):
 
 #-------------------------------------------------------------------------------
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--service",                                 dest="service",          default=None,                                 help="Name of the Service that is beeing tested")
     parser.add_argument("-m", "--system",            action="store_true",  dest="system",           default=False,                                help="Check the gobal systemd (default)")
@@ -171,7 +171,7 @@ def main():
     parser.add_argument("-l", "--tolerate",                                                         default="",                                   help="Systemd units to mark as warning instead of critical")
     parser.add_argument("-g", "--ignore",                                                           default="",                                   help="Systemd units to fully ignore")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

@@ -69,7 +69,7 @@ def checkgetent(database, key, value, partial, outputlevel):
         if found == False:
             exitnagios("CRITICAL","key not found "+key)
 
-def main():
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--database",                                dest="database",                                                       help="database to use (passwod, group, ...)")
     parser.add_argument("-k", "--key",                                     dest="key",                                                            help="key to search")
@@ -78,7 +78,7 @@ def main():
     parser.add_argument("-w", "--warning",           action="store_false", dest="critical",                                                       help="Return warning if not matching")
     parser.add_argument("-c", "--critical",          action="store_true",  dest="critical",         default=True,                                 help="Return critical if not matching (default)")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 

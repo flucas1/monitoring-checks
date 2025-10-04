@@ -105,7 +105,7 @@ def change_mac(base, offset):
 
 #-------------------------------------------------------------------------------
 
-def parse_args():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host",                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-m", "--mac",                                     dest="mac",              default=None,                                 help="MAC address of remote station")
@@ -113,12 +113,12 @@ def parse_args():
     parser.add_argument("-c", "--critical",                                dest="critical" ,        default=None,                                 help="Critical level")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
     
     return args
 
-def main():
-    args = parse_args()
+def main(forcedargs=None):
+    args = parse_args(forcedargs)
     
     setcandebug(args.debug)
 
