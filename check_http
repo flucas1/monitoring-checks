@@ -316,9 +316,9 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         toleratedfailures = []
         toleratedfailures.append("Invalid HTTP header field was received: frame type: 1, stream: 1, name: [upgrade], value: [h2,h2c]")
         if failuremessage not in toleratedfailures:
-            return "CRITICAL","error - "+str(failuremessage)+" | totaltime="+str(totaltime)
+            return "CRITICAL","error - "+str(failuremessage)+" for URL '"+url+"' | totaltime="+str(totaltime)
     if timeoutmessage!=None:
-        return timeoutstatus,"error - "+str(timeoutmessage)+" | totaltime="+str(totaltime)
+        return timeoutstatus,"error - "+str(timeoutmessage)+" for URL '"+url+"' | totaltime="+str(totaltime)
 
     infomsg("----- checks stage 2")
 
@@ -328,7 +328,7 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
+            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)+" for URL '"+url+"' | totaltime="+str(totaltime)
     if len(expect)>0:
         foundexpect = False
         for line in _preheaders:
@@ -336,7 +336,7 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
                 if line.startswith(test):
                     foundexpect = True
         if foundexpect == False:
-            return "CRITICAL","cannot match '"+str(expect)+"' in "+str(_preheaders)+" | totaltime="+str(totaltime)
+            return "CRITICAL","cannot match '"+str(expect)+"' in "+str(_preheaders)+" for URL '"+url+"' | totaltime="+str(totaltime)
 
     infomsg("----- checks stage 3")
 
@@ -346,9 +346,9 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         headermatchvalue = headermatchparts[1].strip()
         if headermatchkey in _headers:
             if _headers[headermatchkey] != headermatchvalue:
-                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"' | totaltime="+str(totaltime)
+                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"' for URL '"+url+"' | totaltime="+str(totaltime)
         else:
-            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"' | totaltime="+str(totaltime)
+            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"' for URL '"+url+"' | totaltime="+str(totaltime)
 
     infomsg("----- checks stage 4")
 
