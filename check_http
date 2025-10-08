@@ -377,7 +377,7 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
             infomsg(traceback.format_exc())
             pass
         if certexpirationparsed==None:
-            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' | totaltime="+str(totaltime)
+            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' for URL '"+url+"' | totaltime="+str(totaltime)
         else:
             today = datetime.datetime.now(datetime.UTC)
             timeremaining = certexpirationparsed.timestamp()-today.timestamp()
@@ -389,14 +389,14 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
             else:
                 warningdays = -1
             if daysremaining<criticaldays:
-                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
+                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days for URL '"+url+"' | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
             elif daysremaining<warningdays:
-                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
+                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days for URL '"+url+"' | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
 
     infomsg("----- checks stage 5")
 
     if responsecode>=500:
-        return "WARNING","unexpected responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)
+        return "WARNING","unexpected responsecode for URL '"+url+"' : "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)
 
     infomsg("----- checks stage 6")
 
