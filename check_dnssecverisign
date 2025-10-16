@@ -52,18 +52,21 @@ def exitnagios(status,message):
 
 def generatedriver(proxy):
     chrome_options = Options()
-    chrome_options.add_argument("--incognito")
+    #chrome_options.add_argument("--incognito")
+    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
-    chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--renderer-process-limit=1")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--in-process-gpu")
     chrome_options.add_argument("--use-gl=angle")
     chrome_options.add_argument("--use-angle=swiftshader-webgl")
     chrome_options.add_argument("--proxy-server="+proxy)
+    chrome_options.add_argument("--disable-popup-blocking")
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
