@@ -68,8 +68,9 @@ def generatedriver(proxy):
     chrome_options.add_argument("--in-process-gpu")
     chrome_options.add_argument("--use-gl=angle")
     chrome_options.add_argument("--use-angle=swiftshader-webgl")
-    chrome_options.add_argument("--proxy-server="+proxy)
     chrome_options.add_argument("--disable-popup-blocking")
+    if proxy is not None:
+        chrome_options.add_argument("--proxy-server=" + proxy)
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
