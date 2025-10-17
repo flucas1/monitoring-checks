@@ -4,11 +4,9 @@
 import socket
 import os
 import time
-import traceback
 import sys
+import ntplib
 import datetime
-import subprocess
-import re
 import argparse
 
 #-------------------------------------------------------------------------------
@@ -64,34 +62,32 @@ def forced_ipv4_gai_family(*args, **kwargs):
 #-------------------------------------------------------------------------------
 
 def dontptimecheck(protocol,hostname,warning,critical,timeoutvalue,timeoutstatus):
-    retries = 3
+    client = ntplib.NTPClient()
     counter = 0
     while True:
         infomsg("executing retry "+str(counter))
         counter = counter+1
-        command = ["/usr/lib/nagios/plugins/check_ntp_time",protocol,"-H",hostname,"-w",warning,"-c",critical,"-t",str(10)]
-        infomsg(" ".join(command))
-        result = subprocess.run(command,capture_output=True)
-        exitcode = result.returncode
-        output = result.stdout.decode("utf-8").strip()
-        errors = result.stderr.decode("utf-8").strip()
+        try:
+            response = client.request(hostname, version=4)
+            offset = response.offset
+            infomsg(f"NTP offset: {offset:.3f} seconds")
 
-        if output.endswith("No response from NTP server"):
-            if counter>retries:
-                exitnagios(timeoutstatus,output+"\n"+errors)
+            if critical is not None and abs(offset) >= float(critical):
+                status = "CRITICAL"
+            elif warning is not None and abs(offset) >= float(warning):
+                status = "WARNING"
             else:
-                infomsg("sleeping for retry "+str(counter))
-                time.sleep(10)
-        else:
-            if exitcode==0:
-                originalstatus = "OK"
-            elif exitcode==1:
-                originalstatus = "WARNING"
-            elif exitcode==2:
-                originalstatus = "CRITICAL"
+                status = "OK"
+
+            now = datetime.datetime.now(datetime.UTC)
+            exitnagios(status, f"NTP offset {offset:.3f}s at {now.isoformat()} UTC")
+
+        except Exception as e:
+            infomsg(f"NTP request failed: {e}")
+            if counter > retries:
+                exitnagios(timeoutstatus, str(e))
             else:
-                originalstatus = "UNKNOWN"
-            exitnagios(originalstatus,output+"\n"+errors)
+                time.sleep(5)
 
 #-------------------------------------------------------------------------------
 
