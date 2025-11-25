@@ -134,7 +134,7 @@ def dodnssecverisigncall(domain,proxy):
         infomsg("page loaded")
 
         infomsg("waiting for element")
-        wait.until(EC.presence_of_element_located((By.ID, "record_details")))
+        wait.until(EC.presence_of_element_located((By.ID, "domain")))
 
         infomsg("finding base element")
         element = tryfindbyid(driver,"success")
@@ -161,7 +161,7 @@ def dodnssecverisigncall(domain,proxy):
 
 def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
+    parser.add_argument('-H', '--host',                                    dest="host",                                                           help="domain")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
