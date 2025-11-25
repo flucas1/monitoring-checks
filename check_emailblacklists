@@ -19,6 +19,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+#import undetected_chromedriver as uc
+#from fake_useragent import UserAgent
+
 #-------------------------------------------------------------------------------
 
 _candebug = False
@@ -71,11 +74,19 @@ def generatedriver(proxy):
     chrome_options.add_argument("--disable-popup-blocking")
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
+    #ua = UserAgent()
+    #chrome_options.add_argument(f'user-agent={ua.random}')
+    chrome_options.add_argument("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
     driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
     #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+#    driver = uc.Chrome(headless=True,use_subprocess=False)
+
+    driver.execute_cdp_cmd("Network.enable", {})
+    driver.execute_cdp_cmd("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
 
@@ -144,7 +155,7 @@ def resolverecord(protocol,hostname):
         infomsg("exception "+str(e))
     return result
 
-def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
+def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
     try:
         ips = resolverecord(protocol,hostname)
         if len(ips)==0:
@@ -164,14 +175,19 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
         #https://www.dnsbl.info/dnsbl-database-check.php
         #https://blacklistchecker.com/check
         #https://www.uceprotect.net/en/rblcheck.php
-        
+
         # OTHER OPTION
         # https://manpages.debian.org/bookworm/amispammer/amispammer.1.en.html -- perl code gives warnings, and fails with IPv6
 
         infomsg("browser OK")
-        url = "https://dnschecker.org/ip-blacklist-checker.php"
-        driver.get(url)
-        infomsg("asking for navigating "+url)
+
+        #driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent/")
+        #detected_user_agent = driver.find_element(By.ID, "detected_value").text
+        #infomsg(f"Detected User Agent: {detected_user_agent}")
+
+        targeturl = "https://dnschecker.org/ip-blacklist-checker.php"
+        infomsg("asking for navigating "+targeturl)
+        driver.get(targeturl)
 
         infomsg("manual delay")
         time.sleep(2)
@@ -179,7 +195,16 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
         wait_page_loaded(driver)
         infomsg("page loaded")
 
-        infomsg("waiting for submit")
+        #currenturl = driver.current_url
+        #driver.get("the current page is "+currenturl)
+
+        if driver.page_source.strip() == "":
+            infomsg("The page source is empty")
+
+        infomsg("waiting for mTools")
+        wait.until(EC.presence_of_element_located((By.ID, "mTools")))
+
+        infomsg("waiting for ipbc_submit")
         wait.until(EC.presence_of_element_located((By.ID, "ipbc_submit")))
 
         infomsg("finding textbox element")
@@ -231,6 +256,7 @@ def dodnssecverisigncall(protocol,hostname,ignorelist,tolerance,proxy):
 
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        infomsg(driver.page_source)
 
 #-------------------------------------------------------------------------------
 
@@ -269,7 +295,7 @@ def main(forcedargs=None):
     proxy = ""
     ignorelist = args.ignore.split(",")
     tolerance = int(args.tolerance)
-    dodnssecverisigncall(protocol,args.hostname,ignorelist,tolerance,proxy)
+    doemailblacklistscall(protocol,args.hostname,ignorelist,tolerance,proxy)
 
 #-------------------------------------------------------------------------------
 
