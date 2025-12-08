@@ -134,7 +134,7 @@ def load_json(proxy,domain,retries):
     else:
         opener = urllib.request.build_opener()
 
-    version = 139
+    version = 142
     item_request = urllib.request.Request(item_url)
     item_request.add_header("Upgrade-Insecure-Requests", "1")
     item_request.add_header("Dnt", "1")

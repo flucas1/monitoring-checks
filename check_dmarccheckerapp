@@ -92,6 +92,7 @@ def wait_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
+        time.sleep(1)
 
 #-------------------------------------------------------------------------------
 
