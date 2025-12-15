@@ -64,6 +64,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 def dontptimecheck(protocol,hostname,warning,critical,timeoutvalue,timeoutstatus):
     client = ntplib.NTPClient()
     counter = 0
+    retries = 3
     while True:
         infomsg("executing retry "+str(counter))
         counter = counter+1
