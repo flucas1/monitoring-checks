@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+#-------------------------------------------------------------------------------
+
+import os
+import subprocess
+import argparse
+import sys
+
+#-------------------------------------------------------------------------------
+
+paths_to_check = ["/"]
+
+#-------------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Detect files with Windows line endings.")
+    parser.add_argument("--debug", action="store_true", help="Enable debug output")
+    return parser.parse_args()
+
+#-------------------------------------------------------------------------------
+
+def is_text_file_with_windows_endings(file_path):
+    """Return True if the file is text and contains Windows line endings (CRLF)."""
+    try:
+        result = subprocess.run(
+            ["file", "--brief", file_path],
+            capture_output=True,
+            text=True
+        )
+        output = result.stdout.strip()
+        return "CRLF" in output
+    except Exception:
+        return False
+
+#-------------------------------------------------------------------------------
+
+def scan_directory(path,debug):
+    """Scan a directory recursively for text files with Windows line endings."""
+    found_files = []
+    total_files_processed = 0
+
+    for root, dirs, files in os.walk(path, followlinks=False):
+        # Skip symbolic link directories
+        dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(root, d))]
+        for file in files:
+            full_path = os.path.join(root, file)
+            # Skip symbolic link files
+            if os.path.islink(full_path):
+                continue
+            total_files_processed += 1
+            if is_text_file_with_windows_endings(full_path):
+                found_files.append(full_path)
+                print(full_path)
+
+    return found_files, total_files_processed
+
+#-------------------------------------------------------------------------------
+
+def main():
+    args = parse_args()
+    all_found_files = []
+    total_files_processed = 0
+
+    for path in paths_to_check:
+        found_files, processed = scan_directory(path,args.debug)
+        all_found_files.extend(found_files)
+        total_files_processed += processed
+
+    # Print results
+    if all_found_files:
+        print("Files with Windows line endings:")
+        for f in all_found_files:
+            print(f)
+    else:
+        print("No files with Windows line endings found.")
+
+    if args.debug:
+        print(f"\nTotal files processed: {total_files_processed}")
+
+    # Exit with code 1 if more than one file found
+    if len(all_found_files) > 1:
+        sys.exit(1)
+
+#-------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    main()
+
+#-------------------------------------------------------------------------------
+
