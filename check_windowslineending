@@ -8,7 +8,35 @@ import sys
 
 #-------------------------------------------------------------------------------
 
-paths_to_check = ["/"]
+_candebug = False
+def candebug():
+    global _candebug
+    return _candebug
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+def mapstatustoexitcode(status):
+    if status=="OK":
+        exitcode = 0
+    elif status=="WARNING":
+        exitcode = 1
+    elif status=="CRITICAL":
+        exitcode = 2
+    elif status=="UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+def exitnagios(status,message):
+    exitcode = mapstatustoexitcode(status)
+    print(status+": "+message, flush=True)
+    sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
@@ -37,7 +65,6 @@ def is_text_file_with_windows_endings(file_path):
 def scan_directory(path,debug):
     """Scan a directory recursively for text files with Windows line endings."""
     found_files = []
-    total_files_processed = 0
 
     for root, dirs, files in os.walk(path, followlinks=False):
         # Skip symbolic link directories
@@ -47,39 +74,27 @@ def scan_directory(path,debug):
             # Skip symbolic link files
             if os.path.islink(full_path):
                 continue
-            total_files_processed += 1
             if is_text_file_with_windows_endings(full_path):
                 found_files.append(full_path)
-                print(full_path)
+                infomsg(full_path)
 
-    return found_files, total_files_processed
+    return found_files
 
 #-------------------------------------------------------------------------------
 
 def main():
     args = parse_args()
     all_found_files = []
-    total_files_processed = 0
 
+    paths_to_check = ["/etc"]
     for path in paths_to_check:
-        found_files, processed = scan_directory(path,args.debug)
+        found_files = scan_directory(path,args.debug)
         all_found_files.extend(found_files)
-        total_files_processed += processed
 
-    # Print results
-    if all_found_files:
-        print("Files with Windows line endings:")
-        for f in all_found_files:
-            print(f)
+    if len(all_found_files)>0:
+        exitnagios("ERROR", "Files with Windows line endings: "+str(all_found_files))
     else:
-        print("No files with Windows line endings found.")
-
-    if args.debug:
-        print(f"\nTotal files processed: {total_files_processed}")
-
-    # Exit with code 1 if more than one file found
-    if len(all_found_files) > 1:
-        sys.exit(1)
+        exitnagios("OK", "No files with Windows line endings found")
 
 #-------------------------------------------------------------------------------
 
