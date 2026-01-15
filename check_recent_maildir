@@ -384,31 +384,15 @@ def dorecentmaildircall(username,warning,critical):
         maildirpath = os.path.join(userhomepath,"Maildir")
         infomsg(maildirpath)
         inbox = mailbox.Maildir(maildirpath, factory=None)
-
-        newest_date = most_recent_date_recursive(inbox)
-        newest_date = newest_date.astimezone(datetime.timezone.utc)
-        infomsg("newest_date: "+str(newest_date))
-
-        if (newest_date)==None:
-            exitnagios("CRITICAL","no emails found | maxage=-1")
-        else:
-            now = datetime.datetime.now(datetime.timezone.utc)
-            infomsg("now: "+str(now))
-            warninglimit = now - datetime.timedelta(hours=warning)
-            criticallimit = now - datetime.timedelta(hours=critical)
-            maxage = now - newest_date
-            if newest_date < criticallimit:
-                exitnagios("CRITICAL","no email in the last "+str(critical)+" hours - newest is "+str(newest_date)+" | maxage="+str(maxage.total_seconds()))
-            elif newest_date < warninglimit:
-                exitnagios("WARNING","no email in the last "+str(warning)+" hours - newest is "+str(newest_date)+" | maxage="+str(maxage.total_seconds()))
-            else:
-                exitnagios("OK","no issues found - newest is "+str(newest_date)+" | maxage="+str(maxage.total_seconds()))
-
-        # Remove original message
-        #inbox.lock()
-        #inbox.discard(key)
-        #inbox.flush()
-        #inbox.unlock()
+        now = datetime.datetime.now(datetime.timezone.utc)
+        infomsg("now: "+str(now))
+        warninglimit = now - datetime.timedelta(hours=warning)
+        criticallimit = now - datetime.timedelta(hours=critical)
+        if not has_email_newer_than_recursive(inbox,criticallimit):
+            exitnagios("CRITICAL","no email in the last "+str(critical)+" hours | maxage>="+str(int(critical*3600)))
+        if not has_email_newer_than_recursive(inbox,warninglimit):
+            exitnagios("WARNING","no email in the last "+str(warning)+" hours | maxage>="+str(int(warning*3600)))
+        exitnagios("OK","no issues found | maxage<"+str(int(warning*3600)))
     except Exception as e:
         exitnagios("CRITICAL","there was an exception - "+str(e)+" | maxage=-1")
 
