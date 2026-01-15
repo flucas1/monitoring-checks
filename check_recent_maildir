@@ -295,9 +295,10 @@ def most_recent_date_simple(inbox):
             date = message["Date"]
             try:
                 candidatedate = dateutil.parser.parse(date, tzinfos=get_extra_tz())
+                candidatedate = candidatedate if candidatedate.tzinfo else candidatedate.replace(tzinfo=datetime.timezone.utc)
             except:
                 candidatedate = None
-            infomsg(candidatedate)
+            infomsg("parsed: "+str(candidatedate))
             if (candidatedate!=None) and ((referencedate==None) or (candidatedate>referencedate)):
                 referencedate = candidatedate
     except Exception as e:
@@ -353,12 +354,13 @@ def dorecentmaildircall(username,warning,critical):
 
         newest_date = most_recent_date_recursive(inbox)
         newest_date = newest_date.astimezone(datetime.timezone.utc)
-        infomsg(newest_date)
+        infomsg("newest_date: "+str(newest_date))
 
         if (newest_date)==None:
             exitnagios("CRITICAL","no emails found | maxage=-1")
         else:
             now = datetime.datetime.now(datetime.timezone.utc)
+            infomsg("now: "+str(now))
             warninglimit = now - datetime.timedelta(hours=warning)
             criticallimit = now - datetime.timedelta(hours=critical)
             maxage = now - newest_date
