@@ -279,52 +279,18 @@ def get_extra_tz():
         }
     return extra_tz
 
-def most_recent_date_simple(inbox):
-    referencedate = None
+def get_maildir_state(inbox, warninglimit, criticallimit):
+    """
+    Traverse inbox and subfolders once, returning:
+    "CRITICAL" if no email newer than criticallimit
+    "WARNING" if no email newer than warninglimit
+    "OK" if at least one email newer than warninglimit
+    """
+    state = "CRITICAL"  # start pessimistic
 
-    infomsg(inbox)
     try:
         inbox.clean()
         for key in inbox.iterkeys():
-            infomsg(key)
-            try:
-                message = inbox[key]
-            except email.errors.MessageParseError:
-                # The message is malformed. Just leave it.
-                continue
-            date = message["Date"]
-            try:
-                candidatedate = dateutil.parser.parse(date, tzinfos=get_extra_tz())
-                candidatedate = candidatedate if candidatedate.tzinfo else candidatedate.replace(tzinfo=datetime.timezone.utc)
-            except:
-                candidatedate = None
-            infomsg("parsed: "+str(candidatedate))
-            if (candidatedate!=None) and ((referencedate==None) or (candidatedate>referencedate)):
-                referencedate = candidatedate
-    except Exception as e:
-        exitnagios("CRITICAL","there was an exception - "+str(e))
-
-    return referencedate
-
-def most_recent_date_recursive(inbox):
-    referencedate = most_recent_date_simple(inbox)
-
-    allfolders = inbox.list_folders()
-    for folder in allfolders:
-        nestedinbox = inbox.get_folder(folder)
-        candidatedate = most_recent_date_recursive(nestedinbox)
-        if (candidatedate!=None) and ((referencedate==None) or (candidatedate>referencedate)):
-            referencedate = candidatedate
-
-    infomsg(referencedate)
-    return referencedate
-
-def has_email_older_than_simple(inbox, referencedate):
-    infomsg(inbox)
-    try:
-        inbox.clean()
-        for key in inbox.iterkeys():
-            infomsg(key)
             try:
                 message = inbox[key]
             except email.errors.MessageParseError:
@@ -336,22 +302,25 @@ def has_email_older_than_simple(inbox, referencedate):
                     candidatedate = candidatedate.replace(tzinfo=datetime.timezone.utc)
             except:
                 continue
-            infomsg("parsed: " + str(candidatedate))
-            if candidatedate < referencedate:
-                return True
+
+            if candidatedate > warninglimit:
+                return "OK"   # highest state, early exit
+            elif candidatedate > criticallimit and state != "OK":
+                state = "WARNING"  # upgrade state if needed
+
+        # check subfolders
+        for folder in inbox.list_folders():
+            nestedinbox = inbox.get_folder(folder)
+            substate = get_maildir_state(nestedinbox, warninglimit, criticallimit)
+            if substate == "OK":
+                return "OK"
+            elif substate == "WARNING" and state != "OK":
+                state = "WARNING"
+
     except Exception as e:
         exitnagios("CRITICAL", "there was an exception - " + str(e))
-    return False
 
-def has_email_older_than_recursive(inbox, referencedate):
-    if has_email_older_than_simple(inbox, referencedate):
-        return True
-    for folder in inbox.list_folders():
-        nestedinbox = inbox.get_folder(folder)
-        if has_email_older_than_recursive(nestedinbox, referencedate):
-            return True
-    return False
-
+    return state
 def get_home_path(username):
     cmdline = ["/usr/bin/getent","passwd",username]
     completedproc = subprocess.run(cmdline,capture_output=True)
@@ -368,7 +337,7 @@ def get_home_path(username):
     else:
         return None
 
-def dorecentmaildircall(username,warning,critical):
+def dorecentmaildircall(username, warning, critical):
     try:
         if warning==None or warning=="":
             warning = 48
@@ -378,21 +347,29 @@ def dorecentmaildircall(username,warning,critical):
             critical = 72
         else:
             critical = float(critical)
+
         userhomepath = get_home_path(username)
         if userhomepath==None or userhomepath=="" or os.path.isdir(userhomepath)==False:
             exitnagios("CRITICAL","the home folder '"+userhomepath+"' is not valid | maxage=-1")
+
         maildirpath = os.path.join(userhomepath,"Maildir")
         infomsg(maildirpath)
         inbox = mailbox.Maildir(maildirpath, factory=None)
+
         now = datetime.datetime.now(datetime.timezone.utc)
-        infomsg("now: "+str(now))
         warninglimit = now - datetime.timedelta(hours=warning)
         criticallimit = now - datetime.timedelta(hours=critical)
-        if not has_email_newer_than_recursive(inbox,criticallimit):
+
+        # single recursive traversal returns the merged state
+        state = get_maildir_state(inbox, warninglimit, criticallimit)
+
+        if state=="CRITICAL":
             exitnagios("CRITICAL","no email in the last "+str(critical)+" hours | maxage>="+str(int(critical*3600)))
-        if not has_email_newer_than_recursive(inbox,warninglimit):
+        elif state=="WARNING":
             exitnagios("WARNING","no email in the last "+str(warning)+" hours | maxage>="+str(int(warning*3600)))
-        exitnagios("OK","no issues found | maxage<"+str(int(warning*3600)))
+        else:
+            exitnagios("OK","no issues found | maxage<"+str(int(warning*3600)))
+
     except Exception as e:
         exitnagios("CRITICAL","there was an exception - "+str(e)+" | maxage=-1")
 
