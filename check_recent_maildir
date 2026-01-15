@@ -319,6 +319,39 @@ def most_recent_date_recursive(inbox):
     infomsg(referencedate)
     return referencedate
 
+def has_email_older_than_simple(inbox, referencedate):
+    infomsg(inbox)
+    try:
+        inbox.clean()
+        for key in inbox.iterkeys():
+            infomsg(key)
+            try:
+                message = inbox[key]
+            except email.errors.MessageParseError:
+                continue
+            date = message["Date"]
+            try:
+                candidatedate = dateutil.parser.parse(date, tzinfos=get_extra_tz())
+                if candidatedate.tzinfo is None:
+                    candidatedate = candidatedate.replace(tzinfo=datetime.timezone.utc)
+            except:
+                continue
+            infomsg("parsed: " + str(candidatedate))
+            if candidatedate < referencedate:
+                return True
+    except Exception as e:
+        exitnagios("CRITICAL", "there was an exception - " + str(e))
+    return False
+
+def has_email_older_than_recursive(inbox, referencedate):
+    if has_email_older_than_simple(inbox, referencedate):
+        return True
+    for folder in inbox.list_folders():
+        nestedinbox = inbox.get_folder(folder)
+        if has_email_older_than_recursive(nestedinbox, referencedate):
+            return True
+    return False
+
 def get_home_path(username):
     cmdline = ["/usr/bin/getent","passwd",username]
     completedproc = subprocess.run(cmdline,capture_output=True)
