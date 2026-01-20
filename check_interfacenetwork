@@ -74,8 +74,6 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
             exitnagios("CRITICAL","no IP for interface "+interface)
     else:
         errors_segment = []
-        errors_address = []
-
         if segment != "":
             for test in segment.split(","):
                 found = False
@@ -87,7 +85,7 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
                     network = ipaddress.ip_network(option["addr"]+"/"+extra, strict=False)
                     cmp_found = str(network)
                     cmp_target = str(ipaddress.ip_network(test, strict=False))
-                    infomsg("comparing "+cmp_found+" with "+cmp_target)
+                    infomsg("comparing segment "+cmp_found+" with "+cmp_target)
                     if str(network)==str(ipaddress.ip_network(test, strict=False)):
                         found = True
                         break
@@ -95,25 +93,30 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
                     errors_segment.append(test)
                 else:
                     infomsg("Found")
+                    errors_segment = []
                     break
 
+        errors_address = []
         if address != "":
             for test in address.split(","):
                 found = False
                 for option in found_addrs:
                     testparts = test.replace(":",".").split(".")
                     refeparts = option["addr"].replace(":",".").split(".")
+                    infomsg("comparing "+cmp_found+" with "+cmp_target)
                     if len(testparts)==len(refeparts):
                         matching = True
                         for index, item in enumerate(testparts):
                             if testparts[index]!="*":
+                                infomsg("comparing address "+refeparts[index]+" with "+testparts[index])
                                 matching = matching and (refeparts[index]==testparts[index])
                         if matching:
                             found = True
                 if found == False:
-                    errors_address.append(address)
+                    errors_address.append(test)
                 else:
                     infomsg("Found")
+                    errors_address = []
                     break
 
         if len(errors_segment)==0 and len(errors_address)==0:
