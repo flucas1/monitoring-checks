@@ -103,7 +103,6 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
                 for option in found_addrs:
                     testparts = test.replace(":",".").split(".")
                     refeparts = option["addr"].replace(":",".").split(".")
-                    infomsg("comparing "+cmp_found+" with "+cmp_target)
                     if len(testparts)==len(refeparts):
                         matching = True
                         for index, item in enumerate(testparts):
