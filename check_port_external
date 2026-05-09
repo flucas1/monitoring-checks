@@ -219,8 +219,6 @@ def main(forcedargs=None):
             with open(args.accesstokenfile) as handle:
                accesstoken=handle.read().splitlines()[0]
         baseurl = args.baseurl
-#        if baseurl=="":
-#            baseurl = "https://www.bigbroeyes.com/external_checks/check_port.php"
         retries = int(args.retries)
         doportexternalcall(retries,baseurl,accesstoken,protocol,tcporudp,args.hostname,int(args.port),args.responses.split(","),timeoutvalue,timeoutstatus)
     else:
