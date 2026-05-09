@@ -106,14 +106,17 @@ def dointernalcall(ipprotocol,tcporudp,hostname,port):
 
 def dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port):
     try:
-        url = baseurl+"?accesstoken="+accesstoken+"&hostname="+hostname+"&protocol="+tcporudp+"&port="+str(port)
+        url = baseurl+"?hostname="+hostname+"&protocol="+tcporudp+"&port="+str(port)
         if ipprotocol != "":
             url = url+"&ipv="+ipprotocol
         infomsg(url)
         br = mechanize.Browser()
         br.set_handle_robots(False) # ignore robots file
         #br.addheaders = [("User-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")]
-        br.addheaders = [("User-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0")]
+        br.addheaders = [
+            ("User-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0"),
+            ("Authorization", "Bearer "+accesstoken")
+        ]
         res = br.open(url)
         content = res.read().decode()
     except Exception as e:
