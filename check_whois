@@ -47,7 +47,7 @@ def dordapcall(domain,warning,critical):
     if domain in [None,""]:
         exitnagios("CRITICAL","no domain specified")
     else:
-        cmdline = ["/usr/bin/rdap","--json",domain]
+        cmdline = ["/usr/bin/go-rdap","--json",domain]
         completedproc = subprocess.run(cmdline,capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
@@ -84,7 +84,7 @@ def dordapcall(domain,warning,critical):
             else:
                 exitnagios("CRITICAL","could not retrieve block 'events'")
         else:
-            exitnagios("CRITICAL","issue calling rdap tool")
+            exitnagios("CRITICAL","issue calling go-rdap tool")
 
     exitnagios("CRITICAL","unexpected case")
 
