@@ -144,17 +144,17 @@ def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     if len(sucesses)>0:
         exitnagios("OK"," - ".join(sucesses)+" | "+" ".join(performance))
 
-    exitnagios("UNKNOWN","unexpected scenario - sucesses: "+str(sucesses)+" - warnings: "+str(warnings)+" - criticals: "+str(criticals)+" | "+" ".join(performance))
+    exitnagios("UNKNOWN","unexpected scenario - successes: "+str(sucesses)+" - warnings: "+str(warnings)+" - criticals: "+str(criticals)+" | "+" ".join(performance))
 
 #-------------------------------------------------------------------------------
 
 def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--servers",                                 dest="servers",          default="0.0.0.0",                            help="DHCP server IP (default %default)")
-    parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default="FF:FF:FF:FF:FF:FF",                  help="chaddr: Client's MAC address (default %default)")
+    parser.add_argument("-s", "--servers",                                 dest="servers",          default="0.0.0.0",                            help="DHCP server IP (default 0.0.0.0)")
+    parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default="FF:FF:FF:FF:FF:FF",                  help="chaddr: Client's MAC address (default FF:FF:FF:FF:FF:FF)")
     parser.add_argument("-w", "--warning",                                 dest="warning",          default="3",                                  help="if less than this value raise a warning")
-    parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default="0.0.0.0",                            help="ciaddr: Client's desired IP address (default %default)")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10",                                 help="UDP timeout (default %default)")
+    parser.add_argument("-c", "--ciaddr",                                  dest="ciaddr",           default="0.0.0.0",                            help="ciaddr: Client's desired IP address (default 0.0.0.0)")
+    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10",                                 help="UDP timeout (default 10)")
     parser.add_argument("-i", "--interfaces",                              dest="interfaces",       default="",                                   help="comma separated interfaces where to listen")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
