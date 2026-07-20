@@ -42,7 +42,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dofreeswapscall(warning,critical,minimun):
+def dofreeswapscall(warning,critical,minimum):
     cmdline = ["/usr/bin/free","--mega","--wide"]
     completedproc = subprocess.run(cmdline,capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
@@ -69,7 +69,7 @@ def dofreeswapscall(warning,critical,minimun):
             exitnagios("CRITICAL","no swap detected")
         else:
             usage = free/total
-            if minimun!="" and total<float(minimun):
+            if minimum!="" and total<float(minimum):
                 exitnagios("CRITICAL","swap is too small")
             elif critical!="" and usage>float(critical):
                 exitnagios("CRITICAL","swap is used at "+str(round(usage,2))+"% | percent="+str(usage))
@@ -84,15 +84,15 @@ def dofreeswapscall(warning,critical,minimun):
 
 def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="warning level %")
-    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="critical level %")
-    parser.add_argument("-m", "--minimun",                                 dest="minimun",          default="",                                   help="minimun size MB")
+    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="warning level percentage")
+    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="critical level percentage")
+    parser.add_argument("-m", "--minimum",                                 dest="minimum",          default="",                                   help="minimum size MB")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
-    dofreeswapscall(args.warning,args.critical,args.minimun)
+    dofreeswapscall(args.warning,args.critical,args.minimum)
 
 #-------------------------------------------------------------------------------
 
