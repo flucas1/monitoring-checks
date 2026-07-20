@@ -118,9 +118,9 @@ def main(forcedargs=None):
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
     parser.add_argument("-m", "--community",                               dest="community",        default="public",                             help="private/public")
     parser.add_argument("-w", "--warning-min",                             dest="warningmin",       default="",                                   help="minimum value for a warning (minutes)")
-    parser.add_argument("-c", "--critical-min",                            dest="criticalmin",      default="",                                   help="maximun value for a critical (minutes)")
+    parser.add_argument("-c", "--critical-min",                            dest="criticalmin",      default="",                                   help="maximum value for a critical (minutes)")
     parser.add_argument("-W", "--warning-max",                             dest="warningmax",       default="",                                   help="minimum value for a warning (minutes)")
-    parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                                   help="maximun value for a critical (minutes)")
+    parser.add_argument("-C", "--critical-max",                            dest="criticalmax",      default="",                                   help="maximum value for a critical (minutes)")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
