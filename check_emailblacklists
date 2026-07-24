@@ -8,18 +8,9 @@ import subprocess
 import argparse
 import datetime
 import dns.resolver
+import asyncio
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-#import undetected_chromedriver as uc
+import nodriver as uc
 #from fake_useragent import UserAgent
 
 #-------------------------------------------------------------------------------
@@ -56,49 +47,74 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def generatedriver(proxy):
-    chrome_options = Options()
-    #chrome_options.add_argument("--incognito")
-    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
-    chrome_options.add_argument("--disk-cache-size=0")
-    chrome_options.add_argument("--media-cache-size=0")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-zygote")
-    chrome_options.add_argument("--renderer-process-limit=1")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--in-process-gpu")
-    chrome_options.add_argument("--use-gl=angle")
-    chrome_options.add_argument("--use-angle=swiftshader-webgl")
-    chrome_options.add_argument("--disable-popup-blocking")
+async def generatedriver(proxy):
+    browserargs = []
+    #browserargs.append("--incognito")
+    #browserargs.append("--enable-features=EphemeralGuestProfilesOnStartup")
+    browserargs.append("--disk-cache-size=0")
+    browserargs.append("--media-cache-size=0")
+    browserargs.append("--headless")
+    browserargs.append("--disable-gpu")
+    browserargs.append("--no-zygote")
+    browserargs.append("--renderer-process-limit=1")
+    browserargs.append("--no-sandbox")
+    browserargs.append("--disable-dev-shm-usage")
+    browserargs.append("--in-process-gpu")
+    browserargs.append("--use-gl=angle")
+    browserargs.append("--use-angle=swiftshader-webgl")
+    browserargs.append("--disable-popup-blocking")
     if proxy not in ["", None]:
-        chrome_options.add_argument("--proxy-server=" + proxy)
+        browserargs.append("--proxy-server=" + proxy)
     #ua = UserAgent()
-    #chrome_options.add_argument(f'user-agent={ua.random}')
-    chrome_options.add_argument("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
+    #browserargs.append(f'user-agent={ua.random}')
+    browserargs.append("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
+    browserconfig = uc.Config(browser_args=browserargs)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
-
-    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    driver = await uc.start(browserconfig)
     #driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
-#    driver = uc.Chrome(headless=True,use_subprocess=False)
-
-    driver.execute_cdp_cmd("Network.enable", {})
-    driver.execute_cdp_cmd("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
+    uc.cdp.network.enable()
+    #uc.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
 
-def check_page_loaded(driver):
-    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
-    page_state = driver.execute_script("return document.readyState;")
-    return page_state == "complete"
+async def get_html_source(page):
+    js = """
+    (() => {
+        return document.documentElement.outerHTML;
+    })();
+    """
+    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    html = response.value
+    return html
 
-def wait_page_loaded(driver):
+async def get_page_title(page):
+    js = """
+    (() => {
+        return document.title;
+    })();
+    """
+    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    title = response.value
+    return title
+
+async def check_page_loaded(page):
+    js = """
+    (() => {
+        return document.readyState;
+    })();
+    """
+    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    page_state_value = response.value
+    infomsg("page state is '"+str(page_state_value)+"'")
+    result = (page_state_value == "complete")
+    return result
+
+async def wait_page_loaded(page):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        loaded = await check_page_loaded(page)
+        if loaded == True:
             break
         if time.time() - timestamp > 20:
             break
@@ -156,7 +172,7 @@ def resolverecord(protocol,hostname):
         infomsg("exception "+str(e))
     return result
 
-def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
+async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
     try:
         ips = resolverecord(protocol,hostname)
         if len(ips)==0:
@@ -166,10 +182,7 @@ def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
         targetip = ips[0]
         infomsg("The IP to test is "+targetip)
 
-        driver = generatedriver(proxy)
-
-        wait = WebDriverWait(driver,20)
-        action=ActionChains(driver)
+        driver = await generatedriver(proxy)
 
         # OTHER ALTERNATIVES
         #https://mxtoolbox.com/SuperTool.aspx?action=blacklist
@@ -188,25 +201,39 @@ def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
 
         targeturl = "https://dnschecker.org/ip-blacklist-checker.php"
         infomsg("asking for navigating "+targeturl)
-        driver.get(targeturl)
+        page = await driver.get(targeturl)
+        #page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
 
-        wait_page_loaded(driver)
+        await wait_page_loaded(page)
         infomsg("page loaded")
 
         #currenturl = driver.current_url
         #driver.get("the current page is "+currenturl)
 
-        if driver.page_source.strip() == "":
+        #sourceraw = await page.send(uc.cdp.dom.get_outer_html())
+        sourceraw = await get_html_source(page)
+        if (sourceraw == None) or (sourceraw.strip() == ""):
             infomsg("The page source is empty")
+        else:
+            infomsg("The page source has contents")
+            pagetitle = await get_page_title(page)
+            infomsg("The page title is '"+str(pagetitle)+"'")
+            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+                infomsg("Aborting...")
+                infomsg(sourceraw)
+                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+            else:
+                infomsg("page OK")
+                infomsg(sourceraw)
 
         infomsg("waiting for mTools")
-        wait.until(EC.presence_of_element_located((By.ID, "mTools")))
+        await page.wait_for("#mTools", timeout=20)
 
         infomsg("waiting for ipbc_submit")
-        wait.until(EC.presence_of_element_located((By.ID, "ipbc_submit")))
+        await page.wait_for("#ipbc_submit", timeout=20)
 
         infomsg("finding textbox element")
         elements = tryfindbyid(driver,"ipbc_host")
@@ -261,7 +288,7 @@ def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -296,11 +323,11 @@ def main(forcedargs=None):
     proxy = ""
     ignorelist = args.ignore.split(",")
     tolerance = int(args.tolerance)
-    doemailblacklistscall(protocol,args.hostname,ignorelist,tolerance,proxy)
+    await doemailblacklistscall(protocol,args.hostname,ignorelist,tolerance,proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
