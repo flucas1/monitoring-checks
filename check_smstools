@@ -56,25 +56,33 @@ def dosmstoolscall(modem):
                 for line in contents.splitlines():
                     infomsg(line)
                     if line.startswith(modem+":"):
+                        infomsg("MATCHING -> "+line)
                         resultstatus = ""
                         resultmsg = ""
                         try:
-                            parts = line.split("\t")
-                            status = parts[2].strip(",")
+                            parts = line.replace("\t"," ").split(": ",1)[1].split(", ")
+                            infomsg("the parts are: ["+ ", ".join(parts)+"]")
+                            status = parts[1].strip()
                             if status in ["Unknown"]:
+                                infomsg("failing condition detected")
                                 resultstatus = "CRITICAL"
                                 resultmsg = "modem ID "+modem+" is not connected | signal=0"
                             else:
-                                info = parts[7]
-                                blocks = info.split()
-                                signal = blocks[3].strip("(),")
-                                resultmsg = "modem ID "+modem+" is "+signal+" ("+blocks[1]+" dBm) | signal="+str(blocks[1])
-                                if signal in ["Excellent","Good","Workable"]:
-                                    resultstatus = "OK"
-                                elif signal in ["Marginal"]:
-                                    resultstatus = "WARNING"
+                                infomsg("doing deeper analysis")
+                                if len(parts) > 5:
+                                    info = parts[5].strip()
+                                    blocks = info.split()
+                                    signal = blocks[3].strip("(),")
+                                    resultmsg = "modem ID "+modem+" is "+signal+" ("+blocks[1]+" dBm) | signal="+str(blocks[1])
+                                    infomsg("the signal is "+signal)
+                                    if signal in ["Excellent","Good","Workable"]:
+                                        resultstatus = "OK"
+                                    elif signal in ["Marginal"]:
+                                        resultstatus = "WARNING"
+                                    else:
+                                        resultstatus = "CRITICAL"
                                 else:
-                                    resultstatus = "CRITICAL"
+                                    infomsg("the line format is unknown")
                         except:
                             pass
         finally:
@@ -84,6 +92,7 @@ def dosmstoolscall(modem):
         if resultmsg != "" and resultstatus != "":
             exitnagios(resultstatus,resultmsg)
         else:
+            infomsg("sleeping...")
             time.sleep(5)
 
     exitnagios("CRITICAL","modem ID "+modem+" could not be parsed or is not defined | signal=0")
