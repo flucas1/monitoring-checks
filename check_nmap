@@ -6,6 +6,8 @@ import sys
 import subprocess
 import argparse
 import socket
+import netifaces
+import ipaddress
 
 #-------------------------------------------------------------------------------
 
@@ -69,7 +71,7 @@ def processservice(port,status,service,expectedservice,exitstatus):
     else:
         exitnagios("WARNING","Port is "+status+" but incorrect service "+service+" listening on port "+str(port)+" - it was expected "+expectedservice)
 
-def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filteredstatus,timeoutvalue,timeoutstatus):
+def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filteredstatus,timeoutvalue,timeoutstatus,sourceip):
     parts=4
     initial_rtt=str(int(round(timeoutvalue/parts)))+"s"
     max_rtt=str(int(round(timeoutvalue/parts)))+"s"
@@ -83,7 +85,9 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
     command=["/usr/bin/nmap"]
     if protocol != "":
         command = command+[protocol]
-    command = command+["--privileged",sflag,pflag,"--discovery-ignore-rst","-p",str(port),hostname,"--initial-rtt-timeout",initial_rtt,"--max-rtt-timeout",max_rtt]
+    command = command+["--privileged",sflag,pflag,"--discovery-ignore-rst","-p",str(port),hostname,"--initial-rtt-timeout",initial_rtt,"--max-rtt-timeout",max_rtt,"--system-dns"]
+    if sourceip not in ["", None]:
+        command = command+["-S",str(sourceip)]
     infomsg(" ".join(command))
 
     result = subprocess.run(command,capture_output=True)
@@ -170,6 +174,31 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
 
 #-------------------------------------------------------------------------------
 
+def findprivateaddress(protocol):
+    if protocol in ["-4"]:
+        family = socket.AF_INET
+    elif protocol in ["-6"]:
+        family = socket.AF_INET6
+    else:
+        return None
+
+    try:
+        iface = netifaces.gateways()["default"][family][1]
+    except:
+        return None
+
+    for addr in netifaces.ifaddresses(iface).get(family, []):
+        ip = addr["addr"].split("%")[0]  # Remove IPv6 scope ID
+        ip_obj = ipaddress.ip_address(ip)
+        if ip_obj.is_loopback:
+            continue
+        if ip_obj.is_private or ip_obj.is_link_local:
+            return ip
+
+    return None
+
+#-------------------------------------------------------------------------------
+
 def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
@@ -182,6 +211,7 @@ def main(forcedargs=None):
     parser.add_argument("-r", "--response",                                dest="response",         default="notclosed",                          help="respose: open,filtered,open+filtered,notclosed,closed")
     parser.add_argument("-f", "--filtered",                                dest="filtered",         default="WARNING",                            help="OK,WARNING,CRITICAL,UNKNOWN")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="30:CRITICAL",                        help="timeout value:STATUS")
+    parser.add_argument("-i", "--sourceip",                                dest="sourceip",         default=None,                                 help="source ip for the request")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
@@ -226,7 +256,12 @@ def main(forcedargs=None):
     if timeoutstatus not in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         exitnagios("CRITICAL","timeout status is not valid")
 
-    donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus)
+    if args.sourceip in ["private"]:
+        convertedip = findprivateaddress(protocol)
+    else:
+        convertedip = args.sourceip
+
+    donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus,convertedip)
 
 #-------------------------------------------------------------------------------
 
