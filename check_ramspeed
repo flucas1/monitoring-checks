@@ -48,7 +48,7 @@ def doramspeedcall(expected):
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
 
-    token = "Speed:"
+    token = "Configured Memory Speed:"
     if exitcode == 0:
         foundspeeds = []
         for line in output.splitlines():
