@@ -92,7 +92,7 @@ def main():
         all_found_files.extend(found_files)
 
     if len(all_found_files)>0:
-        exitnagios("ERROR", "Files with Windows line endings: "+str(all_found_files))
+        exitnagios("CRITICAL", "Files with Windows line endings: "+str(all_found_files))
     else:
         exitnagios("OK", "No files with Windows line endings found")
 
