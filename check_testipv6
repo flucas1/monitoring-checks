@@ -134,8 +134,14 @@ def dotestipv6call(proxy):
         marks = parts[3]
         infomsg("raw marks is '"+marks+"'")
         grading = marks.split("/")
-        currentmark = int(grading[0])
-        totalmarks = int(grading[1])
+        try:
+            currentmark = int(grading[0])
+        except:
+            currentmark = 0
+        try:
+            totalmarks = int(grading[1])
+        except:
+            totalmarks = 0
 
         if currentmark == 0:
             exitnagios("CRITICAL","The result of the test is "+str(currentmark)+"/"+str(totalmarks)+" | result="+str(currentmark)+" best="+str(totalmarks))
