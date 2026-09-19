@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import subprocess
+import asyncio
 import platform
 
 #-------------------------------------------------------------------------------
@@ -41,12 +41,15 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dodcf77call(warning,critical):
-    cmdline = ["/usr/bin/ntpq","-c","clocklist"]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+async def dodcf77call(warning, critical):
+    cmdline = ["/usr/bin/ntpq", "-c", "clocklist"]
+    process = await asyncio.create_subprocess_exec(*cmdline,
+                                                   stdout=asyncio.subprocess.PIPE,
+                                                   stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip()
+    errors = stderr.decode("utf-8").strip()
+    exitcode = process.returncode
 
     if exitcode == 0:
         percent = 0
@@ -55,8 +58,8 @@ def dodcf77call(warning,critical):
         for line in lines:
             line = line.strip()
             if line.startswith(token):
-                value=line[len(token)+1:-1]
-                parts=value.split(";")
+                value = line[len(token)+1:-1]
+                parts = value.split(";")
                 nominal = "NOMINAL:"
                 for part in parts:
                     part = part.strip()
@@ -64,14 +67,14 @@ def dodcf77call(warning,critical):
                         proto = part[len(nominal):].strip()
                         quasi = proto.split()[1]
                         percent = float(quasi[1:-2])
-        if percent>float(warning):
-            exitnagios("OK","the reception status is "+str(percent)+"% | nominal="+str(percent))
-        elif percent<=float(critical):
-            exitnagios("CRITICAL","the reception status is "+str(percent)+"% | nominal="+str(percent))
+        if percent > float(warning):
+            exitnagios("OK", "the reception status is "+str(percent)+"% | nominal="+str(percent))
+        elif percent <= float(critical):
+            exitnagios("CRITICAL", "the reception status is "+str(percent)+"% | nominal="+str(percent))
         else:
-            exitnagios("WARNING","the reception status is "+str(percent)+"% | nominal="+str(percent))
+            exitnagios("WARNING", "the reception status is "+str(percent)+"% | nominal="+str(percent))
     else:
-        exitnagios("CRITICAL","issue retrieving DCF77 values")
+        exitnagios("CRITICAL", "issue retrieving DCF77 values")
 
 #-------------------------------------------------------------------------------
 
@@ -84,7 +87,7 @@ def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    dodcf77call(args.warning,args.critical)
+    asyncio.run(dodcf77call(args.warning, args.critical))
 
 #-------------------------------------------------------------------------------
 
