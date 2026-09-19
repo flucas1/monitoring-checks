@@ -2,7 +2,7 @@
 #-------------------------------------------------------------------------------
 
 import argparse
-import paramiko
+import asyncssh
 import os
 import sys
 import time
@@ -62,29 +62,25 @@ def forced_ipv4_gai_family(*args, **kwargs):
 #-------------------------------------------------------------------------------
 
 async def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlist):
-    t = None
     try:
-        t = paramiko.Transport((host, port))
-        t.set_keepalive(1)
-        t.connect(timeout=timeoutvalue)
-    except Exception as e:
-        if t is not None:
-            t.close()
+        async with asyncssh.connect(host, port=port, timeout=timeoutvalue, known_hosts=None) as conn:
+            try:
+                # Attempt no-auth to see what's allowed
+                await conn.auth_none()
+                # If we get here, auth succeeded (unexpected for no-auth), but we can still check what was offered
+                exitnagios("OK", "SSH connection established and no-auth succeeded")
+            except asyncssh.PermissionDenied as e:
+                # e.allowed_auths contains list of allowed methods
+                allowed_methods = list(e.allowed_auths)
+                if len(expectedlist) == len(allowed_methods):
+                    for item in expectedlist:
+                        if item not in allowed_methods:
+                            exitnagios("WARNING", "The allowed methods are " + str(allowed_methods) + " but it was expected " + str(expectedlist))
+                    exitnagios("OK", "The allowed methods are " + str(allowed_methods) + " as expected")
+                else:
+                    exitnagios("CRITICAL", "The allowed methods are " + str(allowed_methods) + " but it was expected " + str(expectedlist))
+    except (asyncssh.Error, OSError) as e:
         exitnagios(timeoutstatus, "SSH connection failed " + host + ":" + str(port) + " - cause: " + str(e))
-
-    try:
-        t.auth_none("")
-    except paramiko.BadAuthenticationType as e:
-        if len(expectedlist) == len(e.allowed_types):
-            for item in expectedlist:
-                if item not in e.allowed_types:
-                    exitnagios("WARNING", "The allowed methods are " + str(e.allowed_types) + " but it was expected " + str(expectedlist))
-            exitnagios("OK", "The allowed methods are " + str(e.allowed_types) + " as expected")
-        else:
-            exitnagios("CRITICAL", "The allowed methods are " + str(e.allowed_types) + " but it was expected " + str(expectedlist))
-    finally:
-        if t is not None:
-            t.close()
 
 #-------------------------------------------------------------------------------
 
