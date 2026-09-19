@@ -5,8 +5,7 @@
 #and check that issuer+name and issuer_ca_id in list
 #wget "https://crt.sh/?q=google.com&output=json" -O - -q | jq
 
-import urllib.error
-import urllib.request
+import aiohttp
 import argparse
 import sys
 import os
@@ -19,6 +18,7 @@ import gzip
 import zlib
 import io
 import random
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -97,95 +97,61 @@ def ipv4_default_route_exists() -> bool:
 
 #-------------------------------------------------------------------------------
 
-def load_json(proxy,domain,retries):
-    #if args.exclude is True:
-    #    ctx = ssl.create_default_context()
-    #    ssl_handler = urllib.request.HTTPSHandler(context=ctx)
-    #    ssl_opener = urllib.request.build_opener(ssl_handler)
-    #    urllib.request.install_opener(ssl_opener)
-
+async def load_json(session, proxy, domain, retries):
     item_url = "https://crt.sh/?Identity="+domain+"&exclude=expired&output=json"
     infomsg(item_url)
 
-    opener = None
-    if proxy:
-        if proxy.startswith("socks4://") or proxy.startswith("socks5://") or proxy.startswith("socks5h://"):
-            parsed = urlparse(proxy)
-            proxy_type = socks.SOCKS5
-            if parsed.scheme == "socks4":
-                proxy_type = socks.SOCKS4
-            elif parsed.scheme in ("socks5", "socks5h"):
-                proxy_type = socks.SOCKS5
-
-            host = parsed.hostname
-            port = parsed.port
-            # Set default SOCKS proxy for all connections
-            socks.set_default_proxy(proxy_type, host, port, rdns=(parsed.scheme=="socks5h"))
-            socket.socket = socks.socksocket
-
-            opener = urllib.request.build_opener()
-        else:
-            # HTTP/HTTPS proxy
-            proxy_handler = urllib.request.ProxyHandler({
-                "http": proxy,
-                "https": proxy
-            })
-            opener = urllib.request.build_opener(proxy_handler)
-    else:
-        opener = urllib.request.build_opener()
-
-    version = 142
-    item_request = urllib.request.Request(item_url)
-    item_request.add_header("Upgrade-Insecure-Requests", "1")
-    item_request.add_header("Dnt", "1")
-    item_request.add_header("Priority", "u=0,1")
-    item_request.add_header("Cache-Control", "max-age=0")
-    item_request.add_header("Accept-Language", "en-US")
-    item_request.add_header("Accept-Encodinng", "gzip, deflate")
-    item_request.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-    item_request.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+str(version)+".0.0.0 Safari/537.36")
-    item_request.add_header("Sec-Ch-Ua", "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\""+str(version)+"\", \"Chromium\";v=\""+str(version)+"\"")
-    item_request.add_header("Sec-Ch-Ua-Mobile", "?0")
-    item_request.add_header("Sec-Ch-Ua-Platform", "Windows")
-    item_request.add_header("Sec-Fetch-Dest", "document")
-    item_request.add_header("Sec-Fetch-Mode", "navigate")
-    item_request.add_header("Sec-Fetch-Site", "none")
-    item_request.add_header("Sec-Fetch-User", "?1")
+    headers = {
+        "Upgrade-Insecure-Requests": "1",
+        "Dnt": "1",
+        "Priority": "u=0,1",
+        "Cache-Control": "max-age=0",
+        "Accept-Language": "en-US",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "Sec-Ch-Ua": "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"142\", \"Chromium\";v=\"142\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "Windows",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1"
+    }
 
     counter = 0
     object_json = None
     while True:
         try:
-            counter = counter+1
+            counter = counter + 1
 
             infomsg("sending request")
-            response = opener.open(item_request, timeout=15)
-            infomsg("request done")
+            async with session.get(item_url, headers=headers, timeout=15) as response:
+                infomsg("request done")
 
-            if response.getcode() == 429:
-                infomsg("got 'HTTP 429 (Too Many Requests)'")
-                object_json = None
-                break
-            else:
-                encoding = response.headers.get("Content-Encoding")
-                raw_data = response.read()
-                if encoding == "gzip":
-                    with gzip.GzipFile(fileobj=io.BytesIO(raw_data)) as gz:
-                        decoded_data = gz.read().decode("utf-8")
-                elif encoding == "deflate":
-                    try:
-                        decoded_data = zlib.decompress(raw_data).decode("utf-8")
-                    except zlib.error:
-                        # Some servers use raw deflate (no zlib headers)
-                        decoded_data = zlib.decompress(raw_data, -zlib.MAX_WBITS).decode("utf-8")
+                if response.status == 429:
+                    infomsg("got 'HTTP 429 (Too Many Requests)'")
+                    object_json = None
+                    break
                 else:
-                    decoded_data = raw_data.decode("utf-8")
-                infomsg("decoding done")
+                    encoding = response.headers.get("Content-Encoding")
+                    raw_data = await response.read()
+                    if encoding == "gzip":
+                        with gzip.GzipFile(fileobj=io.BytesIO(raw_data)) as gz:
+                            decoded_data = gz.read().decode("utf-8")
+                    elif encoding == "deflate":
+                        try:
+                            decoded_data = zlib.decompress(raw_data).decode("utf-8")
+                        except zlib.error:
+                            # Some servers use raw deflate (no zlib headers)
+                            decoded_data = zlib.decompress(raw_data, -zlib.MAX_WBITS).decode("utf-8")
+                    else:
+                        decoded_data = raw_data.decode("utf-8")
+                    infomsg("decoding done")
 
-                object_json = json.loads(decoded_data)
-                count_json = len(object_json)
-                #infomsg(object_json)
-                infomsg("json done - items: "+str(count_json))
+                    object_json = json.loads(decoded_data)
+                    count_json = len(object_json)
+                    infomsg("json done - items: "+str(count_json))
 
         except Exception as e:
             object_json = None
@@ -200,25 +166,25 @@ def load_json(proxy,domain,retries):
                 infomsg(parsederrorcode)
                 infomsg("server error "+str(parsederrorcode))
 
-        if object_json != None:
+        if object_json is not None:
             break
         elif counter > retries:
             break
         else:
-            time.sleep(5+(counter*2)+random.uniform(1, 5))
+            await asyncio.sleep(5 + (counter * 2) + random.uniform(1, 5))
 
     return object_json
 
 #-------------------------------------------------------------------------------
 
-def docrtshcall(mode,proxy,hostname,validcas,ignorecerts,timeoutvalue,retries):
+async def docrtshcall(session, mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
 
-    mode=mode.lower()
-    if mode=="ipv6":
+    mode = mode.lower()
+    if mode == "ipv6":
         socket.getaddrinfo = forced_ipv6_gai_family
-    elif mode=="ipv4":
+    elif mode == "ipv4":
         socket.getaddrinfo = forced_ipv4_gai_family
-    elif mode==None:
+    elif mode is None:
         pass
     else:
         exitnagios("CRITICAL","invalid IP mode")
@@ -226,17 +192,17 @@ def docrtshcall(mode,proxy,hostname,validcas,ignorecerts,timeoutvalue,retries):
     hostnameparts = hostname.split(".")
     if "" in hostnameparts:
         hostnameparts.remove("")
-    if len(hostnameparts)==2:
+    if len(hostnameparts) == 2:
         hostnameparts.insert(0,"*")
     hostname = ".".join(hostnameparts)
     issuers = validcas.split(";")
     ignored = ignorecerts.split(";")
 
     start = datetime.datetime.now(datetime.UTC)
-    parsed = load_json(proxy,hostname,retries)
-    elapsed = datetime.datetime.now(datetime.UTC)-start
+    parsed = await load_json(session, proxy, hostname, retries)
+    elapsed = datetime.datetime.now(datetime.UTC) - start
     duration = elapsed.total_seconds()
-    if parsed != None:
+    if parsed is not None:
         valid = True
         problems = []
         totalfound = len(parsed)
@@ -251,9 +217,9 @@ def docrtshcall(mode,proxy,hostname,validcas,ignorecerts,timeoutvalue,retries):
                     valid = False
                     problems.append(item)
                     infomsg(item)
-        if totalfound==0:
+        if totalfound == 0:
             exitnagios("WARNING","no certificates in crt.sh | found="+str(totalfound)+" duration="+str(duration))
-        elif valid==True:
+        elif valid:
             exitnagios("OK","no issues found | found="+str(totalfound)+" duration="+str(duration))
         else:
             exitnagios("CRITICAL","found problems --- "+str(problems)+" | found="+str(totalfound)+" duration="+str(duration))
@@ -263,7 +229,7 @@ def docrtshcall(mode,proxy,hostname,validcas,ignorecerts,timeoutvalue,retries):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="domain to check")
     parser.add_argument("-v", "--valid",                                   dest="valid",            default="",                                   help="valid CA ids")
@@ -281,7 +247,7 @@ def main(forcedargs=None):
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
-    if len(parts)>1:
+    if len(parts) > 1:
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "WARNING"
@@ -289,17 +255,18 @@ def main(forcedargs=None):
     proxies = []
 
     start = datetime.datetime.now(datetime.UTC)
-    time.sleep(random.uniform(1, 5))
-    if ipv6_default_route_exists():
-        infomsg("call ipv6")
-        docrtshcall("ipv6",None,args.hostname,args.valid,args.ignore,timeoutvalue,5)
-    if ipv4_default_route_exists():
-        infomsg("call ipv4")
-        docrtshcall("ipv4",None,args.hostname,args.valid,args.ignore,timeoutvalue,5)
-    for proxy in proxies:
-        infomsg("call "+str(proxy))
-        docrtshcall(None,proxy,args.hostname,args.valid,args.ignore,timeoutvalue,5)
-    elapsed = datetime.datetime.now(datetime.UTC)-start
+    await asyncio.sleep(random.uniform(1, 5))
+    async with aiohttp.ClientSession() as session:
+        if ipv6_default_route_exists():
+            infomsg("call ipv6")
+            await docrtshcall(session, "ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        if ipv4_default_route_exists():
+            infomsg("call ipv4")
+            await docrtshcall(session, "ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        for proxy in proxies:
+            infomsg("call "+str(proxy))
+            await docrtshcall(session, None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+    elapsed = datetime.datetime.now(datetime.UTC) - start
     duration = elapsed.total_seconds()
 
     exitnagios(timeoutstatus,"cannot get crt.sh data | found=0 duration="+str(duration))
@@ -307,6 +274,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
