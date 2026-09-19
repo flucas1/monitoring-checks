@@ -218,7 +218,6 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
 async def fetch_object(item_url, args, timeoutstatus):
     infomsg("# "+str(item_url))
 
-    password_manager = aiohttp.BasicAuth
     if args.exclude is True:
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
@@ -226,7 +225,10 @@ async def fetch_object(item_url, args, timeoutstatus):
     else:
         ssl_context = None
 
-    auth = None
+    headers = {
+        "Accept": "application/json"
+    }
+
     if args.authorization is not None:
         auth_params = args.authorization.split(":")
         if len(auth_params) != 2:
@@ -238,15 +240,12 @@ async def fetch_object(item_url, args, timeoutstatus):
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
 
-        auth = password_manager(auth_params[0], auth_params[1])
-
-    headers = {
-        "Accept": "application/json"
-    }
+        auth_header = aiohttp.BasicAuth(auth_params[0], auth_params[1]).encode()
+        headers['Authorization'] = auth_header
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(item_url, headers=headers, ssl=ssl_context, auth=auth) as response:
+            async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
                 if response.status == 404:
                     exitnagios(timeoutstatus,"item %s does not exist." % item_url)
                 elif response.status != 200:
