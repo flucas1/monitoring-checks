@@ -4,7 +4,7 @@
 import sys
 import os
 import argparse
-import subprocess
+import asyncio
 import concurrent.futures
 import ipaddress
 
@@ -14,6 +14,7 @@ _candebug = False
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 def candebug():
     global _candebug
     return _candebug
@@ -35,35 +36,40 @@ def mapstatustoexitcode(status):
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
-def doarpcall(exclusion):
+async def doarpcall(exclusion):
     infomsg(exclusion)
 
-    cmdline = ["/usr/bin/ip","neighbour","show"]
+    cmdline = ["/usr/bin/ip", "neighbour", "show"]
     infomsg(cmdline)
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    exitcode = completedproc.returncode
-    if exitcode!=0:
-        exitnagios("CRITICAL","cannot read ARP table | total_v6=-1 total_v4=-1 duplicated_v6=-1 duplicated_v4=-1")
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
+    errors = stderr.decode("utf-8")
+    exitcode = process.returncode
+    if exitcode != 0:
+        exitnagios("CRITICAL", "cannot read ARP table | total_v6=-1 total_v4=-1 duplicated_v6=-1 duplicated_v4=-1")
 
     arptable4 = {}
     arptable6 = {}
     for line in output.strip().splitlines():
         parts = line.split()
-        if len(parts)>3 and parts[3].lower() == "lladdr":
-            if (len(parts)>5 and parts[5].lower() == "reachable") or (len(parts)>6 and parts[6].lower() == "reachable"):
+        if len(parts) > 3 and parts[3].lower() == "lladdr":
+            if (len(parts) > 5 and parts[5].lower() == "reachable") or (len(parts) > 6 and parts[6].lower() == "reachable"):
                 infomsg(parts)
                 key = parts[4].lower()
                 value = parts[0].lower()
-                infomsg(key+" "+value)
+                infomsg(key + " " + value)
 
                 try:
                     parsed = ipaddress.ip_address(value)
@@ -82,7 +88,7 @@ def doarpcall(exclusion):
                     if value not in arptable6[key]:
                         arptable6[key].append(value)
                 else:
-                    infomsg("failed parsing "+value)
+                    infomsg("failed parsing " + value)
 
     infomsg(str(arptable4))
     infomsg(str(arptable6))
@@ -94,65 +100,64 @@ def doarpcall(exclusion):
         for test in values:
             if str(test) not in exclusion:
                 filtered.append(test)
-        if len(filtered)>1:
+        if len(filtered) > 1:
             duplicated4[key] = filtered
     for key, values in arptable6.items():
         filtered = []
         for test in values:
             if str(test) not in exclusion:
                 filtered.append(test)
-        if len(filtered)>2:
+        if len(filtered) > 2:
             duplicated6[key] = filtered
 
     iscritical = False
     iswarning = False
-    if len(duplicated4)>0:
+    if len(duplicated4) > 0:
         iscritical = True
-    elif len(duplicated6)>0:
+    elif len(duplicated6) > 0:
         map6 = {}
         for candidate6 in duplicated6:
             try:
-                basenetwork = str(ipaddress.ip_network(candidate6+"/64", strict=False))
+                basenetwork = str(ipaddress.ip_network(candidate6 + "/64", strict=False))
             except:
                 basenetwork = None
-            if basenetwork!=None:
+            if basenetwork != None:
                 if basenetwork not in map6.keys():
-                    map6[basenetwork]=1
+                    map6[basenetwork] = 1
                 else:
-                    map6[basenetwork]=map6[basenetwork]+1
+                    map6[basenetwork] = map6[basenetwork] + 1
         infomsg(map6)
-        for basenetwork,count in map6.items():
-            if count>2:
+        for basenetwork, count in map6.items():
+            if count > 2:
                 iscritical = True
-            elif count>1:
+            elif count > 1:
                 iswarning = True
 
-    if iscritical == True:
-        exitnagios("CRITICAL","duplicated ARP IPv4 entries "+str(duplicated4)+" - duplicated ARP IPv6 entries "+str(duplicated6)+" | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6="+str(len(duplicated6))+" duplicated_v4="+str(len(duplicated4)))
-    elif iswarning == True:
-        exitnagios("CRITICAL","duplicated ARP IPv4 entries "+str(duplicated4)+" - duplicated ARP IPv6 entries "+str(duplicated6)+" | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6="+str(len(duplicated6))+" duplicated_v4="+str(len(duplicated4)))
+    if iscritical:
+        exitnagios("CRITICAL", "duplicated ARP IPv4 entries " + str(duplicated4) + " - duplicated ARP IPv6 entries " + str(duplicated6) + " | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=" + str(len(duplicated6)) + " duplicated_v4=" + str(len(duplicated4)))
+    elif iswarning:
+        exitnagios("WARNING", "duplicated ARP IPv4 entries " + str(duplicated4) + " - duplicated ARP IPv6 entries " + str(duplicated6) + " | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=" + str(len(duplicated6)) + " duplicated_v4=" + str(len(duplicated4)))
     else:
-        exitnagios("OK","ARP table looks normal | total_v6="+str(len(arptable6))+" total_v4="+str(len(arptable4))+" duplicated_v6=0 duplicated_v4=0")
+        exitnagios("OK", "ARP table looks normal | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=0 duplicated_v4=0")
 
 #-------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--whitelist",         action="store",       dest="whitelist",        default="",                                   help="IP addresses to whitelist")
-    parser.add_argument("-Â®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-l", "--whitelist", action="store", dest="whitelist", default="", help="IP addresses to whitelist")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     exclusion = args.whitelist.lower().split(",")
-    doarpcall(exclusion)
+    await doarpcall(exclusion)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
-
