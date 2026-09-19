@@ -172,7 +172,7 @@ def resolverecord(protocol,hostname):
         infomsg("exception "+str(e))
     return result
 
-async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
+async def dodnscheckercall(protocol,hostname,ignorelist,tolerance,proxy):
     try:
         ips = resolverecord(protocol,hostname)
         if len(ips)==0:
@@ -184,14 +184,6 @@ async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
 
         driver = await generatedriver(proxy)
 
-        # OTHER ALTERNATIVES
-        #https://mxtoolbox.com/SuperTool.aspx?action=blacklist
-        #https://www.dnsbl.info/dnsbl-database-check.php
-        #https://blacklistchecker.com/check
-        #https://www.uceprotect.net/en/rblcheck.php
-
-        # OTHER OPTION
-        # https://manpages.debian.org/bookworm/amispammer/amispammer.1.en.html -- perl code gives warnings, and fails with IPv6
 
         infomsg("browser OK")
 
@@ -285,6 +277,240 @@ async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check "+str(e))
         infomsg(driver.page_source)
+
+async def domailmeteorcall(protocol,hostname,ignorelist,tolerance,proxy):
+    try:
+        ips = resolverecord(protocol,hostname)
+        if len(ips)==0:
+            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
+        if len(ips)>1:
+            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        targetip = ips[0]
+        infomsg("The IP to test is "+targetip)
+
+        driver = await generatedriver(proxy)
+
+        targeturl = "https://mailmeteor.com/tools/blacklist-checker?search="+targetip
+        infomsg("asking for navigating "+targeturl)
+        page = await driver.get(targeturl)
+        #page = page.main_tab
+
+        infomsg("manual delay")
+        time.sleep(2)
+
+        await wait_page_loaded(page)
+        infomsg("page loaded")
+
+        sourceraw = await get_html_source(page)
+        if (sourceraw == None) or (sourceraw.strip() == ""):
+            infomsg("The page source is empty")
+        else:
+            infomsg("The page source has contents")
+            pagetitle = await get_page_title(page)
+            infomsg("The page title is '"+str(pagetitle)+"'")
+            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+                infomsg("Aborting...")
+                infomsg(sourceraw)
+                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+            else:
+                infomsg("page OK")
+                infomsg(sourceraw)
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        infomsg(driver.page_source)
+
+async def doblacklistcheckercall(protocol,hostname,ignorelist,tolerance,proxy):
+    try:
+        ips = resolverecord(protocol,hostname)
+        if len(ips)==0:
+            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
+        if len(ips)>1:
+            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        targetip = ips[0]
+        infomsg("The IP to test is "+targetip)
+
+        driver = await generatedriver(proxy)
+
+        targeturl = "https://blacklistchecker.com/check?input="+targetip
+        infomsg("asking for navigating "+targeturl)
+        page = await driver.get(targeturl)
+        #page = page.main_tab
+
+        infomsg("manual delay")
+        time.sleep(2)
+
+        await wait_page_loaded(page)
+        infomsg("page loaded")
+
+        sourceraw = await get_html_source(page)
+        if (sourceraw == None) or (sourceraw.strip() == ""):
+            infomsg("The page source is empty")
+        else:
+            infomsg("The page source has contents")
+            pagetitle = await get_page_title(page)
+            infomsg("The page title is '"+str(pagetitle)+"'")
+            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+                infomsg("Aborting...")
+                infomsg(sourceraw)
+                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+            else:
+                infomsg("page OK")
+                infomsg(sourceraw)
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        infomsg(driver.page_source)
+
+
+async def dodnsblcall(protocol,hostname,ignorelist,tolerance,proxy):
+    try:
+        ips = resolverecord(protocol,hostname)
+        if len(ips)==0:
+            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
+        if len(ips)>1:
+            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        targetip = ips[0]
+        infomsg("The IP to test is "+targetip)
+
+        driver = await generatedriver(proxy)
+
+        targeturl = "https://www.dnsbl.info/dnsbl-database-check.php"
+        infomsg("asking for navigating "+targeturl)
+        page = await driver.get(targeturl)
+        #page = page.main_tab
+
+        infomsg("manual delay")
+        time.sleep(2)
+
+        await wait_page_loaded(page)
+        infomsg("page loaded")
+
+        sourceraw = await get_html_source(page)
+        if (sourceraw == None) or (sourceraw.strip() == ""):
+            infomsg("The page source is empty")
+        else:
+            infomsg("The page source has contents")
+            pagetitle = await get_page_title(page)
+            infomsg("The page title is '"+str(pagetitle)+"'")
+            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+                infomsg("Aborting...")
+                infomsg(sourceraw)
+                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+            else:
+                infomsg("page OK")
+                infomsg(sourceraw)
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        infomsg(driver.page_source)
+
+async def domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy):
+    try:
+        ips = resolverecord(protocol,hostname)
+        if len(ips)==0:
+            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
+        if len(ips)>1:
+            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        targetip = ips[0]
+        infomsg("The IP to test is "+targetip)
+
+        driver = await generatedriver(proxy)
+
+        targeturl = "https://mxtoolbox.com/SuperTool.aspx"
+        infomsg("asking for navigating "+targeturl)
+        page = await driver.get(targeturl)
+        #page = page.main_tab
+
+        infomsg("manual delay")
+        time.sleep(2)
+
+        await wait_page_loaded(page)
+        infomsg("page loaded")
+
+        sourceraw = await get_html_source(page)
+        if (sourceraw == None) or (sourceraw.strip() == ""):
+            infomsg("The page source is empty")
+        else:
+            infomsg("The page source has contents")
+            pagetitle = await get_page_title(page)
+            infomsg("The page title is '"+str(pagetitle)+"'")
+            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+                infomsg("Aborting...")
+                infomsg(sourceraw)
+                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+            else:
+                infomsg("page OK")
+                #infomsg(sourceraw)
+
+        infomsg("waiting for btnAction4")
+        dropdown = await page.wait_for("#btnAction4", timeout=10)
+        await dropdown.click()
+        time.sleep(2)
+
+        infomsg("waiting for blacklist")
+        blacklist_btn = await page.wait_for('button[data-cmd="blacklist"]', timeout=10)
+        await blacklist_btn.click()
+
+        infomsg("manual delay")
+        time.sleep(2)
+
+        currentaction = await page.wait_for('#btnAction3', timeout=10)
+        infomsg("current action: "+currentaction.text)
+
+        infomsg("sending ip "+targetip)
+        inputbox = await page.wait_for('#txtInput2', timeout=10)
+        await inputbox.send_keys(targetip)
+        infomsg(inputbox.text)
+
+        infomsg("waiting for btnAction3")
+        dropdown = await page.wait_for("#btnAction3", timeout=10)
+        await dropdown.click()
+        time.sleep(2)
+
+        infomsg("manual delay")
+        time.sleep(10)
+
+        infomsg("waiting for result")
+        answer = await page.wait_for("#lblResult", timeout=10)
+        infomsg(answer.text)
+        #infomsg(await get_html_source(page))
+
+        infomsg("extracting listed")
+        table = await page.wait_for('#lblResult .tool-result-table', timeout=10)
+        infomsg(table.text)
+
+        rows = await page.select_all("#lblResult .tool-result-table tr")
+        infomsg("row canidates: "+str(len(rows)))
+        issues=[]
+        for index, row in enumerate(rows):
+            cells = await row.query_selector_all("td")
+            if len(cells) > 1:
+                status = cells[0].text.strip()
+                listname = cells[1].text.strip()
+                if status!="" and listname!="":
+                    print(f"Row {index}: {status} {listname}")
+                    if status.upper() not in ["OK","TIMEOUT"]:
+                        if listname in ignorelist:
+                            infomsg("ignoring "+listname)
+                        else:
+                            infomsg("adding "+listname)
+                            issues.append(listname)
+
+        if len(issues)>tolerance:
+            exitnagios("CRITICAL","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        elif len(issues)>0:
+            exitnagios("WARNING","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        else:
+            exitnagios("OK","No issues found for the IP "+targetip+" | count="+str(len(issues)))
+
+    except Exception as e:
+        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        infomsg(driver.page_source)
+
+async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
+    result = await domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy)
+    return result
 
 #-------------------------------------------------------------------------------
 
