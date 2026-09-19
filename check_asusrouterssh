@@ -7,6 +7,7 @@ import argparse
 import os
 import sys
 import pathlib
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -60,78 +61,78 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def doasusroutercall(host,username,password,timeoutvalue,command):
+async def doasusroutercall(host, username, password, timeoutvalue, command):
     result = None
     try:
         client = paramiko.client.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=username, password=password)
-        _stdin, _stdout,_stderr = client.exec_command(command)
+        client.connect(host, username=username, password=password, timeout=timeoutvalue)
+        _stdin, _stdout, _stderr = client.exec_command(command, timeout=timeoutvalue)
         result = _stdout.read().decode()
         client.close()
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e)+" | value=-1")
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")
 
     return result
 
 #-------------------------------------------------------------------------------
 
-def check_status(value,warn_low,warn_high,crit_low,crit_high):
-    if ((crit_low!=None) and (crit_high!=None)) and ((value<crit_low) or (value>crit_high)):
-        exitnagios("CRITICAL","value "+str(value)+" is critical | value="+str(value))
-    elif ((warn_low!=None) and (warn_high!=None)) and ((value<warn_low) or (value>warn_high)):
-        exitnagios("WARNING","value "+str(value)+" is warning | value="+str(value))
+def check_status(value, warn_low, warn_high, crit_low, crit_high):
+    if ((crit_low != None) and (crit_high != None)) and ((value < crit_low) or (value > crit_high)):
+        exitnagios("CRITICAL", "value " + str(value) + " is critical | value=" + str(value))
+    elif ((warn_low != None) and (warn_high != None)) and ((value < warn_low) or (value > warn_high)):
+        exitnagios("WARNING", "value " + str(value) + " is warning | value=" + str(value))
     else:
-        exitnagios("OK","value "+str(value)+" is as expected | value="+str(value))
+        exitnagios("OK", "value " + str(value) + " is as expected | value=" + str(value))
 
 #-------------------------------------------------------------------------------
 
-def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+async def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "awk '{print $1}' /proc/uptime"
-        result = doasusroutercall(host,username,password,timeoutvalue,command)
+        result = await doasusroutercall(host, username, password, timeoutvalue, command)
         value = round(float(result))
     except:
         value = None
-    infomsg(uptime)
-    if value!=None:
-        check_status(value,warn_low,warn_high,crit_low,crit_high)
+    infomsg(result)
+    if value != None:
+        check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
-def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+async def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "free"
-        result = doasusroutercall(host,username,password,timeoutvalue,command)
+        result = await doasusroutercall(host, username, password, timeoutvalue, command)
         lines = result.splitlines()
         parts = lines[1].split()
         total = int(parts[1])
         used = int(parts[2])
-        value = round((used/total)*100,2)
+        value = round((used / total) * 100, 2)
     except:
         value = None
-    infomsg(uptime)
-    if value!=None:
-        check_status(value,warn_low,warn_high,crit_low,crit_high)
+    infomsg(result)
+    if value != None:
+        check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
-def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+async def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "cat /proc/stat | grep cpu | tail -1 | awk '{print ($5*100)/($2+$3+$4+$5+$6+$7+$8+$9+$10)}' | awk '{print 100-$1}'"
-        result = doasusroutercall(host,username,password,timeoutvalue,command)
-        value = round(float(result),2)
+        result = await doasusroutercall(host, username, password, timeoutvalue, command)
+        value = round(float(result), 2)
     except:
         value = None
-    infomsg(uptime)
-    if value!=None:
-        check_status(value,warn_low,warn_high,crit_low,crit_high)
+    infomsg(result)
+    if value != None:
+        check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -201,17 +202,17 @@ def main(forcedargs=None):
         crit_high = None
 
     if args.mode=="uptime":
-        douptimecall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await douptimecall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
     elif args.mode=="memory":
-        domemorycall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await domemorycall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
     elif args.mode=="cpu":
-        docpucall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await docpucall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
 
     exitnagios("CRITICAL","unexpected case")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
