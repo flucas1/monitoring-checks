@@ -7,6 +7,7 @@ import time
 import traceback
 import sys
 import datetime
+import asyncio
 import subprocess
 import re
 import argparse
@@ -63,7 +64,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dobysshcheck(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,login,autoaccept):
+async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
     retries = 3
     counter = 0
     while True:
@@ -78,30 +79,48 @@ def dobysshcheck(protocol,hostname,timeoutvalue,timeoutstatus,remotecmdline,key,
         command = command+["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
         infomsg(" ".join(command))
 
-        result = subprocess.run(command,capture_output=True)
-        exitcode = result.returncode
-        output = result.stdout.decode("utf-8").strip()
-        errors = result.stderr.decode("utf-8").strip()
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
 
-        if output in ["SSH connection failed: (no error output)"]:
-            if counter>retries:
-                exitnagios(timeoutstatus,output+"\n"+errors)
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeoutvalue)
+            output = stdout.decode("utf-8").strip()
+            errors = stderr.decode("utf-8").strip()
+
+            if output in ["SSH connection failed: (no error output)"]:
+                if counter > retries:
+                    exitnagios(timeoutstatus, output + "\n" + errors)
+                else:
+                    infomsg("sleeping for retry "+str(counter))
+                    await asyncio.sleep(10)
+            else:
+                if process.returncode in [0, 1, 2, 3]:
+                    if output != "":
+                        print(output, file=sys.stdout, flush=True)
+                    if errors != "":
+                        print(errors, file=sys.stderr, flush=True)
+                    sys.exit(process.returncode)
+                else:
+                    exitnagios("UNKNOWN", output + "\n" + errors)
+        except asyncio.TimeoutError:
+            if counter > retries:
+                exitnagios(timeoutstatus, "Timeout occurred")
             else:
                 infomsg("sleeping for retry "+str(counter))
-                time.sleep(10)
-        else:
-            if exitcode in [0,1,2,3]:
-                if output!="":
-                    print(output, file=sys.stdout, flush=True)
-                if errors!="":
-                    print(errors, file=sys.stderr, flush=True)
-                sys.exit(exitcode)
+                await asyncio.sleep(10)
+        except Exception as e:
+            if counter > retries:
+                exitnagios(timeoutstatus, "Exception occurred: " + str(e))
             else:
-                exitnagios("UNKNOWN",output+"\n"+errors)
+                infomsg("sleeping for retry "+str(counter))
+                await asyncio.sleep(10)
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -151,13 +170,13 @@ def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dobysshcheck(protocol,args.hostname,timeoutvalue,timeoutstatus,args.remotecmdline,args.key,args.login,args.autoaccept)
+        await dobysshcheck(protocol, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
