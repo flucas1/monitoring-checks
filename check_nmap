@@ -3,7 +3,7 @@
 
 import os
 import sys
-import subprocess
+import asyncio
 import argparse
 import socket
 import netifaces
@@ -61,7 +61,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def processservice(port,status,service,expectedservice,exitstatus):
+async def processservice(port,status,service,expectedservice,exitstatus):
     if expectedservice=="":
         exitnagios(exitstatus,"Port is "+status+" and found service "+service+" listening on port "+str(port)+" - no expeced service specified")
     elif service==expectedservice:
@@ -71,7 +71,7 @@ def processservice(port,status,service,expectedservice,exitstatus):
     else:
         exitnagios("WARNING","Port is "+status+" but incorrect service "+service+" listening on port "+str(port)+" - it was expected "+expectedservice)
 
-def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filteredstatus,timeoutvalue,timeoutstatus,sourceip):
+async def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filteredstatus,timeoutvalue,timeoutstatus,sourceip):
     parts=4
     initial_rtt=str(int(round(timeoutvalue/parts)))+"s"
     max_rtt=str(int(round(timeoutvalue/parts)))+"s"
@@ -90,9 +90,15 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
         command = command+["-S",str(sourceip)]
     infomsg(" ".join(command))
 
-    result = subprocess.run(command,capture_output=True)
-    output = result.stdout.decode("utf-8").strip()
-    errors = result.stderr.decode("utf-8").strip()
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeoutvalue)
+    output = stdout.decode("utf-8").strip()
+    errors = stderr.decode("utf-8").strip()
 
     response = ""
     for line in output.splitlines():
@@ -110,44 +116,44 @@ def donmapcall(protocol,mode,hostname,port,expectedservice,expectedresponse,filt
 
             if expectedresponse=="open":
                 if status=="open":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="open|filtered":
-                    processservice(port,status,service,expectedservice,"WARNING")
+                    await processservice(port,status,service,expectedservice,"WARNING")
                 elif status=="filtered":
-                    processservice(port,status,service,expectedservice,filteredstatus)
+                    await processservice(port,status,service,expectedservice,filteredstatus)
                 elif status=="closed":
                     exitnagios("CRITICAL","Port "+str(port)+" is filtered instead of open")
                 else:
                     exitnagios("CRITICAL","cannot map status")
             elif expectedresponse=="open+filtered":
                 if status=="open":
-                    processservice(port,status,service,expectedservice,"WARNING")
+                    await processservice(port,status,service,expectedservice,"WARNING")
                 elif status=="open|filtered":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="filtered":
-                    processservice(port,status,service,expectedservice,filteredstatus)
+                    await processservice(port,status,service,expectedservice,filteredstatus)
                 elif status=="closed":
                     exitnagios("CRITICAL","Port "+str(port)+" is closed instead of open+filtered")
                 else:
                     exitnagios("CRITICAL","cannot map status")
             elif expectedresponse=="filtered":
                 if status=="open":
-                    processservice(port,status,service,expectedservice,"WARNING")
+                    await processservice(port,status,service,expectedservice,"WARNING")
                 elif status=="open|filtered":
-                    processservice(port,status,service,expectedservice,"WARNING")
+                    await processservice(port,status,service,expectedservice,"WARNING")
                 elif status=="filtered":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="closed":
                     exitnagios("CRITICAL","Port "+str(port)+" is closed instead of filtered")
                 else:
                     exitnagios("CRITICAL","cannot map status")
             elif expectedresponse=="notclosed":
                 if status=="open":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="open|filtered":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="filtered":
-                    processservice(port,status,service,expectedservice,"OK")
+                    await processservice(port,status,service,expectedservice,"OK")
                 elif status=="closed":
                     exitnagios("CRITICAL","Port "+str(port)+" is closed instead of notclosed")
                 else:
@@ -199,7 +205,7 @@ def findprivateaddress(protocol):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -261,11 +267,11 @@ def main(forcedargs=None):
     else:
         convertedip = args.sourceip
 
-    donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus,convertedip)
+    await donmapcall(protocol,args.mode,args.hostname,int(args.port),args.service,args.response,args.filtered,timeoutvalue,timeoutstatus,convertedip)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
