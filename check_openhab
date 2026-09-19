@@ -240,7 +240,7 @@ async def fetch_object(item_url, args, timeoutstatus):
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
 
-        auth_header = aiohttp.BasicAuth(auth_params[0], auth_params[1]).encode()
+        auth_header = aiohttp.encode_basic_auth(auth_params[0], auth_params[1])
         headers['Authorization'] = auth_header
 
     try:
