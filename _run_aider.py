@@ -36,6 +36,6 @@ def run_aider_sequentially(target_dir: str, prompt: str):
 
 if __name__ == "__main__":
     DIRECTORY = "."  
-    PROMPT = "In the attached python file replace time.sleep with await asyncio.sleep and make the needed functions async too. If no changes are needed it is OK."
+    PROMPT = "Transform the attached python file to be async. If no changes are needed it is OK."
     
     run_aider_sequentially(DIRECTORY, PROMPT)
