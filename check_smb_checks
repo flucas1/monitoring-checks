@@ -3,8 +3,8 @@
 ##aptitude install python-nagiosplugin
 
 import argparse
+import asyncio
 import subprocess
-import socket
 import sys
 import re
 
@@ -42,23 +42,39 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def check_kcc():
+async def check_kcc():
     result = []
     command = ["/usr/bin/samba-tool", "drs", "kcc"]
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
-    except subprocess.CalledProcessError:
-        output = "Error during 'samba-tool drs kcc'"
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        output, _ = await process.communicate()
+        output = output.decode()
+        if process.returncode != 0:
+            return False, output
+    except Exception as e:
+        output = f"Error during 'samba-tool drs kcc': {e}"
         return False, output
     return True, output
 
-def check_sysvol():
+async def check_sysvol():
     result = []
     command = ["/usr/bin/samba-tool", "ntacl", "sysvolcheck"]
     try:
-        output = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
-    except subprocess.CalledProcessError:
-        output = "Error during 'samba-tool ntacl sysvolcheck'"
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        output, _ = await process.communicate()
+        output = output.decode()
+        if process.returncode != 0:
+            return False, output
+    except Exception as e:
+        output = f"Error during 'samba-tool ntacl sysvolcheck': {e}"
         return False, output
     return True, output
 
@@ -78,12 +94,12 @@ async def main(forcedargs=None):
     errors = 0
     output = ""
 
-    kcc_result, kcc_output = check_kcc()
+    kcc_result, kcc_output = await check_kcc()
     if kcc_result == False:
         errors = errors+1
         output += kcc_output+"\n"
 
-    sysvol_result, sysvol_output = check_sysvol()
+    sysvol_result, sysvol_output = await check_sysvol()
     if sysvol_result == False:
         errors = errors+1
         output += sysvol_output+"\n"
