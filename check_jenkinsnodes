@@ -6,6 +6,8 @@ import sys
 import os
 import pathlib
 import xml.etree.ElementTree as ET
+import asyncio
+import aiofiles
 
 #-------------------------------------------------------------------------------
 
@@ -41,9 +43,9 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def docheckjenkinsnodes(directory,critical):
+async def docheckjenkinsnodes(directory,critical):
     nodespath = os.path.join(directory,"nodes")
-    if os.path.isdir(nodespath)==False:
+    if not os.path.isdir(nodespath):
         exitnagios("CRITICAL","the nodes path "+release+" does not exists")
 
     listnodes = []
@@ -54,8 +56,11 @@ def docheckjenkinsnodes(directory,critical):
 
     issuesnodes = []
     alertsnodes = []
-    for entry in listnodes:
-        if isvalidnode(nodespath,entry)==False:
+    tasks = [isvalidnode(nodespath,entry) for entry in listnodes]
+    results = await asyncio.gather(*tasks)
+
+    for entry, is_valid in zip(listnodes, results):
+        if not is_valid:
             if entry in critical:
                 alertsnodes.append(entry)
             else:
@@ -71,19 +76,21 @@ def docheckjenkinsnodes(directory,critical):
     else:
         exitnagios("OK","all jenkins nodes are in valid state | alerts=0 issues=0")
 
-def isvalidnode(nodespath,entry):
+async def isvalidnode(nodespath,entry):
     configfile = os.path.join(nodespath,entry,"config.xml")
-    if os.path.isfile(configfile)==False:
+    if not os.path.isfile(configfile):
         return False
     else:
         isOK = False
 
-        tree = ET.parse(configfile)
-        root = tree.getroot()
+        async with aiofiles.open(configfile, 'r') as f:
+            content = await f.read()
+            tree = ET.ElementTree(ET.fromstring(content))
+            root = tree.getroot()
 
-        tempOffline = root.findall("temporaryOfflineCause")
-        if len(tempOffline)==0:
-            isOK = True
+            tempOffline = root.findall("temporaryOfflineCause")
+            if len(tempOffline)==0:
+                isOK = True
 
         return isOK
 
@@ -105,7 +112,7 @@ async def main(forcedargs=None):
     critical = args.critical.split(",")
     if "" in critical:
         critical.remove("")
-    docheckjenkinsnodes(args.directory,critical)
+    await docheckjenkinsnodes(args.directory,critical)
 
 #-------------------------------------------------------------------------------
 
