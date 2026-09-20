@@ -4,13 +4,12 @@
 import sys
 import os
 import argparse
-import subprocess
+import asyncio
 import socket
 import concurrent.futures
 import netifaces
 import time
 import random
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -97,7 +96,7 @@ def interface_to_address(interface,protocol):
     infomsg("The ip for interface "+interface+" is "+str(primary_ip))
     return primary_ip
 
-def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
     source = interface_to_address(interface,protocol)
 
     cmdline = ["/usr/bin/ping"]
@@ -112,11 +111,16 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
     cmdline = cmdline + [hostname]
     infomsg(cmdline)
     try:
-        completedproc = subprocess.run(cmdline,capture_output=True,timeout=timeout)
-        output = completedproc.stdout.decode("utf-8")
-        errors = completedproc.stderr.decode("utf-8")
-        exitcode = completedproc.returncode
-    except:
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        output, errors = await asyncio.wait_for(process.communicate(), timeout=timeout)
+        output = output.decode("utf-8")
+        errors = errors.decode("utf-8")
+        exitcode = process.returncode
+    except asyncio.TimeoutError:
         output = ""
         errors = ""
         exitcode = 2
@@ -130,7 +134,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
         linepercent = alllines[-2]
         avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
         percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
-        reason = "undefinded"
+        reason = "undefined"
         if avgms >= criticalms:
             reason = "critical latency"
             infomsg(reason)
@@ -152,7 +156,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
             infomsg(reason)
             return [0,avgms,percent,reason]
 
-def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     hosts = hostname.replace(","," ").split()
     valid = 0
     warning = 0
@@ -171,14 +175,13 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
     else:
         protocolslist = []
 
-    executor = concurrent.futures.ThreadPoolExecutor()
     futures = []
     for hostsingle in hosts:
         for protocol in protocolslist:
-            future = executor.submit(dopingtestsingle, protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
+            future = asyncio.create_task(dopingtestsingle(protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent))
             futures.append(future)
-    for future in concurrent.futures.as_completed(futures):
-        result = future.result()
+    for future in asyncio.as_completed(futures):
+        result = await future
         if isinstance(result, list):
             average = average+result[1]
             percentloss = percentloss+result[2]
@@ -201,21 +204,21 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
     percent = 100-percentloss
     valid = float(valid)/len(protocolslist)
     if valid >= minimum:
-        return ("OK",hostname+" - "+str(valid)+" of at lest "+str(minimum)+" entries are reacheable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
+        return ("OK",hostname+" - "+str(valid)+" of at least "+str(minimum)+" entries are reachable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     elif valid+warning >= minimum:
-        return ("WARNING",hostname+" - "+str(valid)+" of at lest "+str(minimum)+" entries are reacheable - "+str(warnreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
+        return ("WARNING",hostname+" - "+str(valid)+" of at least "+str(minimum)+" entries are reachable - "+str(warnreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     else:
-        return (timeoutstatus,hostname+" - only "+str(valid)+" of at least "+str(minimum)+" entries are reacheable - "+str(critreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average=-1 percent=0")
+        return (timeoutstatus,hostname+" - only "+str(valid)+" of at least "+str(minimum)+" entries are reachable - "+str(critreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average=-1 percent=0")
 
-def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     counter = 0
     while True:
-        exitlevel,message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
+        exitlevel,message = await dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
         if (exitlevel=="OK") or (counter>=retries):
             exitnagios(exitlevel, message)
         else:
             counter = counter+1
-            time.sleep(5)
+            await asyncio.sleep(5)
     exitnagios("CRITICAL","unexpected state")
 
 #-------------------------------------------------------------------------------
@@ -278,7 +281,7 @@ async def main(forcedargs=None):
     criticalpercent = int(float(criticalparts[1].replace("%","")))
     retries = int(args.retries)
 
-    dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
+    await dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
 
 #-------------------------------------------------------------------------------
 
