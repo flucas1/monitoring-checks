@@ -3,10 +3,11 @@
 
 import sys
 import os
-import subprocess
+import asyncio
 import concurrent.futures
 import argparse
 import time
+import aiofiles
 
 #-------------------------------------------------------------------------------
 
@@ -42,7 +43,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dosmstoolscall(modem):
+async def dosmstoolscall(modem):
     filename = "/var/log/smstools/smsd_stats/status"
     resultstatus = ""
     resultmsg = ""
@@ -51,49 +52,49 @@ def dosmstoolscall(modem):
         handle = None
         try:
             if os.path.isfile(filename):
-                handle = open(filename, "r")
-                contents = handle.read()
-                for line in contents.splitlines():
-                    infomsg(line)
-                    if line.startswith(modem+":"):
-                        infomsg("MATCHING -> "+line)
-                        resultstatus = ""
-                        resultmsg = ""
-                        try:
-                            parts = line.replace("\t"," ").split(": ",1)[1].split(", ")
-                            infomsg("the parts are: ["+ ", ".join(parts)+"]")
-                            status = parts[1].strip()
-                            if status in ["Unknown"]:
-                                infomsg("failing condition detected")
-                                resultstatus = "CRITICAL"
-                                resultmsg = "modem ID "+modem+" is not connected | signal=0"
-                            else:
-                                infomsg("doing deeper analysis")
-                                if len(parts) > 5:
-                                    info = parts[5].strip()
-                                    blocks = info.split()
-                                    signal = blocks[3].strip("(),")
-                                    resultmsg = "modem ID "+modem+" is "+signal+" ("+blocks[1]+" dBm) | signal="+str(blocks[1])
-                                    infomsg("the signal is "+signal)
-                                    if signal in ["Excellent","Good","Workable"]:
-                                        resultstatus = "OK"
-                                    elif signal in ["Marginal"]:
-                                        resultstatus = "WARNING"
-                                    else:
-                                        resultstatus = "CRITICAL"
+                async with aiofiles.open(filename, "r") as handle:
+                    contents = await handle.read()
+                    for line in contents.splitlines():
+                        infomsg(line)
+                        if line.startswith(modem+":"):
+                            infomsg("MATCHING -> "+line)
+                            resultstatus = ""
+                            resultmsg = ""
+                            try:
+                                parts = line.replace("\t"," ").split(": ",1)[1].split(", ")
+                                infomsg("the parts are: ["+ ", ".join(parts)+"]")
+                                status = parts[1].strip()
+                                if status in ["Unknown"]:
+                                    infomsg("failing condition detected")
+                                    resultstatus = "CRITICAL"
+                                    resultmsg = "modem ID "+modem+" is not connected | signal=0"
                                 else:
-                                    infomsg("the line format is unknown")
-                        except:
-                            pass
+                                    infomsg("doing deeper analysis")
+                                    if len(parts) > 5:
+                                        info = parts[5].strip()
+                                        blocks = info.split()
+                                        signal = blocks[3].strip("(),")
+                                        resultmsg = "modem ID "+modem+" is "+signal+" ("+blocks[1]+" dBm) | signal="+str(blocks[1])
+                                        infomsg("the signal is "+signal)
+                                        if signal in ["Excellent","Good","Workable"]:
+                                            resultstatus = "OK"
+                                        elif signal in ["Marginal"]:
+                                            resultstatus = "WARNING"
+                                        else:
+                                            resultstatus = "CRITICAL"
+                                    else:
+                                        infomsg("the line format is unknown")
+                            except:
+                                pass
         finally:
             if handle != None:
-                handle.close()
+                await handle.close()
 
         if resultmsg != "" and resultstatus != "":
             exitnagios(resultstatus,resultmsg)
         else:
             infomsg("sleeping...")
-            time.sleep(5)
+            await asyncio.sleep(5)
 
     exitnagios("CRITICAL","modem ID "+modem+" could not be parsed or is not defined | signal=0")
 
@@ -107,7 +108,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    dosmstoolscall(args.modem)
+    await dosmstoolscall(args.modem)
 
 #-------------------------------------------------------------------------------
 

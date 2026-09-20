@@ -7,6 +7,7 @@ import io
 import socket
 import subprocess
 import argparse
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -42,13 +43,18 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def getroles():
+async def getroles():
     cmdline = ["/usr/bin/samba-tool","fsmo","show"]
     infomsg(" ".join(cmdline))
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode()
-    errors = completedproc.stderr.decode()
-    if completedproc.returncode != 0:
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode()
+    errors = stderr.decode()
+    if process.returncode != 0:
         print(output, flush=True)
         print(errors, flush=True)
         return []
@@ -79,7 +85,7 @@ async def main(forcedargs=None):
     if (args.master == ""):
         exitnagios("CRITICAL","expected master was not defined!")
 
-    roles = getroles()
+    roles = await getroles()
     SchemaMasterRole         = extractmaster("SchemaMasterRole",         roles)
     InfrastructureMasterRole = extractmaster("InfrastructureMasterRole", roles)
     RidAllocationMasterRole  = extractmaster("RidAllocationMasterRole",  roles)
