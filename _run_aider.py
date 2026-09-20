@@ -2,7 +2,7 @@ import os
 import subprocess
 import pathlib
 
-def run_aider_sequentially(target_dir: str, prompt: str):
+def run_aider_sequentially(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
     
     target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith("check_")]
@@ -21,7 +21,7 @@ def run_aider_sequentially(target_dir: str, prompt: str):
             "aider",
             str(file_path),
             "--message", prompt,
-            "--model", "ollama/qwen3-coder-next:latest",
+            "--model", model,
             "--encoding", "utf8",
             "--edit-format", "whole",
             "--no-auto-commits",
@@ -34,8 +34,11 @@ def run_aider_sequentially(target_dir: str, prompt: str):
         except subprocess.CalledProcessError as e:
             print(f"Aider failed on {file_path.name} with error: {e}")
 
-if __name__ == "__main__":
-    DIRECTORY = "."  
+def main():
+    DIRECTORY = "."
+    MODEL = "qwen2.5-coder:32b" # "ollama/qwen3-coder-next:latest"
     PROMPT = "Transform the attached python file to be async. If no changes are needed it is OK."
-    
-    run_aider_sequentially(DIRECTORY, PROMPT)
+    run_aider_sequentially(DIRECTORY, MODEL, PROMPT)
+
+if __name__ == "__main__":
+    main()
