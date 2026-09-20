@@ -9,6 +9,7 @@ import datetime
 import socket
 import time
 import pathlib
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -84,18 +85,18 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
+async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
@@ -130,11 +131,11 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
             url = "http://"+username+":"+password+"@"+ip+"/phyRates.html"
             driver.get(url)
             #time.sleep(5)
-            wait_page_loaded(driver)
+            await wait_page_loaded(driver)
 
             infomsg("asking for logging "+"http://"+ip+"/phyRates.html")
-            wait.until(EC.visibility_of_element_located((By.ID, "pageContent")))
-            wait.until(EC.visibility_of_element_located((By.ID, "table_data")))
+            await asyncio.get_event_loop().run_in_executor(None, wait.until, EC.visibility_of_element_located((By.ID, "pageContent")))
+            await asyncio.get_event_loop().run_in_executor(None, wait.until, EC.visibility_of_element_located((By.ID, "table_data")))
 
             tableelem = driver.find_element(By.ID, "table_data")
             tabletext = tableelem.text
@@ -146,7 +147,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
                 cells = tableelem.find_elements(By.TAG_NAME, "td")
                 if len(cells)==0:
                     counter = counter+1
-                    time.sleep(1)
+                    await asyncio.sleep(1)
                 else:
                     break
             infomsg("found "+str(len(cells))+" cells")
@@ -225,7 +226,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         proxy = ""
-        dogocoaxspeedcall(proxy,username,password,args.warning,args.critical,args.hostname,timeoutvalue,timeoutstatus)
+        await dogocoaxspeedcall(proxy,username,password,args.warning,args.critical,args.hostname,timeoutvalue,timeoutstatus)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

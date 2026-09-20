@@ -6,6 +6,7 @@ import sys
 import subprocess
 import argparse
 import time
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -81,18 +82,18 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def dohstspreloadcall(proxy,domain):
+async def dohstspreloadcall(proxy,domain):
     infomsg(proxy)
     infomsg(domain)
     try:
@@ -106,8 +107,8 @@ def dohstspreloadcall(proxy,domain):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
 
         wait.until(EC.text_to_be_present_in_element((By.ID, "status"),"Status: "))
 
@@ -174,7 +175,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL","specify a host/domain to check")
 
     proxy = ""
-    dohstspreloadcall(proxy,args.host)
+    await dohstspreloadcall(proxy,args.host)
 
 #-------------------------------------------------------------------------------
 

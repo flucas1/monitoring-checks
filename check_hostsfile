@@ -6,8 +6,8 @@ import os
 import argparse
 import traceback
 import datetime
-import time
 import ipaddress
+import asyncio
 import dns.query
 import dns.resolver
 import dns.exception
@@ -129,7 +129,7 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
 
     return result,reason
 
-def dohostsfilecheck():
+async def dohostsfilecheck():
     searchlist = extractsearchlist()
     hosts = extracthostslist()
     infomsg(searchlist)
@@ -166,7 +166,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dohostsfilecheck()
+    await dohostsfilecheck()
 
 #-------------------------------------------------------------------------------
 

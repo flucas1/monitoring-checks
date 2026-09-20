@@ -6,6 +6,7 @@ import sys
 import os
 import subprocess
 import platform
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -41,13 +42,13 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def getfiles(basepath,extensions):
+async def getfiles(basepath,extensions):
     foundfiles = []
 
     for entry in os.listdir(basepath):
         fullentry = os.path.join(basepath,entry)
         if os.path.isdir(fullentry):
-            foundfiles = foundfiles+getfiles(fullentry,extensions)
+            foundfiles = foundfiles+await getfiles(fullentry,extensions)
         else:
             infomsg(fullentry)
             fileext = os.path.splitext(fullentry)[1]
@@ -56,20 +57,22 @@ def getfiles(basepath,extensions):
             infomsg(fileext)
             if fileext in extensions:
                 foundfiles.append(fullentry)
+        await asyncio.sleep(0)
 
     foundfiles.sort()
     return foundfiles
 
-def dodpkgetcfilescall(ignorelist):
+async def dodpkgetcfilescall(ignorelist):
     try:
         extensions = ["dpkg-dist", "dpkg-new", "dpkg-old", "ucf-dist", "update-old"]
-        foundfiles = getfiles("/etc",extensions)
+        foundfiles = await getfiles("/etc",extensions)
         infomsg("foundfiles -> "+str(foundfiles))
 
         validatedfiles = []
         for testfile in foundfiles:
             if testfile not in ignorelist:
                 validatedfiles.append(testfile)
+            await asyncio.sleep(0)
         infomsg("validatedfiles -> "+str(validatedfiles))
 
         if len(validatedfiles)==0:
@@ -88,7 +91,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
@@ -97,11 +100,11 @@ def main(forcedargs=None):
         ignorelist.remove("")
     infomsg("ignorelist -> "+str(ignorelist))
 
-    dodpkgetcfilescall(ignorelist)
+    await dodpkgetcfilescall(ignorelist)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import asyncio
 import subprocess
 import argparse
 
@@ -81,14 +82,14 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -169,7 +170,7 @@ def count_red_yellow_green(block,ignoremessages):
     infomsg("ignored -> "+str(ignoredmsg))
     return blocknametext,criticalmsg,warningmsg,okmsg,ignoredmsg
 
-def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
+async def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
     try:
         driver = generatedriver(proxy)
 
@@ -181,8 +182,8 @@ def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
@@ -242,7 +243,7 @@ def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
@@ -255,11 +256,11 @@ def main(forcedargs=None):
     proxy = ""
     ignoremessages = []
     #ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
-    dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages)
+    asyncio.run(dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages))
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

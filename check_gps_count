@@ -2,8 +2,8 @@
 #-------------------------------------------------------------------------------
 
 import argparse
+import asyncio
 import gps
-import time
 import os
 import sys
 
@@ -41,12 +41,12 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dogpscountcall(timeout,warning,critical):
+async def dogpscountcall(timeout,warning,critical):
     gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE|gps.watch_options.WATCH_NEWSTYLE)
     total_used = []
     total_seen = []
     try:
-        start = time.time()
+        start = asyncio.get_event_loop().time()
         while True:
             if gpsd.waiting():
                 if gpsd.read():
@@ -56,11 +56,11 @@ def dogpscountcall(timeout,warning,critical):
                         total_used.append(gpsd.satellites_used)
                         total_seen.append(len(gpsd.satellites))
                         break
-            if time.time() > start + timeout:
+            if asyncio.get_event_loop().time() > start + timeout:
                 #total_seen = len(gpsd.satellites)
                 break
             else:
-                time.sleep(1)
+                await asyncio.sleep(1)
     except Exception as e:
         exitnagios("UNKNOWN","internal error - "+ str(e))
     finally:
@@ -104,7 +104,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dogpscountcall(args.timeout,args.warning,args.critical)
+    await dogpscountcall(args.timeout,args.warning,args.critical)
 
 #-------------------------------------------------------------------------------
 

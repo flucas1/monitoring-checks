@@ -6,6 +6,7 @@ import sys
 import os
 import subprocess
 import platform
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -41,11 +42,11 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dofwupdmgrcall():
+async def dofwupdmgrcall():
     cmdline = ["/usr/bin/fwupdmgr","get-updates","--assume-yes"]
     customenv = os.environ.copy()
     customenv["NO_COLOR"]="1"
-    completedproc = subprocess.run(cmdline,capture_output=True,env=customenv)
+    completedproc = await asyncio.to_thread(subprocess.run, cmdline, capture_output=True, env=customenv)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
@@ -69,14 +70,14 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dofwupdmgrcall()
+    await dofwupdmgrcall()
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

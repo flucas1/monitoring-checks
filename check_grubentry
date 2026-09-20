@@ -7,6 +7,7 @@ import os
 import subprocess
 import platform
 import re
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -42,7 +43,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dogrubentrycall(expectedpos):
+async def dogrubentrycall(expectedpos):
     try:
         lines = []
         handle = open("/boot/grub/grub.cfg", "r")
@@ -71,7 +72,7 @@ def dogrubentrycall(expectedpos):
         infomsg("expected -> "+expectedstring)
 
         cmdline = ["/usr/bin/uname","--kernel-release"]
-        completedproc = subprocess.run(cmdline,capture_output=True)
+        completedproc = await asyncio.to_thread(subprocess.run, cmdline, capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
@@ -99,7 +100,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     expected = int(args.expected)
-    dogrubentrycall(expected)
+    await dogrubentrycall(expected)
 
 #-------------------------------------------------------------------------------
 

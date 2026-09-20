@@ -9,7 +9,7 @@ import httpx
 import dns.message
 import dns.query
 import dns.rdatatype
-import time
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def makedohtest(retries, targetdohurl, testquery):
+async def makedohtest(retries, targetdohurl, testquery):
     result = False
     infomsg("preparing client")
     timeout = httpx.Timeout(5.0)
@@ -93,7 +93,7 @@ def makedohtest(retries, targetdohurl, testquery):
             break
         else:
             infomsg("sleeping before retry!")
-            time.sleep(5)
+            await asyncio.sleep(5)
 
     if result == True:
         exitnagios("OK","DoH for "+targetdohurl+" is working!")
@@ -113,7 +113,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -140,13 +140,11 @@ def main(forcedargs=None):
         exitnagios("CRITICAL","Must give a targetdohurl.")
 
     retries=3
-    makedohtest(retries,args.targetdohurl,args.testquery)
+    asyncio.run(makedohtest(retries,args.targetdohurl,args.testquery))
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
-
-
