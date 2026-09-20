@@ -140,7 +140,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL","Must give a targetdohurl.")
 
     retries=3
-    asyncio.run(makedohtest(retries,args.targetdohurl,args.testquery))
+    await makedohtest(retries,args.targetdohurl,args.testquery)
 
 #-------------------------------------------------------------------------------
 

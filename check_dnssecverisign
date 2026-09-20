@@ -256,7 +256,7 @@ async def main(forcedargs=None):
     proxy = ""
     ignoremessages = []
     #ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
-    asyncio.run(dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages))
+    await dodnssecverisigncall(args.host,proxy,args.tolerant,ignoremessages)
 
 #-------------------------------------------------------------------------------
 
