@@ -4,7 +4,8 @@
 
 import os
 import sys
-import subprocess
+import asyncio
+import aiofiles
 import argparse
 
 #-------------------------------------------------------------------------------
@@ -58,16 +59,16 @@ def isexclusion(parts,customlines):
 def isexpected(parts):
     return parts[1] == "root@localhost"
 
-def domailaliasescall(customlines):
+async def domailaliasescall(customlines):
     try:
         aliasesfile = "/etc/aliases"
         if os.path.isfile(aliasesfile):
             errors = []
             exclusion = []
             expected = []
-            handle = open(aliasesfile,"r")
-            try:
-                lines = handle.read().splitlines()
+            async with aiofiles.open(aliasesfile, "r") as handle:
+                lines = await handle.read()
+                lines = lines.splitlines()
                 for line in lines:
                     line = line.strip()
                     if len(line)>0:
@@ -94,8 +95,6 @@ def domailaliasescall(customlines):
                             else:
                                 errors.append(line)
                                 #infomsg("->"+line+"<-")
-            finally:
-                handle.close()
             if len(errors) == 0:
                 exitnagios("OK","no issues found in "+aliasesfile+" | errors="+str(len(errors))+" exclusion="+str(len(exclusion))+" expected="+str(len(expected)))
             else:
@@ -123,7 +122,7 @@ async def main(forcedargs=None):
     for entry in args.customlines.split(","):
         customlines.append(entry.strip().split(":"))
     infomsg("The custom lines are "+str(customlines))
-    domailaliasescall(customlines)
+    await domailaliasescall(customlines)
 
 #-------------------------------------------------------------------------------
 
