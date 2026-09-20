@@ -78,7 +78,7 @@ async def dodcf77call(warning, critical):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                 dest="warning",          default="80",                                 help="warning level percent")
     parser.add_argument("-c", "--critical",                                dest="critical",         default="50",                                 help="critical level percent")
@@ -92,6 +92,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

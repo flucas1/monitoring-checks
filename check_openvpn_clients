@@ -96,7 +96,7 @@ class telnetconnection:
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target",                                  dest="target",           default="",                                   help="target hostname"                           )
     parser.add_argument("-p", "--port",                                    dest="port",             default="",                                   help="port to use"                               )
@@ -144,6 +144,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

@@ -332,7 +332,7 @@ def dokubernetescall(kubeconfig,namespace):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode",              action="store",       dest="mode",             default="pipeline",                           help="choose one of: monitoring,pipeline"        )
     parser.add_argument("-k", "--kubeconfig",        action="store",       dest="kubeconfig",       default="/etc/kubernetes/admin.conf",         help="path to kubeconfig admin file"             )
@@ -355,6 +355,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
