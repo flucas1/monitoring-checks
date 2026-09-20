@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import subprocess
+import asyncio
 import platform
 
 #-------------------------------------------------------------------------------
@@ -41,17 +41,20 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dopostgresclustercountcall(expected):
+async def dopostgresclustercountcall(expected):
     cmdline = ["/usr/bin/pg_lsclusters","--no-header"]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(*cmdline,
+                                                   stdout=asyncio.subprocess.PIPE,
+                                                   stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip()
+    errors = stderr.decode("utf-8").strip()
+    exitcode = process.returncode
 
     if exitcode == 0:
         lines = output.splitlines()
         found = len(lines)
-        if found==expected:
+        if found == expected:
             exitnagios("OK","there are "+str(found)+" postgres clusters as expected | count="+str(found))
         else:
             exitnagios("CRITICAL","there are "+str(found)+" postgres clusters, but it was expected to find "+str(expected)+" - "+str(lines)+" | count="+str(found))
@@ -69,7 +72,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     expected = int(args.expected)
-    dopostgresclustercountcall(expected)
+    await dopostgresclustercountcall(expected)
 
 #-------------------------------------------------------------------------------
 

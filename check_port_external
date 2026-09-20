@@ -2,11 +2,10 @@
 
 import os
 import sys
-import subprocess
+import asyncio
 import argparse
-import mechanize
+import aiohttp
 import socket
-import time
 from bs4 import BeautifulSoup
 
 #-------------------------------------------------------------------------------
@@ -43,7 +42,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dointernalcall(ipprotocol,tcporudp,hostname,port):
+async def dointernalcall(ipprotocol, tcporudp, hostname, port):
     try:
         if ipprotocol=="4":
             sfamily = socket.AF_INET
@@ -89,7 +88,7 @@ def dointernalcall(ipprotocol,tcporudp,hostname,port):
                 infomsg("socket exception -> "+str(e))
         elif tcporudp == "udp":
             try:
-                sock.sendto("", (ip_address, port))
+                sock.sendto(b"", (ip_address, port))
                 content = "OPEN"
             except socket.error as e:
                 content = "CLOSED"
@@ -104,21 +103,19 @@ def dointernalcall(ipprotocol,tcporudp,hostname,port):
 
     return content
 
-def dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port):
+async def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
     try:
         url = baseurl+"?hostname="+hostname+"&protocol="+tcporudp+"&port="+str(port)
         if ipprotocol != "":
             url = url+"&ipv="+ipprotocol
         infomsg(url)
-        br = mechanize.Browser()
-        br.set_handle_robots(False) # ignore robots file
-        #br.addheaders = [("User-agent", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)")]
-        br.addheaders = [
-            ("User-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0"),
-            ("Authorization", "Bearer "+accesstoken)
-        ]
-        res = br.open(url)
-        content = res.read().decode()
+        headers = {
+            "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+            "Authorization": "Bearer "+accesstoken
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as res:
+                content = await res.text()
     except Exception as e:
         content=""
 
@@ -126,14 +123,14 @@ def dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port):
 
 #-------------------------------------------------------------------------------
 
-def doportexternalcallsimple(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port,responses,timeoutvalue,timeoutstatus):
+async def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     try:
         ipprotocol = ipprotocol.strip().replace("-","")
         tcporudp = tcporudp.lower().strip()
         if baseurl=="":
-            content = dointernalcall(ipprotocol,tcporudp,hostname,port)
+            content = await dointernalcall(ipprotocol, tcporudp, hostname, port)
         else:
-            content = dohttpcall(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port)
+            content = await dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
         infomsg(content)
         if content == None:
             exitnagios("CRITICAL","no result from page")
@@ -158,15 +155,15 @@ def doportexternalcallsimple(baseurl,accesstoken,ipprotocol,tcporudp,hostname,po
     except Exception as e:
         return ("CRITICAL","unexpected error during the check "+str(e))
 
-def doportexternalcall(retries,baseurl,accesstoken,ipprotocol,tcporudp,hostname,port,responses,timeoutvalue,timeoutstatus):
+async def doportexternalcall(retries, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     counter = 0
     while True:
-        exitlevel,message = doportexternalcallsimple(baseurl,accesstoken,ipprotocol,tcporudp,hostname,port,responses,timeoutvalue,timeoutstatus)
+        exitlevel, message = await doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
         if (exitlevel=="OK") or (counter>=retries):
             exitnagios(exitlevel, message)
         else:
             counter = counter+1
-            time.sleep(5)
+            await asyncio.sleep(5)
     exitnagios("CRITICAL","unexpected state")
 
 #-------------------------------------------------------------------------------
@@ -223,7 +220,7 @@ async def main(forcedargs=None):
                accesstoken=handle.read().splitlines()[0]
         baseurl = args.baseurl
         retries = int(args.retries)
-        doportexternalcall(retries,baseurl,accesstoken,protocol,tcporudp,args.hostname,int(args.port),args.responses.split(","),timeoutvalue,timeoutstatus)
+        await doportexternalcall(retries, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

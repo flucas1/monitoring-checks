@@ -124,7 +124,7 @@ async def main(forcedargs=None):
         port = int(args.port)
 
     telnetwrapper = telnetconnection(host, port, password, "status")
-    data = asyncio.run(telnetwrapper.interact())
+    data = await telnetwrapper.interact()
     infomsg(data)
 
     tab1 = re.findall("(.+),(\\d+\\.\\d+\\.\\d+\\.\\d+\\:\\d+),(\\d+),(\\d+),(.+)", data)

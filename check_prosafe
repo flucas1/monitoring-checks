@@ -7,6 +7,8 @@ import os
 import subprocess
 import netifaces
 import time
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -51,13 +53,13 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def findswitchesininterface(interface,model):
+async def findswitchesininterface(interface, model, loop):
     result = []
 
     for index in range(2):
         infomsg("interface "+interface+" - iteration "+str(index))
         cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"discover"]
-        completedproc = subprocess.run(cmdline,capture_output=True)
+        completedproc = await loop.run_in_executor(None, subprocess.run, cmdline, capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
@@ -77,23 +79,26 @@ def findswitchesininterface(interface,model):
                         mac = infos["MAC"]
                         if mac not in result:
                             result.append(mac)
-        time.sleep(1)
+        await asyncio.sleep(1)
 
     infomsg("interfaces "+str(result))
     return result
 
-def findallswitches(model):
+async def findallswitches(model, loop):
     switches = {}
     if_list = netifaces.interfaces()
+    tasks = []
     for interface in if_list:
         if (interface.startswith("veth")==False) and (interface.startswith("flannel")==False) and (interface.startswith("calico")==False) and (interface.startswith("cni")==False) and (interface.startswith("tun")==False) and (interface.startswith("tap")==False) and (interface not in ["pimreg","lo"]):
-            foundmacs = findswitchesininterface(interface,model)
-            if len(foundmacs)>0:
-                switches[interface]=foundmacs
+            task = asyncio.create_task(findswitchesininterface(interface, model, loop))
+            tasks.append(task)
+    results = await asyncio.gather(*tasks)
+    for interface, result in zip(if_list, results):
+        if len(result) > 0:
+            switches[interface] = result
     return switches
 
-
-def queryversion(interface,mac,strict):
+async def queryversion(interface, mac, strict, loop):
     result = None
 
     if strict:
@@ -102,7 +107,7 @@ def queryversion(interface,mac,strict):
         maxversions = 2
     for index in range(maxversions):
         cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"query","--mac",mac,"firmwarever"]
-        completedproc = subprocess.run(cmdline,capture_output=True)
+        completedproc = await loop.run_in_executor(None, subprocess.run, cmdline, capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
@@ -117,15 +122,20 @@ def queryversion(interface,mac,strict):
         if result != None:
             break
         else:
-            time.sleep(1)
+            await asyncio.sleep(1)
 
     return result
 
-def getversions(switches,version,strict):
+async def getversions(switches, version, strict, loop):
     results = {}
-    for interface,macs in switches.items():
+    tasks = []
+    for interface, macs in switches.items():
         for mac in macs:
-            version = queryversion(interface,mac,strict)
+            task = asyncio.create_task(queryversion(interface, mac, strict, loop))
+            tasks.append(task)
+    versions = await asyncio.gather(*tasks)
+    for (interface, macs), version in zip(switches.items(), versions):
+        for mac in macs:
             results[mac] = {}
             results[mac]["interface"] = interface
             results[mac]["version"] = version
@@ -133,15 +143,15 @@ def getversions(switches,version,strict):
 
 #-------------------------------------------------------------------------------
 
-def doprosafecall(model,expected,strict):
-    switches = findallswitches(model)
+async def doprosafecall(model, expected, strict, loop):
+    switches = await findallswitches(model, loop)
     infomsg(str(switches))
-    versions = getversions(switches,expected,strict)
+    versions = await getversions(switches, expected, strict, loop)
     infomsg(str(versions))
 
     valid = {}
     failures = {}
-    for key,value in versions.items():
+    for key, value in versions.items():
         foundversion = value["version"]
         if (foundversion==None and strict==False) or (foundversion==expected) or (expected==""):
             valid[key] = value
@@ -197,7 +207,7 @@ def wait_page_loaded(driver):
 
 #-------------------------------------------------------------------------------
 
-def getexpected(proxy,model):
+async def getexpected(proxy, model, loop):
     expected = ""
     try:
         driver = generatedriver(proxy)
@@ -209,8 +219,7 @@ def getexpected(proxy,model):
 
         url = "https://www.netgear.com/support/product/"+model.lower()+"#download"
         driver.get(url)
-        time.sleep(1)
-        wait_page_loaded(driver)
+        await loop.run_in_executor(None, wait_page_loaded, driver)
 
         wait.until(EC.visibility_of_element_located((By.ID, "topicsdownload")))
         titles = driver.find_elements(by=By.CLASS_NAME, value="accordion-title")
@@ -251,20 +260,17 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    #model = "GS108Ev3"
-    #expected = "2.06.24"
-    #strict = False
-
     model = args.model
     strict = args.strict
+    loop = asyncio.get_event_loop()
     if args.expected in ["auto","",None]:
         proxy = ""
-        expected = getexpected(proxy,model)
+        expected = await getexpected(proxy, model, loop)
         infomsg(expected)
     else:
         expected = args.expected
 
-    doprosafecall(model,expected,strict)
+    await doprosafecall(model, expected, strict, loop)
 
 #-------------------------------------------------------------------------------
 
