@@ -131,7 +131,7 @@ def check_rtc_utc():
         if is_rtc_utc == False:
             exitnagios("CRITICAL","hwclock is not UTC")
 
-def get_rtc_data(device):
+async def get_rtc_data(device):
     # Validate device
     rtc_sys_path = f"/sys/class/rtc/{device}"
     if not os.path.exists(rtc_sys_path):
@@ -139,18 +139,15 @@ def get_rtc_data(device):
 
     try:
         # Read date
-        with open(os.path.join(rtc_sys_path, "date"), "rt") as f:
-            date_str = f.read().strip()  # format: YYYY-MM-DD
+        date_str = await asyncio.to_thread(open, os.path.join(rtc_sys_path, "date"), "rt").read().strip()  # format: YYYY-MM-DD
 
         # Read time
-        with open(os.path.join(rtc_sys_path, "time"), "rt") as f:
-            time_str = f.read().strip()  # format: HH:MM:SS
+        time_str = await asyncio.to_thread(open, os.path.join(rtc_sys_path, "time"), "rt").read().strip()  # format: HH:MM:SS
 
         # Optional: check battery status
         batt_file = os.path.join(rtc_sys_path, "batt_status")
         if os.path.exists(batt_file):
-            with open(batt_file, "rt") as f:
-                batt_status = f.read().strip()
+            batt_status = await asyncio.to_thread(open, batt_file, "rt").read().strip()
             if batt_status != "okay":
                 exitnagios("CRITICAL", f"RTC battery not valid for {device}")
 
@@ -202,7 +199,7 @@ async def main(forcedargs=None):
     else:
         infomsg("The selected rtc device is "+device)
         check_rtc_utc()
-        rtctime = get_rtc_data(device)
+        rtctime = await get_rtc_data(device)
         infomsg(rtctime)
         systime = int(time.time())
         infomsg(systime)

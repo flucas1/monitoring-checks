@@ -11,6 +11,7 @@ import asyncio
 import dns.query
 import dns.resolver
 import dns.exception
+import aiofiles
 
 #-------------------------------------------------------------------------------
 
@@ -46,47 +47,37 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def extractsearchlist():
+async def extractsearchlist():
     result = ""
-    handle = None
-    try:
-        handle = open("/etc/resolv.conf","r")
-        lines = handle.read().splitlines()
+    async with aiofiles.open("/etc/resolv.conf", "r") as handle:
+        lines = await handle.readlines()
         for line in lines:
-            line = line.strip().split("#",1)[0]
-            if len(line)>0:
+            line = line.strip().split("#", 1)[0]
+            if len(line) > 0:
                 parts = line.split()
-                if parts[0]=="search":
+                if parts[0] == "search":
                     result = parts[1].split()
                     break
-    finally:
-        if handle!=None:
-            handle.close()
     return result
 
-def extracthostslist():
+async def extracthostslist():
     result = {}
-    handle = None
-    try:
-        handle = open("/etc/hosts","r")
-        lines = handle.read().splitlines()
+    async with aiofiles.open("/etc/hosts", "r") as handle:
+        lines = await handle.readlines()
         for line in lines:
-            line = line.strip().split("#",1)[0]
-            if len(line)>0:
+            line = line.strip().split("#", 1)[0]
+            if len(line) > 0:
                 parts = line.split()
                 key = parts[0]
                 result[key] = parts[1:]
-    finally:
-        if handle!=None:
-            handle.close()
     return result
 
-def testvalue(ipo,dnsquery,recordtype,customresolver):
+def testvalue(ipo, dnsquery, recordtype, customresolver):
     result = False
     try:
-        queryrr = customresolver.resolve(dnsquery,recordtype,search=False)
+        queryrr = customresolver.resolve(dnsquery, recordtype, search=False)
         infomsg(queryrr.rrset)
-        if len(queryrr.rrset)>0:
+        if len(queryrr.rrset) > 0:
             for rr in queryrr.rrset:
                 foundip = ipaddress.ip_address(rr)
                 #infomsg("--> "+str(foundip))
@@ -98,7 +89,7 @@ def testvalue(ipo,dnsquery,recordtype,customresolver):
         infomsg("Error resolving "+dnsquery+" "+recordtype)
     return result
 
-def testentry(ipo,canonical,aliases,searchlist,customresolver):
+def testentry(ipo, canonical, aliases, searchlist, customresolver):
     result = True
     reason = None
 
@@ -108,13 +99,13 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
     elif ipo.version == 6:
         recordtype = "AAAA"
 
-    if testvalue(ipo,canonical,recordtype,customresolver):
+    if testvalue(ipo, canonical, recordtype, customresolver):
         infomsg("Test value is True for "+str(ipo))
         for alias in aliases:
-            if testvalue(ipo,alias,recordtype,customresolver)==False:
+            if testvalue(ipo, alias, recordtype, customresolver) == False:
                 foundusingsearch = False
                 for search in searchlist:
-                    if testvalue(ipo,alias+"."+search,recordtype,customresolver):
+                    if testvalue(ipo, alias+"."+search, recordtype, customresolver):
                         foundusingsearch = True
                         break
                 infomsg(alias+" "+str(foundusingsearch))
@@ -127,11 +118,11 @@ def testentry(ipo,canonical,aliases,searchlist,customresolver):
         result = False
         reason = "Error in DNS resolving of "+canonical
 
-    return result,reason
+    return result, reason
 
 async def dohostsfilecheck():
-    searchlist = extractsearchlist()
-    hosts = extracthostslist()
+    searchlist = await extractsearchlist()
+    hosts = await extracthostslist()
     infomsg(searchlist)
     infomsg(hosts)
 
@@ -139,27 +130,27 @@ async def dohostsfilecheck():
     failing = {}
     customresolver = dns.resolver.Resolver("/etc/resolv.conf")
 
-    for key,value in hosts.items():
+    for key, value in hosts.items():
         ipo = ipaddress.ip_address(key)
-        if (ipo.is_loopback==False) and (ipo.is_private or ipo.is_global) and (ipo.is_reserved==False) and (ipo.is_link_local==False) and (ipo.is_multicast==False):
+        if (ipo.is_loopback == False) and (ipo.is_private or ipo.is_global) and (ipo.is_reserved == False) and (ipo.is_link_local == False) and (ipo.is_multicast == False):
             infomsg("Evaluating for "+str(ipo))
             canonical = value[0]
             aliases = value[1:]
-            valid,reason = testentry(ipo,canonical,aliases,searchlist,customresolver)
+            valid, reason = testentry(ipo, canonical, aliases, searchlist, customresolver)
             allvalid = allvalid and valid
             if not valid:
-                failing[key] = [value,reason]
+                failing[key] = [value, reason]
 
     if allvalid:
-        exitnagios("OK","the hosts file seems valid")
+        exitnagios("OK", "the hosts file seems valid")
     else:
-        exitnagios("WARNING","some lines do not fully conform to specification or do not resolve properly "+str(failing))
+        exitnagios("WARNING", "some lines do not fully conform to specification or do not resolve properly "+str(failing))
 
 #-------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
