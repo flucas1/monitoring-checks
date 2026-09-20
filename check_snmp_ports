@@ -4,7 +4,7 @@
 import argparse
 import sys
 import re
-import subprocess
+import asyncio
 import datetime
 import socket
 
@@ -60,20 +60,20 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dosnmpuptimecall(listports, expected, hostname, port, community, timeoutvalue, timeoutstatus):
+async def dosnmpuptimecall(listports, expected, hostname, port, community, timeoutvalue, timeoutstatus):
     found = {}
     token = "iso.3.6.1.2.1.2.2.1.5."
-    exitcode, stdout = snmpget(hostname, port, community, ".1.3.6.1.2.1.2.2.1.5")
-    if exitcode==None:
+    exitcode, stdout = await snmpget(hostname, port, community, ".1.3.6.1.2.1.2.2.1.5")
+    if exitcode is None:
         exitnagios(timeoutstatus,"Timeout")
-    elif exitcode==0:
+    elif exitcode == 0:
         for line in stdout.strip().splitlines():
             if line.startswith(token):
                 parsing = line[len(token):]
                 parts = parsing.split("=",1)
-                port=parts[0].strip()
-                payload=parts[1].strip().split()
-                found[port]=payload[1]
+                port = parts[0].strip()
+                payload = parts[1].strip().split()
+                found[port] = payload[1]
     else:
         exitnagios("CRITICAL","Unexpected scenario")
 
@@ -85,24 +85,29 @@ def dosnmpuptimecall(listports, expected, hostname, port, community, timeoutvalu
     for testport in validports:
         if testport in found.keys():
             current = found[testport]
-            if current==expected:
+            if current == expected:
                 success[testport] = current
             else:
                 errors[testport] = current
         else:
             errors[testport] = "?"
 
-    if len(errors)==0:
+    if len(errors) == 0:
         exitnagios("OK","all ports as expected "+str(success))
     else:
         exitnagios("CRITICAL","some ports are not expected "+str(errors)+" - "+str(success))
 
-def snmpget(hostname, port, community, oid):
+async def snmpget(hostname, port, community, oid):
     cmdline = ["/usr/bin/snmpwalk","-v","2c","-c",community,hostname+":"+str(port),oid]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip()
+    errors = stderr.decode("utf-8").strip()
+    exitcode = process.returncode
     if errors.startswith("Timeout: No Response from "):
         exitcode = None
         output = None
@@ -129,12 +134,12 @@ async def main(forcedargs=None):
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
-    if len(parts)>1:
+    if len(parts) > 1:
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dosnmpuptimecall(args.listports,args.expected,args.hostname,int(args.port),args.community,timeoutvalue,timeoutstatus)
+        await dosnmpuptimecall(args.listports, args.expected, args.hostname, int(args.port), args.community, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

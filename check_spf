@@ -6,6 +6,7 @@ import sys
 import time
 import subprocess
 import argparse
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -76,19 +77,19 @@ def generatedriver(proxy):
 
     return driver
 
-def check_page_loaded(driver):
+async def check_page_loaded(driver):
     #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if await check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -118,7 +119,7 @@ def tryfindbyclassname(driver,classname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(domain,proxy):
+async def dodnssecverisigncall(domain,proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -130,8 +131,8 @@ def dodnssecverisigncall(domain,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
@@ -182,7 +183,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     proxy = ""
-    dodnssecverisigncall(args.host,proxy)
+    await dodnssecverisigncall(args.host,proxy)
 
 #-------------------------------------------------------------------------------
 
