@@ -6,7 +6,6 @@ def run_aider_sequentially(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
     
     target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith("check_")]
-    target_files.reverse()
     
     if not target_files:
         print(f"No files starting with 'check_' found in {target_dir}")
@@ -37,8 +36,8 @@ def run_aider_sequentially(target_dir: str, model: str, prompt: str):
 
 def main():
     DIRECTORY = "."
-    MODEL = "qwen3:235b" # "ollama/qwen2.5-coder:32b" # "ollama/qwen3-coder-next:latest"
-    PROMPT = "Transform the attached python file to be async. If no changes are needed it is OK."
+    MODEL = "ollama/qwen3-coder-next:latest" # "ollama/qwen2.5-coder:32b" # "ollama/qwen3:235b"
+    PROMPT = "Transform the attached python file to be async. Avoid to_thread and get_running_loop. If no changes are needed it is OK."
     run_aider_sequentially(DIRECTORY, MODEL, PROMPT)
 
 if __name__ == "__main__":
