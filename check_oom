@@ -125,7 +125,7 @@ def oom_check(criticallevel, warninglevel, short=False):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                                          default="",                                   help="Number of occurences to trigger a warning")
     parser.add_argument("-c", "--critical",                                                         default="1",                                  help="Number of occurences to trigger a warning")
@@ -140,6 +140,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

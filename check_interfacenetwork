@@ -127,7 +127,7 @@ def dointerfacenetworkcheck(interface,segment,address,existence,notexists):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="interface to check")
     parser.add_argument("-s", "--segment",                                 dest="segment",          default="",                                   help="expected network segment")
@@ -147,6 +147,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

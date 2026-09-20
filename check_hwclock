@@ -191,7 +191,7 @@ def evaluate(device,difference,warning,critical):
     else:
         exitnagios("OK","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
@@ -212,6 +212,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

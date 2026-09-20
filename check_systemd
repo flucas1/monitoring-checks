@@ -171,7 +171,7 @@ def systemd_check(service,system,user,toleratecriticallist,toleratewarninglist,i
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--service",                                 dest="service",          default=None,                                 help="Name of the Service that is beeing tested")
     parser.add_argument("-m", "--system",            action="store_true",  dest="system",           default=False,                                help="Check the gobal systemd (default)")
@@ -193,6 +193,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
