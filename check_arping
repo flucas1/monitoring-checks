@@ -4,6 +4,7 @@
 import argparse
 import sys
 import os
+import asyncio
 import subprocess
 
 #-------------------------------------------------------------------------------
@@ -40,12 +41,13 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doarpingcall(hostname,packets,timeout):
+async def doarpingcall(hostname,packets,timeout):
     cmdline = ["/usr/sbin/arping","-C",str(packets),"-w",str(timeout),hostname]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+    proc = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await proc.communicate()
+    output = stdout.decode("utf-8")
+    errors = stderr.decode("utf-8")
+    response = proc.returncode
 
     infomsg(output)
 
@@ -86,18 +88,18 @@ def parse_args(forcedargs=None):
 
     return args
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
     if not args.hostname:
         exitnagios("CRITICAL","Must give a hostname.")
 
-    doarpingcall(args.hostname,args.packets,args.timeout)
+    await doarpingcall(args.hostname,args.packets,args.timeout)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
