@@ -6,6 +6,7 @@ import sys
 import subprocess
 import argparse
 import mechanize
+import asyncio
 import time
 from bs4 import BeautifulSoup
 
@@ -43,7 +44,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def doportexternalcall(domain):
+async def doportexternalcall(domain):
     try:
         valid = False
         url = "https://code.kryo.se/iodine/check-it/"
@@ -89,7 +90,7 @@ def doportexternalcall(domain):
             elif counter>=retries:
                 break
             else:
-                time.sleep(10)
+                await asyncio.sleep(10)
 
         if valid == True:
             exitnagios("OK","the tunnel is well done")
@@ -111,7 +112,7 @@ async def main(forcedargs=None):
     if (args.hostname == ""):
         exitnagios("CRITICAL","hostname not defined")
 
-    doportexternalcall(args.hostname)
+    await doportexternalcall(args.hostname)
 
 #-------------------------------------------------------------------------------
 

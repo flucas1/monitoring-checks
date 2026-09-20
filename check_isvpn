@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import asyncio
 import subprocess
 import socket
 import argparse
@@ -100,18 +101,18 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def doisvpncall(expected,severity,proxy):
+async def doisvpncall(expected,severity,proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -123,8 +124,8 @@ def doisvpncall(expected,severity,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
 
         wait.until(EC.presence_of_element_located((By.ID, "type")))
 
@@ -193,7 +194,7 @@ async def main(forcedargs=None):
     if args.severity not in ["CRITICAL","WARNING"] :
         exitnagios("CRITICAL","the severity '"+args.severity+"' is not valid")
 
-    doisvpncall(expected,args.severity,proxy)
+    await doisvpncall(expected,args.severity,proxy)
 
 #-------------------------------------------------------------------------------
 

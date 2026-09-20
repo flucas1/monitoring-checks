@@ -6,6 +6,7 @@ import time
 import datetime
 import os
 import sys
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -89,12 +90,12 @@ def read_rtc(rtc_name):
 
     return (date_str, time_str)
 
-def check_rtc_device(rtc_name):
+async def check_rtc_device(rtc_name):
     date1, time1 = read_rtc(rtc_name)
     if date1 is None or time1 is None:
         return False
 
-    time.sleep(2)
+    await asyncio.sleep(2)
 
     date2, time2 = read_rtc(rtc_name)
     if date2 is None or time2 is None:
@@ -105,14 +106,14 @@ def check_rtc_device(rtc_name):
     else:
         return False
 
-def finddevice():
+async def finddevice():
     alldevices = list_rtc_devices()
     infomsg("The list of found devices is "+str(alldevices))
     if len(alldevices)==0:
         return None
     else:
         for device in alldevices:
-            valid = check_rtc_device(device)
+            valid = await check_rtc_device(device)
             if valid:
                 return device
         return None
@@ -195,7 +196,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    device = finddevice()
+    device = await finddevice()
     if device == None:
         exitnagios("CRITICAL","Could not find any rtc device")
     else:
@@ -207,7 +208,6 @@ async def main(forcedargs=None):
         infomsg(systime)
         difference = abs(rtctime - systime)
         evaluate(device,difference,args.warning,args.critical)
-        exitnagios("CRITICAL","Internal error")
 
 #-------------------------------------------------------------------------------
 
