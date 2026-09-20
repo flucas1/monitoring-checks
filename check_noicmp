@@ -4,7 +4,8 @@
 import argparse
 import sys
 import os
-import subprocess
+import asyncio
+import socket
 
 #-------------------------------------------------------------------------------
 
@@ -101,13 +102,20 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL","hostname not defined")
 
     cmdline = ["/usr/bin/ping"]
-    if cmdline not in ["",None]:
+    if protocol not in ["",None]:
         cmdline = cmdline+[protocol]
     cmdline = cmdline+["-c",str(args.packets),"-W",str(args.timeout),args.hostname]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
+    errors = stderr.decode("utf-8")
+    response = process.returncode
 
     #and then check the response...
     if response != 0:

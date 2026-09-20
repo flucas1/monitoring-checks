@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import subprocess
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -40,12 +40,13 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def dondisc6call(hostname):
+async def dondisc6call(hostname):
     cmdline = ["/usr/bin/ip","route","get",hostname]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
+    errors = stderr.decode("utf-8")
+    response = process.returncode
     infomsg(output)
     interface = None
     if response == 0:
@@ -53,14 +54,15 @@ def dondisc6call(hostname):
         if len(routeparts)>4:
             interface = routeparts[4]
     if interface == None:
-        exitnagios("CRITICAL","Cannot identify iterface for discovery")
+        exitnagios("CRITICAL","Cannot identify interface for discovery")
     infomsg("interface -> "+interface)
 
     cmdline = ["/usr/bin/ndisc6",hostname,interface]
-    completedproc = subprocess.run(cmdline,capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
+    errors = stderr.decode("utf-8")
+    response = process.returncode
     infomsg(output)
     macfound = None
     if response == 0:
@@ -74,7 +76,7 @@ def dondisc6call(hostname):
                 infomsg(macfound)
 
     if macfound!=None:
-        exitnagios("OK",hostname+" is respoding to NDD with mac "+macfound)
+        exitnagios("OK",hostname+" is responding to NDD with mac "+macfound)
     else:
         exitnagios("CRITICAL",hostname+" is not responding to NDD")
 
@@ -96,7 +98,7 @@ async def main(forcedargs=None):
     if not args.hostname:
         exitnagios("CRITICAL","Must give a hostname.")
 
-    dondisc6call(args.hostname)
+    await dondisc6call(args.hostname)
 
 #-------------------------------------------------------------------------------
 
