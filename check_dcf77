@@ -87,7 +87,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    asyncio.run(dodcf77call(args.warning, args.critical))
+    await dodcf77call(args.warning, args.critical)
 
 #-------------------------------------------------------------------------------
 
