@@ -36,7 +36,7 @@ def run_aider_sequentially(target_dir: str, model: str, prompt: str):
 
 def main():
     DIRECTORY = "."
-    MODEL = "qwen2.5-coder:32b" # "ollama/qwen3-coder-next:latest"
+    MODEL = "ollama/qwen2.5-coder:32b" # "ollama/qwen3-coder-next:latest"
     PROMPT = "Transform the attached python file to be async. If no changes are needed it is OK."
     run_aider_sequentially(DIRECTORY, MODEL, PROMPT)
 
