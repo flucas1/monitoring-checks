@@ -7,7 +7,7 @@ import os
 import subprocess
 import datetime
 import dateutil.parser
-import time
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def get_wtmp_entries():
+async def get_wtmp_entries():
     today = datetime.datetime.now(datetime.UTC)
     seven_days_ago = today - datetime.timedelta(days=7)
     formatted_date = seven_days_ago.strftime("%Y-%m-%d")
@@ -74,17 +74,17 @@ def get_wtmp_entries():
 
     return cleared
 
-def dolastloginscall(warning,critical):
+async def dolastloginscall(warning,critical):
     counter = 0
     retries = 10
     cleared = []
     while counter<retries:
-        cleared = get_wtmp_entries()
+        cleared = await get_wtmp_entries()
         if len(cleared)>0:
             break
         else:
             counter = counter+1
-            time.sleep(1)
+            await asyncio.sleep(1)
             infomsg("sleeping and will do retry "+str(counter))
     infomsg(cleared)
 
@@ -129,7 +129,7 @@ def dolastloginscall(warning,critical):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                 dest="warning",          default="48",                                 help="Warning level - hours")
     parser.add_argument("-c", "--critical",                                dest="critical",         default="96",                                 help="Critical level - hours")
@@ -140,11 +140,11 @@ def main(forcedargs=None):
 
     warning = int(args.warning)
     critical = int(args.critical)
-    dolastloginscall(warning,critical)
+    await dolastloginscall(warning,critical)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
