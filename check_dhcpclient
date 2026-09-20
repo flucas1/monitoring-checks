@@ -3,11 +3,10 @@
 
 import os
 import sys
-import subprocess
+import asyncio
 import re
 import socket
 import argparse
-import socket
 import fcntl
 import struct
 
@@ -65,19 +64,27 @@ def allinterfaces():
     infomsg(interfaces)
     return interfaces
 
-def findservers(interface,requestmac,timeout):
-
+async def findservers(interface, requestmac, timeout):
     command = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
     infomsg(" ".join(command))
 
     try:
-        result = subprocess.check_output(command)
-        output = result.decode("utf-8")
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            infomsg(f"Error: {stderr.decode('utf-8')}")
+            return None
+        output = stdout.decode("utf-8")
         return output
     except Exception as e:
+        infomsg(f"Exception: {e}")
         return None
 
-def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
+async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     interfaceaddress = get_ip_address(interface)
     infomsg(interfaceaddress)
     requestmac = chaddr
@@ -87,41 +94,41 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
         if testaddress in validservers:
             validservers.remove(testaddress)
 
-    output = findservers(interface,requestmac,timeout)
+    output = await findservers(interface, requestmac, timeout)
     infomsg(output)
 
     sucesses = []
     warnings = []
     criticals = []
     total = -1
-    if output == None:
+    if output is None:
         warnings.append("the network on interface '"+interface+"' does not have any dhcp server")
     else:
         lines = output.splitlines()
         responses = []
         goodones = []
         for line in lines:
-            if  line.startswith("Added offer from server"):
+            if line.startswith("Added offer from server"):
                 parts = line.split()
                 foundserver = parts[5]
                 foundip = parts[9]
                 responses.append(foundserver)
                 if foundserver not in validservers:
                     criticals.append("bogus IP server: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
-                elif expectedip.match(foundip) == False:
+                elif expectedip.match(foundip) is None:
                     criticals.append("bogus IP result: "+foundserver+" answers "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
                 else:
                     goodones.append(foundserver)
-        if len(criticals)==0:
-            if len(goodones)<warning:
+        if len(criticals) == 0:
+            if len(goodones) < warning:
                 warnings.append("difference between valid servers and found servers - validservers ["+",".join(validservers)+"] - foundservers ["+",".join(responses)+"] on interface '"+interface+"'")
             else:
                 sucesses.append("foundservers ["+",".join(responses)+"] all answer "+foundip+" for mac "+requestmac+" on interface '"+interface+"'")
         total = len(responses)
 
-    return sucesses,warnings,criticals,total
+    return sucesses, warnings, criticals, total
 
-def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
+async def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     result = True
     infomsg("List of interfaces: "+" ".join(interfaces))
 
@@ -131,20 +138,20 @@ def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     performance = []
     for interface in interfaces:
         infomsg("evaluating: "+interface)
-        temp_sucesses,temp_warnings,temp_criticals,temp_total = checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
-        sucesses = sucesses+temp_sucesses
-        warnings = warnings+temp_warnings
-        criticals = criticals+temp_criticals
-        performance = performance+[interface+"="+str(temp_total)]
+        temp_sucesses, temp_warnings, temp_criticals, temp_total = await checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
+        sucesses = sucesses + temp_sucesses
+        warnings = warnings + temp_warnings
+        criticals = criticals + temp_criticals
+        performance = performance + [interface+"="+str(temp_total)]
 
-    if len(criticals)>0:
-        exitnagios("CRITICAL"," - ".join(criticals)+" | "+" ".join(performance))
-    if len(warnings)>0:
-        exitnagios("WARNING"," - ".join(warnings)+" | "+" ".join(performance))
-    if len(sucesses)>0:
-        exitnagios("OK"," - ".join(sucesses)+" | "+" ".join(performance))
+    if len(criticals) > 0:
+        exitnagios("CRITICAL", " - ".join(criticals) + " | " + " ".join(performance))
+    if len(warnings) > 0:
+        exitnagios("WARNING", " - ".join(warnings) + " | " + " ".join(performance))
+    if len(sucesses) > 0:
+        exitnagios("OK", " - ".join(sucesses) + " | " + " ".join(performance))
 
-    exitnagios("UNKNOWN","unexpected scenario - successes: "+str(sucesses)+" - warnings: "+str(warnings)+" - criticals: "+str(criticals)+" | "+" ".join(performance))
+    exitnagios("UNKNOWN", "unexpected scenario - successes: "+str(sucesses)+" - warnings: "+str(warnings)+" - criticals: "+str(criticals)+" | "+" ".join(performance))
 
 #-------------------------------------------------------------------------------
 
@@ -166,7 +173,7 @@ async def main(forcedargs=None):
     else:
         interfaces = args.interfaces.split(",")
 
-    checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
+    await checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
 
 #-------------------------------------------------------------------------------
 

@@ -3,7 +3,7 @@
 ##aptitude install python-nagiosplugin
 
 import argparse
-import subprocess
+import asyncio
 import socket
 import sys
 import re
@@ -60,9 +60,11 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def getmacfromip(remoteIP):
+async def getmacfromip(remoteIP):
     command = ["/usr/sbin/arp","-n",str(remoteIP)]
-    output = subprocess.check_output(command).decode("utf-8")
+    process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
     rows = output.split("\n")
     infomsg(rows)
     if len(rows) > 0:
@@ -73,19 +75,23 @@ def getmacfromip(remoteIP):
             return parts[2]
     return ""
 
-def findinterfaces():
+async def findinterfaces():
     result = []
     command = ["/usr/bin/plcdevs"]
-    output = subprocess.check_output(command).decode("utf-8")
+    process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
     for row in output.split("\n"):
         parts = row.split()
         if len(parts) > 0:
             result.append(parts[0])
     return result
 
-def getspeeds(interface,targetmac):
+async def getspeeds(interface,targetmac):
     command = ["/usr/bin/plcstat", "-i", interface, "-t", "-q"]
-    output = subprocess.check_output(command).decode("utf-8")
+    process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8")
     rows = output.split("\n")
     infomsg(rows)
     for row in output.split("\n"):
@@ -144,7 +150,7 @@ async def main(forcedargs=None):
         if (targetip == ""):
             exitnagios("CRITICAL","It was not possible to resolve hostname into IP havig hostname as "+hostname)
 
-        tempmac = getmacfromip(targetip)
+        tempmac = await getmacfromip(targetip)
         infomsg(targetmac)
         if (tempmac == ""):
             exitnagios("CRITICAL","It was not possible to resolve IP into MAC. having hostname as "+hostname+" and targetip as "+targetip)
@@ -159,10 +165,10 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        interfaces = findinterfaces()
+        interfaces = await findinterfaces()
         for interface in interfaces:
             infomsg(interface)
-            speeds = getspeeds(interface,targetmac)
+            speeds = await getspeeds(interface,targetmac)
             if speeds != None:
                 upload = speeds[0]
                 download = speeds[1]
