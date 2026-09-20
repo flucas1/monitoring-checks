@@ -5,6 +5,7 @@ import requests
 import base64
 import json
 import time
+import asyncio
 import argparse
 import os
 import sys
@@ -217,7 +218,7 @@ class RouterInfo:
 
     # Traffic in Mb/s . Megabit per second
     # Note this method has a 2 second delay to calculate current throughput
-    def get_traffic(self):
+    async def get_traffic(self):
         """
         Get total and current amount of traffic since last restart (Megabit format)
         Note there is a two second delay to determine current traffic
@@ -226,7 +227,7 @@ class RouterInfo:
         :returns: JSON with current up and down stream in Mbit/s and totals since last reboot
         """
         meas_1 = self.__get('netdev(appobj)')
-        time.sleep(2)
+        await asyncio.sleep(2)
         meas_2 = self.__get('netdev(appobj)')
         meas_1 = json.loads(meas_1)
         meas_2 = json.loads(meas_2)
@@ -406,7 +407,7 @@ class RouterInfo:
 
 #-------------------------------------------------------------------------------
 
-def doasusroutercall(host,username,password,timeoutvalue):
+async def doasusroutercall(host,username,password,timeoutvalue):
     try:
         ri = RouterInfo(host,username,password)
         infomsg(ri)
@@ -449,8 +450,8 @@ def check_status(value,warn_low,warn_high,crit_low,crit_high):
 
 #-------------------------------------------------------------------------------
 
-def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+async def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+    ri = await doasusroutercall(host,username,password,timeoutvalue)
     uptime = ri.get_uptime_secs()
     if uptime!=None:
         infomsg(uptime)
@@ -458,8 +459,8 @@ def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
     else:
         exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
 
-def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+async def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+    ri = await doasusroutercall(host,username,password,timeoutvalue)
     memory = ri.get_memory_usage()
     if memory!=None:
         value = (int(memory["mem_used"])/int(memory["mem_total"]))*100
@@ -468,8 +469,8 @@ def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,ti
     else:
         exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
 
-def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+async def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
+    ri = await doasusroutercall(host,username,password,timeoutvalue)
     cpu = ri.get_cpu_usage()
     if cpu!=None:
         infomsg(cores)
@@ -492,7 +493,7 @@ def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeo
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -562,17 +563,17 @@ def main(forcedargs=None):
         crit_high = None
 
     if args.mode=="uptime":
-        douptimecall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await douptimecall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
     elif args.mode=="memory":
-        domemorycall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await domemorycall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
     elif args.mode=="cpu":
-        docpucall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+        await docpucall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
 
     exitnagios("CRITICAL","unexpected case")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
