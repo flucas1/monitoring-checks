@@ -3,10 +3,10 @@
 
 import os
 import sys
-import subprocess
 import socket
 import argparse
-import mechanize
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 
 #-------------------------------------------------------------------------------
@@ -61,36 +61,37 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dotorcall(protocol,response):
+async def dotorcall(protocol, response):
     try:
         # https://check.torproject.org/api/ip
         url = "https://check.torproject.org/"
-        br = mechanize.Browser()
-        #proxyparts = proxy.split("://",1)
-        #br.set_proxies({proxyparts[0]: proxyparts[1]})
-        br.set_handle_robots(False) # ignore robots file
-        #br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
-        br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
-        res = br.open(url)
-        content = res.read()
-        if content == None:
-            exitnagios("CRITICAL","no result from page")
+        headers = {
+            'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as res:
+                if res.status != 200:
+                    exitnagios("CRITICAL", f"no result from page, status code: {res.status}")
 
-        soup = BeautifulSoup(content, "html.parser")
+                content = await res.text()
+                if content is None:
+                    exitnagios("CRITICAL", "no result from page")
 
-        element = soup.find("h1")
-        status = element["class"][0]
-        if status==response:
-            exitnagios("OK","the result '"+status+"' is as expected")
-        else:
-            exitnagios("CRITICAL","the result '"+status+"' is not the expected value '"+response+"'")
+                soup = BeautifulSoup(content, "html.parser")
+
+                element = soup.find("h1")
+                status = element["class"][0]
+                if status == response:
+                    exitnagios("OK", f"the result '{status}' is as expected")
+                else:
+                    exitnagios("CRITICAL", f"the result '{status}' is not the expected value '{response}'")
 
     except Exception as e:
         exceptionmsg = str(e)
         if exceptionmsg in ["<urlopen error [Errno 104] Connection reset by peer>"]:
-            exitnagios("WARNING","cannot connect")
+            exitnagios("WARNING", "cannot connect")
         else:
-            exitnagios("CRITICAL","unexpected error during the check - "+exceptionmsg)
+            exitnagios("CRITICAL", f"unexpected error during the check - {exceptionmsg}")
 
 #-------------------------------------------------------------------------------
 
@@ -124,7 +125,7 @@ async def main(forcedargs=None):
     elif (exclist<1) :
         exitnagios("CRITICAL","no protocol selected")
 
-    dotorcall(protocol,args.response)
+    await dotorcall(protocol, args.response)
 
 #-------------------------------------------------------------------------------
 

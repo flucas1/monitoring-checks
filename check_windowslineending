@@ -2,7 +2,7 @@
 #-------------------------------------------------------------------------------
 
 import os
-import subprocess
+import asyncio
 import argparse
 import sys
 
@@ -47,22 +47,23 @@ def parse_args():
 
 #-------------------------------------------------------------------------------
 
-def is_text_file_with_windows_endings(file_path):
+async def is_text_file_with_windows_endings(file_path):
     """Return True if the file is text and contains Windows line endings (CRLF)."""
     try:
-        result = subprocess.run(
-            ["file", "--brief", file_path],
-            capture_output=True,
-            text=True
+        process = await asyncio.create_subprocess_exec(
+            "file", "--brief", file_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        output = result.stdout.strip()
+        stdout, stderr = await process.communicate()
+        output = stdout.decode().strip()
         return "CRLF" in output
     except Exception:
         return False
 
 #-------------------------------------------------------------------------------
 
-def scan_directory(path,debug):
+async def scan_directory(path, debug):
     """Scan a directory recursively for text files with Windows line endings."""
     found_files = []
 
@@ -74,7 +75,7 @@ def scan_directory(path,debug):
             # Skip symbolic link files
             if os.path.islink(full_path):
                 continue
-            if is_text_file_with_windows_endings(full_path):
+            if await is_text_file_with_windows_endings(full_path):
                 found_files.append(full_path)
                 infomsg(full_path)
 
@@ -88,11 +89,11 @@ async def main():
 
     paths_to_check = ["/etc"]
     for path in paths_to_check:
-        found_files = scan_directory(path,args.debug)
+        found_files = await scan_directory(path, args.debug)
         all_found_files.extend(found_files)
 
-    if len(all_found_files)>0:
-        exitnagios("CRITICAL", "Files with Windows line endings: "+str(all_found_files))
+    if len(all_found_files) > 0:
+        exitnagios("CRITICAL", "Files with Windows line endings: " + str(all_found_files))
     else:
         exitnagios("OK", "No files with Windows line endings found")
 
@@ -102,4 +103,3 @@ if __name__ == "__main__":
     asyncio.run(main())
 
 #-------------------------------------------------------------------------------
-

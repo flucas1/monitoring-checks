@@ -6,6 +6,7 @@ def run_aider_sequentially(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
     
     target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith("check_")]
+    target_files.reverse()
     
     if not target_files:
         print(f"No files starting with 'check_' found in {target_dir}")
