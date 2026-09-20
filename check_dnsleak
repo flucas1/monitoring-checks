@@ -342,8 +342,8 @@ async def main(forcedargs=None):
     if ((len(problematicip)!=0) and (len(expectedip)!=0)) or ((len(problematicdns)!=0) and (len(expecteddns)!=0)):
         exitnagios("CRITICAL","problematic and expected flags are mutually exclusive")
 
-    if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
-        exitnagios("CRITICAL","a problematic or expected flat must be specified")
+    if (problematicip=="") and (problematicdns=="") and (expectedip=="") and (expecteddns==""):
+        exitnagios("CRITICAL","a problematic or expected flag must be specified")
 
     await dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
 
