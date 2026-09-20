@@ -5,7 +5,8 @@ import socket
 import os
 import time
 import sys
-import ntplib
+import asyncio
+import aiontp
 import datetime
 import argparse
 
@@ -61,15 +62,15 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def dontptimecheck(protocol,hostname,warning,critical,timeoutvalue,timeoutstatus):
-    client = ntplib.NTPClient()
+async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, timeoutstatus):
+    client = aiontp.NTPClient()
     counter = 0
     retries = 3
     while True:
         infomsg("executing retry "+str(counter))
         counter = counter+1
         try:
-            response = client.request(hostname, version=4)
+            response = await client.request(hostname, version=4)
             offset = response.offset
             infomsg(f"NTP offset: {offset:.3f} seconds")
 
@@ -88,7 +89,7 @@ def dontptimecheck(protocol,hostname,warning,critical,timeoutvalue,timeoutstatus
             if counter > retries:
                 exitnagios(timeoutstatus, str(e))
             else:
-                time.sleep(5)
+                await asyncio.sleep(5)
 
 #-------------------------------------------------------------------------------
 
@@ -134,7 +135,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dontptimecheck(protocol,args.hostname,args.warning,args.critical,timeoutvalue,timeoutstatus)
+        await dontptimecheck(protocol, args.hostname, args.warning, args.critical, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
