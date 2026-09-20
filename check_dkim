@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #-------------------------------------------------------------------------------
 
+import asyncio
 import os
 import sys
 import time
@@ -50,7 +51,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     #chrome_options.add_argument("--incognito")
     #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -81,14 +82,14 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -118,9 +119,9 @@ def tryfindbyclassname(driver,classname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(domain,selector,proxy):
+async def dodnssecverisigncall(domain,selector,proxy):
     try:
-        driver = generatedriver(proxy)
+        driver = await generatedriver(proxy)
 
         wait = WebDriverWait(driver,20)
         action=ActionChains(driver)
@@ -134,8 +135,8 @@ def dodnssecverisigncall(domain,selector,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(1)
-        wait_page_loaded(driver)
+        await asyncio.sleep(1)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for input element")
@@ -164,7 +165,7 @@ def dodnssecverisigncall(domain,selector,proxy):
                     element = []
                     if counter<retries:
                         infomsg("waiting a bit")
-                        time.sleep(5)
+                        await asyncio.sleep(5)
                         counter=counter+1
                     else:
                         infomsg("too many retries")
@@ -193,7 +194,7 @@ def dodnssecverisigncall(domain,selector,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-s", "--selector",                                dest="selector",         default="",                                   help="DKIM selector to test")
@@ -209,11 +210,11 @@ def main(forcedargs=None):
     if selector=="":
         exitnagios("CRITICAL","the selector is empty")
 
-    dodnssecverisigncall(args.host,selector,proxy)
+    await dodnssecverisigncall(args.host,selector,proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import asyncio
 import subprocess
 import argparse
 
@@ -81,14 +82,14 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -126,7 +127,7 @@ def tryfindbytagname(driver,tagname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(domain,proxy):
+async def dodnssecverisigncall(domain,proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -138,8 +139,8 @@ def dodnssecverisigncall(domain,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
@@ -181,7 +182,7 @@ def dodnssecverisigncall(domain,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -190,11 +191,11 @@ def main(forcedargs=None):
     setcandebug(args.debug)
 
     proxy = ""
-    dodnssecverisigncall(args.host,proxy)
+    await dodnssecverisigncall(args.host,proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

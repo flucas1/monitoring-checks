@@ -8,7 +8,7 @@ import subprocess
 import argparse
 import datetime
 import smtplib
-import time
+import asyncio
 from email.mime.text import MIMEText
 
 from selenium import webdriver
@@ -54,7 +54,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     #chrome_options.add_argument("--incognito")
     #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -85,14 +85,14 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -130,9 +130,9 @@ def tryfindbytagname(driver,tagname):
 
 #-------------------------------------------------------------------------------
 
-def dodnssecverisigncall(mailfrom,tolerate,proxy):
+async def dodnssecverisigncall(mailfrom,tolerate,proxy):
     try:
-        driver = generatedriver(proxy)
+        driver = await generatedriver(proxy)
 
         wait = WebDriverWait(driver,20)
         action=ActionChains(driver)
@@ -148,8 +148,8 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(2)
-        wait_page_loaded(driver)
+        await asyncio.sleep(2)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
@@ -177,7 +177,7 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
         s.sendmail(me, [targetemail], email_message.as_string())
         s.quit()
 
-        time.sleep(5)
+        await asyncio.sleep(5)
         infomsg("waiting for element")
         start_time = time.time()
         max_duration = 180
@@ -194,7 +194,7 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
                 if len(foundcheck)>0:
                     infomsg("the check status is "+foundcheck[0].text)
                 infomsg("extra wait for mail arrival")
-                time.sleep(retry_interval)
+                await asyncio.sleep(retry_interval)
 
         if gotanswer==False:
             exitnagios("CRITICAL","could not find answer from remote website")
@@ -242,7 +242,7 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
     parser.add_argument("-l", "--tolerate",                                dest="tolerate",         default="0",                                  help="number of warnings to tolerate")
@@ -253,11 +253,11 @@ def main(forcedargs=None):
 
     proxy = ""
     tolerate = int(args.tolerate)
-    dodnssecverisigncall(args.mailfrom,tolerate,proxy)
+    await dodnssecverisigncall(args.mailfrom,tolerate,proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
