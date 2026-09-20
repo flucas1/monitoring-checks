@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import asyncio
 import subprocess
 import argparse
 
@@ -81,14 +82,14 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
@@ -195,7 +196,7 @@ def alltripletsmatching(inputtriplets,expectedtriplets,tolerance):
     successmatching = (len(failed)==0)
     return successmatching,tolerated
 
-def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns):
+async def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns):
     try:
         driver = generatedriver(proxy)
 
@@ -207,8 +208,8 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         counter=0
@@ -227,7 +228,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
                 exitnagios("WARNING","cannot find result element")
             if resume == None:
                 counter=counter+1
-                time.sleep(3)
+                await asyncio.sleep(3)
             else:
                 break
 
@@ -314,7 +315,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
     parser.add_argument("-x", "--problematicip",                           dest="problematicip",    default="",                                   help="raise critical if this IP is found")
@@ -344,11 +345,11 @@ def main(forcedargs=None):
     if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
         exitnagios("CRITICAL","a problematic or expected flat must be specified")
 
-    dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
+    await dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
