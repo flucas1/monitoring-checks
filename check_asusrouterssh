@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 #-------------------------------------------------------------------------------
 
-import paramiko
 import asyncio
 import argparse
 import os
 import sys
 import pathlib
 import socket
+import asyncssh
 
 #-------------------------------------------------------------------------------
 
@@ -65,12 +65,9 @@ def forced_ipv4_gai_family(*args, **kwargs):
 async def doasusroutercall(host, username, password, timeoutvalue, command):
     result = None
     try:
-        client = paramiko.client.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=username, password=password, timeout=timeoutvalue)
-        _stdin, _stdout, _stderr = client.exec_command(command, timeout=timeoutvalue)
-        result = _stdout.read().decode()
-        client.close()
+        async with asyncssh.connect(host, username=username, password=password, timeout=timeoutvalue) as conn:
+            result = await conn.run(command, check=True, timeout=timeoutvalue)
+            return result.stdout
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")
 
