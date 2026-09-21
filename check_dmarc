@@ -7,10 +7,11 @@ import time
 import asyncio
 import argparse
 
+import selenium
+import selenium.webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver import ActionChains
 
 #-------------------------------------------------------------------------------
@@ -49,7 +50,7 @@ def exitnagios(status, message):
 #-------------------------------------------------------------------------------
 
 def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.ChromeOptions()
     #chrome_options.add_argument("--incognito")
     #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
