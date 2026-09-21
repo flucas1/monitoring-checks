@@ -9,6 +9,7 @@ import mailbox
 import email.errors
 import datetime
 import dateutil.parser
+import asyncio
 
 #-------------------------------------------------------------------------------
 

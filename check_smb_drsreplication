@@ -2,6 +2,7 @@
 #-------------------------------------------------------------------------------
 
 import sys
+import asyncio
 from samba.param import LoadParm
 from samba.credentials import Credentials
 from samba.netcmd.drs import drsuapi_connect, drs_parse_ntds_dn
