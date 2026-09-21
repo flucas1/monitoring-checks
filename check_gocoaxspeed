@@ -134,8 +134,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
             await wait_page_loaded(driver)
 
             infomsg("asking for logging "+"http://"+ip+"/phyRates.html")
-            await asyncio.get_event_loop().run_in_executor(None, wait.until, EC.visibility_of_element_located((By.ID, "pageContent")))
-            await asyncio.get_event_loop().run_in_executor(None, wait.until, EC.visibility_of_element_located((By.ID, "table_data")))
+            wait.until(EC.visibility_of_element_located((By.ID, "pageContent")))
+            wait.until(EC.visibility_of_element_located((By.ID, "table_data")))
 
             tableelem = driver.find_element(By.ID, "table_data")
             tabletext = tableelem.text
