@@ -242,7 +242,7 @@ def dodnssecverisigncall(mailfrom,tolerate,proxy):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
     parser.add_argument("-l", "--tolerate",                                dest="tolerate",         default="0",                                  help="number of warnings to tolerate")
@@ -258,6 +258,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

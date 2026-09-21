@@ -67,7 +67,7 @@ def doretrycall(cmdline):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     if forcedargs==None:
         forcedargs = sys.argv[1:]
     cmdline = forcedargs
@@ -76,6 +76,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

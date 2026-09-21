@@ -242,7 +242,7 @@ def dodnssecverisigncall(domain,proxy,tolerant,ignoremessages):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="false",                              help="expected true/false")
@@ -260,6 +260,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

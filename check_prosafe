@@ -240,7 +240,7 @@ def getexpected(proxy,model):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model",                                   dest="model",            default="",                                   help="netgear prosafe model to check")
     parser.add_argument("-e", "--expected",                                dest="expected",         default="auto",                               help="expected firmware version")
@@ -269,6 +269,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

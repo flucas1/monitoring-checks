@@ -314,7 +314,7 @@ def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tole
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
     parser.add_argument("-x", "--problematicip",                           dest="problematicip",    default="",                                   help="raise critical if this IP is found")
@@ -349,6 +349,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

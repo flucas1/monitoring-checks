@@ -263,7 +263,7 @@ def docrtshcall(mode,proxy,hostname,validcas,ignorecerts,timeoutvalue,retries):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="domain to check")
     parser.add_argument("-v", "--valid",                                   dest="valid",            default="",                                   help="valid CA ids")
@@ -307,6 +307,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
