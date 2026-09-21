@@ -65,25 +65,23 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 async def makedohtest(retries, targetdohurl, testquery):
     result = False
-    infomsg("preparing client")
+    infomsg("preparing async client")
     timeout = httpx.Timeout(5.0)
 
     counter = 0
     while True:
-        client = httpx.Client(timeout=timeout)
-        try:
-            q = dns.message.make_query(testquery, dns.rdatatype.ANY)
-            infomsg("query ready")
-            r = dns.query.https(q, targetdohurl, session=client, timeout=5.0)
-            infomsg("got answer!")
-            if len(r.answer)>0:
-                result = True
-        except Exception as e:
-            exitnagios("CRITICAL","url "+targetdohurl+" caused an exception "+str(e))
-        finally:
-            infomsg("ended")
-            if client != None:
-                client.close()
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            try:
+                q = dns.message.make_query(testquery, dns.rdatatype.ANY)
+                infomsg("query ready")
+                r = await dns.query.asynchttps(q, targetdohurl, session=client, timeout=5.0)
+                infomsg("got answer!")
+                if len(r.answer)>0:
+                    result = True
+            except Exception as e:
+                exitnagios("CRITICAL","url "+targetdohurl+" caused an exception "+str(e))
+            finally:
+                infomsg("ended")
 
         counter = counter+1
         if result==True:
