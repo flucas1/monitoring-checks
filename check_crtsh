@@ -19,6 +19,7 @@ import gzip
 import zlib
 import io
 import random
+import asyncio
 
 # -------------------------------------------------------------------------------
 
