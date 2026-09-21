@@ -6,6 +6,7 @@ import sys
 import subprocess
 import argparse
 import mechanize
+import asyncio
 from bs4 import BeautifulSoup
 
 #-------------------------------------------------------------------------------

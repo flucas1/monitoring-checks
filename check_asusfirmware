@@ -12,6 +12,7 @@ import subprocess
 import argparse
 import re
 import pathlib
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
