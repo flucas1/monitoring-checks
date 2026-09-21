@@ -87,18 +87,18 @@ def check_page_loaded(driver):
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-def wait_page_loaded(driver):
+async def await wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
+await def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex((ip,80))
@@ -122,8 +122,8 @@ def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
         driver.get(url)
         infomsg("asking for logging "+url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
         wait.until(EC.visibility_of_element_located((By.ID, "login_filed")))
         infomsg("login page ready")
@@ -158,8 +158,8 @@ def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
         login.click()
         infomsg("login click!")
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
     except Exception as e:
         exitnagios("CRITICAL","exeception during loging-in "+str(e))
 
@@ -181,9 +181,9 @@ def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
     url = "http://"+ip+"/Advanced_FirmwareUpgrade_Content.asp?confirm_show=0"
     driver.get(url)
 
-    time.sleep(5)
+    await asyncio.sleep(5)
 
-    wait_page_loaded(driver)
+    await wait_page_loaded(driver)
     infomsg("firmware page loaged")
 
     wait.until(EC.visibility_of_element_located((By.ID, "current_version")))
@@ -193,12 +193,12 @@ def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
     infomsg(actual)
     infomsg("current version found")
 
-    time.sleep(10)
+    await asyncio.sleep(10)
 
     while True:
         working = driver.find_element(by=By.ID, value="update_scan")
         if working.is_displayed():
-            time.sleep(10)
+            await asyncio.sleep(10)
         else:
             break
     infomsg("update scan found")
@@ -223,7 +223,7 @@ def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
     parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
@@ -254,7 +254,7 @@ def main(forcedargs=None):
             address = socket.gethostbyname(args.hostname).strip()
             infomsg("The target ip is: "+address)
             proxy = ""
-            do_is_newest(proxy, username, password, address, timeoutvalue, timeoutstatus)
+            await do_is_newest(proxy, username, password, address, timeoutvalue, timeoutstatus)
         except Exception as e:
             exitnagios("CRITICAL","exception during browsing "+str(e))
     else:
@@ -263,6 +263,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
