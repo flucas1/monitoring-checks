@@ -8,6 +8,7 @@ import sys
 import ntplib
 import datetime
 import argparse
+import asyncio
 
 #-------------------------------------------------------------------------------
 

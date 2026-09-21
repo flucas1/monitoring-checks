@@ -6,6 +6,7 @@ import sys
 import subprocess
 import argparse
 import time
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys

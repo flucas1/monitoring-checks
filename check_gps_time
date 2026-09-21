@@ -6,6 +6,7 @@ import gps
 import time
 import os
 import sys
+import asyncio
 
 #-------------------------------------------------------------------------------
 
