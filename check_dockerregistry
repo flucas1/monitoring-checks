@@ -50,10 +50,17 @@ async def dodockerregistrycheck(port):
     command = ["/etc/nagios/scripts/check_http","-4","-H","127.0.0.1","-p",str(port),"-A","/v2/_catalog","-e","HTTP/1.1 200"]
     infomsg(" ".join(command))
 
-    result = await asyncio.to_thread(subprocess.run, command, capture_output=True)
-    exitcode = result.returncode
-    output = result.stdout.decode("utf-8").strip()
-    errors = result.stderr.decode("utf-8").strip()
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    stdout, stderr = await process.communicate()
+    
+    exitcode = process.returncode
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
 
     if exitcode in [0,1,2,3]:
         if output!="":
