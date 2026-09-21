@@ -139,7 +139,7 @@ def doarpcall(exclusion):
     if iscritical == True:
         exitnagios("CRITICAL", "duplicated ARP IPv4 entries " + str(duplicated4) + " - duplicated ARP IPv6 entries " + str(duplicated6) + " | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=" + str(len(duplicated6)) + " duplicated_v4=" + str(len(duplicated4)))
     elif iswarning == True:
-        exitnagios("CRITICAL", "duplicated ARP IPv4 entries " + str(duplicated4) + " - duplicated ARP IPv6 entries " + str(duplicated6) + " | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=" + str(len(duplicated6)) + " duplicated_v4=" + str(len(duplicated4)))
+        exitnagios("WARNING", "duplicated ARP IPv4 entries " + str(duplicated4) + " - duplicated ARP IPv6 entries " + str(duplicated6) + " | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=" + str(len(duplicated6)) + " duplicated_v4=" + str(len(duplicated4)))
     else:
         exitnagios("OK", "ARP table looks normal | total_v6=" + str(len(arptable6)) + " total_v4=" + str(len(arptable4)) + " duplicated_v6=0 duplicated_v4=0")
 

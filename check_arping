@@ -66,9 +66,10 @@ def doarpingcall(hostname, packets, timeout):
         for line in alllines:
             if " bytes from " in line:
                 parts = line.split()
-                mac = parts[3]
-                if mac not in allmacs:
-                    allmacs.append(mac)
+                if len(parts) > 3:
+                    mac = parts[3]
+                    if mac not in allmacs:
+                        allmacs.append(mac)
         infomsg(allmacs)
 
         if len(allmacs) == 1:
