@@ -1,0 +1,13 @@
+- name: ollama/qwen3-coder-next:latest
+  extra_params:
+    num_ctx: 131072
+- name: ollama/qwen3:235b
+  extra_params:
+    num_ctx: 131072
+- name: ollama/deepseek-coder-v2:236b
+  extra_params:
+    num_ctx: 131072
+- name: ollama/frob/deepseek-v4-flash-0731:latest
+  extra_params:
+    num_ctx: 131072
+
