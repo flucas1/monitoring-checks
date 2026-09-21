@@ -11,7 +11,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
         "--message", prompt,
         "--model", model,
         "--encoding", "utf8",
-        "--edit-format", "whole",
+        "--edit-format", "architect",
         "--no-auto-commits",
         "--yes"
     ]
@@ -50,7 +50,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
 async def main():
     DIRECTORY = "."
-    MODEL = "ollama/qwen3-coder-next:latest" 
+    MODEL = "ollama_chat/deepseek-r1:70b" 
     PROMPT = "Transform the attached python file to be async. Avoid to_thread, get_event_loop and get_running_loop. For python imports do not use 'from'. Remove legacy subprocess, urllib and concurrent.futures"
     
     await run_aider(DIRECTORY, MODEL, PROMPT)

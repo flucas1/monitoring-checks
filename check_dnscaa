@@ -14,6 +14,7 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
+
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -23,59 +24,59 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
 async def dodnscaacall(domain):
     try:
-        url = "https://caatest.co.uk/"+domain
+        url = "https://caatest.co.uk/" + domain
         headers = {
             'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         }
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
-                    exitnagios("CRITICAL","no result from page")
+                    exitnagios("CRITICAL", "no result from page")
                 content = await response.text()
                 soup = BeautifulSoup(content, "html.parser")
 
                 element = soup.find("span", class_="success green")
                 if element is not None:
-                    exitnagios("OK","the domain has valid CAA records")
+                    exitnagios("OK", "the domain has valid CAA records")
                 else:
-                    exitnagios("CRITICAL","the domain has issues with the CAA records")
+                    exitnagios("CRITICAL", "the domain has issues with the CAA records")
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 #-------------------------------------------------------------------------------
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host',                                    dest="host",                                                           help="Hostname")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument('-H', '--host', dest="host", help="Hostname")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     
     setcandebug(args.debug)
     
     if not args.host:
-        exitnagios("CRITICAL","specify a host/domain to check")
+        exitnagios("CRITICAL", "specify a host/domain to check")
     
     await dodnscaacall(args.host)
 

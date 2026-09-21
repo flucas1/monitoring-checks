@@ -10,4 +10,7 @@
 - name: ollama/frob/deepseek-v4-flash-0731:latest
   extra_params:
     num_ctx: 131072
+- name: ollama_chat/deepseek-r1:70b
+  extra_params:
+    num_ctx: 131072
 

@@ -145,13 +145,14 @@ async def main(forcedargs=None):
     else:
         critical = int(args.critical)
 
+    targetmac = None
     if (args.mac == None):
         targetip = socket.gethostbyname(hostname)
         if (targetip == ""):
-            exitnagios("CRITICAL","It was not possible to resolve hostname into IP havig hostname as "+hostname)
+            exitnagios("CRITICAL","It was not possible to resolve hostname into IP having hostname as "+hostname)
 
         tempmac = await getmacfromip(targetip)
-        infomsg(targetmac)
+        infomsg(tempmac)
         if (tempmac == ""):
             exitnagios("CRITICAL","It was not possible to resolve IP into MAC. having hostname as "+hostname+" and targetip as "+targetip)
         targetmac = change_mac(tempmac,1)
