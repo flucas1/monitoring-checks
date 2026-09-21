@@ -8,6 +8,7 @@ import os
 import sys
 import pathlib
 import asyncio
+import socket
 
 # -------------------------------------------------------------------------------
 
@@ -107,7 +108,7 @@ def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_h
         value = round(float(result))
     except:
         value = None
-    infomsg(uptime)
+    infomsg(value)
     if value != None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
@@ -125,7 +126,7 @@ def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_h
         value = round((used / total) * 100, 2)
     except:
         value = None
-    infomsg(uptime)
+    infomsg(value)
     if value != None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
@@ -139,7 +140,7 @@ def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high
         value = round(float(result), 2)
     except:
         value = None
-    infomsg(uptime)
+    infomsg(value)
     if value != None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
