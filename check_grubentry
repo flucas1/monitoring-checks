@@ -71,11 +71,17 @@ async def dogrubentrycall(expectedpos):
         expectedstring = validcandidates[expectedpos]
         infomsg("expected -> "+expectedstring)
 
-        cmdline = ["/usr/bin/uname","--kernel-release"]
-        completedproc = await asyncio.to_thread(subprocess.run, cmdline, capture_output=True)
-        output = completedproc.stdout.decode("utf-8").strip()
-        errors = completedproc.stderr.decode("utf-8").strip()
-        exitcode = completedproc.returncode
+        # Use async subprocess instead of to_thread
+        process = await asyncio.create_subprocess_exec(
+            "/usr/bin/uname",
+            "--kernel-release",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip()
+        errors = stderr.decode("utf-8").strip()
+        exitcode = process.returncode
         version = ""
         if exitcode == 0:
             version = output.strip()
