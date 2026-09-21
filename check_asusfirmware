@@ -8,7 +8,6 @@ import time
 import traceback
 import sys
 import datetime
-import subprocess
 import argparse
 import re
 import pathlib

@@ -4,8 +4,6 @@
 import argparse
 import sys
 import re
-import subprocess
-import datetime
 import socket
 import time
 import pathlib
