@@ -4,11 +4,10 @@
 import os
 import sys
 import time
-import subprocess
-import argparse
-import datetime
 import smtplib
 import asyncio
+import argparse
+import datetime
 from email.mime.text import MIMEText
 
 from selenium import webdriver
