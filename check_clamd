@@ -42,7 +42,7 @@ def exitnagios(status,message):
 #-------------------------------------------------------------------------------
 
 async def doclamdcall(filetest):
-    start = datetime.datetime.now(datetime.UTC)
+    start = datetime.datetime.now(datetime.timezone.utc)
 
     cmdline = ["/usr/bin/clamdscan","--stream","--stdout","--infected","--no-summary",filetest]
     process = await asyncio.create_subprocess_exec(
@@ -55,7 +55,7 @@ async def doclamdcall(filetest):
     errors = stderr.decode("utf-8").strip()
     exitcode = process.returncode
 
-    elapsed = datetime.datetime.now(datetime.UTC)-start
+    elapsed = datetime.datetime.now(datetime.timezone.utc)-start
     duration = elapsed.total_seconds()
 
     if exitcode == 0:
@@ -71,7 +71,7 @@ async def doclamdcall(filetest):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filetest",          action="store",       dest="filetest",         default="/etc/mtab",                          help="file to check")
-    parser.add_argument("-Â®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
