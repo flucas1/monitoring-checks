@@ -4,8 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import re
 import asyncio
 

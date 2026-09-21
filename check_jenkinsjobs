@@ -5,6 +5,7 @@ import argparse
 import sys
 import os
 import pathlib
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -40,7 +41,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-def docheckjenkinsjobs(directory,critical):
+async def docheckjenkinsjobs(directory,critical):
     jobspath = os.path.join(directory,"jobs")
     if os.path.isdir(jobspath)==False:
         exitnagios("CRITICAL","the jobs path "+release+" does not exists")
@@ -104,6 +105,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     
@@ -112,7 +114,7 @@ async def main(forcedargs=None):
     critical = args.critical.split(",")
     if "" in critical:
         critical.remove("")
-    docheckjenkinsjobs(args.directory,critical)
+    await docheckjenkinsjobs(args.directory,critical)
 
 #-------------------------------------------------------------------------------
 

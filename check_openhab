@@ -4,6 +4,7 @@
 # https://raw.githubusercontent.com/asciiphil/check_openhab/master/check_openhab
 # aptitude install python3-dateutil
 
+import asyncio
 import datetime
 import json
 import re
@@ -16,7 +17,6 @@ import dateutil.parser
 import dateutil.relativedelta
 import pathlib
 import aiohttp
-import asyncio
 
 #-------------------------------------------------------------------------------
 

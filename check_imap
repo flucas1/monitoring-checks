@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 #-------------------------------------------------------------------------------
 
-import imaplib
+import aioimaplib
 import argparse
 import sys
 import time
 import datetime
 import socket
 import ssl
+import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -61,34 +62,33 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays):
+async def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays):
     try:
         start = datetime.datetime.now(datetime.UTC)
         imapconnection = None
-        #socket.setdefaulttimeout(timeoutvalue)
         if dossl==True:
             ctx = ssl.create_default_context()
-            imapconnection = imaplib.IMAP4_SSL(host=hostname,port=port,timeout=timeoutvalue,ssl_context=ctx)
+            imapconnection = aioimaplib.IMAP4_SSL(host=hostname,port=port,timeout=timeoutvalue,ssl_context=ctx)
         else:
-            imapconnection = imaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
+            imapconnection = aioimaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
         if imapconnection != None:
             infomsg(str(imapconnection.PROTOCOL_VERSION))
             certexpirationparsed = None
             if dossl==True:
-                infomsg(str(imapconnection.socket().version()))
+                infomsg(str(imapconnection.writer.get_extra_info('ssl_object').version()))
                 certexpirationraw = None
                 try:
-                    cert_data = imapconnection.socket().getpeercert()
+                    cert_data = imapconnection.writer.get_extra_info('peercert')
                     infomsg(str(cert_data))
-                    certexpirationraw = cert_data["notAfter"]
+                    certexpirationraw = cert_data.get("notAfter")
                     infomsg("Expiry date: "+str(certexpirationraw))
                     if certexpirationraw != None:
-                        from dateutil.parser import parse
-                        certexpirationparsed = parse(cert_data["notAfter"])
+                        dateutil = __import__('dateutil.parser')
+                        certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
                 except:
-                    infomsg(str(traceback.format_exc()))
+                    infomsg(str(sys.exc_info()[1]))
                     pass
-            imapconnection.shutdown()
+            await imapconnection.logout()
 
             elapsed = datetime.datetime.now(datetime.UTC)-start
             duration = elapsed.total_seconds()
@@ -167,7 +167,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        doimapcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays)
+        await doimapcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 

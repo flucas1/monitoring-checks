@@ -46,7 +46,7 @@ def exitnagios(status,message):
 async def docheckjenkinsnodes(directory,critical):
     nodespath = os.path.join(directory,"nodes")
     if not os.path.isdir(nodespath):
-        exitnagios("CRITICAL","the nodes path "+release+" does not exists")
+        exitnagios("CRITICAL","the nodes path "+nodespath+" does not exists")
 
     listnodes = []
     for entry in os.listdir(nodespath):

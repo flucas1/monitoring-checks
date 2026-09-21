@@ -14,6 +14,7 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
+
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -23,21 +24,21 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
@@ -46,8 +47,8 @@ def isfinal(parts):
     finals = ["localaccount@localhost"]
     return parts[0] in finals
 
-def isexclusion(parts,customlines):
-    exceptions = []+customlines
+def isexclusion(parts, customlines):
+    exceptions = [] + customlines
     exceptions.append(["mailer-daemon", "postmaster@localhost"])
     exceptions.append(["root", "localaccount@localhost"])
     #infomsg(exceptions)
@@ -71,45 +72,45 @@ async def domailaliasescall(customlines):
                 lines = lines.splitlines()
                 for line in lines:
                     line = line.strip()
-                    if len(line)>0:
-                        if line[0] not in [";","#"]:
-                            parts = line.split(":",1)
-                            if len(parts)==2:
+                    if len(line) > 0:
+                        if line[0] not in [";", "#"]:
+                            parts = line.split(":", 1)
+                            if len(parts) == 2:
                                 parts[0] = parts[0].strip()
                                 parts[1] = parts[1].strip()
                                 if parts[1].endswith("@localhost") == False:
-                                    infomsg("ERROR -> "+str(parts))
+                                    infomsg("ERROR -> " + str(parts))
                                     errors.append(line)
                                 elif isfinal(parts) == True:
-                                    infomsg("ERROR -> "+str(parts))
+                                    infomsg("ERROR -> " + str(parts))
                                     errors.append(line)
-                                elif isexclusion(parts,customlines):
-                                    infomsg("EXCLUSION -> "+str(parts))
+                                elif isexclusion(parts, customlines):
+                                    infomsg("EXCLUSION -> " + str(parts))
                                     exclusion.append(line)
                                 elif isexpected(parts):
-                                    infomsg("EXPECTED -> "+str(parts))
+                                    infomsg("EXPECTED -> " + str(parts))
                                     expected.append(line)
                                 else:
-                                    infomsg("ERROR -> "+str(parts))
+                                    infomsg("ERROR -> " + str(parts))
                                     errors.append(line)
                             else:
                                 errors.append(line)
                                 #infomsg("->"+line+"<-")
             if len(errors) == 0:
-                exitnagios("OK","no issues found in "+aliasesfile+" | errors="+str(len(errors))+" exclusion="+str(len(exclusion))+" expected="+str(len(expected)))
+                exitnagios("OK", "no issues found in " + aliasesfile + " | errors=" + str(len(errors)) + " exclusion=" + str(len(exclusion)) + " expected=" + str(len(expected)))
             else:
-                exitnagios("CRITICAL","issues found in "+aliasesfile+" -> "+" - ".join(errors)+" | errors="+str(len(errors))+" exclusion="+str(len(exclusion))+" expected="+str(len(expected)))
+                exitnagios("CRITICAL", "issues found in " + aliasesfile + " -> " + " - ".join(errors) + " | errors=" + str(len(errors)) + " exclusion=" + str(len(exclusion)) + " expected=" + str(len(expected)))
         else:
-            exitnagios("CRITICAL","cannot find "+aliasesfile+" | errors=-1 exclusion=-1 expected=-1")
+            exitnagios("CRITICAL", "cannot find " + aliasesfile + " | errors=-1 exclusion=-1 expected=-1")
     except Exception as e:
-        exitnagios("CRITICAL","unexpected exception "+str(e)+" | errors=-1 exclusion=-1 expected=-1")
+        exitnagios("CRITICAL", "unexpected exception " + str(e) + " | errors=-1 exclusion=-1 expected=-1")
 
 #-------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
-    parser.add_argument("-l", "--customlines",                             dest="customlines",      default="",                                   help="expected custom lines")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-l", "--customlines", dest="customlines", default="", help="expected custom lines")
 
     args = parser.parse_args(forcedargs)
     
@@ -121,7 +122,7 @@ async def main(forcedargs=None):
     customlines = []
     for entry in args.customlines.split(","):
         customlines.append(entry.strip().split(":"))
-    infomsg("The custom lines are "+str(customlines))
+    infomsg("The custom lines are " + str(customlines))
     await domailaliasescall(customlines)
 
 #-------------------------------------------------------------------------------

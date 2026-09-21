@@ -9,7 +9,8 @@ import datetime
 import ipaddress
 import asyncio
 import dns.query
-import dns.resolver
+import dns.asyncresolver
+import dns.message
 import dns.exception
 import aiofiles
 
@@ -72,24 +73,24 @@ async def extracthostslist():
                 result[key] = parts[1:]
     return result
 
-def testvalue(ipo, dnsquery, recordtype, customresolver):
+async def testvalue(ipo, dnsquery, recordtype, customresolver):
     result = False
     try:
-        queryrr = customresolver.resolve(dnsquery, recordtype, search=False)
-        infomsg(queryrr.rrset)
-        if len(queryrr.rrset) > 0:
-            for rr in queryrr.rrset:
+        query = dns.message.make_query(dnsquery, recordtype)
+        response = await dns.asyncquery.udp(query, customresolver.nameservers[0], timeout=5.0)
+        for rrset in response.answer:
+            for rr in rrset:
                 foundip = ipaddress.ip_address(rr)
-                #infomsg("--> "+str(foundip))
-                #infomsg("--> "+str(ipo))
                 if str(foundip) == str(ipo):
                     result = True
                     break
-    except:
-        infomsg("Error resolving "+dnsquery+" "+recordtype)
+            if result:
+                break
+    except Exception as e:
+        infomsg("Error resolving "+dnsquery+" "+recordtype+": "+str(e))
     return result
 
-def testentry(ipo, canonical, aliases, searchlist, customresolver):
+async def testentry(ipo, canonical, aliases, searchlist, customresolver):
     result = True
     reason = None
 
@@ -99,13 +100,13 @@ def testentry(ipo, canonical, aliases, searchlist, customresolver):
     elif ipo.version == 6:
         recordtype = "AAAA"
 
-    if testvalue(ipo, canonical, recordtype, customresolver):
+    if await testvalue(ipo, canonical, recordtype, customresolver):
         infomsg("Test value is True for "+str(ipo))
         for alias in aliases:
-            if testvalue(ipo, alias, recordtype, customresolver) == False:
+            if await testvalue(ipo, alias, recordtype, customresolver) == False:
                 foundusingsearch = False
                 for search in searchlist:
-                    if testvalue(ipo, alias+"."+search, recordtype, customresolver):
+                    if await testvalue(ipo, alias+"."+search, recordtype, customresolver):
                         foundusingsearch = True
                         break
                 infomsg(alias+" "+str(foundusingsearch))
@@ -128,7 +129,7 @@ async def dohostsfilecheck():
 
     allvalid = True
     failing = {}
-    customresolver = dns.resolver.Resolver("/etc/resolv.conf")
+    customresolver = dns.asyncresolver.Resolver(filename="/etc/resolv.conf")
 
     for key, value in hosts.items():
         ipo = ipaddress.ip_address(key)
@@ -136,7 +137,7 @@ async def dohostsfilecheck():
             infomsg("Evaluating for "+str(ipo))
             canonical = value[0]
             aliases = value[1:]
-            valid, reason = testentry(ipo, canonical, aliases, searchlist, customresolver)
+            valid, reason = await testentry(ipo, canonical, aliases, searchlist, customresolver)
             allvalid = allvalid and valid
             if not valid:
                 failing[key] = [value, reason]
