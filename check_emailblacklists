@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import os
 import sys
@@ -11,46 +11,54 @@ import dns.resolver
 import asyncio
 
 import nodriver as uc
-#from fake_useragent import UserAgent
+# from fake_useragent import UserAgent
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def generatedriver(proxy):
     browserargs = []
-    #browserargs.append("--incognito")
-    #browserargs.append("--enable-features=EphemeralGuestProfilesOnStartup")
+    # browserargs.append("--incognito")
+    # browserargs.append("--enable-features=EphemeralGuestProfilesOnStartup")
     browserargs.append("--disk-cache-size=0")
     browserargs.append("--media-cache-size=0")
     browserargs.append("--headless")
@@ -65,18 +73,19 @@ async def generatedriver(proxy):
     browserargs.append("--disable-popup-blocking")
     if proxy not in ["", None]:
         browserargs.append("--proxy-server=" + proxy)
-    #ua = UserAgent()
-    #browserargs.append(f'user-agent={ua.random}')
+    # ua = UserAgent()
+    # browserargs.append(f'user-agent={ua.random}')
     browserargs.append("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
     browserconfig = uc.Config(browser_args=browserargs)
 
     driver = await uc.start(browserconfig)
-    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     uc.cdp.network.enable()
-    #uc.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
+    # uc.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
+
 
 async def get_html_source(page):
     js = """
@@ -88,6 +97,7 @@ async def get_html_source(page):
     html = response.value
     return html
 
+
 async def get_page_title(page):
     js = """
     (() => {
@@ -98,6 +108,7 @@ async def get_page_title(page):
     title = response.value
     return title
 
+
 async def check_page_loaded(page):
     js = """
     (() => {
@@ -106,9 +117,10 @@ async def check_page_loaded(page):
     """
     response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
     page_state_value = response.value
-    infomsg("page state is '"+str(page_state_value)+"'")
+    infomsg("page state is '" + str(page_state_value) + "'")
     result = (page_state_value == "complete")
     return result
+
 
 async def wait_page_loaded(page):
     timestamp = time.time()
@@ -120,9 +132,10 @@ async def wait_page_loaded(page):
             break
         time.sleep(1)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def tryfindbyxpath(driver,xpath):
+
+def tryfindbyxpath(driver, xpath):
     result = []
     try:
         result = driver.find_elements(By.XPATH, xpath)
@@ -130,7 +143,8 @@ def tryfindbyxpath(driver,xpath):
         pass
     return result
 
-def tryfindbyid(driver,idname):
+
+def tryfindbyid(driver, idname):
     result = []
     try:
         result = driver.find_elements(By.ID, idname)
@@ -138,7 +152,8 @@ def tryfindbyid(driver,idname):
         pass
     return result
 
-def tryfindbyclassname(driver,classname):
+
+def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(By.CLASS_NAME, classname)
@@ -146,7 +161,8 @@ def tryfindbyclassname(driver,classname):
         pass
     return result
 
-def tryfindbytagname(driver,tagname):
+
+def tryfindbytagname(driver, tagname):
     result = []
     try:
         result = driver.find_elements(By.TAG_NAME, tagname)
@@ -154,47 +170,48 @@ def tryfindbytagname(driver,tagname):
         pass
     return result
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def resolverecord(protocol,hostname):
+
+def resolverecord(protocol, hostname):
     result = []
     try:
         record = None
-        if protocol in ["-4","4"]:
+        if protocol in ["-4", "4"]:
             record = "A"
-        if protocol in ["-6","6"]:
+        if protocol in ["-6", "6"]:
             record = "AAAA"
-        if record!=None:
+        if record != None:
             answers = dns.resolver.resolve(hostname, record)
             for rdata in answers:
                 result.append(rdata.to_text())
     except Exception as e:
-        infomsg("exception "+str(e))
+        infomsg("exception " + str(e))
     return result
 
-async def dodnscheckercall(protocol,hostname,ignorelist,tolerance,proxy):
+
+async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol,hostname)
-        if len(ips)==0:
-            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
-        if len(ips)>1:
-            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        ips = resolverecord(protocol, hostname)
+        if len(ips) == 0:
+            exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
+        if len(ips) > 1:
+            exitnagios("CRITICAL", "too many ips resolved for " + hostname + " - " + str(ips))
         targetip = ips[0]
-        infomsg("The IP to test is "+targetip)
+        infomsg("The IP to test is " + targetip)
 
         driver = await generatedriver(proxy)
 
-
         infomsg("browser OK")
 
-        #driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent/")
-        #detected_user_agent = driver.find_element(By.ID, "detected_value").text
-        #infomsg(f"Detected User Agent: {detected_user_agent}")
+        # driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent/")
+        # detected_user_agent = driver.find_element(By.ID, "detected_value").text
+        # infomsg(f"Detected User Agent: {detected_user_agent}")
 
         targeturl = "https://dnschecker.org/ip-blacklist-checker.php"
-        infomsg("asking for navigating "+targeturl)
+        infomsg("asking for navigating " + targeturl)
         page = await driver.get(targeturl)
-        #page = page.main_tab
+        # page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
@@ -202,21 +219,21 @@ async def dodnscheckercall(protocol,hostname,ignorelist,tolerance,proxy):
         await wait_page_loaded(page)
         infomsg("page loaded")
 
-        #currenturl = driver.current_url
-        #driver.get("the current page is "+currenturl)
+        # currenturl = driver.current_url
+        # driver.get("the current page is "+currenturl)
 
-        #sourceraw = await page.send(uc.cdp.dom.get_outer_html())
+        # sourceraw = await page.send(uc.cdp.dom.get_outer_html())
         sourceraw = await get_html_source(page)
         if (sourceraw == None) or (sourceraw.strip() == ""):
             infomsg("The page source is empty")
         else:
             infomsg("The page source has contents")
             pagetitle = await get_page_title(page)
-            infomsg("The page title is '"+str(pagetitle)+"'")
-            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+            infomsg("The page title is '" + str(pagetitle) + "'")
+            if (pagetitle in ["New tab", "", None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
                 infomsg("Aborting...")
                 infomsg(sourceraw)
-                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+                exitnagios("CRITICAL", "could not get effective page, maybe antibot protection")
             else:
                 infomsg("page OK")
                 infomsg(sourceraw)
@@ -228,9 +245,9 @@ async def dodnscheckercall(protocol,hostname,ignorelist,tolerance,proxy):
         await page.wait_for("#ipbc_submit", timeout=20)
 
         infomsg("finding textbox element")
-        elements = tryfindbyid(driver,"ipbc_host")
-        if len(elements)==0:
-            exitnagios("CRITICAL","cannot find textbox")
+        elements = tryfindbyid(driver, "ipbc_host")
+        if len(elements) == 0:
+            exitnagios("CRITICAL", "cannot find textbox")
         else:
             infomsg("sending ip")
             elements[0].send_keys(targetip)
@@ -243,57 +260,58 @@ async def dodnscheckercall(protocol,hostname,ignorelist,tolerance,proxy):
         wait.until(EC.presence_of_element_located((By.ID, "blacklist_count")))
 
         infomsg("extracting listed")
-        blocks = tryfindbyid(driver,"ipbc_results_dnsbl")
-        lists = tryfindbytagname(blocks[0],"tr")
-        infomsg("row canidates: "+str(len(lists)))
-        issues=[]
+        blocks = tryfindbyid(driver, "ipbc_results_dnsbl")
+        lists = tryfindbytagname(blocks[0], "tr")
+        infomsg("row canidates: " + str(len(lists)))
+        issues = []
         for item in lists:
-            providers = tryfindbytagname(item,"th")
-            if len(providers)==1:
+            providers = tryfindbytagname(item, "th")
+            if len(providers) == 1:
                 provider = providers[0].text
             else:
                 provider = ""
-            statuses = tryfindbytagname(item,"td")
-            if len(statuses)==2:
+            statuses = tryfindbytagname(item, "td")
+            if len(statuses) == 2:
                 listed = statuses[0].text.split()[0]
             else:
                 listed = ""
-            if provider!="" and listed!="":
-                infomsg("status "+provider+" "+listed)
-                if listed.lower()=="yes":
+            if provider != "" and listed != "":
+                infomsg("status " + provider + " " + listed)
+                if listed.lower() == "yes":
                     if provider in ignorelist:
-                        infomsg("ignoring "+provider)
+                        infomsg("ignoring " + provider)
                     else:
-                        infomsg("adding "+provider)
+                        infomsg("adding " + provider)
                         issues.append(provider)
 
-        if len(issues)>tolerance:
-            exitnagios("CRITICAL","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
-        elif len(issues)>0:
-            exitnagios("WARNING","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        if len(issues) > tolerance:
+            exitnagios("CRITICAL", "The IP " + targetip + " is listed in spam databases " + str(issues) + " | count=" + str(len(issues)))
+        elif len(issues) > 0:
+            exitnagios("WARNING", "The IP " + targetip + " is listed in spam databases " + str(issues) + " | count=" + str(len(issues)))
         else:
-            exitnagios("OK","No issues found for the IP "+targetip+" | count="+str(len(issues)))
+            exitnagios("OK", "No issues found for the IP " + targetip + " | count=" + str(len(issues)))
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         infomsg(driver.page_source)
 
-async def domailmeteorcall(protocol,hostname,ignorelist,tolerance,proxy):
+
+async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol,hostname)
-        if len(ips)==0:
-            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
-        if len(ips)>1:
-            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        ips = resolverecord(protocol, hostname)
+        if len(ips) == 0:
+            exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
+        if len(ips) > 1:
+            exitnagios("CRITICAL", "too many ips resolved for " + hostname + " - " + str(ips))
         targetip = ips[0]
-        infomsg("The IP to test is "+targetip)
+        infomsg("The IP to test is " + targetip)
 
         driver = await generatedriver(proxy)
 
-        targeturl = "https://mailmeteor.com/tools/blacklist-checker?search="+targetip
-        infomsg("asking for navigating "+targeturl)
+        targeturl = "https://mailmeteor.com/tools/blacklist-checker?search=" + targetip
+        infomsg("asking for navigating " + targeturl)
         page = await driver.get(targeturl)
-        #page = page.main_tab
+        # page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
@@ -307,35 +325,36 @@ async def domailmeteorcall(protocol,hostname,ignorelist,tolerance,proxy):
         else:
             infomsg("The page source has contents")
             pagetitle = await get_page_title(page)
-            infomsg("The page title is '"+str(pagetitle)+"'")
-            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+            infomsg("The page title is '" + str(pagetitle) + "'")
+            if (pagetitle in ["New tab", "", None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
                 infomsg("Aborting...")
                 infomsg(sourceraw)
-                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+                exitnagios("CRITICAL", "could not get effective page, maybe antibot protection")
             else:
                 infomsg("page OK")
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         infomsg(driver.page_source)
 
-async def doblacklistcheckercall(protocol,hostname,ignorelist,tolerance,proxy):
+
+async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol,hostname)
-        if len(ips)==0:
-            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
-        if len(ips)>1:
-            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        ips = resolverecord(protocol, hostname)
+        if len(ips) == 0:
+            exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
+        if len(ips) > 1:
+            exitnagios("CRITICAL", "too many ips resolved for " + hostname + " - " + str(ips))
         targetip = ips[0]
-        infomsg("The IP to test is "+targetip)
+        infomsg("The IP to test is " + targetip)
 
         driver = await generatedriver(proxy)
 
-        targeturl = "https://blacklistchecker.com/check?input="+targetip
-        infomsg("asking for navigating "+targeturl)
+        targeturl = "https://blacklistchecker.com/check?input=" + targetip
+        infomsg("asking for navigating " + targeturl)
         page = await driver.get(targeturl)
-        #page = page.main_tab
+        # page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
@@ -349,36 +368,36 @@ async def doblacklistcheckercall(protocol,hostname,ignorelist,tolerance,proxy):
         else:
             infomsg("The page source has contents")
             pagetitle = await get_page_title(page)
-            infomsg("The page title is '"+str(pagetitle)+"'")
-            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+            infomsg("The page title is '" + str(pagetitle) + "'")
+            if (pagetitle in ["New tab", "", None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
                 infomsg("Aborting...")
                 infomsg(sourceraw)
-                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+                exitnagios("CRITICAL", "could not get effective page, maybe antibot protection")
             else:
                 infomsg("page OK")
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         infomsg(driver.page_source)
 
 
-async def dodnsblcall(protocol,hostname,ignorelist,tolerance,proxy):
+async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol,hostname)
-        if len(ips)==0:
-            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
-        if len(ips)>1:
-            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        ips = resolverecord(protocol, hostname)
+        if len(ips) == 0:
+            exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
+        if len(ips) > 1:
+            exitnagios("CRITICAL", "too many ips resolved for " + hostname + " - " + str(ips))
         targetip = ips[0]
-        infomsg("The IP to test is "+targetip)
+        infomsg("The IP to test is " + targetip)
 
         driver = await generatedriver(proxy)
 
         targeturl = "https://www.dnsbl.info/dnsbl-database-check.php"
-        infomsg("asking for navigating "+targeturl)
+        infomsg("asking for navigating " + targeturl)
         page = await driver.get(targeturl)
-        #page = page.main_tab
+        # page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
@@ -392,35 +411,36 @@ async def dodnsblcall(protocol,hostname,ignorelist,tolerance,proxy):
         else:
             infomsg("The page source has contents")
             pagetitle = await get_page_title(page)
-            infomsg("The page title is '"+str(pagetitle)+"'")
-            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+            infomsg("The page title is '" + str(pagetitle) + "'")
+            if (pagetitle in ["New tab", "", None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
                 infomsg("Aborting...")
                 infomsg(sourceraw)
-                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+                exitnagios("CRITICAL", "could not get effective page, maybe antibot protection")
             else:
                 infomsg("page OK")
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         infomsg(driver.page_source)
 
-async def domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy):
+
+async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol,hostname)
-        if len(ips)==0:
-            exitnagios("CRITICAL","cannot resolve "+hostname+" with protocol "+protocol)
-        if len(ips)>1:
-            exitnagios("CRITICAL","too many ips resolved for "+hostname+" - "+str(ips))
+        ips = resolverecord(protocol, hostname)
+        if len(ips) == 0:
+            exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
+        if len(ips) > 1:
+            exitnagios("CRITICAL", "too many ips resolved for " + hostname + " - " + str(ips))
         targetip = ips[0]
-        infomsg("The IP to test is "+targetip)
+        infomsg("The IP to test is " + targetip)
 
         driver = await generatedriver(proxy)
 
         targeturl = "https://mxtoolbox.com/SuperTool.aspx"
-        infomsg("asking for navigating "+targeturl)
+        infomsg("asking for navigating " + targeturl)
         page = await driver.get(targeturl)
-        #page = page.main_tab
+        # page = page.main_tab
 
         infomsg("manual delay")
         time.sleep(2)
@@ -434,14 +454,14 @@ async def domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy):
         else:
             infomsg("The page source has contents")
             pagetitle = await get_page_title(page)
-            infomsg("The page title is '"+str(pagetitle)+"'")
-            if (pagetitle in ["New tab","",None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
+            infomsg("The page title is '" + str(pagetitle) + "'")
+            if (pagetitle in ["New tab", "", None]) or ("Access denied" in pagetitle) or ("Cloudflare" in pagetitle):
                 infomsg("Aborting...")
                 infomsg(sourceraw)
-                exitnagios("CRITICAL","could not get effective page, maybe antibot protection")
+                exitnagios("CRITICAL", "could not get effective page, maybe antibot protection")
             else:
                 infomsg("page OK")
-                #infomsg(sourceraw)
+                # infomsg(sourceraw)
 
         infomsg("waiting for btnAction4")
         dropdown = await page.wait_for("#btnAction4", timeout=10)
@@ -456,9 +476,9 @@ async def domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy):
         time.sleep(2)
 
         currentaction = await page.wait_for('#btnAction3', timeout=10)
-        infomsg("current action: "+currentaction.text)
+        infomsg("current action: " + currentaction.text)
 
-        infomsg("sending ip "+targetip)
+        infomsg("sending ip " + targetip)
         inputbox = await page.wait_for('#txtInput2', timeout=10)
         await inputbox.send_keys(targetip)
         infomsg(inputbox.text)
@@ -474,86 +494,88 @@ async def domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy):
         infomsg("waiting for result")
         answer = await page.wait_for("#lblResult", timeout=10)
         infomsg(answer.text)
-        #infomsg(await get_html_source(page))
+        # infomsg(await get_html_source(page))
 
         infomsg("extracting listed")
         table = await page.wait_for('#lblResult .tool-result-table', timeout=10)
         infomsg(table.text)
 
         rows = await page.select_all("#lblResult .tool-result-table tr")
-        infomsg("row canidates: "+str(len(rows)))
-        issues=[]
+        infomsg("row canidates: " + str(len(rows)))
+        issues = []
         for index, row in enumerate(rows):
             cells = await row.query_selector_all("td")
             if len(cells) > 1:
                 status = cells[0].text.strip()
                 listname = cells[1].text.strip()
-                if status!="" and listname!="":
+                if status != "" and listname != "":
                     print(f"Row {index}: {status} {listname}")
-                    if status.upper() not in ["OK","TIMEOUT"]:
+                    if status.upper() not in ["OK", "TIMEOUT"]:
                         if listname in ignorelist:
-                            infomsg("ignoring "+listname)
+                            infomsg("ignoring " + listname)
                         else:
-                            infomsg("adding "+listname)
+                            infomsg("adding " + listname)
                             issues.append(listname)
 
-        if len(issues)>tolerance:
-            exitnagios("CRITICAL","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
-        elif len(issues)>0:
-            exitnagios("WARNING","The IP "+targetip+" is listed in spam databases "+str(issues)+" | count="+str(len(issues)))
+        if len(issues) > tolerance:
+            exitnagios("CRITICAL", "The IP " + targetip + " is listed in spam databases " + str(issues) + " | count=" + str(len(issues)))
+        elif len(issues) > 0:
+            exitnagios("WARNING", "The IP " + targetip + " is listed in spam databases " + str(issues) + " | count=" + str(len(issues)))
         else:
-            exitnagios("OK","No issues found for the IP "+targetip+" | count="+str(len(issues)))
+            exitnagios("OK", "No issues found for the IP " + targetip + " | count=" + str(len(issues)))
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e))
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         infomsg(driver.page_source)
 
-async def doemailblacklistscall(protocol,hostname,ignorelist,tolerance,proxy):
-    result = await domxtoolboxcall(protocol,hostname,ignorelist,tolerance,proxy)
+
+async def doemailblacklistscall(protocol, hostname, ignorelist, tolerance, proxy):
+    result = await domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy)
     return result
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
-    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="lists to ignore")
-    parser.add_argument("-l", "--tolerance",                               dest="tolerance",        default="0",                                  help="number of listed databases to tolerate")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
+    parser.add_argument("-i", "--ignore", dest="ignore", default="", help="lists to ignore")
+    parser.add_argument("-l", "--tolerance", dest="tolerance", default="0", help="number of listed databases to tolerate")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
     protocol = None
     exclist = 0
-    if args.ipv0 == True :
+    if args.ipv0 == True:
         protocol = ""
-        exclist = exclist+1
-    if args.ipv4 == True :
+        exclist = exclist + 1
+    if args.ipv4 == True:
         protocol = "-4"
-        exclist = exclist+1
-    if args.ipv6 == True :
+        exclist = exclist + 1
+    if args.ipv6 == True:
         protocol = "-6"
-        exclist = exclist+1
-    if (exclist>1) :
-        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist<1) :
-        exitnagios("CRITICAL","no protocol selected")
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     if (args.hostname == ""):
-        exitnagios("CRITICAL","hostname not defined")
+        exitnagios("CRITICAL", "hostname not defined")
 
     proxy = ""
     ignorelist = args.ignore.split(",")
     tolerance = int(args.tolerance)
-    await doemailblacklistscall(protocol,args.hostname,ignorelist,tolerance,proxy)
+    await doemailblacklistscall(protocol, args.hostname, ignorelist, tolerance, proxy)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

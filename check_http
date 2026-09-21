@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import sys
 import os
@@ -16,49 +16,59 @@ import dns.resolver
 import asyncio
 import time
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
+
 def exitnagios(exitinfo):
     status = exitinfo["status"]
     message = exitinfo["message"]
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-def build_exitinfo(status,message):
+
+def build_exitinfo(status, message):
     exitinfo = {}
     exitinfo["status"] = status
     exitinfo["message"] = message
     return exitinfo
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 original_getaddrinfo = socket.getaddrinfo
+
 
 def forced_ipv6_gai_family(*args, **kwargs):
     global original_getaddrinfo
@@ -67,6 +77,7 @@ def forced_ipv6_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET6]
 
+
 def forced_ipv4_gai_family(*args, **kwargs):
     global original_getaddrinfo
     responses = original_getaddrinfo(*args, **kwargs)
@@ -74,19 +85,22 @@ def forced_ipv4_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET]
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 _debuginfo = []
 _preheaders = []
 _headers = {}
 
+
 def _debug_function(debug_type, debug_msg):
     global _debuginfo
     try:
         debug_msg = debug_msg.decode().strip()
-        infomsg("debug -> "+str(debug_type)+" -> "+debug_msg)
+        infomsg("debug -> " + str(debug_type) + " -> " + debug_msg)
     except:
         pass
+
 
 def _header_function(header_line):
     global _preheaders
@@ -94,13 +108,13 @@ def _header_function(header_line):
 
     # HTTP standard specifies that headers are encoded in iso-8859-1.
     header_line = header_line.decode('iso-8859-1')
-    infomsg("raw response -> "+header_line)
+    infomsg("raw response -> " + header_line)
 
     # Header lines include the first status line (HTTP/1.x ...).
     # We are going to ignore all lines that don't have a colon in them.
     # This will botch headers that are split on multiple lines...
     if ":" not in header_line:
-        if header_line!="" and len(_headers)==0:
+        if header_line != "" and len(_headers) == 0:
             _preheaders.append(header_line.strip())
         return
 
@@ -117,23 +131,24 @@ def _header_function(header_line):
     # Lowercase name here.
     name = name.lower()
 
-    infomsg("header -> "+name+": "+value)
+    infomsg("header -> " + name + ": " + value)
     # Now we can actually record the header name and value.
     # Note: this only works when headers are not duplicated, see below.
     _headers[name] = value
 
-async def generate_resolves(hostname,ipprotocol,port,dnsservers):
+
+async def generate_resolves(hostname, ipprotocol, port, dnsservers):
     result = []
 
-    infomsg("generate_resolves: "+str(dnsservers))
+    infomsg("generate_resolves: " + str(dnsservers))
     if dnsservers != "":
         listdnsservers = dnsservers.split(",")
-        infomsg("listdnsservers: "+str(listdnsservers))
+        infomsg("listdnsservers: " + str(listdnsservers))
 
         maxretries = 3
         for i in range(maxretries):
             try:
-                if i>1:
+                if i > 1:
                     await asyncio.sleep(i)
                 customresolver = dns.resolver.Resolver(configure=False)
                 customresolver.nameservers = listdnsservers
@@ -141,13 +156,13 @@ async def generate_resolves(hostname,ipprotocol,port,dnsservers):
                 customresolver.edns = True
 
                 recordtype = ""
-                if ipprotocol in ["4","-4"]:
+                if ipprotocol in ["4", "-4"]:
                     recordtype = "A"
-                elif ipprotocol in ["6","-6"]:
+                elif ipprotocol in ["6", "-6"]:
                     recordtype = "AAAA"
                 infomsg(recordtype)
 
-                result = [hostname+":"+str(port)+":"+str(customresolver.resolve(hostname,recordtype)[0])]
+                result = [hostname + ":" + str(port) + ":" + str(customresolver.resolve(hostname, recordtype)[0])]
 
                 break
             except:
@@ -156,29 +171,31 @@ async def generate_resolves(hostname,ipprotocol,port,dnsservers):
         infomsg(result)
     return result
 
-async def dolibcurlcheck_retries(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,retries,useragent):
+
+async def dolibcurlcheck_retries(ipprotocol, hostname, port, path, timeoutvalue, timeoutstatus, httpversion, sslversion, expect, unknown, headerstring, certificatedays, interface, dnsservers, retries, useragent):
     exitlevel = "UNKNOWN"
     exitmessage = "not executed"
     counter = 0
     while True:
         try:
-            infomsg("retry "+str(counter))
-            exitlevel,exitmessage = await dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,useragent)
-            counter = counter+1
-            if counter>retries:
+            infomsg("retry " + str(counter))
+            exitlevel, exitmessage = await dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, timeoutstatus, httpversion, sslversion, expect, unknown, headerstring, certificatedays, interface, dnsservers, useragent)
+            counter = counter + 1
+            if counter > retries:
                 break
             elif exitlevel == "OK":
                 break
             else:
-                await asyncio.sleep(5*counter)
+                await asyncio.sleep(5 * counter)
         except Exception as e:
             exitlevel = "CRITICAL"
-            exitmessage = "exception - "+str(e)
+            exitmessage = "exception - " + str(e)
             break
 
-    return build_exitinfo(exitlevel,exitmessage)
+    return build_exitinfo(exitlevel, exitmessage)
 
-async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeoutstatus,httpversion,sslversion,expect,unknown,headerstring,certificatedays,interface,dnsservers,useragent):
+
+async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, timeoutstatus, httpversion, sslversion, expect, unknown, headerstring, certificatedays, interface, dnsservers, useragent):
     global _debuginfo
     global _preheaders
     global _headers
@@ -194,18 +211,18 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
     totaltime = None
     certinfo = None
     try:
-        infomsg("ssl "+str(sslversion))
+        infomsg("ssl " + str(sslversion))
         curlsslfinal = None
-        if sslversion!=None:
+        if sslversion != None:
             httpprotocol = "https"
             if sslversion == "default":
                 curlsslmin = pycurl.SSLVERSION_DEFAULT
-                sslversionplus =  True
+                sslversionplus = True
             else:
                 sslversionplus = sslversion.endswith("+")
                 sslversion = sslversion.strip("+")
                 curlsslmin = None
-                infomsg(sslversion) # 1.2+
+                infomsg(sslversion)  # 1.2+
                 if sslversion == "TLSv1.0":
                     curlsslmin = pycurl.SSLVERSION_TLSv1_0
                 elif sslversion == "TLSv1.1":
@@ -219,15 +236,15 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
                 curlsslfinal = curlsslmin
             else:
                 curlsslfinal = curlsslmin | curlsslmin
-            infomsg(sslversion) # 1.2+
+            infomsg(sslversion)  # 1.2+
         else:
             httpprotocol = "http"
-        if path.startswith("/")==False:
-            path = "/"+path
-        url = httpprotocol+"://"+hostname+":"+str(port)+path
-        infomsg("url "+url)
+        if path.startswith("/") == False:
+            path = "/" + path
+        url = httpprotocol + "://" + hostname + ":" + str(port) + path
+        infomsg("url " + url)
         httpversionparts = httpversion.split(",")
-        if len(httpversionparts)>0:
+        if len(httpversionparts) > 0:
             curlhttpcode = 0
             if "0.9" in httpversionparts:
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_0_9
@@ -241,8 +258,8 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         buffer = io.BytesIO()
         curl = pycurl.Curl()
         curl.reset()
-        #curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
-        #curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
+        # curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
+        # curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
         if candebug() == True:
             curl.setopt(pycurl.VERBOSE, 1)
             curl.setopt(pycurl.DEBUGFUNCTION, _debug_function)
@@ -252,31 +269,31 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         curl.setopt(pycurl.HTTP_VERSION, curlhttpcode)
         if useragent not in [None, ""]:
             curl.setopt(pycurl.USERAGENT, useragent)
-        if ipprotocol in ["4","-4"]:
+        if ipprotocol in ["4", "-4"]:
             curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
-        elif ipprotocol in ["6","-6"]:
+        elif ipprotocol in ["6", "-6"]:
             curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
         else:
             curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
-        if curlsslfinal!=None:
-            curl.setopt(pycurl.SSL_VERIFYPEER, 1) # default is 1
-            curl.setopt(pycurl.SSL_VERIFYHOST, 2) # default is 2
+        if curlsslfinal != None:
+            curl.setopt(pycurl.SSL_VERIFYPEER, 1)  # default is 1
+            curl.setopt(pycurl.SSL_VERIFYHOST, 2)  # default is 2
             curl.setopt(pycurl.SSLVERSION, curlsslfinal)
         else:
             curl.setopt(pycurl.SSL_VERIFYPEER, 0)
             curl.setopt(pycurl.SSL_VERIFYHOST, 0)
-        if len(expect)>0 or unknown!="" or len(headerstring)>0:
+        if len(expect) > 0 or unknown != "" or len(headerstring) > 0:
             curl.setopt(pycurl.HEADERFUNCTION, _header_function)
-        if httpprotocol=="https" and certificatedays!="":
+        if httpprotocol == "https" and certificatedays != "":
             curl.setopt(pycurl.OPT_CERTINFO, 1)
         curl.setopt(pycurl.TIMEOUT, timeoutvalue)
-        #curl.setopt(pycurl.FOLLOWLOCATION, 1)
-        if interface!="":
+        # curl.setopt(pycurl.FOLLOWLOCATION, 1)
+        if interface != "":
             curl.setopt(pycurl.INTERFACE, interface)
-        if len(dnsservers)>0:
-            resolves = await generate_resolves(hostname,ipprotocol,port,dnsservers)
-            infomsg("resolves "+str(resolves))
-            if len(resolves)>0:
+        if len(dnsservers) > 0:
+            resolves = await generate_resolves(hostname, ipprotocol, port, dnsservers)
+            infomsg("resolves " + str(resolves))
+            if len(resolves) > 0:
                 curl.setopt(pycurl.RESOLVE, resolves)
             else:
                 raise Exception(cannotresolvecustommsg)
@@ -299,7 +316,7 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         else:
             failuremessage = msg
     finally:
-        if curl!=None:
+        if curl != None:
             curl.close()
 
     infomsg("----- start of preheaders")
@@ -312,57 +329,57 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
 
     infomsg("----- checks stage 1")
 
-    infomsg("timeoutmsg: "+str(timeoutmessage))
-    infomsg("failuremsg: "+str(failuremessage))
-    if failuremessage!=None:
+    infomsg("timeoutmsg: " + str(timeoutmessage))
+    infomsg("failuremsg: " + str(failuremessage))
+    if failuremessage != None:
         toleratedfailures = []
         toleratedfailures.append("Invalid HTTP header field was received: frame type: 1, stream: 1, name: [upgrade], value: [h2,h2c]")
         if failuremessage not in toleratedfailures:
-            return "CRITICAL","error - "+str(failuremessage)+" for URL '"+url+"' | totaltime="+str(totaltime)
-    if timeoutmessage!=None:
-        return timeoutstatus,"error - "+str(timeoutmessage)+" for URL '"+url+"' | totaltime="+str(totaltime)
+            return "CRITICAL", "error - " + str(failuremessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+    if timeoutmessage != None:
+        return timeoutstatus, "error - " + str(timeoutmessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 2")
 
-    if unknown!="":
+    if unknown != "":
         foundunknown = False
         for line in _preheaders:
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            return timeoutstatus,"match '"+unknown+"' in "+str(_preheaders)+" for URL '"+url+"' | totaltime="+str(totaltime)
-    if len(expect)>0:
+            return timeoutstatus, "match '" + unknown + "' in " + str(_preheaders) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+    if len(expect) > 0:
         foundexpect = False
         for line in _preheaders:
             for test in expect:
                 if line.startswith(test):
                     foundexpect = True
         if foundexpect == False:
-            return "CRITICAL","cannot match '"+str(expect)+"' in "+str(_preheaders)+" for URL '"+url+"' | totaltime="+str(totaltime)
+            return "CRITICAL", "cannot match '" + str(expect) + "' in " + str(_preheaders) + " for URL '" + url + "' | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 3")
 
     for hsitem in headerstring:
-        headermatchparts = hsitem.split(":",1)
+        headermatchparts = hsitem.split(":", 1)
         headermatchkey = headermatchparts[0].strip().lower()
         headermatchvalue = headermatchparts[1].strip()
         if headermatchkey in _headers:
             if _headers[headermatchkey] != headermatchvalue:
-                return "CRITICAL","headerstring '"+headermatchkey+"' is '"+_headers[headermatchkey]+"' but it was expected '"+headermatchvalue+"' for URL '"+url+"' | totaltime="+str(totaltime)
+                return "CRITICAL", "headerstring '" + headermatchkey + "' is '" + _headers[headermatchkey] + "' but it was expected '" + headermatchvalue + "' for URL '" + url + "' | totaltime=" + str(totaltime)
         else:
-            return "CRITICAL","cannot locate headerstring '"+headermatchkey+"' for URL '"+url+"' | totaltime="+str(totaltime)
+            return "CRITICAL", "cannot locate headerstring '" + headermatchkey + "' for URL '" + url + "' | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 4")
 
     daysremaining = -1
-    if httpprotocol=="https" and certificatedays!="":
+    if httpprotocol == "https" and certificatedays != "":
         certexpirationraw = None
         certexpirationparsed = None
         try:
-            infomsg("certinfo is "+str(certinfo))
-            if certinfo==None:
+            infomsg("certinfo is " + str(certinfo))
+            if certinfo == None:
                 certvars = []
-            elif len(certinfo)>0:
+            elif len(certinfo) > 0:
                 certvars = certinfo[0]
             else:
                 certvars = []
@@ -371,38 +388,38 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
                 if certvarname in ["Expire Date", "Expire date"]:
                     certexpirationraw = certvarvalue
                     break
-            if certexpirationraw!=None:
+            if certexpirationraw != None:
                 from dateutil.parser import parse
                 infomsg(certexpirationraw)
                 certexpirationparsed = parse(certexpirationraw)
         except:
             infomsg(traceback.format_exc())
             pass
-        if certexpirationparsed==None:
-            return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' for URL '"+url+"' | totaltime="+str(totaltime)
+        if certexpirationparsed == None:
+            return "CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' for URL '" + url + "' | totaltime=" + str(totaltime)
         else:
             today = datetime.datetime.now(datetime.UTC)
-            timeremaining = certexpirationparsed.timestamp()-today.timestamp()
-            daysremaining = int(timeremaining/86400)
+            timeremaining = certexpirationparsed.timestamp() - today.timestamp()
+            daysremaining = int(timeremaining / 86400)
             certificatedaysparts = certificatedays.split(",")
             criticaldays = int(certificatedaysparts[0])
-            if len(certificatedaysparts)>1:
+            if len(certificatedaysparts) > 1:
                 warningdays = int(certificatedaysparts[1])
             else:
                 warningdays = -1
-            if daysremaining<criticaldays:
-                return "CRITICAL","the certificate is expiring in '"+str(daysremaining)+"' days for URL '"+url+"' | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
-            elif daysremaining<warningdays:
-                return "WARNING","the certificate is expiring in '"+str(daysremaining)+"' days for URL '"+url+"' | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
+            if daysremaining < criticaldays:
+                return "CRITICAL", "the certificate is expiring in '" + str(daysremaining) + "' days for URL '" + url + "' | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
+            elif daysremaining < warningdays:
+                return "WARNING", "the certificate is expiring in '" + str(daysremaining) + "' days for URL '" + url + "' | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
 
     infomsg("----- checks stage 5")
 
-    if responsecode>=500:
-        return "WARNING","unexpected responsecode for URL '"+url+"' : "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)
+    if responsecode >= 500:
+        return "WARNING", "unexpected responsecode for URL '" + url + "' : " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 6")
 
-    return "OK","everything seems OK for URL '"+url+"' - responsecode: "+str(responsecode)+" - totaltime: "+str(totaltime)+" | totaltime="+str(totaltime)+" remaining="+str(daysremaining)
+    return "OK", "everything seems OK for URL '" + url + "' - responsecode: " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
 
 #    context = ssl.create_default_context()
 #    with socket.create_connection((hostname, port)) as sock:
@@ -432,76 +449,75 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
 #        foundname = output.split("'")[1]
 #        output = "can connect, but the certificate found '"+foundname+"' name does not match the expected '"+hostname+"'"
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     exitinfo = None
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
-    parser.add_argument("-A", "--path",                                    dest="path",             default="",                                   help="path to check")
-    parser.add_argument("-p", "--port",                                    dest="port",             default="80",                                 help="port to use, usually 80 or 443")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
-    parser.add_argument("-S", "--sslversion",                              dest="sslversion",       default=None,                                 help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+, TLSv1.3")
-    parser.add_argument("-e", "--expect",            action="append",      dest="expect",           default=[],                                   help="first (status) line of the server response (default: HTTP/1.)")
-    parser.add_argument("-K", "--unknown",                                 dest="unknown",          default="",                                   help="match this header to return unknown")
-    parser.add_argument("-d", "--headerstring",      action="append",      dest="headerstring",     default=[],                                   help="string to expect in the response headers")
-    parser.add_argument("-C", "--certificatedays",                         dest="certificatedays",  default="5,10",                               help="minimum number of days a certificate has to be valid crit,warn")
-    parser.add_argument("-P", "--httpversion",                             dest="httpversion",      default="",                                   help="0.9,1.0,1.1,2,3")
-    parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="what interface to use")
-    parser.add_argument("-D", "--dnsservers",                              dest="dnsservers",       default="",                                   help="dns servers to use")
-    parser.add_argument("-r", "--retries",                                 dest="retries",          default="5",                                  help="number of times to try")
-    parser.add_argument("-u", "--useragent",                               dest="useragent",        default="",                                   help="set the User Agent header")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
+    parser.add_argument("-A", "--path", dest="path", default="", help="path to check")
+    parser.add_argument("-p", "--port", dest="port", default="80", help="port to use, usually 80 or 443")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-S", "--sslversion", dest="sslversion", default=None, help="SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLSv1.2+, TLSv1.3")
+    parser.add_argument("-e", "--expect", action="append", dest="expect", default=[], help="first (status) line of the server response (default: HTTP/1.)")
+    parser.add_argument("-K", "--unknown", dest="unknown", default="", help="match this header to return unknown")
+    parser.add_argument("-d", "--headerstring", action="append", dest="headerstring", default=[], help="string to expect in the response headers")
+    parser.add_argument("-C", "--certificatedays", dest="certificatedays", default="5,10", help="minimum number of days a certificate has to be valid crit,warn")
+    parser.add_argument("-P", "--httpversion", dest="httpversion", default="", help="0.9,1.0,1.1,2,3")
+    parser.add_argument("-I", "--interface", dest="interface", default="", help="what interface to use")
+    parser.add_argument("-D", "--dnsservers", dest="dnsservers", default="", help="dns servers to use")
+    parser.add_argument("-r", "--retries", dest="retries", default="5", help="number of times to try")
+    parser.add_argument("-u", "--useragent", dest="useragent", default="", help="set the User Agent header")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
     protocol = None
     exclist = 0
-    if args.ipv0 == True :
+    if args.ipv0 == True:
         protocol = ""
-        exclist = exclist+1
-    if args.ipv4 == True :
+        exclist = exclist + 1
+    if args.ipv4 == True:
         protocol = "-4"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv4_gai_family
-    if args.ipv6 == True :
+    if args.ipv6 == True:
         protocol = "-6"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv6_gai_family
-    if (exclist>1) :
-        exitinfo = build_exitinfo("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist<1) :
-        exitinfo = build_exitinfo("CRITICAL","no protocol selected")
+    if (exclist > 1):
+        exitinfo = build_exitinfo("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitinfo = build_exitinfo("CRITICAL", "no protocol selected")
 
     retries = int(args.retries)
     port = int(args.port)
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
-    if len(parts)>1:
+    if len(parts) > 1:
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         infomsg("precall")
-        infomsg(str(args.hostname)+" "+str(port)+" "+str(args.httpversion)+" "+str(args.sslversion))
-        exitinfo = await dolibcurlcheck_retries(protocol,args.hostname,port,args.path,timeoutvalue,timeoutstatus,args.httpversion,args.sslversion,args.expect,args.unknown,args.headerstring,args.certificatedays,args.interface,args.dnsservers,retries,args.useragent)
+        infomsg(str(args.hostname) + " " + str(port) + " " + str(args.httpversion) + " " + str(args.sslversion))
+        exitinfo = await dolibcurlcheck_retries(protocol, args.hostname, port, args.path, timeoutvalue, timeoutstatus, args.httpversion, args.sslversion, args.expect, args.unknown, args.headerstring, args.certificatedays, args.interface, args.dnsservers, retries, args.useragent)
     else:
-        exitinfo = build_exitinfo("CRITICAL","timeout status is not valid")
+        exitinfo = build_exitinfo("CRITICAL", "timeout status is not valid")
 
     return exitinfo
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     exitinfo = asyncio.run(main())
     exitnagios(exitinfo)
 
-#-------------------------------------------------------------------------------
-
-
+# -------------------------------------------------------------------------------

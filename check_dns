@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import os
 import sys
@@ -18,49 +18,59 @@ import traceback
 import random
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
+
 def exitnagios(exitinfo):
     status = exitinfo["status"]
     message = exitinfo["message"]
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-def build_exitinfo(status,message):
+
+def build_exitinfo(status, message):
     exitinfo = {}
     exitinfo["status"] = status
     exitinfo["message"] = message
     return exitinfo
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 original_getaddrinfo = socket.getaddrinfo
+
 
 def forced_ipv6_gai_family(*args, **kwargs):
     global original_getaddrinfo
@@ -69,6 +79,7 @@ def forced_ipv6_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET6]
 
+
 def forced_ipv4_gai_family(*args, **kwargs):
     global original_getaddrinfo
     responses = original_getaddrinfo(*args, **kwargs)
@@ -76,7 +87,8 @@ def forced_ipv4_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET]
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
     responses = None
@@ -87,41 +99,43 @@ async def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
             responses = customresolver.resolve(zone, field, tcp=useTcp, raise_on_no_answer=True)
         except dns.resolver.NXDOMAIN as e:
             # The DNS query name does not exist:
-            infomsg("returning [] - "+type(e).__name__+" - "+str(e))
+            infomsg("returning [] - " + type(e).__name__ + " - " + str(e))
             responses = []
         except dns.resolver.NoAnswer as e:
             # The DNS query name does not exist:
-            infomsg("returning [] - "+type(e).__name__+" - "+str(e))
+            infomsg("returning [] - " + type(e).__name__ + " - " + str(e))
             responses = []
         except Exception as e:
-            infomsg("returning None - "+type(e).__name__+" - "+str(e))
+            infomsg("returning None - " + type(e).__name__ + " - " + str(e))
             responses = None
-        infomsg("responses for type "+str(field)+" -> "+str(responses))
+        infomsg("responses for type " + str(field) + " -> " + str(responses))
         if responses == None:
-            await asyncio.sleep(i*5)
+            await asyncio.sleep(i * 5)
         else:
             break
-    infomsg(zone+" -> "+str(responses))
+    infomsg(zone + " -> " + str(responses))
     return responses
+
 
 def build_name(entry, zone):
     if entry.endswith("."):
         return entry[0:-1]
     else:
-        return entry+"."+zone
+        return entry + "." + zone
+
 
 def get_address(protocol, serverinfo):
-    infomsg("get_address using "+protocol+" for "+str(serverinfo))
+    infomsg("get_address using " + protocol + " for " + str(serverinfo))
 
     parts = serverinfo.split("@")
     server = parts[0]
-    if len(parts)>1:
+    if len(parts) > 1:
         port = int(parts[1])
     else:
         port = 53
 
     if server == ".":
-        result = "."+"@"+str(port)
+        result = "." + "@" + str(port)
     else:
         address = ""
         try:
@@ -132,7 +146,7 @@ def get_address(protocol, serverinfo):
             else:
                 address = ipaddress.ip_address(server).compressed
 
-            return address+"@"+str(port)
+            return address + "@" + str(port)
         except Exception as e:
             pass
 
@@ -146,10 +160,11 @@ def get_address(protocol, serverinfo):
         except Exception as e:
             return None
 
-        result = address+"@"+str(port)
+        result = address + "@" + str(port)
 
-    infomsg("evaluated as "+result)
+    infomsg("evaluated as " + result)
     return result
+
 
 async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     parts = addressinfo.split("@")
@@ -167,7 +182,7 @@ async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
                 parts = line.splitlines()
                 parts.sort()
                 line = os.linesep.join(parts)
-                text = text+os.linesep+line
+                text = text + os.linesep + line
         except:
             text = ""
             pass
@@ -177,6 +192,7 @@ async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
             break
     return text
 
+
 async def get_mname(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "SOA", useTcp, retries=9)
@@ -184,6 +200,7 @@ async def get_mname(useTcp, addressinfo, timeoutvalue, zone):
         return ""
     else:
         return (responses[0]).mname.to_text()
+
 
 async def get_serial(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
@@ -193,6 +210,7 @@ async def get_serial(useTcp, addressinfo, timeoutvalue, zone):
     else:
         return (responses[0]).serial
 
+
 async def get_retry(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "SOA", useTcp)
@@ -201,6 +219,7 @@ async def get_retry(useTcp, addressinfo, timeoutvalue, zone):
     else:
         return (responses[0]).retry
 
+
 async def get_ns(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "NS", useTcp)
@@ -208,42 +227,44 @@ async def get_ns(useTcp, addressinfo, timeoutvalue, zone):
         return ""
     else:
         result = []
-        if len(responses)>0:
+        if len(responses) > 0:
             for response in responses:
                 finalname = response.target.to_text()
                 if finalname not in result:
                     result.append(finalname)
         return result
 
+
 async def get_records(useTcp, addressinfo, timeoutvalue, record, kind):
-    customresolver = await get_resolver(addressinfo,timeoutvalue)
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, record, kind, useTcp)
     if responses == None:
-        #server is not responding
+        # server is not responding
         return None
     else:
-        #server is responding, maybe it returns an empty string is len(responses) is zero
+        # server is responding, maybe it returns an empty string is len(responses) is zero
         temp = []
-        if len(responses)>0:
+        if len(responses) > 0:
             for rdata in responses:
-                if kind=="TXT":
+                if kind == "TXT":
                     joint = ""
                     for parttxt in rdata.strings:
-                        joint = joint+parttxt.decode()
-                    temp.append("\""+joint+"\"")
+                        joint = joint + parttxt.decode()
+                    temp.append("\"" + joint + "\"")
                 else:
                     temp.append(rdata.to_text())
         result = ",".join(temp)
         return result
 
+
 async def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
-    customresolver = await get_resolver(addressinfo,timeoutvalue)
+    customresolver = await get_resolver(addressinfo, timeoutvalue)
     canonical_name = entry
     counter = 0
     infomsg(canonical_name)
     while True:
-        counter = counter+1
-        if counter>30:
+        counter = counter + 1
+        if counter > 30:
             # loop?
             canonical_name = ""
             break
@@ -253,7 +274,7 @@ async def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
             if answer == None:
                 canonical_name = ""
                 break
-            elif len(answer)>0:
+            elif len(answer) > 0:
                 canonical_name = answer[0].to_text()
             else:
                 # not None and not CNAME answer, ready to resolve A/AAAA
@@ -261,36 +282,37 @@ async def get_query(useTcp, protocol, addressinfo, timeoutvalue, entry):
     alternatives = []
     if protocol == "-6":
         responses = await resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-        if responses!=None:
+        if responses != None:
             for response in responses:
                 alternatives.append(response)
     elif protocol == "-4":
         responses = await resolvewithretries(customresolver, canonical_name, "A", useTcp)
-        if responses!=None:
+        if responses != None:
             for response in responses:
                 alternatives.append(response)
     else:
         responses = await resolvewithretries(customresolver, canonical_name, "AAAA", useTcp)
-        if responses!=None:
+        if responses != None:
             for response in responses:
                 alternatives.append(response)
         responses = await resolvewithretries(customresolver, canonical_name, "A", useTcp)
-        if responses!=None:
+        if responses != None:
             for response in responses:
                 alternatives.append(response)
-    if alternatives==None:
+    if alternatives == None:
         return ""
     else:
         result = ""
-        if len(alternatives)>0:
+        if len(alternatives) > 0:
             randpos = random.randrange(len(alternatives))
             result = alternatives[randpos].to_text()
         return result
 
+
 async def get_resolver(addressinfo, timeoutvalue):
     parts = addressinfo.split("@")
     address = parts[0]
-    if len(parts)>1:
+    if len(parts) > 1:
         port = int(parts[1])
     else:
         port = 53
@@ -301,7 +323,7 @@ async def get_resolver(addressinfo, timeoutvalue):
         for counter in range(5):
             validparsing = False
             try:
-                stream = io.StringIO("nameserver "+address)
+                stream = io.StringIO("nameserver " + address)
                 customresolver.read_resolv_conf(stream)
             except:
                 pass
@@ -314,326 +336,331 @@ async def get_resolver(addressinfo, timeoutvalue):
                 await asyncio.sleep(1)
         customresolver.port = port
     customresolver.timeout = timeoutvalue
-    infomsg("found resolver "+str(customresolver._nameservers))
+    infomsg("found resolver " + str(customresolver._nameservers))
     return customresolver
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         if addressinfo == None:
-            return build_exitinfo("CRITICAL","error during get_address - "+str(protocol)+" "+str(server))
+            return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
             found = await get_records(useTcp, addressinfo, timeoutvalue, record, kind)
-            #infomsg(found)
+            # infomsg(found)
 
             if found == None:
-                #server not responding
-                return build_exitinfo(timeoutstatus,"no response when trying to resolve records")
-            elif found=="":
-                #server responding, but no results
-                if expected==".":
-                    return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
+                # server not responding
+                return build_exitinfo(timeoutstatus, "no response when trying to resolve records")
+            elif found == "":
+                # server responding, but no results
+                if expected == ".":
+                    return build_exitinfo("OK", "the query of record " + record + " to " + addressinfo + " did not return any value")
                 else:
-                    return build_exitinfo("CRITICAL","the server is not returning any value for the record")
+                    return build_exitinfo("CRITICAL", "the server is not returning any value for the record")
             else:
                 if expected == "":
-                    return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" - no specific result was expected")
+                    return build_exitinfo("OK", "the query of record " + record + " to " + addressinfo + " was successful with value " + found + " - no specific result was expected")
                 else:
                     listexpected = sorted(expected.split(","))
                     listfound = sorted(found.split(","))
                     if (",".join(listexpected) == ",".join(listfound)):
-                        return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" was successful with value "+found+" as expected | found="+str(len(listfound)))
+                        return build_exitinfo("OK", "the query of record " + record + " to " + addressinfo + " was successful with value " + found + " as expected | found=" + str(len(listfound)))
                     else:
                         listunexpected = []
                         for test in listfound:
                             if test not in listexpected:
                                 listunexpected.append(test)
-                        msgunexpected = "there were issues with the query of record "+record+" to "+addressinfo+" - Result "+" ".join(listunexpected)+" were not in expected "+expected+" | found="+str(len(listfound))+" unexpected="+str(len(listunexpected))
-                        if len(listunexpected)>0:
-                            return build_exitinfo("CRITICAL",msgunexpected)
+                        msgunexpected = "there were issues with the query of record " + record + " to " + addressinfo + " - Result " + " ".join(listunexpected) + " were not in expected " + expected + " | found=" + str(len(listfound)) + " unexpected=" + str(len(listunexpected))
+                        if len(listunexpected) > 0:
+                            return build_exitinfo("CRITICAL", msgunexpected)
 
                         listmissing = []
                         for test in listexpected:
                             if test not in listfound:
                                 listmissing.append(test)
-                        msgmissing = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is missing "+" ".join(listmissing)+" as in "+expected+" | found="+str(len(listfound))+" missing="+str(len(listmissing))
+                        msgmissing = "the query of record " + record + " to " + addressinfo + " was successful with value " + found + " but is missing " + " ".join(listmissing) + " as in " + expected + " | found=" + str(len(listfound)) + " missing=" + str(len(listmissing))
                         if alternativeslogic == True:
-                           return build_exitinfo("OK",msgmissing)
-                        if len(listmissing)>recmissingcrit:
-                            return build_exitinfo("CRITICAL",msgmissing)
-                        if len(listmissing)>recmissingwarn:
-                            return build_exitinfo("WARNING",msgmissing)
+                            return build_exitinfo("OK", msgmissing)
+                        if len(listmissing) > recmissingcrit:
+                            return build_exitinfo("CRITICAL", msgmissing)
+                        if len(listmissing) > recmissingwarn:
+                            return build_exitinfo("WARNING", msgmissing)
 
-                        msgfound = "the query of record "+record+" to "+addressinfo+" was successful with value "+found+" but is not reaching the minimum count of values | found="+str(len(listfound))+" unexpected=0 missing=0"
-                        if len(listfound)<recmincountcrit:
-                            return build_exitinfo("CRITICAL",msgfound)
-                        if len(listfound)<recmincountwarn:
-                            return build_exitinfo("WARNING",msgfound)
+                        msgfound = "the query of record " + record + " to " + addressinfo + " was successful with value " + found + " but is not reaching the minimum count of values | found=" + str(len(listfound)) + " unexpected=0 missing=0"
+                        if len(listfound) < recmincountcrit:
+                            return build_exitinfo("CRITICAL", msgfound)
+                        if len(listfound) < recmincountwarn:
+                            return build_exitinfo("WARNING", msgfound)
 
-                        return build_exitinfo("CRITICAL","unexpected situation")
+                        return build_exitinfo("CRITICAL", "unexpected situation")
         except dns.exception.Timeout as e:
-            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus, "timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            return build_exitinfo(timeoutstatus,"error during check record - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus, "error during check record - noroute - " + str(e))
         else:
-            return build_exitinfo("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL", "error during check record - " + type(e).__name__ + " - " + str(e))
     except Exception as e:
         if (expected == "."):
-            return build_exitinfo("OK","the query of record "+record+" to "+addressinfo+" did not return any value")
+            return build_exitinfo("OK", "the query of record " + record + " to " + addressinfo + " did not return any value")
         else:
-            return build_exitinfo("CRITICAL","error during check record - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL", "error during check record - " + type(e).__name__ + " - " + str(e))
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         if addressinfo == None:
-            return build_exitinfo("CRITICAL","error during get_address - "+str(protocol)+" "+str(server))
+            return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
             mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                return build_exitinfo(timeoutstatus,"no response when trying to resolve mname for zone '"+zone+"' using server "+addressinfo)
+                return build_exitinfo(timeoutstatus, "no response when trying to resolve mname for zone '" + zone + "' using server " + addressinfo)
             querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
             text_mname = await get_zone(useTcp, querydata, timeoutvalue, zone)
-            if text_mname=="":
-                return build_exitinfo(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from mname")
+            if text_mname == "":
+                return build_exitinfo(timeoutstatus, "no response when trying to transfer zone '" + zone + "' from mname")
             text_server = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
-            if text_server=="":
-                return build_exitinfo(timeoutstatus,"no response when trying to transfer zone '"+zone+"' from server")
+            if text_server == "":
+                return build_exitinfo(timeoutstatus, "no response when trying to transfer zone '" + zone + "' from server")
             if text_mname != text_server:
-                return build_exitinfo("CRITICAL","zone '"+zone+"' in target server "+server+" and MNAME server "+mname+" are different.")
-                infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_mname.splitlines())))
+                return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and MNAME server " + mname + " are different.")
+                infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(), text_mname.splitlines())))
             else:
                 ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
-                    return build_exitinfo(timeoutstatus,"no response when trying to resolve ns")
-                #infomsg(ns)
+                    return build_exitinfo(timeoutstatus, "no response when trying to resolve ns")
+                # infomsg(ns)
                 validservers = []
                 errorservers = []
                 for test in ns:
-                    #infomsg(test)
+                    # infomsg(test)
                     try:
                         querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
                         text_test = await get_zone(useTcp, querydata, timeoutvalue, zone)
-                        if text_test=="":
+                        if text_test == "":
                             if test not in errorservers:
                                 errorservers.append(test)
                         elif text_test == text_server:
                             validservers.append(test)
                         else:
-                            #zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
-                            return build_exitinfo("CRITICAL","zone '"+zone+"' in target server "+server+" and NS server "+test+" are different.")
+                            # zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
+                            return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and NS server " + test + " are different.")
                     except Exception as e:
                         if test not in errorservers:
                             errorservers.append(test)
-                if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    return build_exitinfo("CRITICAL","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
-                elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    return build_exitinfo("WARNING","zone '"+zone+"' match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                if len(validservers) < mincountcrit and mincountcrit >= 0 and len(errorservers) > 0:
+                    return build_exitinfo("CRITICAL", "zone '" + zone + "' match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " | valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
+                elif len(validservers) < mincountwarn and mincountwarn >= 0 and len(errorservers) > 0:
+                    return build_exitinfo("WARNING", "zone '" + zone + "' match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " | valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
                 else:
-                    return build_exitinfo("OK","zone '"+zone+"' in target server matches the transfer from the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" | valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                    return build_exitinfo("OK", "zone '" + zone + "' in target server matches the transfer from the MNAME and NS entries - errors " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " | valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
         except dns.exception.Timeout as e:
-            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus, "timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
             infomsg(traceback.format_exc())
-            return build_exitinfo(timeoutstatus,"error during check consistency - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus, "error during check consistency - noroute - " + str(e))
         else:
             infomsg(traceback.format_exc())
-            return build_exitinfo("CRITICAL","error during check consistency - "+type(e).__name__+"  - "+str(e))
+            return build_exitinfo("CRITICAL", "error during check consistency - " + type(e).__name__ + "  - " + str(e))
     except Exception as e:
         infomsg(traceback.format_exc())
-        return build_exitinfo("CRITICAL","error during check consistency - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL", "error during check consistency - " + type(e).__name__ + " - " + str(e))
+
 
 async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         if addressinfo == None:
-            return build_exitinfo("CRITICAL","error during get_address - "+str(protocol)+" "+str(server))
+            return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
-            automode = tolerancewarn<0 or tolerancecrit<0
+            automode = tolerancewarn < 0 or tolerancecrit < 0
 
             serial_server = await get_serial(useTcp, addressinfo, timeoutvalue, zone)
             if serial_server == "":
-                return build_exitinfo(timeoutstatus,"no response when trying to resolve serial_server "+addressinfo)
+                return build_exitinfo(timeoutstatus, "no response when trying to resolve serial_server " + addressinfo)
             if automode:
                 retry_server = await get_retry(useTcp, addressinfo, timeoutvalue, zone)
                 if retry_server == "":
-                    return build_exitinfo(timeoutstatus,"no response when trying to resolve retry_server "+addressinfo)
-            #infomsg(serial_server)
+                    return build_exitinfo(timeoutstatus, "no response when trying to resolve retry_server " + addressinfo)
+            # infomsg(serial_server)
 
             mname = await get_mname(useTcp, addressinfo, timeoutvalue, zone)
             if mname == "":
-                return build_exitinfo(timeoutstatus,"no response when trying to resolve mname for zone "+zone+" using server "+addressinfo)
+                return build_exitinfo(timeoutstatus, "no response when trying to resolve mname for zone " + zone + " using server " + addressinfo)
             principalserver = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(mname, zone))
-            #infomsg(principalserver)
+            # infomsg(principalserver)
             serial_mname = await get_serial(useTcp, principalserver, timeoutvalue, zone)
             if serial_mname == "":
-                return build_exitinfo(timeoutstatus,"no response when trying to resolve serial_mname for zone "+zone+" using found domain main server "+principalserver)
+                return build_exitinfo(timeoutstatus, "no response when trying to resolve serial_mname for zone " + zone + " using found domain main server " + principalserver)
             if automode:
                 retry_mname = await get_retry(useTcp, principalserver, timeoutvalue, zone)
                 if retry_mname == "":
-                    return build_exitinfo(timeoutstatus,"no response when trying to resolve retry_mname")
-            #infomsg(serial_mname)
+                    return build_exitinfo(timeoutstatus, "no response when trying to resolve retry_mname")
+            # infomsg(serial_mname)
 
-            difference = abs(serial_mname-serial_server)
+            difference = abs(serial_mname - serial_server)
 
             if automode:
-                commonretry = max(retry_server,retry_mname)
-                infomsg("the biggest retry time is "+str(commonretry))
+                commonretry = max(retry_server, retry_mname)
+                infomsg("the biggest retry time is " + str(commonretry))
                 tolerancewarn = commonretry
-                tolerancecrit = commonretry*2
+                tolerancecrit = commonretry * 2
 
             identical = True
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
                 if difference > tolerancecrit:
-                    return build_exitinfo("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and MNANE server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                    return build_exitinfo("CRITICAL", "zone in target server " + server + ":" + str(serial_server) + " and MNANE server " + mname + ":" + str(serial_mname) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
                 elif difference > tolerancewarn:
-                    return build_exitinfo("WARNING","zone in target server "+server+":"+str(serial_server)+" and MNAME server "+mname+":"+str(serial_mname)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                    return build_exitinfo("WARNING", "zone in target server " + server + ":" + str(serial_server) + " and MNAME server " + mname + ":" + str(serial_mname) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
             else:
                 if difference > 0:
                     identical = False
                 ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
-                    return build_exitinfo(timeoutstatus,"no response when trying to resolve ns")
-                #infomsg(ns)
+                    return build_exitinfo(timeoutstatus, "no response when trying to resolve ns")
+                # infomsg(ns)
                 validservers = []
                 errorservers = []
                 maxdifference = -1
                 for test in ns:
-                    #infomsg(test)
+                    # infomsg(test)
                     try:
                         querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
                         serial_test = await get_serial(useTcp, querydata, timeoutvalue, zone)
                         if serial_test == "":
                             if test not in errorservers:
                                 errorservers.append(test)
-                        #infomsg(str(serial_test))
-                        difference = abs(serial_test-serial_server)
+                        # infomsg(str(serial_test))
+                        difference = abs(serial_test - serial_server)
                         if difference > maxdifference:
                             maxdifference = difference
                         if (difference > tolerancecrit) or (difference > tolerancewarn):
                             identical = False
                             if difference > tolerancecrit:
-                                return build_exitinfo("CRITICAL","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                                return build_exitinfo("CRITICAL", "zone in target server " + server + ":" + str(serial_server) + " and NS server " + test + ":" + str(serial_test) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
                             elif difference > tolerancewarn:
-                                return build_exitinfo("WARNING","zone in target server "+server+":"+str(serial_server)+" and NS server "+test+":"+str(serial_test)+" have different serial (diff="+str(difference)+") | diff="+str(difference))
+                                return build_exitinfo("WARNING", "zone in target server " + server + ":" + str(serial_server) + " and NS server " + test + ":" + str(serial_test) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
                         if difference > 0:
                             identical = False
                         validservers.append(test)
                     except Exception as e:
                         if test not in errorservers:
                             errorservers.append(test)
-                if len(validservers)<mincountcrit and mincountcrit>=0 and len(errorservers)>0:
-                    return build_exitinfo("CRITICAL","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
-                elif len(validservers)<mincountwarn and mincountwarn>=0 and len(errorservers)>0:
-                    return build_exitinfo("WARNING","serials match, but too many servers are not responding - errors: "+" ".join(errorservers)+" - valid: "+" ".join(validservers))
+                if len(validservers) < mincountcrit and mincountcrit >= 0 and len(errorservers) > 0:
+                    return build_exitinfo("CRITICAL", "serials match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers))
+                elif len(validservers) < mincountwarn and mincountwarn >= 0 and len(errorservers) > 0:
+                    return build_exitinfo("WARNING", "serials match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers))
             if identical == True:
-                return build_exitinfo("OK","zone in target server has identical serial "+str(serial_server)+" than the MNAME and NS entries - errors "+" ".join(errorservers)+" - valid: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                return build_exitinfo("OK", "zone in target server has identical serial " + str(serial_server) + " than the MNAME and NS entries - errors " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
             else:
-                return build_exitinfo("OK","zone in target server withing the tolerance "+str(tolerancewarn)+" of the serial "+str(serial_server)+" from the MNAME and NS entries - errors: "+" ".join(validservers)+" (maxdiff="+str(maxdifference)+") | maxdiff="+str(maxdifference)+" valid="+str(len(validservers))+" errors="+str(len(errorservers)))
+                return build_exitinfo("OK", "zone in target server withing the tolerance " + str(tolerancewarn) + " of the serial " + str(serial_server) + " from the MNAME and NS entries - errors: " + " ".join(validservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
         except dns.exception.Timeout as e:
-            return build_exitinfo(timeoutstatus,"timeout reaching "+addressinfo)
+            return build_exitinfo(timeoutstatus, "timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            return build_exitinfo(timeoutstatus,"error during check serial - noroute - "+str(e))
+            return build_exitinfo(timeoutstatus, "error during check serial - noroute - " + str(e))
         else:
-            return build_exitinfo("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
+            return build_exitinfo("CRITICAL", "error during check serial - " + type(e).__name__ + " - " + str(e))
     except Exception as e:
-        return build_exitinfo("CRITICAL","error during check serial - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL", "error during check serial - " + type(e).__name__ + " - " + str(e))
 
 
 async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
         addressinfo = get_address(protocol, server)
         if addressinfo == None:
-            return build_exitinfo("CRITICAL","error during get_address - "+str(protocol)+" "+str(server))
+            return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
             start = datetime.datetime.now(datetime.UTC)
             text = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
-            elapsed = datetime.datetime.now(datetime.UTC)-start
+            elapsed = datetime.datetime.now(datetime.UTC) - start
             duration = elapsed.total_seconds()
-            if text!="":
-                return build_exitinfo("OK","transfer of zone "+zone+" from "+addressinfo+" successful | duration="+str(duration))
+            if text != "":
+                return build_exitinfo("OK", "transfer of zone " + zone + " from " + addressinfo + " successful | duration=" + str(duration))
             else:
-                return build_exitinfo("CRITICAL","there were issues with the transfer of zone "+zone+" from "+addressinfo)
+                return build_exitinfo("CRITICAL", "there were issues with the transfer of zone " + zone + " from " + addressinfo)
         except dns.exception.Timeout as e:
-            infomsg(timeoutstatus+": timeout reaching "+addressinfo)
+            infomsg(timeoutstatus + ": timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
         if str(e).endswith("No route to host"):
-            return build_exitinfo(timeoutstatus,"error during check transfer - "+type(e).__name__+"  - "+str(e))
+            return build_exitinfo(timeoutstatus, "error during check transfer - " + type(e).__name__ + "  - " + str(e))
         else:
             raise
     except Exception as e:
-        return build_exitinfo("CRITICAL","error during check transfer - "+type(e).__name__+" - "+str(e))
+        return build_exitinfo("CRITICAL", "error during check transfer - " + type(e).__name__ + " - " + str(e))
+
 
 async def check_zone(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, consistency, serial, transfer, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     if consistency:
-        return await check_consistency(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,mincountwarn,mincountcrit)
+        return await check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit)
     elif serial:
-        return await check_serial(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone,tolerancewarn,tolerancecrit,mincountwarn,mincountcrit)
+        return await check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit)
     elif transfer:
-        return await check_transfer(useTcp,protocol,server,timeoutvalue,timeoutstatus,authoritative,zone)
+        return await check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone)
     else:
-        return build_exitinfo("CRITICAL","unknown check for zone")
+        return build_exitinfo("CRITICAL", "unknown check for zone")
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     exitinfo = None
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
 #    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
-    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                                   help="mode TCP/UDP")
-    parser.add_argument("-r", "--record",                                  dest="record",           default="",                                   help="record to query (exclusive with zone)")
-    parser.add_argument("-p", "--type",                                    dest="kind",             default="A",                                  help="query type for the record")
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected record value")
-    parser.add_argument("-A", "--alternativeslogic", action="store_true",  dest="alternativeslogic",default=False,                                help="there is no need to match all the expected values")
-    parser.add_argument("-z", "--zone",                                    dest="zone",             default="",                                   help="zone to test (exclusive with record)")
-    parser.add_argument("-y", "--consistency",       action="store_true",  dest="consistency",      default=False,                                help="test full consistency for zone at server with MNAME and NS")
-    parser.add_argument("-l", "--serial" ,           action="store_true",  dest="serial",           default=False,                                help="test same serial for zone at server with MNAME and NS")
-    parser.add_argument("-f", "--transfer",          action="store_true",  dest="transfer",         default=False,                                help="test transfer of zone at server")
-    parser.add_argument("-a", "--authoritative",     action="store_true",  dest="authoritative",    default=False,                                help="the reply must be authoritative (not implemented)")
-    parser.add_argument("-o", "--sertolerancewarn",                        dest="sertolerancewarn", default="auto",                               help="tolerance in zone serial before considering warning (integer or 'auto')")
-    parser.add_argument("-n", "--sertolerancecrit",                        dest="sertolerancecrit", default="auto",                               help="tolerance in zone serial before considering critical (integer or 'auto')")
-    parser.add_argument("-u", "--sermincountwarn",                         dest="sermincountwarn",  default="3",                                  help="minimum number of responding servers before considering warning")
-    parser.add_argument("-i", "--sermincountcrit",                         dest="sermincountcrit",  default="2",                                  help="minimum number of responding servers before considering critical")
-    parser.add_argument("-O", "--recmissingwarn",                          dest="recmissingwarn",   default="0",                                  help="tolerance in missing values in record before considering warning")
-    parser.add_argument("-N", "--recmissingcrit",                          dest="recmissingcrit",   default="0",                                  help="tolerance in missing values in record before considering critical")
-    parser.add_argument("-U", "--recmincountwarn",                         dest="recmincountwarn",  default="0",                                  help="minimum number of values in record before considering warning")
-    parser.add_argument("-I", "--recmincountcrit",                         dest="recmincountcrit",  default="0",                                  help="minimum number of values in record servers before considering critical")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
+    parser.add_argument("-m", "--mode", dest="mode", default="", help="mode TCP/UDP")
+    parser.add_argument("-r", "--record", dest="record", default="", help="record to query (exclusive with zone)")
+    parser.add_argument("-p", "--type", dest="kind", default="A", help="query type for the record")
+    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected record value")
+    parser.add_argument("-A", "--alternativeslogic", action="store_true", dest="alternativeslogic", default=False, help="there is no need to match all the expected values")
+    parser.add_argument("-z", "--zone", dest="zone", default="", help="zone to test (exclusive with record)")
+    parser.add_argument("-y", "--consistency", action="store_true", dest="consistency", default=False, help="test full consistency for zone at server with MNAME and NS")
+    parser.add_argument("-l", "--serial", action="store_true", dest="serial", default=False, help="test same serial for zone at server with MNAME and NS")
+    parser.add_argument("-f", "--transfer", action="store_true", dest="transfer", default=False, help="test transfer of zone at server")
+    parser.add_argument("-a", "--authoritative", action="store_true", dest="authoritative", default=False, help="the reply must be authoritative (not implemented)")
+    parser.add_argument("-o", "--sertolerancewarn", dest="sertolerancewarn", default="auto", help="tolerance in zone serial before considering warning (integer or 'auto')")
+    parser.add_argument("-n", "--sertolerancecrit", dest="sertolerancecrit", default="auto", help="tolerance in zone serial before considering critical (integer or 'auto')")
+    parser.add_argument("-u", "--sermincountwarn", dest="sermincountwarn", default="3", help="minimum number of responding servers before considering warning")
+    parser.add_argument("-i", "--sermincountcrit", dest="sermincountcrit", default="2", help="minimum number of responding servers before considering critical")
+    parser.add_argument("-O", "--recmissingwarn", dest="recmissingwarn", default="0", help="tolerance in missing values in record before considering warning")
+    parser.add_argument("-N", "--recmissingcrit", dest="recmissingcrit", default="0", help="tolerance in missing values in record before considering critical")
+    parser.add_argument("-U", "--recmincountwarn", dest="recmincountwarn", default="0", help="minimum number of values in record before considering warning")
+    parser.add_argument("-I", "--recmincountcrit", dest="recmincountcrit", default="0", help="minimum number of values in record servers before considering critical")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
     protocol = None
     exclist = 0
-    if args.ipv0 == True :
+    if args.ipv0 == True:
         protocol = ""
-        exclist = exclist+1
-    if args.ipv4 == True :
+        exclist = exclist + 1
+    if args.ipv4 == True:
         protocol = "-4"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv4_gai_family
-    if args.ipv6 == True :
+    if args.ipv6 == True:
         protocol = "-6"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv6_gai_family
-    if (exclist>1) :
-        exitinfo = build_exitinfo("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist<1) :
-        exitinfo = build_exitinfo("CRITICAL","no protocol selected")
+    if (exclist > 1):
+        exitinfo = build_exitinfo("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitinfo = build_exitinfo("CRITICAL", "no protocol selected")
 
 #    if args.proxy != "":
 #        proxyparts = args.proxy.split("://",1)
@@ -643,15 +670,15 @@ async def main(forcedargs=None):
 #            dns.query.socket_factory = socks.socksocket
 
     if (args.record != "") and (args.zone != ""):
-        exitinfo = build_exitinfo("CRITICAL","parameters zone, record and consistency are exclusive")
+        exitinfo = build_exitinfo("CRITICAL", "parameters zone, record and consistency are exclusive")
 
     if (args.consistency == False) and (args.serial == False) and (args.transfer == False) and (args.zone != ""):
-        exitinfo = build_exitinfo("CRITICAL","choose consistency serial or transfer when using a zone")
+        exitinfo = build_exitinfo("CRITICAL", "choose consistency serial or transfer when using a zone")
 
     if args.mode == "tcp":
-        useTcp=True
+        useTcp = True
     else:
-        useTcp=False
+        useTcp = False
 
     if args.sertolerancewarn == "auto":
         sertolerancewarn = -1
@@ -664,27 +691,27 @@ async def main(forcedargs=None):
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
-    if len(parts)>1:
+    if len(parts) > 1:
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
 
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         if (args.zone != ""):
-            exitinfo = await check_zone(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.zone,args.consistency,args.serial,args.transfer,sertolerancewarn,sertolerancecrit,int(args.sermincountwarn),int(args.sermincountcrit))
+            exitinfo = await check_zone(useTcp, protocol, args.hostname, timeoutvalue, timeoutstatus, args.authoritative, args.zone, args.consistency, args.serial, args.transfer, sertolerancewarn, sertolerancecrit, int(args.sermincountwarn), int(args.sermincountcrit))
         elif (args.record != ""):
-            exitinfo = await check_record(useTcp,protocol,args.hostname,timeoutvalue,timeoutstatus,args.authoritative,args.record,args.kind,args.expected,args.alternativeslogic,int(args.recmissingwarn),int(args.recmissingcrit),int(args.recmincountwarn),int(args.recmincountcrit))
+            exitinfo = await check_record(useTcp, protocol, args.hostname, timeoutvalue, timeoutstatus, args.authoritative, args.record, args.kind, args.expected, args.alternativeslogic, int(args.recmissingwarn), int(args.recmissingcrit), int(args.recmincountwarn), int(args.recmincountcrit))
         else:
-            exitinfo = build_exitinfo("CRITICAL","no zone or record defined")
+            exitinfo = build_exitinfo("CRITICAL", "no zone or record defined")
     else:
-        exitinfo = build_exitinfo("CRITICAL","timeout status is not valid")
+        exitinfo = build_exitinfo("CRITICAL", "timeout status is not valid")
 
     return exitinfo
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     exitinfo = asyncio.run(main())
     exitnagios(exitinfo)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

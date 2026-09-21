@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import argparse
 import sys
@@ -10,60 +10,71 @@ import ipaddress
 import pygeoip
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def get_fail2ban_client_path():
     return "/usr/bin/fail2ban-client"
+
 
 def run_command(cmdlist):
     try:
         result = subprocess.run(cmdlist, text=True, capture_output=True, check=True)
         return result.stdout.strip().split("\n")
     except subprocess.CalledProcessError as e:
-        exitnagios("CRITICAL","Command failed: " + str(cmdlist) + ". Error: " + str(e))
+        exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + str(e))
+
 
 def check_fail2ban_status():
-    cmdlist = [get_fail2ban_client_path(),"ping"]
+    cmdlist = [get_fail2ban_client_path(), "ping"]
     infomsg("DEBUG: Running command: " + str(cmdlist))
     output = run_command(cmdlist)
     infomsg("DEBUG: Fail2Ban server response: " + str(output))
     if "Server replied: pong" not in output:
-        exitnagios("CRITICAL","Fail2Ban server not responding. Check if it is running and accessible.")
+        exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
+
 
 def get_jail_list():
-    cmdlist = [get_fail2ban_client_path(),"status"]
+    cmdlist = [get_fail2ban_client_path(), "status"]
     infomsg("DEBUG: Running command: " + str(cmdlist))
     output = run_command(cmdlist)
     for line in output:
@@ -71,10 +82,11 @@ def get_jail_list():
             jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
             infomsg("DEBUG: Jails list: " + ", ".join(jail_list))
             return jail_list
-    exitnagios("CRITICAL","Unable to retrieve the jail list.")
+    exitnagios("CRITICAL", "Unable to retrieve the jail list.")
+
 
 def get_banned_ips(jail_name):
-    cmdlist = [get_fail2ban_client_path(),"status",jail_name]
+    cmdlist = [get_fail2ban_client_path(), "status", jail_name]
     infomsg("DEBUG: Running command: " + str(cmdlist))
     output = run_command(cmdlist)
     for line in output:
@@ -84,12 +96,14 @@ def get_banned_ips(jail_name):
             return banned_ips
     return []
 
+
 def is_ipv6(ip):
     try:
         ip_obj = ipaddress.ip_address(ip)
         return isinstance(ip_obj, ipaddress.IPv6Address)
     except ValueError:
         return False
+
 
 def get_city_country(ip_address):
     if is_ipv6(ip_address):
@@ -105,15 +119,16 @@ def get_city_country(ip_address):
         country = None
     return country, city
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-j", "--jail",                                    dest="jail",                                                           help="Specify a specific jail to check.")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default="1",                                   help="Warning threshold for banned IPs.")
-    parser.add_argument("-c", "--critical",                                dest="critical",         default="2",                                   help="Critical threshold for banned IPs.")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-j", "--jail", dest="jail", help="Specify a specific jail to check.")
+    parser.add_argument("-w", "--warning", dest="warning", default="1", help="Warning threshold for banned IPs.")
+    parser.add_argument("-c", "--critical", dest="critical", default="2", help="Critical threshold for banned IPs.")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -138,7 +153,7 @@ async def main(forcedargs=None):
         for banned_ip in banned_ips:
             if banned_ip not in dict_banned.keys():
                 country, city = get_city_country(banned_ip)
-                dict_banned[banned_ip] = [city,country]
+                dict_banned[banned_ip] = [city, country]
 
     countjails = len(jails)
     countbanned = len(dict_banned)
@@ -149,11 +164,11 @@ async def main(forcedargs=None):
     elif countbanned >= warning:
         state = "WARNING"
 
-    exitnagios(state,str(countjails)+" detected jails with "+str(countbanned)+" banned IPs: " + str(dict_banned)+" | banned="+str(countbanned)+" jails="+str(countjails))
+    exitnagios(state, str(countjails) + " detected jails with " + str(countbanned) + " banned IPs: " + str(dict_banned) + " | banned=" + str(countbanned) + " jails=" + str(countjails))
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 # https://raw.githubusercontent.com/asciiphil/check_openhab/master/check_openhab
 # aptitude install python3-dateutil
@@ -19,39 +19,47 @@ import dateutil.relativedelta
 import pathlib
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 iso8601_duration_re = \
     re.compile(r"""^P(?:(?:(\d+)Y)?
@@ -63,38 +71,42 @@ iso8601_duration_re = \
                         |
                         (\d+)W)$""", re.X)
 
+
 def parse_iso8601(value, forward):
     period_match = iso8601_duration_re.search(value)
     if period_match:
         multiplier = 1 if forward else -1
-        years, months, days, hours, minutes, seconds, weeks = [ int(i) * multiplier if i else 0 for i in period_match.groups() ]
+        years, months, days, hours, minutes, seconds, weeks = [int(i) * multiplier if i else 0 for i in period_match.groups()]
         return datetime.datetime.now(pytz.utc) + dateutil.relativedelta.relativedelta(years=years, months=months, days=days, hours=hours, minutes=minutes, seconds=seconds, weeks=weeks)
     return dateutil.parser.parse(value, default=datetime.datetime(1, 1, 1))
 
+
 def split_threshold(value, level, convert):
-    if value in [None,"",":"]:
+    if value in [None, "", ":"]:
         return (None, None)
     items = value.split(":")
     try:
         many = len(items)
         if many == 2:
-            return (convert(items[0],False), convert(items[1],True))
+            return (convert(items[0], False), convert(items[1], True))
         else:
-            exitnagios("CRITICAL","Malformed "+str(levle)+" value: "+str(value))
+            exitnagios("CRITICAL", "Malformed " + str(levle) + " value: " + str(value))
     except:
-        exitnagios("CRITICAL","invalid value passed as %s parameter: %s" % (level, value))
+        exitnagios("CRITICAL", "invalid value passed as %s parameter: %s" % (level, value))
+
 
 def check_limits(state, low, high, name, return_code):
-    #infosmg(str(state))
-    #infosmg(str(low))
-    #infosmg(str(high))
-    #infomsng(str(datetime.datetime.now(pytz.utc)))
+    # infosmg(str(state))
+    # infosmg(str(low))
+    # infosmg(str(high))
+    # infomsng(str(datetime.datetime.now(pytz.utc)))
     if low is not None and state < low:
         return (return_code, "%s state (%s) is less than %s | value=%s" % (name, state, low, state))
     elif high is not None and state > high:
         return (return_code, "%s state (%s) is greater than %s | value=%s" % (name, state, high, state))
     else:
         return (None, None)
+
 
 class Thresholds:
     def __init__(self, args):
@@ -117,21 +129,21 @@ class Thresholds:
                 try:
                     self.compiled_regex_ok = re.compile(args.string_ok)
                 except:
-                    exitnagios("CRITICAL","Unable to compile string OK regex: "+args.string_ok)
+                    exitnagios("CRITICAL", "Unable to compile string OK regex: " + args.string_ok)
             else:
                 self.compiled_regex_ok = None
             if args.string_warn:
                 try:
                     self.compiled_regex_warn = re.compile(args.string_warn)
                 except:
-                    exitnagios("CRITICAL","Unable to compile string WARNING regex: "+args.string_warn)
+                    exitnagios("CRITICAL", "Unable to compile string WARNING regex: " + args.string_warn)
             else:
                 self.compiled_regex_warn = None
             if args.string_crit:
                 try:
                     self.compiled_regex_crit = re.compile(args.string_crit)
                 except:
-                    exitnagios("CRITICAL"," Unable to compile string CRITICAL regex: "+args.string_crit)
+                    exitnagios("CRITICAL", " Unable to compile string CRITICAL regex: " + args.string_crit)
             else:
                 self.compiled_regex_crit = None
 
@@ -140,7 +152,7 @@ class Thresholds:
             try:
                 state_float = float(state.split()[0])
             except ValueError as e:
-                return ("CRITICAL", "Numeric thresholds given for non-numeric state: "+str(state)+" | value="+str(state))
+                return ("CRITICAL", "Numeric thresholds given for non-numeric state: " + str(state) + " | value=" + str(state))
             rc, message = check_limits(state_float, self.number_unkn_low, self.number_unkn_high, name, "UNKNOWN")
             if rc is not None:
                 return (rc, message)
@@ -150,13 +162,13 @@ class Thresholds:
             rc, message = check_limits(state_float, self.number_warn_low, self.number_warn_high, name, "WARNING")
             if rc is not None:
                 return (rc, message)
-            return ("OK", name+" state within valid numeric range: "+str(state)+" | value="+str(state))
+            return ("OK", name + " state within valid numeric range: " + str(state) + " | value=" + str(state))
 
         if self.datetime_limits:
             try:
                 state_time = dateutil.parser.parse(state)
             except ValueError as e:
-                return ("CRITICAL", "Time thresholds given for non-time state: %s | value=%s" % (state,state))
+                return ("CRITICAL", "Time thresholds given for non-time state: %s | value=%s" % (state, state))
             rc, message = check_limits(state_time, self.datetime_crit_low, self.datetime_crit_high, name, "CRITICAL")
             if rc is not None:
                 return (rc, message)
@@ -177,11 +189,13 @@ class Thresholds:
 
         return ("OK", "%s state within fallback sittuation: %s | value=%s" % (name, state, state))
 
+
 def check_item(object_json, thresholds, timeoutstatus):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
         return (timeoutstatus, "%s is uninitialized." % object_json["name"])
     else:
         return thresholds.check(object_json["state"], object_json["name"])
+
 
 def check_thing(object_json, args):
     status = object_json["statusInfo"]["status"]
@@ -192,6 +206,7 @@ def check_thing(object_json, args):
     else:
         rc = "CRITICAL"
     return (rc, "%s is %s." % (object_json["UID"], status))
+
 
 def check_group(group_json, thresholds, args, timeoutstatus):
     final_rc = "OK"
@@ -213,22 +228,23 @@ def check_group(group_json, thresholds, args, timeoutstatus):
 
             if rc != "OK":
                 final_messages.append(message)
-        if rc=="CRITICAL":
-            final_rc="CRITICAL"
-        elif rc=="UNKNOWN" and final_rc in ["OK","WARNING"]:
-            final_rc="UNKNOWN"
-        elif rc=="WARNING" and final_rc in ["OK"]:
-            final_rc="WARNING"
+        if rc == "CRITICAL":
+            final_rc = "CRITICAL"
+        elif rc == "UNKNOWN" and final_rc in ["OK", "WARNING"]:
+            final_rc = "UNKNOWN"
+        elif rc == "WARNING" and final_rc in ["OK"]:
+            final_rc = "WARNING"
     return (final_rc, final_messages, perfdata)
 
+
 def fetch_object(item_url, args, timeoutstatus):
-    infomsg("# "+str(item_url))
+    infomsg("# " + str(item_url))
 
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     if args.exclude is True:
         ctx = ssl.create_default_context()
-        #ctx.check_hostname = False
-        #ctx.verify_mode = ssl.CERT_NONE
+        # ctx.check_hostname = False
+        # ctx.verify_mode = ssl.CERT_NONE
         ssl_handler = urllib.request.HTTPSHandler(context=ctx)
         ssl_opener = urllib.request.build_opener(ssl_handler)
         urllib.request.install_opener(ssl_opener)
@@ -236,9 +252,9 @@ def fetch_object(item_url, args, timeoutstatus):
         auth_params = args.authorization.split(":")
         if len(auth_params) != 2:
             if not os.path.isfile(args.authorization):
-                exitnagios("CRITICAL","Authorization parameters not in username:password format, nor an existing file")
+                exitnagios("CRITICAL", "Authorization parameters not in username:password format, nor an existing file")
             else:
-                filecontentslines=pathlib.Path(args.authorization).read_text().splitlines()
+                filecontentslines = pathlib.Path(args.authorization).read_text().splitlines()
                 auth_params = []
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
@@ -254,39 +270,40 @@ def fetch_object(item_url, args, timeoutstatus):
         item_raw = urllib.request.urlopen(item_request)
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            exitnagios(timeoutstatus,"item %s does not exist." % item_url)
+            exitnagios(timeoutstatus, "item %s does not exist." % item_url)
         else:
-            exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
+            exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
     except Exception as e:
-        exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
+        exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
 
     object_json = json.load(item_raw)
-    infomsg("# "+str(json.dumps(object_json)))
+    infomsg("# " + str(json.dumps(object_json)))
     return object_json
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-I", "--item",                                    dest="item",                                                           help="The item to check. Either this or --thing is required.")
-    parser.add_argument("-T", "--thing",                                   dest="thing",                                                          help="The thing to check. Will check thing's status. Either this or --item is required.")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",         default="localhost",                          help="Hostname of the OpenHAB instance.  Defaults to localhost.")
-    parser.add_argument("-p", "--port",                                    dest="port",             default=8080,           type=int,             help="Port number of the OpenHAB instance.  Defaults to 8080.")
-    parser.add_argument("-S", "--ssl",               action="store_true",  dest="ssl",                                                            help="Use SSL when connecting.  Default is not to use SSL.")
-    parser.add_argument("-X", "--exclude",           action="store_true",  dest="exclude",                                                        help="Do not validate SSL.  Default is to validate SSL.")
-    parser.add_argument("-a", "--authorization",                           dest="authorization",                                                  help="username:password pair to use when connecting.")
-    parser.add_argument("-u", "--base-url",                                dest="base_url",         default="/rest",                              help="Base path for the REST API.  Defaults to /rest.")
-    parser.add_argument("-G", "--group",             action="store_true",  dest="group",                                                          help="This item is a group; apply the checks to each group member individually. Cannot be used with --thing.")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:UNKNOWN",                         help="timeout value:STATUS")
-    parser.add_argument("-W", "--datetime-warn",                           dest="datetime_warn",    default=None,                                 help="low:high pair of timestamps or time periods which constitute WARNING thresholds for DateTime items.  See below for information on formatting.")
-    parser.add_argument("-C", "--datetime-crit",                           dest="datetime_crit",    default=None,                                 help="low:high pair of timestamps or time periods which constitute CRITICAL thresholds for DateTime items.  See below for information on formatting.")
-    parser.add_argument("-w", "--number-warn",                             dest="number_warn",      default=None,                                 help="low:high pair of numbers to set thresholds for the WARNING status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
-    parser.add_argument("-c", "--number-crit",                             dest="number_crit",      default=None,                                 help="low:high pair of numbers to set thresholds for the CRITICAL status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
-    parser.add_argument("-k", "--number-unkn",                             dest="number_unkn",      default=None,                                 help="low:high pair of numbers to set thresholds for the UNKNOWN status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
-    parser.add_argument("-O", "--string-ok",                               dest="string_ok",        default=None,                                 help="Regular expression to search for in string values.  Returns OK if pattern is found.")
-    parser.add_argument("-g", "--string-warn",                             dest="string_warn",      default=None,                                 help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
-    parser.add_argument("-l", "--string-crit",                             dest="string_crit",      default=None,                                 help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-I", "--item", dest="item", help="The item to check. Either this or --thing is required.")
+    parser.add_argument("-T", "--thing", dest="thing", help="The thing to check. Will check thing's status. Either this or --item is required.")
+    parser.add_argument("-H", "--hostname", dest="hostname", default="localhost", help="Hostname of the OpenHAB instance.  Defaults to localhost.")
+    parser.add_argument("-p", "--port", dest="port", default=8080, type=int, help="Port number of the OpenHAB instance.  Defaults to 8080.")
+    parser.add_argument("-S", "--ssl", action="store_true", dest="ssl", help="Use SSL when connecting.  Default is not to use SSL.")
+    parser.add_argument("-X", "--exclude", action="store_true", dest="exclude", help="Do not validate SSL.  Default is to validate SSL.")
+    parser.add_argument("-a", "--authorization", dest="authorization", help="username:password pair to use when connecting.")
+    parser.add_argument("-u", "--base-url", dest="base_url", default="/rest", help="Base path for the REST API.  Defaults to /rest.")
+    parser.add_argument("-G", "--group", action="store_true", dest="group", help="This item is a group; apply the checks to each group member individually. Cannot be used with --thing.")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="10:UNKNOWN", help="timeout value:STATUS")
+    parser.add_argument("-W", "--datetime-warn", dest="datetime_warn", default=None, help="low:high pair of timestamps or time periods which constitute WARNING thresholds for DateTime items.  See below for information on formatting.")
+    parser.add_argument("-C", "--datetime-crit", dest="datetime_crit", default=None, help="low:high pair of timestamps or time periods which constitute CRITICAL thresholds for DateTime items.  See below for information on formatting.")
+    parser.add_argument("-w", "--number-warn", dest="number_warn", default=None, help="low:high pair of numbers to set thresholds for the WARNING status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-c", "--number-crit", dest="number_crit", default=None, help="low:high pair of numbers to set thresholds for the CRITICAL status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-k", "--number-unkn", dest="number_unkn", default=None, help="low:high pair of numbers to set thresholds for the UNKNOWN status.  Either number may be absent to indicate no threshold in that direction. Only used for item/group checks.")
+    parser.add_argument("-O", "--string-ok", dest="string_ok", default=None, help="Regular expression to search for in string values.  Returns OK if pattern is found.")
+    parser.add_argument("-g", "--string-warn", dest="string_warn", default=None, help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
+    parser.add_argument("-l", "--string-crit", dest="string_crit", default=None, help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -294,28 +311,28 @@ async def main(forcedargs=None):
     timeoutparts = args.timeout.split(":")
     timeoutvalue = int(timeoutparts[0])
     timeoutstatus = "CRITICAL"
-    if len(timeoutparts)>1:
+    if len(timeoutparts) > 1:
         timeoutstatus = timeoutparts[1]
 
     thresholds = Thresholds(args)
 
     if args.item is None and args.thing is None:
-        exitnagios("CRITICAL","Item or Thing is mandatory.")
+        exitnagios("CRITICAL", "Item or Thing is mandatory.")
 
     if args.item is not None and args.thing is not None:
-        exitnagios("CRITICAL","Item and Thing cannot be combined.")
+        exitnagios("CRITICAL", "Item and Thing cannot be combined.")
 
     if args.thing is not None and args.group is not None:
-        exitnagios("CRITICAL"," Group functionality can only be used with item checks.")
+        exitnagios("CRITICAL", " Group functionality can only be used with item checks.")
 
     object_type = "items" if args.item else "things"
     object_name = args.item if args.item else args.thing
     temp = object_name.split("#")
     object_name = temp[0].split(".")[0]
-    object_name = object_name.replace("-","_")+"_"+temp[1]
+    object_name = object_name.replace("-", "_") + "_" + temp[1]
 
     object_url = "%s://%s:%d%s/%s/%s" % \
-               ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
+        ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
     object_json = fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
@@ -326,17 +343,17 @@ async def main(forcedargs=None):
             final_message = messages[0]
         else:
             final_message = "%d problems in group %s.\n%s" % (len(messages), object_json["name"], "\n".join(messages))
-        exitnagios(rc,final_message+" | "+perfdata)
+        exitnagios(rc, final_message + " | " + perfdata)
     elif args.item:
         rc, message = check_item(object_json, thresholds, timeoutstatus)
-        exitnagios(rc,message)
+        exitnagios(rc, message)
     elif args.thing:
         rc, message = check_thing(object_json, args)
-        exitnagios(rc,message)
+        exitnagios(rc, message)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

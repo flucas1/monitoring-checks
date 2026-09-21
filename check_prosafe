@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import argparse
 import sys
@@ -18,47 +18,55 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def findswitchesininterface(interface,model):
+
+def findswitchesininterface(interface, model):
     result = []
 
     for index in range(2):
-        infomsg("interface "+interface+" - iteration "+str(index))
-        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"discover"]
-        completedproc = subprocess.run(cmdline,capture_output=True)
+        infomsg("interface " + interface + " - iteration " + str(index))
+        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py", "--interface", interface, "discover"]
+        completedproc = subprocess.run(cmdline, capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
@@ -69,9 +77,9 @@ def findswitchesininterface(interface,model):
                 if line == "":
                     infos = {}
                 else:
-                    parts = line.split(":",1)
+                    parts = line.split(":", 1)
                     marker = parts[0].strip()
-                    if marker in ["model","name","MAC","dhcp","ip"]:
+                    if marker in ["model", "name", "MAC", "dhcp", "ip"]:
                         infos[marker] = parts[1].strip()
                 if ("model" in infos.keys()) and ("MAC" in infos.keys()):
                     if (infos["model"] == model) or (model == ""):
@@ -80,21 +88,22 @@ def findswitchesininterface(interface,model):
                             result.append(mac)
         time.sleep(1)
 
-    infomsg("interfaces "+str(result))
+    infomsg("interfaces " + str(result))
     return result
+
 
 def findallswitches(model):
     switches = {}
     if_list = netifaces.interfaces()
     for interface in if_list:
-        if (interface.startswith("veth")==False) and (interface.startswith("flannel")==False) and (interface.startswith("calico")==False) and (interface.startswith("cni")==False) and (interface.startswith("tun")==False) and (interface.startswith("tap")==False) and (interface not in ["pimreg","lo"]):
-            foundmacs = findswitchesininterface(interface,model)
-            if len(foundmacs)>0:
-                switches[interface]=foundmacs
+        if (interface.startswith("veth") == False) and (interface.startswith("flannel") == False) and (interface.startswith("calico") == False) and (interface.startswith("cni") == False) and (interface.startswith("tun") == False) and (interface.startswith("tap") == False) and (interface not in ["pimreg", "lo"]):
+            foundmacs = findswitchesininterface(interface, model)
+            if len(foundmacs) > 0:
+                switches[interface] = foundmacs
     return switches
 
 
-def queryversion(interface,mac,strict):
+def queryversion(interface, mac, strict):
     result = None
 
     if strict:
@@ -102,8 +111,8 @@ def queryversion(interface,mac,strict):
     else:
         maxversions = 2
     for index in range(maxversions):
-        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py","--interface",interface,"query","--mac",mac,"firmwarever"]
-        completedproc = subprocess.run(cmdline,capture_output=True)
+        cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py", "--interface", interface, "query", "--mac", mac, "firmwarever"]
+        completedproc = subprocess.run(cmdline, capture_output=True)
         output = completedproc.stdout.decode("utf-8").strip()
         errors = completedproc.stderr.decode("utf-8").strip()
         exitcode = completedproc.returncode
@@ -111,7 +120,7 @@ def queryversion(interface,mac,strict):
             for line in output.splitlines():
                 line = line.strip()
                 parts = line.split()
-                if len(parts)>0 and parts[0]=="Firmwarever":
+                if len(parts) > 0 and parts[0] == "Firmwarever":
                     result = parts[1]
                     break
         infomsg("queryversion")
@@ -122,44 +131,47 @@ def queryversion(interface,mac,strict):
 
     return result
 
-def getversions(switches,version,strict):
+
+def getversions(switches, version, strict):
     results = {}
-    for interface,macs in switches.items():
+    for interface, macs in switches.items():
         for mac in macs:
-            version = queryversion(interface,mac,strict)
+            version = queryversion(interface, mac, strict)
             results[mac] = {}
             results[mac]["interface"] = interface
             results[mac]["version"] = version
     return results
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def doprosafecall(model,expected,strict):
+
+def doprosafecall(model, expected, strict):
     switches = findallswitches(model)
     infomsg(str(switches))
-    versions = getversions(switches,expected,strict)
+    versions = getversions(switches, expected, strict)
     infomsg(str(versions))
 
     valid = {}
     failures = {}
-    for key,value in versions.items():
+    for key, value in versions.items():
         foundversion = value["version"]
-        if (foundversion==None and strict==False) or (foundversion==expected) or (expected==""):
+        if (foundversion == None and strict == False) or (foundversion == expected) or (expected == ""):
             valid[key] = value
         else:
             failures[key] = value
 
-    if len(failures)==0:
-        exitnagios("OK","all switches found are OK - valid "+str(valid)+" | found="+str(len(versions))+" failures="+str(len(failures))+" valid="+str(len(valid))+" version="+expected)
+    if len(failures) == 0:
+        exitnagios("OK", "all switches found are OK - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
     else:
-        exitnagios("WARNING","some switches are not as expected - failures "+str(failures)+" - valid "+str(valid)+" | found="+str(len(versions))+" failures="+str(len(failures))+" valid="+str(len(valid))+" version="+expected)
+        exitnagios("WARNING", "some switches are not as expected - failures " + str(failures) + " - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def generatedriver(proxy):
     chrome_options = Options()
-    #chrome_options.add_argument("--incognito")
-    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
+    # chrome_options.add_argument("--incognito")
+    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -177,15 +189,17 @@ def generatedriver(proxy):
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
-    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
 
+
 def check_page_loaded(driver):
-    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
+
 
 def wait_page_loaded(driver):
     timestamp = time.time()
@@ -196,19 +210,20 @@ def wait_page_loaded(driver):
             break
         time.sleep(1)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def getexpected(proxy,model):
+
+def getexpected(proxy, model):
     expected = ""
     try:
         driver = generatedriver(proxy)
 
-        wait = WebDriverWait(driver,20)
-        action=ActionChains(driver)
+        wait = WebDriverWait(driver, 20)
+        action = ActionChains(driver)
 
         infomsg("browser initialized")
 
-        url = "https://www.netgear.com/support/product/"+model.lower()+"#download"
+        url = "https://www.netgear.com/support/product/" + model.lower() + "#download"
         driver.get(url)
         time.sleep(1)
         wait_page_loaded(driver)
@@ -223,53 +238,54 @@ def getexpected(proxy,model):
                 version = parts[2]
                 if version not in candidates:
                     candidates.append(version)
-        if len(candidates)>0:
-             expected = candidates[0]
-        #for candidate in candidates:
+        if len(candidates) > 0:
+            expected = candidates[0]
+        # for candidate in candidates:
         #    if expected == "":
         #        expected = candidate
         #    else:
         #        expparts = expected.split(".")
         #        candparts = candidate.split(".")
 
-        infomsg("the autodetected expected value is "+expected)
+        infomsg("the autodetected expected value is " + expected)
 
     except Exception as e:
-        infomsg("unexpected error during the check "+str(e))
+        infomsg("unexpected error during the check " + str(e))
 
     return expected
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model",                                   dest="model",            default="",                                   help="netgear prosafe model to check")
-    parser.add_argument("-e", "--expected",                                dest="expected",         default="auto",                               help="expected firmware version")
-    parser.add_argument("-s", "--strict",            action="store_true",  dest="strict",           default=False,                                help="if version not found, raise problem")
-    parser.add_argument("-l", "--tolerant",          action="store_false", dest="strict",                                                         help="if version not found, do not raise problem")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-m", "--model", dest="model", default="", help="netgear prosafe model to check")
+    parser.add_argument("-e", "--expected", dest="expected", default="auto", help="expected firmware version")
+    parser.add_argument("-s", "--strict", action="store_true", dest="strict", default=False, help="if version not found, raise problem")
+    parser.add_argument("-l", "--tolerant", action="store_false", dest="strict", help="if version not found, do not raise problem")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
-    #model = "GS108Ev3"
-    #expected = "2.06.24"
-    #strict = False
+    # model = "GS108Ev3"
+    # expected = "2.06.24"
+    # strict = False
 
     model = args.model
     strict = args.strict
-    if args.expected in ["auto","",None]:
+    if args.expected in ["auto", "", None]:
         proxy = ""
-        expected = getexpected(proxy,model)
+        expected = getexpected(proxy, model)
         infomsg(expected)
     else:
         expected = args.expected
 
-    doprosafecall(model,expected,strict)
+    doprosafecall(model, expected, strict)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

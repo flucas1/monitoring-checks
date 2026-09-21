@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import requests
 import base64
@@ -11,41 +11,50 @@ import sys
 import pathlib
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 original_getaddrinfo = socket.getaddrinfo
+
 
 def forced_ipv6_gai_family(*args, **kwargs):
     global original_getaddrinfo
@@ -54,6 +63,7 @@ def forced_ipv6_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET6]
 
+
 def forced_ipv4_gai_family(*args, **kwargs):
     global original_getaddrinfo
     responses = original_getaddrinfo(*args, **kwargs)
@@ -61,7 +71,8 @@ def forced_ipv4_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET]
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 class RouterInfo:
 
@@ -128,11 +139,11 @@ class RouterInfo:
         :returns: JSON with last boot time and uptime in seconds
         """
         r = self.__get('uptime()')
-        if r==None:
+        if r == None:
             return None
         else:
             temp = json.loads(r)["uptime"]
-            parts = temp.replace("(","¶").replace(")","¶").split("¶")
+            parts = temp.replace("(", "¶").replace(")", "¶").split("¶")
             since = parts[0]
             up = parts[1].split()[0]
             return json.loads('{' + '"since":"{}", "uptime":"{}"'.format(since, up) + '}')
@@ -143,7 +154,7 @@ class RouterInfo:
         :returns: integer - uptime in seconds
         """
         r = self.get_uptime()
-        if r==None:
+        if r == None:
             return None
         else:
             return int(r['uptime'])
@@ -155,7 +166,7 @@ class RouterInfo:
         :returns: JSON with memory variables
         """
         r = self.__get('memory_usage()')
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads('{' + r[17:])
@@ -168,7 +179,7 @@ class RouterInfo:
         :returns: JSON with CPU load statistics
         """
         r = self.__get('cpu_usage()')
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads('{' + r[14:])
@@ -195,7 +206,7 @@ class RouterInfo:
         :returns: JSON with list of clents and a list of mac addresses
         """
         r = self.__get('get_clientlist()')
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads(r)
@@ -208,7 +219,7 @@ class RouterInfo:
         :returns: JSON with sent and received Megabits since last boot
         """
         r = self.__get('netdev(appobj)')
-        if r==None:
+        if r == None:
             return None
         else:
             meas_2 = json.loads(r)
@@ -254,7 +265,7 @@ class RouterInfo:
         :returns: JSON with status information on the WAN connection
         """
         r = self.__get('wanlink()')
-        if r==None:
+        if r == None:
             return None
         else:
             status = {}
@@ -272,7 +283,7 @@ class RouterInfo:
         :returns: True if WAN is connected
         """
         r = self.get_status_wan()
-        if r==None:
+        if r == None:
             return None
         else:
             return r['status'] == '1'
@@ -294,8 +305,8 @@ class RouterInfo:
                   'lan_proto', 'x_Setting', 'label_mac', 'lan_netmask', 'lan_gateway',
                   'http_enable', 'https_lanport', 'wl0_country_code', 'wl1_country_code']:
             r = self.__get("nvram_get(" + s + ")")
-            if r!=None:
-               settings[s] = json.loads(r)[s]
+            if r != None:
+                settings[s] = json.loads(r)[s]
         return settings
 
     def get_lan_ip_address(self):
@@ -304,7 +315,7 @@ class RouterInfo:
         :return: IP address
         """
         r = self.__get("nvram_get(lan_ipaddr)")
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads(r)['lan_ipaddr']
@@ -315,7 +326,7 @@ class RouterInfo:
         :return: Netmask
         """
         r = self.__get("nvram_get(lan_netmask)")
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads(r)['lan_netmask']
@@ -326,7 +337,7 @@ class RouterInfo:
         :return: IP address of gateay
         """
         r = self.__get("nvram_get(lan_gateway)")
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads(r)['lan_gateway']
@@ -338,7 +349,7 @@ class RouterInfo:
         :returns: JSON with a list of DHCP leases
         """
         r = self.__get("dhcpLeaseMacList()")
-        if r==None:
+        if r == None:
             return None
         else:
             return json.loads(r)
@@ -350,7 +361,7 @@ class RouterInfo:
         :returns: JSON list with MAC addresses
         """
         clnts = self.get_clients_fullinfo()
-        if clnts==None:
+        if clnts == None:
             return None
         else:
             infomsg(clnts)
@@ -368,7 +379,7 @@ class RouterInfo:
         :return: JSON list of clients with main characteristics
         """
         clnts = self.get_clients_fullinfo()
-        if clnts==None:
+        if clnts == None:
             return None
         else:
             lst = []
@@ -397,7 +408,7 @@ class RouterInfo:
         :return: JSON with clientinfo (see get_clients_info() for description)
         """
         clnts = self.get_clients_fullinfo()['get_clientlist']
-        if clnts==None:
+        if clnts == None:
             return None
         else:
             if clientid in clnts:
@@ -405,11 +416,12 @@ class RouterInfo:
             else:
                 return None
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def doasusroutercall(host,username,password,timeoutvalue):
+
+def doasusroutercall(host, username, password, timeoutvalue):
     try:
-        ri = RouterInfo(host,username,password)
+        ri = RouterInfo(host, username, password)
         infomsg(ri)
 
         infomsg("Uptime    : " + str(ri.get_uptime_secs()))
@@ -430,118 +442,123 @@ def doasusroutercall(host,username,password,timeoutvalue):
         infomsg("WAN       : " + str(ri.get_status_wan()))
         infomsg("Client   : " + str(ri.get_client_info('B8:2C:A0:5F:37:52')))
 
-        #status = "dummy"
-        #exitnagios("OK","the result '"+status+"' is as expected")
+        # status = "dummy"
+        # exitnagios("OK","the result '"+status+"' is as expected")
 
     except Exception as e:
-        exitnagios("CRITICAL","unexpected error during the check "+str(e)+" | value=-1")
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")
 
     return ri
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def check_status(value,warn_low,warn_high,crit_low,crit_high):
-    if ((crit_low!=None) and (crit_high!=None)) and ((value<crit_low) or (value>crit_high)):
-        exitnagios("CRITICAL","value "+str(value)+" is critical | value="+str(value))
-    elif ((warn_low!=None) and (warn_high!=None)) and ((value<warn_low) or (value>warn_high)):
-        exitnagios("WARNING","value "+str(value)+" is warning | value="+str(value))
+
+def check_status(value, warn_low, warn_high, crit_low, crit_high):
+    if ((crit_low != None) and (crit_high != None)) and ((value < crit_low) or (value > crit_high)):
+        exitnagios("CRITICAL", "value " + str(value) + " is critical | value=" + str(value))
+    elif ((warn_low != None) and (warn_high != None)) and ((value < warn_low) or (value > warn_high)):
+        exitnagios("WARNING", "value " + str(value) + " is warning | value=" + str(value))
     else:
-        exitnagios("OK","value "+str(value)+" is as expected | value="+str(value))
+        exitnagios("OK", "value " + str(value) + " is as expected | value=" + str(value))
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-def douptimecall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+
+def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = doasusroutercall(host, username, password, timeoutvalue)
     uptime = ri.get_uptime_secs()
-    if uptime!=None:
+    if uptime != None:
         infomsg(uptime)
-        check_status(uptime,warn_low,warn_high,crit_low,crit_high)
+        check_status(uptime, warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
-def domemorycall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+
+def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = doasusroutercall(host, username, password, timeoutvalue)
     memory = ri.get_memory_usage()
-    if memory!=None:
-        value = (int(memory["mem_used"])/int(memory["mem_total"]))*100
+    if memory != None:
+        value = (int(memory["mem_used"]) / int(memory["mem_total"])) * 100
         infomsg(value)
-        check_status(round(value,2),warn_low,warn_high,crit_low,crit_high)
+        check_status(round(value, 2), warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
-def docpucall(host,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus):
-    ri = doasusroutercall(host,username,password,timeoutvalue)
+
+def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = doasusroutercall(host, username, password, timeoutvalue)
     cpu = ri.get_cpu_usage()
-    if cpu!=None:
+    if cpu != None:
         infomsg(cores)
-        cores = int(len(cpu)/2)
+        cores = int(len(cpu) / 2)
         counter = 1
         values = []
         while counter <= cores:
-            temp = (int(cpu["cpu"+str(counter)+"_usage"])/int(cpu["cpu"+str(counter)+"_total"]))*100
+            temp = (int(cpu["cpu" + str(counter) + "_usage"]) / int(cpu["cpu" + str(counter) + "_total"])) * 100
             values.append(temp)
-            counter = counter+1
+            counter = counter + 1
         infomsg(values)
         added = 0
         for value in values:
-            added = added+value
-        average = added/len(values)
+            added = added + value
+        average = added / len(values)
         infomsg(average)
-        check_status(round(average,2),warn_low,warn_high,crit_low,crit_high)
+        check_status(round(average, 2), warn_low, warn_high, crit_low, crit_high)
     else:
-        exitnagios(timeoutstatus,"unable to retrieve the value | value=-1")
+        exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
-    parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
-    parser.add_argument("-0", "--ipv0",              action="store_true",  dest="ipv0",             default=False,                                help="do not specify ip protocol version")
-    parser.add_argument("-H", "--hostname",                                dest="hostname",                                                       help="server to check")
-    parser.add_argument("-t", "--timeout",                                 dest="timeout",          default="10:CRITICAL",                        help="timeout value:STATUS")
-    parser.add_argument("-f", "--filecred",                                dest="filecred",         default="",                                   help="file containing the management credentials")
-    parser.add_argument("-m", "--mode",                                    dest="mode",             default="",                                   help="value to check")
-    parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="warning level %")
-    parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="critical level %")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
+    parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
+    parser.add_argument("-m", "--mode", dest="mode", default="", help="value to check")
+    parser.add_argument("-w", "--warning", dest="warning", default="", help="warning level %")
+    parser.add_argument("-c", "--critical", dest="critical", default="", help="critical level %")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
-    
+
     setcandebug(args.debug)
-    
+
     protocol = None
     exclist = 0
-    if args.ipv0 == True :
+    if args.ipv0 == True:
         protocol = ""
-        exclist = exclist+1
-    if args.ipv4 == True :
+        exclist = exclist + 1
+    if args.ipv4 == True:
         protocol = "-4"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv4_gai_family
-    if args.ipv6 == True :
+    if args.ipv6 == True:
         protocol = "-6"
-        exclist = exclist+1
+        exclist = exclist + 1
         socket.getaddrinfo = forced_ipv6_gai_family
-    if (exclist>1) :
-        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist<1) :
-        exitnagios("CRITICAL","no protocol selected")
-    
-    if args.hostname==None or args.hostname=="":
-        exitnagios("CRITICAL","please specify a target hostname")
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
+    if args.hostname == None or args.hostname == "":
+        exitnagios("CRITICAL", "please specify a target hostname")
 
     if args.filecred == "":
-        exitnagios("CRITICAL","filecred is not specified")
-    elif args.mode not in ["uptime","memory","cpu"]:
-        exitnagios("CRITICAL","mode must be uptime, memory, cpu")
+        exitnagios("CRITICAL", "filecred is not specified")
+    elif args.mode not in ["uptime", "memory", "cpu"]:
+        exitnagios("CRITICAL", "mode must be uptime, memory, cpu")
     else:
-        filecontentslines=pathlib.Path(args.filecred).read_text().splitlines()
-        username=filecontentslines[0]
-        password=filecontentslines[1]
+        filecontentslines = pathlib.Path(args.filecred).read_text().splitlines()
+        username = filecontentslines[0]
+        password = filecontentslines[1]
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
-    if len(parts)>1:
+    if len(parts) > 1:
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
@@ -562,18 +579,18 @@ async def main(forcedargs=None):
         crit_low = None
         crit_high = None
 
-    if args.mode=="uptime":
-        douptimecall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
-    elif args.mode=="memory":
-        domemorycall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
-    elif args.mode=="cpu":
-        docpucall(args.hostname,username,password,warn_low,warn_high,crit_low,crit_high,timeoutvalue,timeoutstatus)
+    if args.mode == "uptime":
+        douptimecall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+    elif args.mode == "memory":
+        domemorycall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+    elif args.mode == "cpu":
+        docpucall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
 
-    exitnagios("CRITICAL","unexpected case")
+    exitnagios("CRITICAL", "unexpected case")
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

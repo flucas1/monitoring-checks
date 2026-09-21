@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import os
 import sys
@@ -8,39 +8,47 @@ import re
 import argparse
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def checkgetent(database, key, value, partial, outputlevel):
     command = ["/usr/bin/getent", database]
@@ -50,53 +58,54 @@ def checkgetent(database, key, value, partial, outputlevel):
         result = subprocess.check_output(command)
         output = result.decode("utf-8")
     except Exception as e:
-        exitnagios("CRITICAL","exception during getent call")
+        exitnagios("CRITICAL", "exception during getent call")
 
     if output == None:
-        exitnagios("CRITICAL","no output from getent")
+        exitnagios("CRITICAL", "no output from getent")
     else:
         lines = output.splitlines()
         isok = False
         found = False
         for line in lines:
-            infomsg("Evaluating line - "+line)
-            if  line.startswith(key+":"):
+            infomsg("Evaluating line - " + line)
+            if line.startswith(key + ":"):
                 found = True
-                if ((value==None) or (value=="")):
-                    exitnagios("OK","found key and no expected value was set - "+line)
-                elif (line == key+value):
-                    exitnagios("OK","found fully matching expected line "+line)
-                elif partial and (line.startswith(key+value)):
-                    exitnagios("OK","found partial match with expected line "+line)
+                if ((value == None) or (value == "")):
+                    exitnagios("OK", "found key and no expected value was set - " + line)
+                elif (line == key + value):
+                    exitnagios("OK", "found fully matching expected line " + line)
+                elif partial and (line.startswith(key + value)):
+                    exitnagios("OK", "found partial match with expected line " + line)
                 else:
-                    exitnagios(outputlevel,"found unexpected line "+line+" but it was expected "+key+value)
+                    exitnagios(outputlevel, "found unexpected line " + line + " but it was expected " + key + value)
                 break
         if found == False:
-            exitnagios("CRITICAL","key not found "+key)
+            exitnagios("CRITICAL", "key not found " + key)
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--database",                                dest="database",                                                       help="database to use (passwod, group, ...)")
-    parser.add_argument("-k", "--key",                                     dest="key",                                                            help="key to search")
-    parser.add_argument("-l", "--value",                                   dest="value",            default=None,                                 help="expected value")
-    parser.add_argument("-p", "--partial",           action="store_true",  dest="partial",          default=False,                                help="is partial match")
-    parser.add_argument("-w", "--warning",           action="store_false", dest="critical",                                                       help="Return warning if not matching")
-    parser.add_argument("-c", "--critical",          action="store_true",  dest="critical",         default=True,                                 help="Return critical if not matching (default)")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-d", "--database", dest="database", help="database to use (passwod, group, ...)")
+    parser.add_argument("-k", "--key", dest="key", help="key to search")
+    parser.add_argument("-l", "--value", dest="value", default=None, help="expected value")
+    parser.add_argument("-p", "--partial", action="store_true", dest="partial", default=False, help="is partial match")
+    parser.add_argument("-w", "--warning", action="store_false", dest="critical", help="Return warning if not matching")
+    parser.add_argument("-c", "--critical", action="store_true", dest="critical", default=True, help="Return critical if not matching (default)")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
-    if args.critical==True:
+    if args.critical == True:
         outputlevel = "CRITICAL"
     else:
         outputlevel = "WARNING"
 
     result = checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

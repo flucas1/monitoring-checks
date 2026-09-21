@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import sys
 import os
@@ -11,41 +11,51 @@ import datetime
 import dateutil.parser
 import asyncio
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 extra_tz = None
+
+
 def get_extra_tz():
     global extra_tz
     if extra_tz == None:
@@ -280,6 +290,7 @@ def get_extra_tz():
         }
     return extra_tz
 
+
 def get_maildir_state(inbox, warninglimit, criticallimit):
     """
     Traverse inbox and subfolders once, returning:
@@ -322,9 +333,11 @@ def get_maildir_state(inbox, warninglimit, criticallimit):
         exitnagios("CRITICAL", "there was an exception - " + str(e))
 
     return state
+
+
 def get_home_path(username):
-    cmdline = ["/usr/bin/getent","passwd",username]
-    completedproc = subprocess.run(cmdline,capture_output=True)
+    cmdline = ["/usr/bin/getent", "passwd", username]
+    completedproc = subprocess.run(cmdline, capture_output=True)
     output = completedproc.stdout.decode("utf-8").strip()
     errors = completedproc.stderr.decode("utf-8").strip()
     exitcode = completedproc.returncode
@@ -338,22 +351,23 @@ def get_home_path(username):
     else:
         return None
 
+
 def dorecentmaildircall(username, warning, critical):
     try:
-        if warning==None or warning=="":
+        if warning == None or warning == "":
             warning = 48
         else:
             warning = float(warning)
-        if critical==None or critical=="":
+        if critical == None or critical == "":
             critical = 72
         else:
             critical = float(critical)
 
         userhomepath = get_home_path(username)
-        if userhomepath==None or userhomepath=="" or os.path.isdir(userhomepath)==False:
-            exitnagios("CRITICAL","the home folder '"+userhomepath+"' is not valid | maxage=-1")
+        if userhomepath == None or userhomepath == "" or os.path.isdir(userhomepath) == False:
+            exitnagios("CRITICAL", "the home folder '" + userhomepath + "' is not valid | maxage=-1")
 
-        maildirpath = os.path.join(userhomepath,"Maildir")
+        maildirpath = os.path.join(userhomepath, "Maildir")
         infomsg(maildirpath)
         inbox = mailbox.Maildir(maildirpath, factory=None)
 
@@ -364,35 +378,37 @@ def dorecentmaildircall(username, warning, critical):
         # single recursive traversal returns the merged state
         state = get_maildir_state(inbox, warninglimit, criticallimit)
 
-        if state=="CRITICAL":
-            exitnagios("CRITICAL","no email in the last "+str(critical)+" hours | maxage>="+str(int(critical*3600)))
-        elif state=="WARNING":
-            exitnagios("WARNING","no email in the last "+str(warning)+" hours | maxage>="+str(int(warning*3600)))
+        if state == "CRITICAL":
+            exitnagios("CRITICAL", "no email in the last " + str(critical) + " hours | maxage>=" + str(int(critical * 3600)))
+        elif state == "WARNING":
+            exitnagios("WARNING", "no email in the last " + str(warning) + " hours | maxage>=" + str(int(warning * 3600)))
         else:
-            exitnagios("OK","no issues found | maxage<"+str(int(warning*3600)))
+            exitnagios("OK", "no issues found | maxage<" + str(int(warning * 3600)))
 
     except Exception as e:
-        exitnagios("CRITICAL","there was an exception - "+str(e)+" | maxage=-1")
+        exitnagios("CRITICAL", "there was an exception - " + str(e) + " | maxage=-1")
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--username",          action="store",       dest="username",         default="",                                   help="username to check")
-    parser.add_argument("-w", "--warning",           action="store",       dest="warning",          default="",                                   help="warning hours")
-    parser.add_argument("-c", "--critical",          action="store",       dest="critical",         default="",                                   help="critical hours")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-u", "--username", action="store", dest="username", default="", help="username to check")
+    parser.add_argument("-w", "--warning", action="store", dest="warning", default="", help="warning hours")
+    parser.add_argument("-c", "--critical", action="store", dest="critical", default="", help="critical hours")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
+
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dorecentmaildircall(args.username,args.warning,args.critical)
+    dorecentmaildircall(args.username, args.warning, args.critical)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------

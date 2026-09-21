@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 import argparse
 import time
@@ -7,39 +7,47 @@ import datetime
 import os
 import sys
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 _candebug = False
+
+
 def candebug():
     global _candebug
     return _candebug
+
+
 def setcandebug(value):
     global _candebug
     _candebug = value
+
 
 def infomsg(msg):
     if candebug() == True:
         print(msg, flush=True)
 
+
 def mapstatustoexitcode(status):
-    if status=="OK":
+    if status == "OK":
         exitcode = 0
-    elif status=="WARNING":
+    elif status == "WARNING":
         exitcode = 1
-    elif status=="CRITICAL":
+    elif status == "CRITICAL":
         exitcode = 2
-    elif status=="UNKNOWN":
+    elif status == "UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status,message):
+
+def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
-    print(status+": "+message, flush=True)
+    print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def list_rtc_devices():
     rtc_path = "/sys/class/rtc"
@@ -49,6 +57,7 @@ def list_rtc_devices():
             if entry.startswith("rtc") and entry != "rtc":
                 devices.append(entry)
     return devices
+
 
 def read_rtc(rtc_name):
     if rtc_name.startswith("/sys/class/rtc/"):
@@ -89,6 +98,7 @@ def read_rtc(rtc_name):
 
     return (date_str, time_str)
 
+
 def check_rtc_device(rtc_name):
     date1, time1 = read_rtc(rtc_name)
     if date1 is None or time1 is None:
@@ -105,10 +115,11 @@ def check_rtc_device(rtc_name):
     else:
         return False
 
+
 def finddevice():
     alldevices = list_rtc_devices()
-    infomsg("The list of found devices is "+str(alldevices))
-    if len(alldevices)==0:
+    infomsg("The list of found devices is " + str(alldevices))
+    if len(alldevices) == 0:
         return None
     else:
         for device in alldevices:
@@ -117,18 +128,20 @@ def finddevice():
                 return device
         return None
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def check_rtc_utc():
     adjfilename = "/etc/adjtime"
-    if os.path.isfile(adjfilename)==True:
-        filehandle = open(adjfilename,"rt")
+    if os.path.isfile(adjfilename) == True:
+        filehandle = open(adjfilename, "rt")
         hwclockdata = filehandle.read().splitlines()
         filehandle.close()
 
         is_rtc_utc = (hwclockdata[2].strip().upper() == "UTC")
         if is_rtc_utc == False:
-            exitnagios("CRITICAL","hwclock is not UTC")
+            exitnagios("CRITICAL", "hwclock is not UTC")
+
 
 def get_rtc_data(device):
     # Validate device
@@ -171,25 +184,26 @@ def get_rtc_data(device):
         exitnagios("CRITICAL", f"Error reading RTC data for {device}: {e}")
 
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--warning",           action="store",       type=int,                default=5,                                    help="if this number or more, it becomes warning state (default 5")
-    parser.add_argument("-c", "--critical",          action="store",       type=int,                default=10,                                   help="if this number or more, it becomes critical state (default 10")
-    parser.add_argument("-t", "--timeout",           action="store",       type=int,                default=90,                                   help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-w", "--warning", action="store", type=int, default=5, help="if this number or more, it becomes warning state (default 5")
+    parser.add_argument("-c", "--critical", action="store", type=int, default=10, help="if this number or more, it becomes critical state (default 10")
+    parser.add_argument("-t", "--timeout", action="store", type=int, default=90, help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
 
-def evaluate(device,difference,warning,critical):
-    if (difference>=critical):
-        exitnagios("CRITICAL","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
-    elif (difference>=warning):
-        exitnagios("WARNING","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
+def evaluate(device, difference, warning, critical):
+    if (difference >= critical):
+        exitnagios("CRITICAL", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
+    elif (difference >= warning):
+        exitnagios("WARNING", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
     else:
-        exitnagios("OK","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
+        exitnagios("OK", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
+
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
@@ -197,21 +211,21 @@ async def main(forcedargs=None):
 
     device = finddevice()
     if device == None:
-        exitnagios("CRITICAL","Could not find any rtc device")
+        exitnagios("CRITICAL", "Could not find any rtc device")
     else:
-        infomsg("The selected rtc device is "+device)
+        infomsg("The selected rtc device is " + device)
         check_rtc_utc()
         rtctime = get_rtc_data(device)
         infomsg(rtctime)
         systime = int(time.time())
         infomsg(systime)
         difference = abs(rtctime - systime)
-        evaluate(device,difference,args.warning,args.critical)
-        exitnagios("CRITICAL","Internal error")
+        evaluate(device, difference, args.warning, args.critical)
+        exitnagios("CRITICAL", "Internal error")
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
