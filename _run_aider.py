@@ -50,7 +50,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
 async def main():
     DIRECTORY = "."
-    MODEL = "ollama/qwen3-coder-next:latest" 
+    MODEL = "ollama/deepseek-r1:32b" 
     PROMPT = "Transform the attached python file to be async. Avoid to_thread and get_running_loop. If no changes are needed it is OK."
     
     await run_aider(DIRECTORY, MODEL, PROMPT)

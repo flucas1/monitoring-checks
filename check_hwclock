@@ -120,7 +120,7 @@ async def finddevice():
 
 #-------------------------------------------------------------------------------
 
-def check_rtc_utc():
+async def check_rtc_utc():
     adjfilename = "/etc/adjtime"
     if os.path.isfile(adjfilename)==True:
         filehandle = open(adjfilename,"rt")
@@ -139,15 +139,20 @@ async def get_rtc_data(device):
 
     try:
         # Read date
-        date_str = await asyncio.to_thread(open, os.path.join(rtc_sys_path, "date"), "rt").read().strip()  # format: YYYY-MM-DD
+        date_file_path = os.path.join(rtc_sys_path, "date")
+        with open(date_file_path, "rt") as f:
+            date_str = f.read().strip()  # format: YYYY-MM-DD
 
         # Read time
-        time_str = await asyncio.to_thread(open, os.path.join(rtc_sys_path, "time"), "rt").read().strip()  # format: HH:MM:SS
+        time_file_path = os.path.join(rtc_sys_path, "time")
+        with open(time_file_path, "rt") as f:
+            time_str = f.read().strip()  # format: HH:MM:SS
 
         # Optional: check battery status
         batt_file = os.path.join(rtc_sys_path, "batt_status")
         if os.path.exists(batt_file):
-            batt_status = await asyncio.to_thread(open, batt_file, "rt").read().strip()
+            with open(batt_file, "rt") as f:
+                batt_status = f.read().strip()
             if batt_status != "okay":
                 exitnagios("CRITICAL", f"RTC battery not valid for {device}")
 
@@ -198,7 +203,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL","Could not find any rtc device")
     else:
         infomsg("The selected rtc device is "+device)
-        check_rtc_utc()
+        await check_rtc_utc()
         rtctime = await get_rtc_data(device)
         infomsg(rtctime)
         systime = int(time.time())
