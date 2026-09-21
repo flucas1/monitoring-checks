@@ -8,6 +8,7 @@ import subprocess
 import platform
 import ipaddress
 import pygeoip
+import asyncio
 
 #-------------------------------------------------------------------------------
 
