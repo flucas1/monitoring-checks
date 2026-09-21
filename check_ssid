@@ -139,7 +139,7 @@ def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,util
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--alert",                                   dest="alert",            default="",                                   help="alert if an ssid matching")
     parser.add_argument("-g", "--ignored",                                 dest="ignored",          default="",                                   help="ssids to ignore")
@@ -207,6 +207,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

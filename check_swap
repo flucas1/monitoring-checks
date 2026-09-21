@@ -82,7 +82,7 @@ def dofreeswapscall(warning,critical,minimum):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                 dest="warning",          default="",                                   help="warning level percentage")
     parser.add_argument("-c", "--critical",                                dest="critical",         default="",                                   help="critical level percentage")
@@ -97,6 +97,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

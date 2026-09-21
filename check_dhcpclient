@@ -148,7 +148,7 @@ def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--servers",                                 dest="servers",          default="0.0.0.0",                            help="DHCP server IP (default 0.0.0.0)")
     parser.add_argument("-m", "--chaddr",                                  dest="chaddr",           default="FF:FF:FF:FF:FF:FF",                  help="chaddr: Client's MAC address (default FF:FF:FF:FF:FF:FF)")
@@ -171,6 +171,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

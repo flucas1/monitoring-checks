@@ -145,7 +145,7 @@ def domultiaddrcall(multitimeoutvalue,multitimeoutstatus,childtimeoutvalue,child
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     if forcedargs==None:
         forcedargs = sys.argv[1:]
     multitimeoutparts = forcedargs[0].split(":")
@@ -205,6 +205,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

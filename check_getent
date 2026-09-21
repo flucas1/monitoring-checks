@@ -73,7 +73,7 @@ def checkgetent(database, key, value, partial, outputlevel):
         if found == False:
             exitnagios("CRITICAL","key not found "+key)
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--database",                                dest="database",                                                       help="database to use (passwod, group, ...)")
     parser.add_argument("-k", "--key",                                     dest="key",                                                            help="key to search")
@@ -96,6 +96,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

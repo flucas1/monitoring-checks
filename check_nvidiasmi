@@ -141,7 +141,7 @@ def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_critical, t
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--gpu_warning",                             dest="gpu_warning",      default=0,                                    help="warning if threshold is outside low,high" )
     parser.add_argument("-c", "--gpu_critical",                            dest="gpu_critical",     default=0,                                    help="critical if threshold is outside low,high")
@@ -160,6 +160,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------

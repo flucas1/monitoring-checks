@@ -122,7 +122,7 @@ def is_usb_connected(device_identifiers,device_messages,device_expected):
 
 #-------------------------------------------------------------------------------
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--devices",                                 dest="devices",          default="",                                   help="devices" )
     parser.add_argument("-m", "--messages",                                dest="messages",         default="",                                   help="messages")
@@ -137,6 +137,6 @@ def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 #-------------------------------------------------------------------------------
