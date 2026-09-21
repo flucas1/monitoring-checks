@@ -3,13 +3,12 @@
 
 import sys
 import asyncio
-import threading
-from samba.param import LoadParm
-from samba.credentials import Credentials
-from samba.netcmd.drs import drsuapi_connect, drs_parse_ntds_dn
-from samba.netcmd.common import netcmd_dnsname
-from samba.dcerpc import drsuapi
 import argparse
+import samba.param
+import samba.credentials
+import samba.netcmd.drs
+import samba.netcmd.common
+import samba.dcerpc.drsuapi
 
 #-------------------------------------------------------------------------------
 
@@ -46,26 +45,26 @@ def exitnagios(status, message):
 
 #-------------------------------------------------------------------------------
 
-def dosmbreplicationcall():
+async def dosmbreplicationcall():
     failures = False
     msg = ""
     try:
-        lp = LoadParm()
+        lp = samba.param.LoadParm()
         lp.load_default()
-        creds = Credentials()
+        creds = samba.credentials.Credentials()
         creds.guess(lp)
         creds.set_machine_account(lp)
-        server = netcmd_dnsname(lp)
+        server = samba.netcmd.common.netcmd_dnsname(lp)
 
         consecutive_sync_failures = dict()
-        drsuapi_handle = drsuapi_connect(server, lp, creds)
-        req1 = drsuapi.DsReplicaGetInfoRequest1()
-        req1.info_type = drsuapi.DRSUAPI_DS_REPLICA_INFO_REPSTO
-        (info_type, info) = drsuapi_handle.DsReplicaGetInfo(1, req1)
+        drsuapi_handle = await asyncio.to_thread(samba.netcmd.drs.drsuapi_connect, server, lp, creds)
+        req1 = samba.dcerpc.drsuapi.DsReplicaGetInfoRequest1()
+        req1.info_type = samba.dcerpc.drsuapi.DRSUAPI_DS_REPLICA_INFO_REPSTO
+        (info_type, info) = await asyncio.to_thread(drsuapi_handle.DsReplicaGetInfo, 1, req1)
         for n in info.array:
             if n.consecutive_sync_failures > 0:
                 failures = True
-                (site, server) = drs_parse_ntds_dn(n.source_dsa_obj_dn)
+                (site, server) = samba.netcmd.drs.drs_parse_ntds_dn(n.source_dsa_obj_dn)
                 if server not in consecutive_sync_failures:
                     consecutive_sync_failures[server] = 0
                 consecutive_sync_failures[server] += n.consecutive_sync_failures
@@ -93,8 +92,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, dosmbreplicationcall)
+    await dosmbreplicationcall()
 
 #-------------------------------------------------------------------------------
 

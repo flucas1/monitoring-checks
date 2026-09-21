@@ -125,10 +125,12 @@ async def is_usb_speedmax():
     issues = []
 
     realdevices = listdevices()
-    for device in realdevices:
-        status = await printinfo(device)
+    tasks = [printinfo(device) for device in realdevices]
+    results = await asyncio.gather(*tasks)
+
+    for index, status in enumerate(results):
         if status == False:
-            issues.append(device)
+            issues.append(realdevices[index])
 
     if len(issues) == 0:
         exitnagios("OK","no issues found | issues=0")
