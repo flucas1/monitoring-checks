@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
 import datetime
 
 #-------------------------------------------------------------------------------
@@ -41,21 +41,16 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def doclamdcall(filetest):
-    start = datetime.datetime.now(datetime.timezone.utc)
+def doclamdcall(filetest):
+    start = datetime.datetime.now(datetime.UTC)
 
     cmdline = ["/usr/bin/clamdscan","--stream","--stdout","--infected","--no-summary",filetest]
-    process = await asyncio.create_subprocess_exec(
-        *cmdline,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
 
-    elapsed = datetime.datetime.now(datetime.timezone.utc)-start
+    elapsed = datetime.datetime.now(datetime.UTC)-start
     duration = elapsed.total_seconds()
 
     if exitcode == 0:
@@ -71,18 +66,18 @@ async def doclamdcall(filetest):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filetest",          action="store",       dest="filetest",         default="/etc/mtab",                          help="file to check")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-Â®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    await doclamdcall(args.filetest)
+    doclamdcall(args.filetest)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

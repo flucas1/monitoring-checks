@@ -4,8 +4,9 @@
 import sys
 import os
 import argparse
-import asyncio
+import subprocess
 import socket
+import concurrent.futures
 import netifaces
 import time
 import random
@@ -25,21 +26,21 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(status + ": " + message, flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
@@ -62,101 +63,96 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-def interface_to_address(interface, protocol):
+def interface_to_address(interface,protocol):
     primary_ip = None
-    if interface != "":
+    if interface!="":
         try:
-            infomsg("protocol is " + protocol)
+            infomsg("protocol is "+protocol)
             addresses = netifaces.ifaddresses(interface)
             ip_info = []
-            if protocol in ["-4", "4"]:
+            if protocol in ["-4","4"]:
                 ip_info4 = addresses.get(netifaces.AF_INET)
-                if ip_info4 != None:
+                if ip_info4!=None:
                     ip_info.append(ip_info4[0]["addr"])
-            elif protocol in ["-6", "6"]:
+            elif protocol in ["-6","6"]:
                 ip_info6 = addresses.get(netifaces.AF_INET6)
-                if ip_info6 != None:
+                if ip_info6!=None:
                     ip_info.append(ip_info6[0]["addr"])
             else:
                 ip_info4 = addresses.get(netifaces.AF_INET)
-                if ip_info4 != None:
+                if ip_info4!=None:
                     ip_info.append(ip_info4[0]["addr"])
                 ip_info6 = addresses.get(netifaces.AF_INET6)
-                if ip_info6 != None:
+                if ip_info6!=None:
                     ip_info.append(ip_info6[0]["addr"])
                 random.shuffle(ip_info)
-            infomsg("------> " + str(ip_info))
-            if ip_info != None and len(ip_info) > 0:
+            infomsg("------> "+str(ip_info))
+            if ip_info!=None and len(ip_info)>0:
                 primary_ip = ip_info[0]
             else:
-                infomsg("could not get interface ip for " + interface)
+                infomsg("could not get interface ip for "+interface)
         except Exception as e:
-            infomsg("exception - " + str(e))
-    infomsg("The ip for interface " + interface + " is " + str(primary_ip))
+            infomsg("exception - "+str(e))
+    infomsg("The ip for interface "+interface+" is "+str(primary_ip))
     return primary_ip
 
-async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
-    source = interface_to_address(interface, protocol)
+def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
+    source = interface_to_address(interface,protocol)
 
     cmdline = ["/usr/bin/ping"]
-    if protocol not in ["", None]:
+    if protocol not in ["",None]:
         cmdline = cmdline + [protocol]
-    if source != None:
+    if source!=None:
         cmdline = cmdline + ["-I", source]
-    elif interface != "":
+    elif interface!="":
         cmdline = cmdline + ["-I", interface]
     cmdline = cmdline + ["-c", str(packets)]
     cmdline = cmdline + ["-W", str(2)]
     cmdline = cmdline + [hostname]
     infomsg(cmdline)
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmdline,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        output, errors = await asyncio.wait_for(process.communicate(), timeout=timeout)
-        output = output.decode("utf-8")
-        errors = errors.decode("utf-8")
-        exitcode = process.returncode
-    except asyncio.TimeoutError:
+        completedproc = subprocess.run(cmdline,capture_output=True,timeout=timeout)
+        output = completedproc.stdout.decode("utf-8")
+        errors = completedproc.stderr.decode("utf-8")
+        exitcode = completedproc.returncode
+    except:
         output = ""
         errors = ""
         exitcode = 2
 
     infomsg(output)
-    if exitcode != 0:
-        return [2, -1, 100, "error"]
+    if exitcode!=0:
+        return [2,-1,100,"error"]
     else:
         alllines = output.splitlines()
         linems = alllines[-1]
         linepercent = alllines[-2]
         avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
-        percent = float(linepercent.split(",")[2].strip().split()[0].replace("%", ""))
-        reason = "undefined"
+        percent = float(linepercent.split(",")[2].strip().split()[0].replace("%",""))
+        reason = "undefinded"
         if avgms >= criticalms:
             reason = "critical latency"
             infomsg(reason)
-            return [2, avgms, percent, reason]
+            return [2,avgms,percent,reason]
         elif percent >= criticalpercent:
             reason = "critical ping loss"
             infomsg(reason)
-            return [2, avgms, percent, reason]
+            return [2,avgms,percent,reason]
         elif avgms >= warningms:
             reason = "warning latency"
             infomsg(reason)
-            return [1, avgms, percent, reason]
+            return [1,avgms,percent,reason]
         elif percent >= warningpercent:
             reason = "warning ping loss"
             infomsg(reason)
-            return [1, avgms, percent, reason]
+            return [1,avgms,percent,reason]
         else:
             reason = "no issues"
             infomsg(reason)
-            return [0, avgms, percent, reason]
+            return [0,avgms,percent,reason]
 
-async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
-    hosts = hostname.replace(",", " ").split()
+def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+    hosts = hostname.replace(","," ").split()
     valid = 0
     warning = 0
     average = 0
@@ -165,32 +161,33 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     warnreasons = []
     critreasons = []
 
-    if protocol == "":
-        protocolslist = ["-4", "-6"]
-    elif protocol == "-4":
+    if protocol=="":
+        protocolslist = ["-4","-6"]
+    elif protocol=="-4":
         protocolslist = ["-4"]
-    elif protocol == "-6":
+    elif protocol=="-6":
         protocolslist = ["-6"]
     else:
         protocolslist = []
 
+    executor = concurrent.futures.ThreadPoolExecutor()
     futures = []
     for hostsingle in hosts:
-        for protocol_single in protocolslist:
-            future = asyncio.create_task(dopingtestsingle(protocol_single, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent))
+        for protocol in protocolslist:
+            future = executor.submit(dopingtestsingle, protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
             futures.append(future)
-    for future in asyncio.as_completed(futures):
-        result = await future
+    for future in concurrent.futures.as_completed(futures):
+        result = future.result()
         if isinstance(result, list):
-            average = average + result[1]
-            percentloss = percentloss + result[2]
+            average = average+result[1]
+            percentloss = percentloss+result[2]
             reason = result[3]
             if result[0] == 0:
-                valid = valid + 1
+                valid = valid+1
                 if reason not in okreasons:
                     okreasons.append(reason)
             elif result[0] == 1:
-                warning = warning + 1
+                warning = warning+1
                 if reason not in warnreasons:
                     warnreasons.append(reason)
             else:
@@ -203,22 +200,22 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     percent = 100-percentloss
     valid = float(valid)/len(protocolslist)
     if valid >= minimum:
-        return ("OK", hostname + " - " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(okreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(percent))
-    elif valid + warning >= minimum:
-        return ("WARNING", hostname + " - " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(warnreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(percent))
+        return ("OK",hostname+" - "+str(valid)+" of at lest "+str(minimum)+" entries are reacheable - "+str(okreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
+    elif valid+warning >= minimum:
+        return ("WARNING",hostname+" - "+str(valid)+" of at lest "+str(minimum)+" entries are reacheable - "+str(warnreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average="+str(average)+" percent="+str(percent))
     else:
-        return (timeoutstatus, hostname + " - only " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(critreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=-1 percent=0")
+        return (timeoutstatus,hostname+" - only "+str(valid)+" of at least "+str(minimum)+" entries are reacheable - "+str(critreasons)+" | valid="+str(valid)+" warning="+str(warning)+" average=-1 percent=0")
 
-async def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     counter = 0
     while True:
-        exitlevel, message = await dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
-        if (exitlevel == "OK") or (counter >= retries):
+        exitlevel,message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
+        if (exitlevel=="OK") or (counter>=retries):
             exitnagios(exitlevel, message)
         else:
-            counter = counter + 1
-            await asyncio.sleep(5)
-    exitnagios("CRITICAL", "unexpected state")
+            counter = counter+1
+            time.sleep(5)
+    exitnagios("CRITICAL","unexpected state")
 
 #-------------------------------------------------------------------------------
 
@@ -240,7 +237,7 @@ def parse_args(forcedargs=None):
 
     return args
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -249,42 +246,42 @@ async def main(forcedargs=None):
     exclist = 0
     if args.ipv0 == True :
         protocol = ""
-        exclist = exclist + 1
+        exclist = exclist+1
     if args.ipv4 == True :
         protocol = "-4"
-        exclist = exclist + 1
+        exclist = exclist+1
         socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True :
         protocol = "-6"
-        exclist = exclist + 1
+        exclist = exclist+1
         socket.getaddrinfo = forced_ipv6_gai_family
-    if (exclist > 1) :
-        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
-    elif (exclist < 1) :
-        exitnagios("CRITICAL", "no protocol selected")
+    if (exclist>1) :
+        exitnagios("CRITICAL","select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist<1) :
+        exitnagios("CRITICAL","no protocol selected")
 
     if (args.hostname == ""):
-        exitnagios("CRITICAL", "hostname not defined")
+        exitnagios("CRITICAL","hostname not defined")
 
     timeoutparts = args.timeout.split(":")
     timeoutvalue = int(timeoutparts[0])
     timeoutstatus = "CRITICAL"
-    if len(timeoutparts) > 1:
+    if len(timeoutparts)>1:
         timeoutstatus = timeoutparts[1]
 
     warningparts = args.warning.split(",")
     warningms = int(float(warningparts[0]))
-    warningpercent = int(float(warningparts[1].replace("%", "")))
+    warningpercent = int(float(warningparts[1].replace("%","")))
     criticalparts = args.critical.split(",")
     criticalms = int(float(criticalparts[0]))
-    criticalpercent = int(float(criticalparts[1].replace("%", "")))
+    criticalpercent = int(float(criticalparts[1].replace("%","")))
     retries = int(args.retries)
 
-    await dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
+    dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

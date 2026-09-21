@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
 
 #-------------------------------------------------------------------------------
 
@@ -40,17 +40,12 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def doconnectionscall(warning,critical):
+def doconnectionscall(warning,critical):
     cmdline = ["/usr/bin/ss","-s"]
-    process = await asyncio.create_subprocess_exec(
-        *cmdline,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
 
     if exitcode == 0:
         lines = output.splitlines()
@@ -80,14 +75,14 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    await doconnectionscall(args.warning,args.critical)
+    doconnectionscall(args.warning,args.critical)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

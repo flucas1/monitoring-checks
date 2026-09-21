@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
 import platform
 
 #-------------------------------------------------------------------------------
@@ -41,13 +41,12 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def doramspeedcall(expected):
+def doramspeedcall(expected):
     cmdline = ["/usr/sbin/dmidecode","--type","memory"]
-    process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
 
     token = "Configured Memory Speed:"
     if exitcode == 0:
@@ -69,7 +68,7 @@ async def doramspeedcall(expected):
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--expected",                                dest="expected",         default="",                                   help="expected values")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -83,11 +82,11 @@ async def main(forcedargs=None):
         clean.append(part.strip())
     expected = " ; ".join(clean)
 
-    await doramspeedcall(expected)
+    doramspeedcall(expected)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

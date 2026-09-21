@@ -4,10 +4,9 @@
 import os
 import sys
 import time
-import asyncio
+import subprocess
 import argparse
 
-import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -23,7 +22,6 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
-
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -33,29 +31,29 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(status + ": " + message, flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
 def generatedriver(proxy):
     chrome_options = Options()
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
+    #chrome_options.add_argument("--incognito")
+    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -73,29 +71,29 @@ def generatedriver(proxy):
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
-    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
 
 def check_page_loaded(driver):
-    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-async def wait_page_loaded(driver):
+def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        await asyncio.sleep(1)
+        time.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def extractvalue(driver, entryname):
-    element = driver.find_element(By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
+def extractvalue(driver,entryname):
+    element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
     value = element.text
     infomsg(value)
     return value
@@ -103,35 +101,35 @@ def extractvalue(driver, entryname):
 def extracttable(driver):
     element = driver.find_element(By.ID, "dns-list")
     value = ""
-    lines = element.find_elements(By.TAG_NAME, "tr")
+    lines = element.find_elements(By.TAG_NAME,"tr")
     infomsg(element.text)
     for line in lines:
-        if len(value) > 0:
+        if len(value)>0:
             value = value + " § "
-        cells = line.find_elements(By.TAG_NAME, "td")
+        cells = line.find_elements(By.TAG_NAME,"td")
         entry = ""
         for cell in cells:
-            if len(entry) > 0:
+            if len(entry)>0:
                 entry = entry + " ; "
             entry = entry + cell.text
         value = value + entry
     return value
 
-def comparepart(value, expecteds):
+def comparepart(value,expecteds):
     listexpected = expecteds.split("¶")
     result = False
     for alternative in listexpected:
-        result = result or value == alternative.strip()
+        result = result or value==alternative.strip()
     return result
 
-def comparetriplet(value, expected):
+def comparetriplet(value,expected):
     if expected == "":
         return True
     else:
         listvalue = value.split(";")
         listexpected = expected.split(";")
 
-        if (len(listvalue) == 3) and (len(listexpected) == 3):
+        if (len(listvalue)==3) and (len(listexpected)==3):
             cleanvalue = []
             for value in listvalue:
                 cleanvalue.append(value.strip())
@@ -141,9 +139,9 @@ def comparetriplet(value, expected):
                 cleanexpected.append(expected.strip())
 
             result = True
-            for i in range(0, 3):
-                if cleanexpected[i] != "":
-                    result = result and comparepart(cleanvalue[i], cleanexpected[i])
+            for i in range(0,3):
+                if cleanexpected[i]!="":
+                    result = result and comparepart(cleanvalue[i],cleanexpected[i])
             return result
         else:
             return False
@@ -151,7 +149,7 @@ def comparetriplet(value, expected):
 def parseip(inputvalue):
     result = []
     inputvalue = inputvalue.strip()
-    if inputvalue != "":
+    if inputvalue!="":
         for item in inputvalue.split("§"):
             item = item.strip()
             if item not in result:
@@ -161,22 +159,22 @@ def parseip(inputvalue):
 def parsedns(inputvalue):
     result = []
     inputvalue = inputvalue.strip()
-    if inputvalue != "":
+    if inputvalue!="":
         for item in inputvalue.split("§"):
             item = item.strip()
             if item not in result:
                 result.append(item)
     return result
 
-def findtripletsmatching(inputtriplets, expectedtriplets):
+def findtripletsmatching(inputtriplets,expectedtriplets):
     result = []
     for testinputtriplet in inputtriplets:
         for testexpectedtriplet in expectedtriplets:
-            if comparetriplet(testinputtriplet.strip(), testexpectedtriplet.strip()):
+            if comparetriplet(testinputtriplet.strip(),testexpectedtriplet.strip()):
                 result.append(testinputtriplet)
     return result
 
-def alltripletsmatching(inputtriplets, expectedtriplets, tolerance):
+def alltripletsmatching(inputtriplets,expectedtriplets,tolerance):
     successmatching = True
     failed = []
     tolerated = []
@@ -185,40 +183,40 @@ def alltripletsmatching(inputtriplets, expectedtriplets, tolerance):
         for testexpectedtriplet in expectedtriplets:
             infomsg(testinputtriplet.strip())
             infomsg(testexpectedtriplet.strip())
-            if comparetriplet(testinputtriplet.strip(), testexpectedtriplet.strip()):
+            if comparetriplet(testinputtriplet.strip(),testexpectedtriplet.strip()):
                 partial = True
                 break
         infomsg(partial)
-        if partial == False:
+        if partial==False:
             failed.append(testinputtriplet.strip())
-        if tolerance >= len(failed):
-            tolerated = failed.copy()
-            failed = []
-    successmatching = (len(failed) == 0)
-    return successmatching, tolerated
+    if tolerance >= len(failed):
+        tolerated = failed.copy()
+        failed = []
+    successmatching = (len(failed)==0)
+    return successmatching,tolerated
 
-async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns):
+def dodnsleakcall(proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns):
     try:
         driver = generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 10)
-        action = ActionChains(driver)
+        wait = WebDriverWait(driver,10)
+        action=ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://browserleaks.com/dns"
         driver.get(url)
-        infomsg("asking for navigating " + url)
+        infomsg("asking for navigating "+url)
 
-        await asyncio.sleep(5)
-        await wait_page_loaded(driver)
+        time.sleep(5)
+        wait_page_loaded(driver)
         infomsg("page loaded")
 
-        counter = 0
-        retries = 3
-        while counter < retries:
-            infomsg("retry " + str(counter))
+        counter=0
+        retries=3
+        while counter<retries:
+            infomsg("retry "+str(counter))
             try:
-                wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"), "Found"))
+                wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"),"Found"))
             except Exception as e:
                 pass
             finally:
@@ -226,21 +224,21 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
             try:
                 resume = driver.find_element(By.ID, "dns-test")
             except Exception as e:
-                exitnagios("WARNING", "cannot find result element")
+                exitnagios("WARNING","cannot find result element")
             if resume == None:
-                counter = counter + 1
-                await asyncio.sleep(3)
+                counter=counter+1
+                time.sleep(3)
             else:
                 break
 
         if resume == None:
-            exitnagios("WARNING", "no result from page")
+            exitnagios("WARNING","no result from page")
         infomsg("test with results")
 
         address = extractvalue(driver, "IP Address")
         isp = extractvalue(driver, "ISP")
         location = extractvalue(driver, "Location")
-        resultedip = address.replace(";", " ") + " ; " + isp.replace(";", " ") + " ; " + location.replace(";", " ")
+        resultedip = address.replace(";"," ")+" ; "+isp.replace(";"," ")+" ; "+location.replace(";"," ")
         infomsg(resultedip)
 
         resulteddns = ""
@@ -250,81 +248,81 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
         except Exception as e:
             pass
         finally:
-            infomsg("found element dns-list as '" + resulteddns + "'")
+            infomsg("found element dns-list as '"+resulteddns+"'")
 
         successmsg = ""
         warningmsg = ""
         errormsg = ""
 
         if resultedip == "":
-            warningmsg += "The IP response is empty, and was expected '" + " § ".join(expectedip) + "'. "
+            warningmsg += "The IP response is empty, and was expected '"+" § ".join(expectedip)+"'. "
         else:
             # if something problematic is defined, find it and report it,
             # ifnot,... all the resulted dns should be in the expected dns
             resultedipparts = parseip(resultedip)
             infomsg(resultedipparts)
-            if len(problematicip) > 0:
-                failureip = findtripletsmatching(resultedipparts, problematicip)
-                if len(failureip) > 0:
-                    errormsg += "The IP response '" + " § ".join(resultedipparts) + "' is problematic. "
+            if len(problematicip)>0:
+                failureip = findtripletsmatching(resultedipparts,problematicip)
+                if len(failureip)>0:
+                    errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is problematic. "
                 else:
-                    successmsg += "The IP response '" + " § ".join(resultedipparts) + "' is not problematic. "
+                    successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is not problematic. "
             else:
-                successip, toleratedip = alltripletsmatching(resultedipparts, expectedip, 0)
-                if successip or len(expectedip) == 0:
-                    successmsg += "The IP response '" + " § ".join(resultedipparts) + "' is as expected. "
+                successip,toleratedip = alltripletsmatching(resultedipparts,expectedip,0)
+                if successip or len(expectedip)==0:
+                    successmsg += "The IP response '"+" § ".join(resultedipparts)+"' is as expected. "
                 else:
-                    errormsg += "The IP response '" + " § ".join(resultedipparts) + "' is not as expected '" + " § ".join(expectedip) + "'. "
+                    errormsg += "The IP response '"+" § ".join(resultedipparts)+"' is not as expected '"+" § ".join(expectedip)+"'. "
 
         if resulteddns == "":
-            warningmsg += "The DNS response is empty, and was expected '" + " § ".join(expecteddns) + "'. "
+            warningmsg += "The DNS response is empty, and was expected '"+" § ".join(expecteddns)+"'. "
         else:
             # if something problematic is defined, find it and report it,
             # ifnot,... all the resulted dns should be in the expected dns
             resulteddnsparts = parsedns(resulteddns)
             infomsg(resulteddnsparts)
-            if len(problematicdns) > 0:
-                failuredns = findtripletsmatching(resulteddnsparts, problematicdns)
-                if len(failuredns) > tolerancedns:
-                    errormsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is problematic. "
-                elif len(failuredns) > 0:
-                    warningmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is tolerated. "
+            if len(problematicdns)>0:
+                failuredns = findtripletsmatching(resulteddnsparts,problematicdns)
+                if len(failuredns)>tolerancedns:
+                    errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is problematic. "
+                elif len(failuredns)>0:
+                    warningmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is tolerated. "
                 else:
-                    successmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is not problematic. "
+                    successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not problematic. "
             else:
-                successdns, tolerateddns = alltripletsmatching(resulteddnsparts, expecteddns, tolerancedns)
-                if successdns or len(expecteddns) == 0:
-                    if len(tolerateddns) == 0:
-                        successmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is as expected. "
+                successdns,tolerateddns = alltripletsmatching(resulteddnsparts,expecteddns,tolerancedns)
+                if successdns or len(expecteddns)==0:
+                    if len(tolerateddns)==0:
+                        successmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is as expected. "
                     else:
-                        warningmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is tolerated. "
+                        warningmsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is tolerated. "
                 else:
-                    errormsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is not as expected '" + " § ".join(expecteddns) + "'. "
+                    errormsg += "The DNS response '"+" § ".join(resulteddnsparts)+"' is not as expected '"+" § ".join(expecteddns)+"'. "
 
         if errormsg != "":
-            exitnagios("CRITICAL", errormsg)
+            exitnagios("CRITICAL",errormsg)
         elif warningmsg != "":
-            exitnagios("WARNING", warningmsg)
+            exitnagios("WARNING",warningmsg)
         else:
-            exitnagios("OK", successmsg)
+            exitnagios("OK",successmsg)
     except Exception as e:
         exceptionmsg = str(e)
         if (exceptionmsg.find("net::ERR_CONNECTION_REFUSED") > -1) or (exceptionmsg.find("net::ERR_SOCKS_CONNECTION_FAILED") > -1) or (exceptionmsg.find("net::ERR_ADDRESS_UNREACHABLE") > -1):
-            exitnagios("WARNING", "no connection")
+            exitnagios("WARNING","no connection")
         else:
-            exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
+            exitnagios("CRITICAL","unexpected error during the check - "+str(e))
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
-    parser.add_argument("-x", "--problematicip", dest="problematicip", default="", help="raise critical if this IP is found")
-    parser.add_argument("-r", "--problematicdns", dest="problematicdns", default="", help="raise critical if this DNS is found")
-    parser.add_argument("-i", "--expectedip", dest="expectedip", default="", help="expected response for the IP")
-    parser.add_argument("-d", "--expecteddns", dest="expecteddns", default="", help="expected response for the DNS")
-    parser.add_argument("-t", "--tolerancedns", dest="tolerancedns", default="0", help="number of problematic DNS entries to tolerate")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
+    parser.add_argument("-x", "--problematicip",                           dest="problematicip",    default="",                                   help="raise critical if this IP is found")
+    parser.add_argument("-r", "--problematicdns",                          dest="problematicdns",   default="",                                   help="raise critical if this DNS is found")
+    parser.add_argument("-i", "--expectedip",                              dest="expectedip",       default="",                                   help="expected response for the IP")
+    parser.add_argument("-d", "--expecteddns",                             dest="expecteddns",      default="",                                   help="expected response for the DNS")
+    parser.add_argument("-t", "--tolerancedns",                            dest="tolerancedns",     default="0",                                  help="number of problematic DNS entries to tolerate")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -340,17 +338,17 @@ async def main(forcedargs=None):
     tolerancedns = int(args.tolerancedns)
     infomsg(tolerancedns)
 
-    if ((len(problematicip) != 0) and (len(expectedip) != 0)) or ((len(problematicdns) != 0) and (len(expecteddns) != 0)):
-        exitnagios("CRITICAL", "problematic and expected flags are mutually exclusive")
+    if ((len(problematicip)!=0) and (len(expectedip)!=0)) or ((len(problematicdns)!=0) and (len(expecteddns)!=0)):
+        exitnagios("CRITICAL","problematic and expected flags are mutually exclusive")
 
-    if (problematicip == "") and (problematicdns == "") and (expectedip == "") and (expecteddns == ""):
-        exitnagios("CRITICAL", "a problematic or expected flag must be specified")
+    if (problematicip=="") and (problematicdns=="") and (problematicip=="") and (problematicdns==""):
+        exitnagios("CRITICAL","a problematic or expected flat must be specified")
 
-    await dodnsleakcall(args.proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns)
+    dodnsleakcall(args.proxy,problematicip,problematicdns,expectedip,expecteddns,tolerancedns)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

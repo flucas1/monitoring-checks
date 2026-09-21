@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 #-------------------------------------------------------------------------------
 
-import aioimaplib
+import imaplib
 import argparse
 import sys
 import time
 import datetime
 import socket
 import ssl
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -62,33 +61,34 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 #-------------------------------------------------------------------------------
 
-async def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays):
+def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue,timeoutstatus,certificatedays):
     try:
         start = datetime.datetime.now(datetime.UTC)
         imapconnection = None
+        #socket.setdefaulttimeout(timeoutvalue)
         if dossl==True:
             ctx = ssl.create_default_context()
-            imapconnection = aioimaplib.IMAP4_SSL(host=hostname,port=port,timeout=timeoutvalue,ssl_context=ctx)
+            imapconnection = imaplib.IMAP4_SSL(host=hostname,port=port,timeout=timeoutvalue,ssl_context=ctx)
         else:
-            imapconnection = aioimaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
+            imapconnection = imaplib.IMAP4(host=hostname,port=port,timeout=timeoutvalue)
         if imapconnection != None:
             infomsg(str(imapconnection.PROTOCOL_VERSION))
             certexpirationparsed = None
             if dossl==True:
-                infomsg(str(imapconnection.writer.get_extra_info('ssl_object').version()))
+                infomsg(str(imapconnection.socket().version()))
                 certexpirationraw = None
                 try:
-                    cert_data = imapconnection.writer.get_extra_info('peercert')
+                    cert_data = imapconnection.socket().getpeercert()
                     infomsg(str(cert_data))
-                    certexpirationraw = cert_data.get("notAfter")
+                    certexpirationraw = cert_data["notAfter"]
                     infomsg("Expiry date: "+str(certexpirationraw))
                     if certexpirationraw != None:
-                        dateutil = __import__('dateutil.parser')
-                        certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
+                        from dateutil.parser import parse
+                        certexpirationparsed = parse(cert_data["notAfter"])
                 except:
-                    infomsg(str(sys.exc_info()[1]))
+                    infomsg(str(traceback.format_exc()))
                     pass
-            await imapconnection.logout()
+            imapconnection.shutdown()
 
             elapsed = datetime.datetime.now(datetime.UTC)-start
             duration = elapsed.total_seconds()
@@ -125,7 +125,7 @@ async def doimapcheck(protocol,hostname,port,dossl,warning,critical,timeoutvalue
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4",              action="store_true",  dest="ipv4",             default=False,                                help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6",              action="store_true",  dest="ipv6",             default=False,                                help="use ipv6 (exclusive with ipv4)")
@@ -167,13 +167,13 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await doimapcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays)
+        doimapcheck(protocol,args.hostname,int(args.port),args.ssl,int(args.warning),int(args.critical),timeoutvalue,timeoutstatus,args.certificatedays)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

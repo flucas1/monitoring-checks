@@ -6,7 +6,6 @@ import time
 import datetime
 import os
 import sys
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -90,12 +89,12 @@ def read_rtc(rtc_name):
 
     return (date_str, time_str)
 
-async def check_rtc_device(rtc_name):
+def check_rtc_device(rtc_name):
     date1, time1 = read_rtc(rtc_name)
     if date1 is None or time1 is None:
         return False
 
-    await asyncio.sleep(2)
+    time.sleep(2)
 
     date2, time2 = read_rtc(rtc_name)
     if date2 is None or time2 is None:
@@ -106,21 +105,21 @@ async def check_rtc_device(rtc_name):
     else:
         return False
 
-async def finddevice():
+def finddevice():
     alldevices = list_rtc_devices()
     infomsg("The list of found devices is "+str(alldevices))
     if len(alldevices)==0:
         return None
     else:
         for device in alldevices:
-            valid = await check_rtc_device(device)
+            valid = check_rtc_device(device)
             if valid:
                 return device
         return None
 
 #-------------------------------------------------------------------------------
 
-async def check_rtc_utc():
+def check_rtc_utc():
     adjfilename = "/etc/adjtime"
     if os.path.isfile(adjfilename)==True:
         filehandle = open(adjfilename,"rt")
@@ -131,7 +130,7 @@ async def check_rtc_utc():
         if is_rtc_utc == False:
             exitnagios("CRITICAL","hwclock is not UTC")
 
-async def get_rtc_data(device):
+def get_rtc_data(device):
     # Validate device
     rtc_sys_path = f"/sys/class/rtc/{device}"
     if not os.path.exists(rtc_sys_path):
@@ -139,13 +138,11 @@ async def get_rtc_data(device):
 
     try:
         # Read date
-        date_file_path = os.path.join(rtc_sys_path, "date")
-        with open(date_file_path, "rt") as f:
+        with open(os.path.join(rtc_sys_path, "date"), "rt") as f:
             date_str = f.read().strip()  # format: YYYY-MM-DD
 
         # Read time
-        time_file_path = os.path.join(rtc_sys_path, "time")
-        with open(time_file_path, "rt") as f:
+        with open(os.path.join(rtc_sys_path, "time"), "rt") as f:
             time_str = f.read().strip()  # format: HH:MM:SS
 
         # Optional: check battery status
@@ -194,26 +191,27 @@ def evaluate(device,difference,warning,critical):
     else:
         exitnagios("OK","The hwclock offset using device "+device+" is "+str(difference)+"s | difference="+str(difference))
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    device = await finddevice()
+    device = finddevice()
     if device == None:
         exitnagios("CRITICAL","Could not find any rtc device")
     else:
         infomsg("The selected rtc device is "+device)
-        await check_rtc_utc()
-        rtctime = await get_rtc_data(device)
+        check_rtc_utc()
+        rtctime = get_rtc_data(device)
         infomsg(rtctime)
         systime = int(time.time())
         infomsg(systime)
         difference = abs(rtctime - systime)
         evaluate(device,difference,args.warning,args.critical)
+        exitnagios("CRITICAL","Internal error")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

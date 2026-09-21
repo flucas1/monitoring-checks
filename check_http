@@ -381,7 +381,7 @@ async def dolibcurlcheck_simple(ipprotocol,hostname,port,path,timeoutvalue,timeo
         if certexpirationparsed==None:
             return "CRITICAL","cannot parse certificate expiration date '"+str(certexpirationraw)+"' for URL '"+url+"' | totaltime="+str(totaltime)
         else:
-            today = datetime.datetime.now(datetime.timezone.utc)
+            today = datetime.datetime.now(datetime.UTC)
             timeremaining = certexpirationparsed.timestamp()-today.timestamp()
             daysremaining = int(timeremaining/86400)
             certificatedaysparts = certificatedays.split(",")
@@ -503,3 +503,5 @@ if __name__ == "__main__":
     exitnagios(exitinfo)
 
 #-------------------------------------------------------------------------------
+
+

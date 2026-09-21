@@ -3,7 +3,8 @@
 
 import sys
 import os
-import asyncio
+import subprocess
+import time
 
 #-------------------------------------------------------------------------------
 
@@ -11,7 +12,6 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
-
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -21,70 +21,61 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(status + ": " + message, flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
-async def doretrycall(cmdline):
+def doretrycall(cmdline):
     counter = 0
     retries = 3
     while True:
-        counter = counter + 1
+        counter = counter+1
         infomsg(str(cmdline))
-        try:
-            completedproc = await asyncio.create_subprocess_exec(
-                *cmdline,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, stderr = await completedproc.communicate()
-            output = stdout.decode("utf-8").strip()
-            errors = stderr.decode("utf-8").strip()
-            exitcode = completedproc.returncode
-            if exitcode == 0:
-                if output != "":
-                    print(output, file=sys.stdout, flush=True, end="")
-                if errors != "":
-                    print(errors, file=sys.stderr, flush=True, end="")
-                sys.exit(0)
-            elif counter >= retries:
-                if output != "":
-                    print(output, file=sys.stdout, flush=True, end="")
-                if errors != "":
-                    print(errors, file=sys.stderr, flush=True, end="")
-                sys.exit(exitcode)
-            else:
-                await asyncio.sleep(10)
-        except Exception as e:
-            infomsg(f"Exception occurred: {e}")
-            await asyncio.sleep(10)
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
+        if exitcode == 0:
+            if output!="":
+                print(output, file=sys.stdout, flush=True, end="")
+            if errors!="":
+                print(errors, file=sys.stderr, flush=True, end="")
+            exit(0)
+        elif counter>=retries:
+            if output!="":
+                print(output, file=sys.stdout, flush=True, end="")
+            if errors!="":
+                print(errors, file=sys.stderr, flush=True, end="")
+            exit(exitcode)
+        else:
+            time.sleep(10)
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
-    if forcedargs is None:
+def main(forcedargs=None):
+    if forcedargs==None:
         forcedargs = sys.argv[1:]
     cmdline = forcedargs
-    await doretrycall(cmdline)
+    doretrycall(cmdline)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

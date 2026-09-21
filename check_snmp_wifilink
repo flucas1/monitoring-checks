@@ -4,7 +4,7 @@
 import argparse
 import sys
 import re
-import asyncio
+import subprocess
 import datetime
 import socket
 
@@ -70,7 +70,7 @@ def extractvalue(rawdata):
             result = elements[1].strip()
     return result
 
-async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalue, timeoutstatus):
+def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalue, timeoutstatus):
     version = "1"
 
     parameters = {}
@@ -79,7 +79,7 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
 
     values = {}
     for key,oid in parameters.items():
-        mycode, stdout = await snmpget(hostname, port, version, community, oid)
+        mycode, stdout = snmpget(hostname, port, version, community, oid)
         if mycode==0:
             values[key] = extractvalue(stdout)
         else:
@@ -106,19 +106,14 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
     else:
         exitnagios("OK","The signal is "+str(signal)+" | signal="+str(signal)+" noise="+str(noise))
 
-async def snmpget(hostname, port, version, community, oid):
+def snmpget(hostname, port, version, community, oid):
     cmdline = ["/usr/bin/snmpget","-v",version,"-c",community,hostname+":"+str(port),oid]
     infomsg("[ '"+("' '".join(cmdline))+"' ]")
 
-    process = await asyncio.create_subprocess_exec(
-        *cmdline,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
     if errors.startswith("Timeout: No Response from "):
         exitcode = None
         output = None
@@ -127,7 +122,7 @@ async def snmpget(hostname, port, version, community, oid):
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname",                                dest="hostname",         default="",                                   help="server to check")
     parser.add_argument("-p", "--port",                                    dest="port",             default=161,                                  help="port to use, usually 143 or 993")
@@ -150,13 +145,13 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await dosnmpwifilinkcall(args.warning,args.critical,args.hostname,int(args.port),args.community,timeoutvalue,timeoutstatus)
+        dosnmpwifilinkcall(args.warning,args.critical,args.hostname,int(args.port),args.community,timeoutvalue,timeoutstatus)
     else:
         exitnagios("CRITICAL","timeout status is not valid")
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

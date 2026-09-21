@@ -4,7 +4,8 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
+import platform
 
 #-------------------------------------------------------------------------------
 
@@ -21,88 +22,86 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(status + ": " + message, flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
-async def getfiles(basepath, extensions):
+def getfiles(basepath,extensions):
     foundfiles = []
 
     for entry in os.listdir(basepath):
-        fullentry = os.path.join(basepath, entry)
+        fullentry = os.path.join(basepath,entry)
         if os.path.isdir(fullentry):
-            foundfiles = foundfiles + await getfiles(fullentry, extensions)
+            foundfiles = foundfiles+getfiles(fullentry,extensions)
         else:
             infomsg(fullentry)
             fileext = os.path.splitext(fullentry)[1]
-            if len(fileext) > 0:
+            if len(fileext)>0:
                 fileext = fileext[1:]
             infomsg(fileext)
             if fileext in extensions:
                 foundfiles.append(fullentry)
-        await asyncio.sleep(0)
 
     foundfiles.sort()
     return foundfiles
 
-async def dodpkgetcfilescall(ignorelist):
+def dodpkgetcfilescall(ignorelist):
     try:
         extensions = ["dpkg-dist", "dpkg-new", "dpkg-old", "ucf-dist", "update-old"]
-        foundfiles = await getfiles("/etc", extensions)
-        infomsg("foundfiles -> " + str(foundfiles))
+        foundfiles = getfiles("/etc",extensions)
+        infomsg("foundfiles -> "+str(foundfiles))
 
         validatedfiles = []
         for testfile in foundfiles:
             if testfile not in ignorelist:
                 validatedfiles.append(testfile)
-            await asyncio.sleep(0)
-        infomsg("validatedfiles -> " + str(validatedfiles))
+        infomsg("validatedfiles -> "+str(validatedfiles))
 
-        if len(validatedfiles) == 0:
-            exitnagios("OK", "there are no extra dpkg-etc files | total=0")
+        if len(validatedfiles)==0:
+            exitnagios("OK","there are no extra dpkg-etc files | total=0")
         else:
-            exitnagios("WARNING", "please review extra dpkg-etc files: " + " ".join(validatedfiles) + " | total=" + str(len(validatedfiles)))
+            exitnagios("WARNING","please review extra dpkg-etc files: "+" ".join(validatedfiles)+" | total="+str(len(validatedfiles)))
     except Exception as e:
-        exitnagios("CRITICAL", "issue retrieving extra dpkg-etc files - " + str(e) + " total=-1")
+        exitnagios("CRITICAL","issue retrieving extra dpkg-etc files - "+str(e)+" total=-1")
 
 #-------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--ignore", dest="ignore", default="", help="list of files to ignore")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-i", "--ignore",                                  dest="ignore",           default="",                                   help="list of files to ignore")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
     ignorelist = args.ignore.split(",")
     if "" in ignorelist:
         ignorelist.remove("")
-    infomsg("ignorelist -> " + str(ignorelist))
+    infomsg("ignorelist -> "+str(ignorelist))
 
-    await dodpkgetcfilescall(ignorelist)
+    dodpkgetcfilescall(ignorelist)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

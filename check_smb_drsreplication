@@ -2,13 +2,11 @@
 #-------------------------------------------------------------------------------
 
 import sys
-import asyncio
-import argparse
-import samba.param
-import samba.credentials
-import samba.netcmd.drs
-import samba.netcmd.common
-import samba.dcerpc.drsuapi
+from samba.param import LoadParm
+from samba.credentials import Credentials
+from samba.netcmd.drs import drsuapi_connect, drs_parse_ntds_dn
+from samba.netcmd.common import netcmd_dnsname
+from samba.dcerpc import drsuapi
 
 #-------------------------------------------------------------------------------
 
@@ -16,65 +14,64 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
-
 def setcandebug(value):
     global _candebug
     _candebug = value
 
 def infomsg(msg):
-    if candebug():
+    if candebug() == True:
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(f"{status}: {message}", flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
-async def dosmbreplicationcall():
+def dosmbreplicationcall():
     failures = False
     msg = ""
     try:
-        lp = samba.param.LoadParm()
+        lp = LoadParm()
         lp.load_default()
-        creds = samba.credentials.Credentials()
+        creds = Credentials()
         creds.guess(lp)
         creds.set_machine_account(lp)
-        server = samba.netcmd.common.netcmd_dnsname(lp)
+        server = netcmd_dnsname(lp)
 
         consecutive_sync_failures = dict()
-        drsuapi_handle = await asyncio.to_thread(samba.netcmd.drs.drsuapi_connect, server, lp, creds)
-        req1 = samba.dcerpc.drsuapi.DsReplicaGetInfoRequest1()
-        req1.info_type = samba.dcerpc.drsuapi.DRSUAPI_DS_REPLICA_INFO_REPSTO
-        (info_type, info) = await asyncio.to_thread(drsuapi_handle.DsReplicaGetInfo, 1, req1)
+        drsuapi_connect(self)
+        req1 = drsuapi.DsReplicaGetInfoRequest1()
+        req1.info_type = drsuapi.DRSUAPI_DS_REPLICA_INFO_REPSTO
+        (info_type, info) = drsuapi.DsReplicaGetInfo(drsuapi_handle, 1, req1)
         for n in info.array:
             if n.consecutive_sync_failures > 0:
                 failures = True
-                (site, server) = samba.netcmd.drs.drs_parse_ntds_dn(n.source_dsa_obj_dn)
+                (site, server) = drs_parse_ntds_dn(n.source_dsa_obj_dn)
                 if server not in consecutive_sync_failures:
                     consecutive_sync_failures[server] = 0
                 consecutive_sync_failures[server] += n.consecutive_sync_failures
         for server in consecutive_sync_failures:
-            text = f"{consecutive_sync_failures[server]} failures on {server}"
-            msg = f"{msg}, {text}" if msg else text
+            text = "%s failures on %s" % (consecutive_sync_failures[server], server)
+            msg = msg + ", " + text if msg else text
     except RuntimeError as error:
-        exitnagios("CRITICAL", str(error))
+        exitnagios("CRITICAL", error)
     except Exception as ex:
-        exitnagios("CRITICAL", str(ex))
+        exitnagios("CRITICAL", ex.message)
 
     if failures:
         exitnagios("CRITICAL", msg)
@@ -85,18 +82,18 @@ async def dosmbreplicationcall():
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    await dosmbreplicationcall()
+    dosmbreplicationcall()
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

@@ -4,8 +4,9 @@
 import argparse
 import sys
 import os
+import subprocess
+import platform
 import re
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -41,7 +42,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def dogrubentrycall(expectedpos):
+def dogrubentrycall(expectedpos):
     try:
         lines = []
         handle = open("/boot/grub/grub.cfg", "r")
@@ -69,17 +70,11 @@ async def dogrubentrycall(expectedpos):
         expectedstring = validcandidates[expectedpos]
         infomsg("expected -> "+expectedstring)
 
-        # Use async subprocess instead of to_thread
-        process = await asyncio.create_subprocess_exec(
-            "/usr/bin/uname",
-            "--kernel-release",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-        output = stdout.decode("utf-8").strip()
-        errors = stderr.decode("utf-8").strip()
-        exitcode = process.returncode
+        cmdline = ["/usr/bin/uname","--kernel-release"]
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
         version = ""
         if exitcode == 0:
             version = output.strip()
@@ -95,7 +90,7 @@ async def dogrubentrycall(expectedpos):
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--expected",                                dest="expected",         default="0",                                  help="expected")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -104,11 +99,11 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     expected = int(args.expected)
-    await dogrubentrycall(expected)
+    dogrubentrycall(expected)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

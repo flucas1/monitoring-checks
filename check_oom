@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
 import platform
 import json
 
@@ -42,18 +42,15 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def oom_kernel_check(criticallevel, warninglevel, short=False):
+def oom_kernel_check(criticallevel, warninglevel, short=False):
     infomsg("KERNEL")
 
     cmdline = ["/usr/bin/journalctl","--utc","--no-pager","-kq","-o","json","-b","-0","--output-fields=MESSAGE"]
     infomsg(cmdline)
-    process = await asyncio.create_subprocess_exec(*cmdline,
-                                                   stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
 
     #infomsg(output)
 
@@ -77,18 +74,15 @@ async def oom_kernel_check(criticallevel, warninglevel, short=False):
         return None,logs
 
 
-async def oom_systemd_check(criticallevel, warninglevel, short=False):
+def oom_systemd_check(criticallevel, warninglevel, short=False):
     infomsg("SYSTEMD")
 
     cmdline = ["/usr/bin/journalctl", "-u", "systemd-oomd.service", "--utc", "--no-pager", "-o", "json", "-b", "-0", "--output-fields=MESSAGE"]
     infomsg(cmdline)
-    process = await asyncio.create_subprocess_exec(*cmdline,
-                                                   stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
 
     #infomsg(output)
 
@@ -111,9 +105,9 @@ async def oom_systemd_check(criticallevel, warninglevel, short=False):
     else:
         return None,logs
 
-async def oom_check(criticallevel, warninglevel, short=False):
-    kernelcounter,kernellogs = await oom_kernel_check(criticallevel, warninglevel, short)
-    systemdcounter,systemdlogs = await oom_systemd_check(criticallevel, warninglevel, short)
+def oom_check(criticallevel, warninglevel, short=False):
+    kernelcounter,kernellogs = oom_kernel_check(criticallevel, warninglevel, short)
+    systemdcounter,systemdlogs = oom_systemd_check(criticallevel, warninglevel, short)
 
     if kernelcounter==None:
         exitnagios("CRITICAL","error retrieving the information from kernel oom journalctl | counter=-1")
@@ -131,7 +125,7 @@ async def oom_check(criticallevel, warninglevel, short=False):
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning",                                                          default="",                                   help="Number of occurences to trigger a warning")
     parser.add_argument("-c", "--critical",                                                         default="1",                                  help="Number of occurences to trigger a warning")
@@ -141,11 +135,11 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    await oom_check(args.critical, args.warning, args.short)
+    oom_check(args.critical, args.warning, args.short)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

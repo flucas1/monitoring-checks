@@ -4,19 +4,19 @@
 # https://raw.githubusercontent.com/asciiphil/check_openhab/master/check_openhab
 # aptitude install python3-dateutil
 
-import asyncio
 import datetime
 import json
 import re
 import sys
-import ssl
-import os
+import urllib.error
+import urllib.request
 import pytz
+import os
+import ssl
 import argparse
 import dateutil.parser
 import dateutil.relativedelta
 import pathlib
-import aiohttp
 
 #-------------------------------------------------------------------------------
 
@@ -79,11 +79,15 @@ def split_threshold(value, level, convert):
         if many == 2:
             return (convert(items[0],False), convert(items[1],True))
         else:
-            exitnagios("CRITICAL","Malformed "+str(level)+" value: "+str(value))
+            exitnagios("CRITICAL","Malformed "+str(levle)+" value: "+str(value))
     except:
         exitnagios("CRITICAL","invalid value passed as %s parameter: %s" % (level, value))
 
 def check_limits(state, low, high, name, return_code):
+    #infosmg(str(state))
+    #infosmg(str(low))
+    #infosmg(str(high))
+    #infomsng(str(datetime.datetime.now(pytz.utc)))
     if low is not None and state < low:
         return (return_code, "%s state (%s) is less than %s | value=%s" % (name, state, low, state))
     elif high is not None and state > high:
@@ -172,13 +176,13 @@ class Thresholds:
 
         return ("OK", "%s state within fallback sittuation: %s | value=%s" % (name, state, state))
 
-async def check_item(object_json, thresholds, timeoutstatus):
+def check_item(object_json, thresholds, timeoutstatus):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
         return (timeoutstatus, "%s is uninitialized." % object_json["name"])
     else:
         return thresholds.check(object_json["state"], object_json["name"])
 
-async def check_thing(object_json, args):
+def check_thing(object_json, args):
     status = object_json["statusInfo"]["status"]
     if status == "ONLINE":
         rc = "OK"
@@ -188,21 +192,22 @@ async def check_thing(object_json, args):
         rc = "CRITICAL"
     return (rc, "%s is %s." % (object_json["UID"], status))
 
-async def check_group(group_json, thresholds, args, timeoutstatus):
+def check_group(group_json, thresholds, args, timeoutstatus):
     final_rc = "OK"
     final_messages = []
     perfdata = ""
     for i in group_json["members"]:
         if i["type"] == "GroupItem":
-            rc, messages, perfdata = await check_group(await fetch_object(i["link"], args, timeoutstatus), thresholds, args, timeoutstatus)
+            rc, messages, perfdata = check_group(fetch_object(i["link"], args, timeoutstatus), thresholds, args, timeoutstatus)
             final_messages += messages
             perfdata += perfdata
         else:
-            rc, message = await check_item(i, thresholds, timeoutstatus)
+            rc, message = check_item(i, thresholds, timeoutstatus)
             try:
                 state_float = float(i["state"])
                 perfdata += ("%s=%s " % (i["name"], i["state"]))
             except:
+                # state isn't numeric, so don't add perfdata
                 pass
 
             if rc != "OK":
@@ -215,20 +220,17 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
             final_rc="WARNING"
     return (final_rc, final_messages, perfdata)
 
-async def fetch_object(item_url, args, timeoutstatus):
+def fetch_object(item_url, args, timeoutstatus):
     infomsg("# "+str(item_url))
 
+    password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     if args.exclude is True:
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-    else:
-        ssl_context = None
-
-    headers = {
-        "Accept": "application/json"
-    }
-
+        ctx = ssl.create_default_context()
+        #ctx.check_hostname = False
+        #ctx.verify_mode = ssl.CERT_NONE
+        ssl_handler = urllib.request.HTTPSHandler(context=ctx)
+        ssl_opener = urllib.request.build_opener(ssl_handler)
+        urllib.request.install_opener(ssl_opener)
     if args.authorization is not None:
         auth_params = args.authorization.split(":")
         if len(auth_params) != 2:
@@ -240,25 +242,30 @@ async def fetch_object(item_url, args, timeoutstatus):
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
 
-        auth_header = aiohttp.encode_basic_auth(auth_params[0], auth_params[1])
-        headers['Authorization'] = auth_header
+        password_manager.add_password(None, item_url, auth_params[0], auth_params[1])
+        auth_handler = urllib.request.HTTPBasicAuthHandler(password_manager)
+        auth_opener = urllib.request.build_opener(auth_handler)
+        urllib.request.install_opener(auth_opener)
 
+    item_request = urllib.request.Request(item_url)
+    item_request.add_header("Accept", "application/json")
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
-                if response.status == 404:
-                    exitnagios(timeoutstatus,"item %s does not exist." % item_url)
-                elif response.status != 200:
-                    exitnagios(timeoutstatus,"exception fetching item data - HTTP %d" % response.status)
-                object_json = await response.json()
-                infomsg("# "+str(json.dumps(object_json)))
-                return object_json
+        item_raw = urllib.request.urlopen(item_request)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            exitnagios(timeoutstatus,"item %s does not exist." % item_url)
+        else:
+            exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
     except Exception as e:
         exitnagios(timeoutstatus,"exception fetching item data - "+str(e))
 
+    object_json = json.load(item_raw)
+    infomsg("# "+str(json.dumps(object_json)))
+    return object_json
+
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--item",                                    dest="item",                                                           help="The item to check. Either this or --thing is required.")
     parser.add_argument("-T", "--thing",                                   dest="thing",                                                          help="The thing to check. Will check thing's status. Either this or --item is required.")
@@ -308,10 +315,10 @@ async def main(forcedargs=None):
 
     object_url = "%s://%s:%d%s/%s/%s" % \
                ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
-    object_json = await fetch_object(object_url, args, timeoutstatus)
+    object_json = fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
-        rc, messages, perfdata = await check_group(object_json, thresholds, args, timeoutstatus)
+        rc, messages, perfdata = check_group(object_json, thresholds, args, timeoutstatus)
         if len(messages) == 0:
             final_message = "All group members within bounds."
         elif len(messages) == 1:
@@ -320,15 +327,15 @@ async def main(forcedargs=None):
             final_message = "%d problems in group %s.\n%s" % (len(messages), object_json["name"], "\n".join(messages))
         exitnagios(rc,final_message+" | "+perfdata)
     elif args.item:
-        rc, message = await check_item(object_json, thresholds, timeoutstatus)
+        rc, message = check_item(object_json, thresholds, timeoutstatus)
         exitnagios(rc,message)
     elif args.thing:
-        rc, message = await check_thing(object_json, args)
+        rc, message = check_thing(object_json, args)
         exitnagios(rc,message)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

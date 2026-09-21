@@ -4,12 +4,13 @@
 import os
 import sys
 import time
-import smtplib
-import asyncio
+import subprocess
 import argparse
 import datetime
+import smtplib
+import time
+from email.mime.text import MIMEText
 
-import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -19,15 +20,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-import email.mime.text
-
 #-------------------------------------------------------------------------------
 
 _candebug = False
 def candebug():
     global _candebug
     return _candebug
-
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -37,27 +35,29 @@ def infomsg(msg):
         print(msg, flush=True)
 
 def mapstatustoexitcode(status):
-    if status == "OK":
+    if status=="OK":
         exitcode = 0
-    elif status == "WARNING":
+    elif status=="WARNING":
         exitcode = 1
-    elif status == "CRITICAL":
+    elif status=="CRITICAL":
         exitcode = 2
-    elif status == "UNKNOWN":
+    elif status=="UNKNOWN":
         exitcode = 3
     else:
         exitcode = 4
     return exitcode
 
-def exitnagios(status, message):
+def exitnagios(status,message):
     exitcode = mapstatustoexitcode(status)
-    print(status + ": " + message, flush=True)
+    print(status+": "+message, flush=True)
     sys.exit(exitcode)
 
 #-------------------------------------------------------------------------------
 
-async def generatedriver(proxy):
+def generatedriver(proxy):
     chrome_options = Options()
+    #chrome_options.add_argument("--incognito")
+    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -75,25 +75,28 @@ async def generatedriver(proxy):
 
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
     return driver
 
 def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-async def wait_page_loaded(driver):
+def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        await asyncio.sleep(1)
+        time.sleep(1)
 
 #-------------------------------------------------------------------------------
 
-def tryfindbyxpath(driver, xpath):
+def tryfindbyxpath(driver,xpath):
     result = []
     try:
         result = driver.find_elements(By.XPATH, xpath)
@@ -101,7 +104,7 @@ def tryfindbyxpath(driver, xpath):
         pass
     return result
 
-def tryfindbyid(driver, idname):
+def tryfindbyid(driver,idname):
     result = []
     try:
         result = driver.find_elements(By.ID, idname)
@@ -109,7 +112,7 @@ def tryfindbyid(driver, idname):
         pass
     return result
 
-def tryfindbyclassname(driver, classname):
+def tryfindbyclassname(driver,classname):
     result = []
     try:
         result = driver.find_elements(By.CLASS_NAME, classname)
@@ -117,7 +120,7 @@ def tryfindbyclassname(driver, classname):
         pass
     return result
 
-def tryfindbytagname(driver, tagname):
+def tryfindbytagname(driver,tagname):
     result = []
     try:
         result = driver.find_elements(By.TAG_NAME, tagname)
@@ -127,128 +130,134 @@ def tryfindbytagname(driver, tagname):
 
 #-------------------------------------------------------------------------------
 
-async def dodnssecverisigncall(mailfrom, tolerate, proxy):
+def dodnssecverisigncall(mailfrom,tolerate,proxy):
     try:
-        driver = await generatedriver(proxy)
+        driver = generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = WebDriverWait(driver,20)
+        action=ActionChains(driver)
+
+        # OTHER ALTERNATIVES, BUT DO NOT CHECK DMARC
+        # https://dkimvalidator.com/
+        # https://dmarcchecker.app/
+        # https://www.mailreach.co/dkim-checker
+        # https://wander.science/projects/email/dkimtest/
 
         infomsg("browser OK")
         url = "https://dmarcchecker.app"
         driver.get(url)
-        infomsg("asking for navigating " + url)
+        infomsg("asking for navigating "+url)
 
-        await asyncio.sleep(2)
-        await wait_page_loaded(driver)
+        time.sleep(2)
+        wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
         wait.until(EC.presence_of_element_located((By.ID, "email-address")))
 
         infomsg("finding base element")
-        elements = tryfindbyxpath(driver, ".//*[@id='email-address']//a")
-        if len(elements) == 0:
-            exitnagios("CRITICAL", "no result from page")
+        elements = tryfindbyxpath(driver,".//*[@id='email-address']//a")
+        if len(elements)==0:
+            exitnagios("CRITICAL","no result from page")
 
         infomsg("extracting email")
         targetemail = elements[0].text
         me = mailfrom
-        dummystring = "TEST email to " + url + " at " + datetime.datetime.now(datetime.UTC).isoformat()
+        dummystring = "TEST email to "+url+" at "+datetime.datetime.now(datetime.UTC).isoformat()
 
         email_body = dummystring
-        email_message = email.mime.text.MIMEText(email_body)
+        email_message = MIMEText(email_body)
         email_message["Subject"] = dummystring
         email_message["From"] = me
         email_message["To"] = targetemail
         email_message["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:102.0) Gecko/20100101 Thunderbird/102.0"
 
-        infomsg("sending email to " + targetemail)
+        infomsg("sending email to "+targetemail)
         s = smtplib.SMTP("localhost")
         s.sendmail(me, [targetemail], email_message.as_string())
         s.quit()
 
-        await asyncio.sleep(5)
+        time.sleep(5)
         infomsg("waiting for element")
         start_time = time.time()
         max_duration = 180
         retry_interval = 5
         gotanswer = False
         while time.time() - start_time < max_duration:
-            founddetails = tryfindbyclassname(driver, "report-details-table")
-            if len(founddetails) > 0:
+            founddetails = tryfindbyclassname(driver,"report-details-table")
+            if len(founddetails)>0:
                 infomsg("found details!")
                 gotanswer = True
                 break
             else:
-                foundcheck = tryfindbyid(driver, "check-status")
-                if len(foundcheck) > 0:
-                    infomsg("the check status is " + foundcheck[0].text)
+                foundcheck = tryfindbyid(driver,"check-status")
+                if len(foundcheck)>0:
+                    infomsg("the check status is "+foundcheck[0].text)
                 infomsg("extra wait for mail arrival")
-                await asyncio.sleep(retry_interval)
+                time.sleep(retry_interval)
 
-        if gotanswer == False:
-            exitnagios("CRITICAL", "could not find answer from remote website")
+        if gotanswer==False:
+            exitnagios("CRITICAL","could not find answer from remote website")
         else:
             infomsg("extracting errors")
-            errors = tryfindbyclassname(driver, "error")
+            errors = tryfindbyclassname(driver,"error")
             infomsg(len(errors))
             countError = 0
             for item in errors:
                 words = item.text.split()
                 infomsg(words)
-                if len(words) == 2:
-                    partial = None
+                if len(words)==2:
+                    partial=None
                     try:
                         partial = int(words[0])
                     except:
                         pass
-                    if partial != None:
-                        countError = countError + partial
+                    if partial!=None:
+                        countError=countError+partial
             infomsg("extracting warns")
-            warns = tryfindbyclassname(driver, "warn")
+            warns = tryfindbyclassname(driver,"warn")
             infomsg(len(warns))
             countWarning = 0
             for item in warns:
                 words = item.text.split()
                 infomsg(words)
-                if len(words) == 2:
-                    partial = None
+                if len(words)==2:
+                    partial=None
                     try:
                         partial = int(words[0])
                     except:
                         pass
-                    if partial != None:
-                        countWarning = countWarning + partial
+                    if partial!=None:
+                        countWarning=countWarning+partial
 
-        if countError > 0:
-            exitnagios("CRITICAL", "There are errors for " + mailfrom + " | warnings=" + str(countWarning) + " errors=" + str(countError))
-        elif countWarning > tolerate:
-            exitnagios("WARNING", "There are warnings for " + mailfrom + " | warnings=" + str(countWarning) + " errors=" + str(countError))
+        if countError>0:
+            exitnagios("CRITICAL","There are errors for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
+        elif countWarning>tolerate:
+            exitnagios("WARNING","There are warnings for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
         else:
-            exitnagios("OK", "No issues found for " + mailfrom + " | warnings=" + str(countWarning) + " errors=" + str(countError))
+            exitnagios("OK","No issues found for "+mailfrom+" | warnings="+str(countWarning)+" errors="+str(countError))
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
+        exitnagios("CRITICAL","unexpected error during the check - "+str(e))
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--mailfrom", dest="mailfrom", default="root@localhost", help="email to test")
-    parser.add_argument("-l", "--tolerate", dest="tolerate", default="0", help="number of warnings to tolerate")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-f", "--mailfrom",                                dest="mailfrom",         default="root@localhost",                     help="email to test")
+    parser.add_argument("-l", "--tolerate",                                dest="tolerate",         default="0",                                  help="number of warnings to tolerate")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
     proxy = ""
     tolerate = int(args.tolerate)
-    await dodnssecverisigncall(args.mailfrom, tolerate, proxy)
+    dodnssecverisigncall(args.mailfrom,tolerate,proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

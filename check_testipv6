@@ -6,7 +6,6 @@ import sys
 import time
 import subprocess
 import argparse
-import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -53,6 +52,8 @@ def exitnagios(status,message):
 
 def generatedriver(proxy):
     chrome_options = Options()
+    #chrome_options.add_argument("--incognito")
+    #chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -71,30 +72,33 @@ def generatedriver(proxy):
     chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
     driver = webdriver.Chrome(options=chrome_options,service=chrome_service)
+    #driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
     return driver
 
 def check_page_loaded(driver):
+    #self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
-async def wait_page_loaded(driver):
+def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        await asyncio.sleep(1)
+        time.sleep(1)
 
 #-------------------------------------------------------------------------------
 
 def extractvalue(driver,entryname):
     element = driver.find_element(By.XPATH, "//td[text()=\""+entryname+"\"]/following-sibling::td")
-    value = element.text  # Added this line to get the text from the element
+
     infomsg(value)
     return value
 
-async def dotestipv6call(proxy):
+def dotestipv6call(proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -106,8 +110,8 @@ async def dotestipv6call(proxy):
         driver.get(url)
         infomsg("asking for navigating "+url)
 
-        await asyncio.sleep(5)
-        await wait_page_loaded(driver)
+        time.sleep(5)
+        wait_page_loaded(driver)
         infomsg("page loaded")
 
         try:
@@ -147,24 +151,22 @@ async def dotestipv6call(proxy):
             exitnagios("WARNING","The result of the test is "+str(currentmark)+"/"+str(totalmarks)+" | result="+str(currentmark)+" best="+str(totalmarks))
     except Exception as e:
         exitnagios("CRITICAL","unexpected error during the check - "+str(e))
-    finally:
-        driver.quit()
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
-    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-Â®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
-    await dotestipv6call(args.proxy)
+    dotestipv6call(args.proxy)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

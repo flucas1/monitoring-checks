@@ -5,7 +5,7 @@ import os
 import sys
 import argparse
 import pathlib
-import asyncio
+import subprocess
 
 #-------------------------------------------------------------------------------
 
@@ -55,18 +55,16 @@ def speedfromversion(version):
     else:
         return 0
 
-async def getmaxspeed(device):
+def getmaxspeed(device):
     deviceroute = os.path.basename(device).replace("-",":")
-    process = await asyncio.create_subprocess_exec("/usr/bin/lsusb", "-v", "-s", deviceroute,
-                                                   stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    response = process.returncode
+    cmdline = ["/usr/bin/lsusb","-v","-s",deviceroute]
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    response = completedproc.returncode
 
     maxspeed = 0
-    if response == 0:
+    if response==0:
         for line in output.splitlines():
             line = line.strip()
             if line.startswith("Device can operate at SuperSpeed "):
@@ -74,15 +72,15 @@ async def getmaxspeed(device):
                 candidate = parts[5]
                 candidate = candidate.replace("(","").replace(")","").replace("Gbps","")+"000"
                 candidate = int(candidate)
-                if candidate > maxspeed:
-                    maxspeed = candidate
-    elif response == 1:
-        if output == "" and errors == "":
-            maxspeed = -1
+                if candidate>maxspeed:
+                    maxspeed=candidate
+    elif response==1:
+        if output=="" and errors=="":
+            maxspeed=-1
 
     return maxspeed
 
-async def printinfo(device):
+def printinfo(device):
     status = False
     try:
         version = pathlib.Path(os.path.join(device,"version")).read_text().strip()
@@ -90,17 +88,17 @@ async def printinfo(device):
         major = int(parts[0])
         infomsg("USB major version for "+device+" is "+str(major))
         if major >= 3:
-            maxspeed = await getmaxspeed(device)
-            actualspeed = pathlib.Path(os.path.join(device,"speed")).read_text().strip()
+            maxspeed = getmaxspeed(device)
+            actualspeed = pathlib.Path(os.path.join(device,"speed"  )).read_text().strip()
             actualspeed = int(actualspeed)
-            reference = speedfromversion(version)
+            reference   = speedfromversion(version)
             infomsg("\tusb version: "+version)
             infomsg("\tmax speed: "+str(maxspeed))
             infomsg("\tactual speed: "+str(actualspeed))
             infomsg("\treference speed: "+str(reference))
             if maxspeed <= actualspeed:
                 status = True
-            elif maxspeed == -1:
+            elif maxspeed==-1:
                 status = True
         else:
             status = True
@@ -121,36 +119,34 @@ def listdevices():
                 result.append(fullpath)
     return result
 
-async def is_usb_speedmax():
+def is_usb_speedmax():
     issues = []
 
     realdevices = listdevices()
-    tasks = [printinfo(device) for device in realdevices]
-    results = await asyncio.gather(*tasks)
-
-    for index, status in enumerate(results):
+    for device in realdevices:
+        status = printinfo(device)
         if status == False:
-            issues.append(realdevices[index])
+            issues.append(device)
 
-    if len(issues) == 0:
+    if len(issues)==0:
         exitnagios("OK","no issues found | issues=0")
     else:
         exitnagios("WARNING","some issues found - "+str(issues)+" | issues="+str(len(issues)))
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
 
-    await is_usb_speedmax()
+    is_usb_speedmax()
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

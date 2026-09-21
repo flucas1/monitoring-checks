@@ -4,7 +4,7 @@
 import argparse
 import sys
 import os
-import asyncio
+import subprocess
 import datetime
 import json
 import re
@@ -57,13 +57,12 @@ def match_ssid(ssid,listregex):
             return True
     return False
 
-async def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit):
+def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit):
     cmdline = ["/usr/sbin/iw","dev",interface,"info"]
-    process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip()
-    errors = stderr.decode("utf-8").strip()
-    exitcode = process.returncode
+    completedproc = subprocess.run(cmdline,capture_output=True)
+    output = completedproc.stdout.decode("utf-8").strip()
+    errors = completedproc.stderr.decode("utf-8").strip()
+    exitcode = completedproc.returncode
     if exitcode != 0:
         return ("WARNING","The interface "+interface+" is not valid "+interface+".")
     else:
@@ -79,11 +78,10 @@ async def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expecte
         cmdline.append("passive")
     infomsg(" ".join(cmdline))
     try:
-        process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        stdout, stderr = await process.communicate()
-        output = stdout.decode("utf-8").strip()
-        errors = stderr.decode("utf-8").strip()
-        exitcode = process.returncode
+        completedproc = subprocess.run(cmdline,capture_output=True)
+        output = completedproc.stdout.decode("utf-8").strip()
+        errors = completedproc.stderr.decode("utf-8").strip()
+        exitcode = completedproc.returncode
     except Exception as e:
         return ("WARNING","Cannot get the wireless info for the interface "+interface+" - "+str(e))
     if exitcode != 0:
@@ -109,7 +107,7 @@ async def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expecte
                 current_channel = "unknown"
             if match_ssid(current_ssid,ignoredlist):
                 resultmessages.append("The SSID "+current_ssid+" with channel "+current_channel+" matches the ignore list "+str(ignoredlist)+".")
-                ignoredcount=ignoredcount+1
+                ignorecount=ignorecount+1
             elif match_ssid(current_ssid,alertlist):
                 resultstatus = "CRITICAL"
                 resultmessages.append("The SSID "+current_ssid+" with channel "+current_channel+" matches the alert list "+str(alertlist)+".")
@@ -141,7 +139,7 @@ async def dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expecte
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--alert",                                   dest="alert",            default="",                                   help="alert if an ssid matching")
     parser.add_argument("-g", "--ignored",                                 dest="ignored",          default="",                                   help="ssids to ignore")
@@ -149,7 +147,7 @@ async def main(forcedargs=None):
     parser.add_argument("-u", "--utilization",                             dest="utilization",      default="70;90",                              help="max utilization of expected ssids warning;critical")
     parser.add_argument("-i", "--interface",                               dest="interface",        default="",                                   help="interface to use")
     parser.add_argument("-p", "--passive",           action="store_true",  dest="passive",          default=False,                                help="skips sending probe requests and only listens to beacons - faster but may miss hidden SSIDs")
-    parser.add_argument("-d", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
+    parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
@@ -196,7 +194,7 @@ async def main(forcedargs=None):
     finalstatus = ""
     finalmessages = []
     for interface in interfacelist:
-        status, message = await dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit)
+        status, message = dossidcall(interface,passive,timeoutsecs,ignoredlist,alertlist,expected,utilwarn,utilcrit)
         finalstatus = mergestatus(finalstatus,status)
         if message != "":
             finalmessages.append(message)
@@ -209,6 +207,6 @@ async def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

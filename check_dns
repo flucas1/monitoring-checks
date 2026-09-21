@@ -17,7 +17,6 @@ import socks
 import traceback
 import random
 import asyncio
-import datetime
 
 #-------------------------------------------------------------------------------
 

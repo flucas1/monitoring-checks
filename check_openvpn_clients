@@ -96,7 +96,7 @@ class telnetconnection:
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target",                                  dest="target",           default="",                                   help="target hostname"                           )
     parser.add_argument("-p", "--port",                                    dest="port",             default="",                                   help="port to use"                               )
@@ -124,7 +124,7 @@ async def main(forcedargs=None):
         port = int(args.port)
 
     telnetwrapper = telnetconnection(host, port, password, "status")
-    data = await telnetwrapper.interact()
+    data = asyncio.run(telnetwrapper.interact())
     infomsg(data)
 
     tab1 = re.findall("(.+),(\\d+\\.\\d+\\.\\d+\\.\\d+\\:\\d+),(\\d+),(\\d+),(.+)", data)
@@ -144,6 +144,6 @@ async def main(forcedargs=None):
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

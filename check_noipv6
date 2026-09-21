@@ -4,9 +4,9 @@
 import argparse
 import sys
 import os
+import subprocess
 import netifaces
 import ipaddress
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -14,7 +14,6 @@ _candebug = False
 def candebug():
     global _candebug
     return _candebug
-
 def setcandebug(value):
     global _candebug
     _candebug = value
@@ -43,7 +42,7 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def dointerfacenetworkcheck(interface):
+def dointerfacenetworkcheck(interface):
     interfaces = netifaces.interfaces()
     found_addrs = []
     for item in interfaces:
@@ -72,7 +71,7 @@ async def dointerfacenetworkcheck(interface):
 
 #-------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--interface",                               dest="interface",        default="",                                   help="interface to check")
     parser.add_argument("-®", "--debug",             action="store_true",  dest="debug",            default=False,                                help="be more verbose")
@@ -83,11 +82,11 @@ async def main(forcedargs=None):
     if (args.interface == ""):
         exitnagios("CRITICAL","interface not defined")
 
-    await dointerfacenetworkcheck(args.interface)
+    dointerfacenetworkcheck(args.interface)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------

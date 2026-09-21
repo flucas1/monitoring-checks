@@ -3,9 +3,9 @@
 
 import os
 import sys
+import subprocess
 import re
 import argparse
-import asyncio
 
 #-------------------------------------------------------------------------------
 
@@ -41,16 +41,13 @@ def exitnagios(status,message):
 
 #-------------------------------------------------------------------------------
 
-async def checkgetent(database, key, value, partial, outputlevel):
+def checkgetent(database, key, value, partial, outputlevel):
     command = ["/usr/bin/getent", database]
     infomsg(str(command))
     output = ""
     try:
-        result = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE)
-        stdout, stderr = await result.communicate()
-        if result.returncode != 0:
-            exitnagios("CRITICAL","getent call failed")
-        output = stdout.decode("utf-8")
+        result = subprocess.check_output(command)
+        output = result.decode("utf-8")
     except Exception as e:
         exitnagios("CRITICAL","exception during getent call")
 
@@ -76,7 +73,7 @@ async def checkgetent(database, key, value, partial, outputlevel):
         if found == False:
             exitnagios("CRITICAL","key not found "+key)
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--database",                                dest="database",                                                       help="database to use (passwod, group, ...)")
     parser.add_argument("-k", "--key",                                     dest="key",                                                            help="key to search")
@@ -94,11 +91,11 @@ async def main(forcedargs=None):
     else:
         outputlevel = "WARNING"
 
-    await checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
+    result = checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
 
 #-------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 #-------------------------------------------------------------------------------
