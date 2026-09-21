@@ -8,7 +8,6 @@ import traceback
 import sys
 import datetime
 import asyncio
-import subprocess
 import re
 import argparse
 
