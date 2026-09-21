@@ -98,7 +98,7 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-async def await wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
