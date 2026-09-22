@@ -32,7 +32,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug():
         print(msg, flush=True)
 
 
@@ -260,7 +260,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
         curl.reset()
         # curl.setopt(pycurl.CAINFO, "/etc/ssl/certs/ca-certificates.crt")
         # curl.setopt(pycurl.CAPATH, "/etc/ssl/certs/")
-        if candebug() == True:
+        if candebug():
             curl.setopt(pycurl.VERBOSE, 1)
             curl.setopt(pycurl.DEBUGFUNCTION, _debug_function)
         curl.setopt(pycurl.CAINFO, certifi.where())

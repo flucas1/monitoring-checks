@@ -2,10 +2,8 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import os
 import argparse
 import subprocess
-import concurrent.futures
 import ipaddress
 import asyncio
 
@@ -25,7 +23,7 @@ def candebug():
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug():
         print(msg, flush=True)
 
 
