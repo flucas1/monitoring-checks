@@ -342,9 +342,9 @@ async def main(forcedargs=None):
     parser.add_argument("-x", "--problematicip", dest="problematicip", default="", help="raise critical if this IP is found")
     parser.add_argument("-r", "--problematicdns", dest="problematicdns", default="", help="raise critical if this DNS is found")
     parser.add_argument("-i", "--expectedip", dest="expectedip", default="", help="expected response for the IP")
-    parser.add_argument("-d", "--expecteddns", dest="expecteddns", default="", help="expected response for the DNS")
+    parser.add_argument("-n", "--expecteddns", dest="expecteddns", default="", help="expected response for the DNS")
     parser.add_argument("-t", "--tolerancedns", dest="tolerancedns", default="0", help="number of problematic DNS entries to tolerate")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

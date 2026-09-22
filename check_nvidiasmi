@@ -163,7 +163,7 @@ async def main(forcedargs=None):
     parser.add_argument("-C", "--mem_critical", dest="mem_critical", default=0, help="critical if threshold is outside low,high")
     parser.add_argument("-t", "--temp_warning", dest="temp_warning", default=0, help="warning if threshold is outside low,high")
     parser.add_argument("-T", "--temp_critical", dest="temp_critical", default=0, help="critical if threshold is outside low,high")
-    parser.add_argument("-d", "--device", dest="device", default=0, help="Device ID (starting from 0)")
+    parser.add_argument("-v", "--device", dest="device", default=0, help="Device ID (starting from 0)")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
