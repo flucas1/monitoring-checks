@@ -122,7 +122,7 @@ def doarpcall(exclusion):
                 basenetwork = str(ipaddress.ip_network(candidate6 + "/64", strict=False))
             except:
                 basenetwork = None
-            if basenetwork != None:
+            if basenetwork is not None:
                 if basenetwork not in map6.keys():
                     map6[basenetwork] = 1
                 else:
