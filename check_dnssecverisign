@@ -262,7 +262,7 @@ async def main(forcedargs=None):
     parser.add_argument('-H', '--host', dest="host", help="Hostname")
     parser.add_argument("-e", "--expected", dest="expected", default="false", help="expected true/false")
     parser.add_argument("-t", "--tolerant", action="store_true", dest="tolerant", default=False, help="allow servers not responding")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

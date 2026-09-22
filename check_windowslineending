@@ -51,7 +51,7 @@ def exitnagios(status, message):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Detect files with Windows line endings.")
-    parser.add_argument("--debug", action="store_true", help="Enable debug output")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="Enable debug output")
     return parser.parse_args()
 
 # -------------------------------------------------------------------------------

@@ -639,7 +639,7 @@ async def main(forcedargs=None):
     parser.add_argument("-U", "--recmincountwarn", dest="recmincountwarn", default="0", help="minimum number of values in record before considering warning")
     parser.add_argument("-I", "--recmincountcrit", dest="recmincountcrit", default="0", help="minimum number of values in record servers before considering critical")
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

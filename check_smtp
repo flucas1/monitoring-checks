@@ -197,7 +197,7 @@ async def main(forcedargs=None):
     parser.add_argument("-r", "--relay", dest="relay", default="closed", help="open or closed relay")
     parser.add_argument("-b", "--blocked", action="store_true", dest="blocked", default=False, help="check if the connection is blocked")
     parser.add_argument("-u", "--source", dest="source", default="", help="source IP for the connection")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

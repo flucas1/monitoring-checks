@@ -161,7 +161,7 @@ async def main(forcedargs=None):
     parser.add_argument("-p", "--port", dest="port", default=80, help="port to use, usually 80 or 443")
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-C", "--certificatedays", dest="certificatedays", default="5,20", help="minimum number of days a certificate has to be valid crit,warn")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

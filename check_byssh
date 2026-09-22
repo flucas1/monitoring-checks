@@ -125,7 +125,7 @@ async def main(forcedargs=None):
     parser.add_argument("-l", "--login", dest="login", default="", help="username for login")
     parser.add_argument("-C", "--remotecmdline", dest="remotecmdline", default="", help="remote commandline to execute")
     parser.add_argument("-a", "--autoaccept", action="store_true", dest="autoaccept", default=False, help="accept all remote keys")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

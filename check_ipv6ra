@@ -101,7 +101,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-i", "--interface", action="store", dest="interface", default="", help="interface to evaluate")
     parser.add_argument("-e", "--expected", action="store", dest="expected", default="", help="expected RA prefixes")
     parser.add_argument("-g", "--ignored", action="store", dest="ignored", default="", help="ignore these RA prefixes")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     return args

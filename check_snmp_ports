@@ -133,7 +133,7 @@ async def main(forcedargs=None):
     parser.add_argument("-m", "--community", dest="community", default="public", help="private/public")
     parser.add_argument("-l", "--listports", dest="listports", default="", help="comma separated list of ports to check speed")
     parser.add_argument("-e", "--expected", dest="expected", default="", help="expected speed")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

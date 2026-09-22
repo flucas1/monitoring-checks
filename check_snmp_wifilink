@@ -145,7 +145,7 @@ async def main(forcedargs=None):
     parser.add_argument("-m", "--community", dest="community", default="public", help="private/public")
     parser.add_argument("-w", "--warning", dest="warning", default="-75", help="if signal less than this, it is a warning")
     parser.add_argument("-c", "--critical", dest="critical", default="-85", help="if signal less than this, it is a critical")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

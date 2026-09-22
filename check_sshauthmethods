@@ -107,7 +107,7 @@ async def main(forcedargs=None):
     parser.add_argument("-p", "--port", dest="port", default="22", help="Enter a TCP port number")
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-e", "--expected", dest="expected", default="publickey,gssapi-with-mic,password", help="expected methods")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

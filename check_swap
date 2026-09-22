@@ -97,7 +97,7 @@ async def main(forcedargs=None):
     parser.add_argument("-w", "--warning", dest="warning", default="", help="warning level percentage")
     parser.add_argument("-c", "--critical", dest="critical", default="", help="critical level percentage")
     parser.add_argument("-m", "--minimum", dest="minimum", default="", help="minimum size MB")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

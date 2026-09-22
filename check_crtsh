@@ -285,7 +285,7 @@ async def main(forcedargs=None):
     parser.add_argument("-v", "--valid", dest="valid", default="", help="valid CA ids")
     parser.add_argument("-i", "--ignore", dest="ignore", default="", help="ignore certificate ids")
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:WARNING", help="timeout value:STATUS")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

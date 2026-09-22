@@ -214,7 +214,7 @@ async def main(forcedargs=None):
     parser.add_argument("-w", "--warning", dest="warning", default="1000", help="minimum value for a warning")
     parser.add_argument("-c", "--critical", dest="critical", default="500", help="maximum value for a critical")
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

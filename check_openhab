@@ -303,7 +303,7 @@ async def main(forcedargs=None):
     parser.add_argument("-O", "--string-ok", dest="string_ok", default=None, help="Regular expression to search for in string values.  Returns OK if pattern is found.")
     parser.add_argument("-g", "--string-warn", dest="string_warn", default=None, help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
     parser.add_argument("-l", "--string-crit", dest="string_crit", default=None, help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)

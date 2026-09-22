@@ -122,7 +122,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-t", "--targetdohurl", action="store", help="target url for the DoH server")
     parser.add_argument("-q", "--testquery", action="store", default="www.google.com.", help="query to resolve")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 

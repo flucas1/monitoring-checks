@@ -109,7 +109,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-k", "--socket", action="store", help="socket file (hot compatible with --hostname)")
     parser.add_argument("-r", "--printers", action="store", help="A comma separated list of printers")
     parser.add_argument("-a", "--all-printers", action="store_true", default=False, help="Test all printers (not compatible with --printers)")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     return args

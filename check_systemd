@@ -192,7 +192,7 @@ async def main(forcedargs=None):
     parser.add_argument("-l", "--toleratecritical", default="", help="Systemd units to mark as warning instead of critical")
     parser.add_argument("-e", "--toleratewarning", default="", help="Systemd units to mark as ok instead of warning")
     parser.add_argument("-g", "--ignore", default="", help="Systemd units to fully ignore")
-    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     setcandebug(args.debug)
