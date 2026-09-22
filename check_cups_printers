@@ -83,6 +83,7 @@ def get_printers_states(conn, printers_names=None, all_printers=False):
     if all_printers:
         printers_names = printers.keys()
     for printer_name in printers_names:
+        found = False
         for cprinter_name, cprinter_attributes in printers.items():
             if printer_name == cprinter_name:
                 cprinter_state = cprinter_attributes["printer-state"]
@@ -95,9 +96,9 @@ def get_printers_states(conn, printers_names=None, all_printers=False):
                 else:
                     printers_failed.append("%s (error %s)" % (printer_name, cprinter_state))
                 found = True
+                break
         if not found:
             printers_failed.append(printer_name + " (not found)")
-        found = False
     return printer_valid, printers_failed
 
 # -------------------------------------------------------------------------------
@@ -108,7 +109,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-k", "--socket", action="store", help="socket file (hot compatible with --hostname)")
     parser.add_argument("-r", "--printers", action="store", help="A comma separated list of printers")
     parser.add_argument("-a", "--all-printers", action="store_true", default=False, help="Test all printers (not compatible with --printers)")
-    parser.add_argument("-Â®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
     return args

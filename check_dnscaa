@@ -56,11 +56,10 @@ def dodnscaacall(domain):
         url = "https://caatest.co.uk/" + domain
         br = mechanize.Browser()
         br.set_handle_robots(False)  # ignore robots file
-        # br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
         br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
         res = br.open(url)
         content = res.read()
-        if content == None:
+        if len(content) == 0:
             exitnagios("CRITICAL", "no result from page")
 
         soup = BeautifulSoup(content, "html.parser")
@@ -70,6 +69,8 @@ def dodnscaacall(domain):
             exitnagios("OK", "the domain has valid CAA records")
         else:
             exitnagios("CRITICAL", "the domain has issues with the CAA records")
+
+        br.close()
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
@@ -85,7 +86,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    if (args.host == ""):
+    if args.host is None or args.host == "":
         exitnagios("CRITICAL", "specify a host/domain to check")
 
     dodnscaacall(args.host)

@@ -8,7 +8,6 @@ import subprocess
 import argparse
 import datetime
 import smtplib
-import time
 import asyncio
 from email.mime.text import MIMEText
 

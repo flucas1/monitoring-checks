@@ -33,7 +33,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug():
         print(msg, flush=True)
 
 
@@ -95,7 +95,7 @@ def check_page_loaded(driver):
 def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
