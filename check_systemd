@@ -59,7 +59,7 @@ def execute_systemd_call(system, service, user):
         cmdline = cmdline + ["--system"]
     else:
         cmdline = cmdline + ["--user"]
-    if service != None:
+    if service is not None:
         cmdline = cmdline + ["is-active", service]
     else:
         cmdline = cmdline + ["--no-legend"]
@@ -147,7 +147,7 @@ def generate_dicts(system, service, user, toleratecriticallist, toleratewarningl
 
 def systemd_check(service, system, user, toleratecriticallist, toleratewarninglist, ignorelist):
 
-    if service == None:
+    if service is None:
         valid, oks, warnings, criticals = generate_dicts(system, service, user, toleratecriticallist, toleratewarninglist, ignorelist)
         if valid != True:
             exitnagios("CRITICAL", "issue calling systemd")

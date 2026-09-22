@@ -214,7 +214,7 @@ def load_json(proxy, domain, retries):
                 infomsg(parsederrorcode)
                 infomsg("server error " + str(parsederrorcode))
 
-        if object_json != None:
+        if object_json is not None:
             break
         elif counter > retries:
             break
@@ -233,7 +233,7 @@ def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retr
         socket.getaddrinfo = forced_ipv6_gai_family
     elif mode == "ipv4":
         socket.getaddrinfo = forced_ipv4_gai_family
-    elif mode == None:
+    elif mode is None:
         pass
     else:
         exitnagios("CRITICAL", "invalid IP mode")
@@ -251,7 +251,7 @@ def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retr
     parsed = load_json(proxy, hostname, retries)
     elapsed = datetime.datetime.now(datetime.UTC) - start
     duration = elapsed.total_seconds()
-    if parsed != None:
+    if parsed is not None:
         valid = True
         problems = []
         totalfound = len(parsed)

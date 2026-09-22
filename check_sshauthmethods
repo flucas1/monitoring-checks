@@ -78,7 +78,7 @@ def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlis
         t = paramiko.Transport((host, port))
         t.connect()
     except Exception as e:
-        if t != None:
+        if t is not None:
             t.close()
         exitnagios(timeoutstatus, "SSH connection failed " + host + ":" + str(port) + " - cause: " + str(e))
 

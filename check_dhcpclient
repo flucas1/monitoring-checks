@@ -106,7 +106,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     warnings = []
     criticals = []
     total = -1
-    if output == None:
+    if output is None:
         warnings.append("the network on interface '" + interface + "' does not have any dhcp server")
     else:
         lines = output.splitlines()

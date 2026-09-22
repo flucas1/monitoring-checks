@@ -124,7 +124,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
     except Exception as e:
         exitnagios(timeoutstatus, str(e))
 
-    if ip != None:
+    if ip is not None:
         try:
             driver = generatedriver(proxy)
 
@@ -135,7 +135,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
     else:
         exitnagios("CRITICAL", "The hostname " + hostname + " was not resolved")
 
-    if driver != None:
+    if driver is not None:
         try:
             infomsg("browser OK")
 

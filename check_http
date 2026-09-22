@@ -213,7 +213,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
     try:
         infomsg("ssl " + str(sslversion))
         curlsslfinal = None
-        if sslversion != None:
+        if sslversion is not None:
             httpprotocol = "https"
             if sslversion == "default":
                 curlsslmin = pycurl.SSLVERSION_DEFAULT
@@ -275,7 +275,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
             curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
         else:
             curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
-        if curlsslfinal != None:
+        if curlsslfinal is not None:
             curl.setopt(pycurl.SSL_VERIFYPEER, 1)  # default is 1
             curl.setopt(pycurl.SSL_VERIFYHOST, 2)  # default is 2
             curl.setopt(pycurl.SSLVERSION, curlsslfinal)
@@ -316,7 +316,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
         else:
             failuremessage = msg
     finally:
-        if curl != None:
+        if curl is not None:
             curl.close()
 
     infomsg("----- start of preheaders")
@@ -331,12 +331,12 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
 
     infomsg("timeoutmsg: " + str(timeoutmessage))
     infomsg("failuremsg: " + str(failuremessage))
-    if failuremessage != None:
+    if failuremessage is not None:
         toleratedfailures = []
         toleratedfailures.append("Invalid HTTP header field was received: frame type: 1, stream: 1, name: [upgrade], value: [h2,h2c]")
         if failuremessage not in toleratedfailures:
             return "CRITICAL", "error - " + str(failuremessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
-    if timeoutmessage != None:
+    if timeoutmessage is not None:
         return timeoutstatus, "error - " + str(timeoutmessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 2")
@@ -377,7 +377,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
         certexpirationparsed = None
         try:
             infomsg("certinfo is " + str(certinfo))
-            if certinfo == None:
+            if certinfo is None:
                 certvars = []
             elif len(certinfo) > 0:
                 certvars = certinfo[0]
@@ -388,14 +388,14 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
                 if certvarname in ["Expire Date", "Expire date"]:
                     certexpirationraw = certvarvalue
                     break
-            if certexpirationraw != None:
+            if certexpirationraw is not None:
                 from dateutil.parser import parse
                 infomsg(certexpirationraw)
                 certexpirationparsed = parse(certexpirationraw)
         except:
             infomsg(traceback.format_exc())
             pass
-        if certexpirationparsed == None:
+        if certexpirationparsed is None:
             return "CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' for URL '" + url + "' | totaltime=" + str(totaltime)
         else:
             today = datetime.datetime.now(datetime.UTC)

@@ -77,7 +77,7 @@ def doportexternalcall(domain):
                 content = res.read()
                 infomsg("the result is of length " + str(len(content)))
 
-                if content != None:
+                if content is not None:
                     soup = BeautifulSoup(content, "html.parser")
                     # infomsg(soup)
                     div = soup.find("div", id="blaffa")

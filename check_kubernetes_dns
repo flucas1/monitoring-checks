@@ -85,9 +85,9 @@ def doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, login,
         counter = counter + 1
 
         command = ["/usr/bin/ssh", login + "@" + hostname]
-        if protocol != "" and protocol != None:
+        if protocol != "" and protocol is not None:
             command = command + [protocol]
-        if key != "" and key != None:
+        if key != "" and key is not None:
             command = command + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
         if autoaccept:
             command = command + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
@@ -130,7 +130,7 @@ def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, key, l
     dnslist = []
     remotecmdline = "/usr/bin/sudo -u root /etc/automation/kubednsips-kubernetes"
     output = doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, login, autoaccept)
-    if output == None:
+    if output is None:
         exitnagios(timeoutstatus, "could not get the list of DNS service ips")
     else:
         dnslist = output.split()
@@ -142,7 +142,7 @@ def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, key, l
     nodelist = []
     remotecmdline = "/usr/bin/sudo -u root /etc/automation/nodelist-kubernetes"
     output = doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, login, autoaccept)
-    if output == None:
+    if output is None:
         exitnagios(timeoutstatus, "could not get the list of kubernetes nodes")
     else:
         nodelist = output.split()
@@ -152,16 +152,16 @@ def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, key, l
     for nodename in nodelist:
         infomsg("testing node " + nodename)
 
-        if serverv4 != None:
+        if serverv4 is not None:
             remotecmdline = "nslookup www.google.com " + serverv4
             output = doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
-            if output == None:
+            if output is None:
                 finalmessages.append("could not validate IPv4 DNS traffic for node " + nodename)
 
-        if serverv6 != None:
+        if serverv6 is not None:
             remotecmdline = "nslookup www.google.com " + serverv6
             output = doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
-            if output == None:
+            if output is None:
                 finalmessages.append("could not validate IPv6 DNS traffic for node " + nodename)
 
     if len(finalmessages) == 0:

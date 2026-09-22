@@ -119,9 +119,9 @@ def oom_check(criticallevel, warninglevel, short=False):
     kernelcounter, kernellogs = oom_kernel_check(criticallevel, warninglevel, short)
     systemdcounter, systemdlogs = oom_systemd_check(criticallevel, warninglevel, short)
 
-    if kernelcounter == None:
+    if kernelcounter is None:
         exitnagios("CRITICAL", "error retrieving the information from kernel oom journalctl | counter=-1")
-    elif systemdcounter == None:
+    elif systemdcounter is None:
         exitnagios("CRITICAL", "error retrieving the information from systemd oomd journalctl | counter=-1")
     else:
         counter = kernelcounter + systemdcounter

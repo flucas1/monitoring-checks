@@ -124,7 +124,7 @@ def queryversion(interface, mac, strict):
                     result = parts[1]
                     break
         infomsg("queryversion")
-        if result != None:
+        if result is not None:
             break
         else:
             time.sleep(1)

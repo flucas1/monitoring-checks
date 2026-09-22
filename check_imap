@@ -83,7 +83,7 @@ def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
             imapconnection = imaplib.IMAP4_SSL(host=hostname, port=port, timeout=timeoutvalue, ssl_context=ctx)
         else:
             imapconnection = imaplib.IMAP4(host=hostname, port=port, timeout=timeoutvalue)
-        if imapconnection != None:
+        if imapconnection is not None:
             infomsg(str(imapconnection.PROTOCOL_VERSION))
             certexpirationparsed = None
             if dossl == True:
@@ -94,7 +94,7 @@ def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
                     infomsg(str(cert_data))
                     certexpirationraw = cert_data["notAfter"]
                     infomsg("Expiry date: " + str(certexpirationraw))
-                    if certexpirationraw != None:
+                    if certexpirationraw is not None:
                         from dateutil.parser import parse
                         certexpirationparsed = parse(cert_data["notAfter"])
                 except:
@@ -106,7 +106,7 @@ def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
             duration = elapsed.total_seconds()
             daysremaining = -1
             if dossl == True and certificatedays != "":
-                if certexpirationparsed == None:
+                if certexpirationparsed is None:
                     exitnagios("CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' | time=" + str(duration) + " validity=0")
                 else:
                     today = datetime.datetime.now(datetime.UTC)

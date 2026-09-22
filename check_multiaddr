@@ -55,7 +55,7 @@ def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutv
         infomsg(childtimeoutstatus)
         cmdline = multiargs
         cmdline = cmdline + ["-H", host]
-        if childtimeoutvalue != None and childtimeoutstatus != None:
+        if childtimeoutvalue != None and childtimeoutstatus is not None:
             cmdline = cmdline + ["-t", str(childtimeoutvalue) + ":" + childtimeoutstatus]
         infomsg(cmdline)
         completedproc = subprocess.run(cmdline, capture_output=True, timeout=multitimeoutvalue)
@@ -91,7 +91,7 @@ def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, ch
             for test in futures:
                 test.cancel()
             for pid, proc in executor._processes.items():
-                if proc != None:
+                if proc is not None:
                     proc.terminate()
             executor.shutdown(wait=False, cancel_futures=True)
             parts = output.split("|", 1)
@@ -157,7 +157,7 @@ def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, ch
 
 
 async def main(forcedargs=None):
-    if forcedargs == None:
+    if forcedargs is None:
         forcedargs = sys.argv[1:]
     multitimeoutparts = forcedargs[0].split(":")
     multitimeoutvalue = int(multitimeoutparts[0])
@@ -199,7 +199,7 @@ async def main(forcedargs=None):
         childtimeoutvalue = int(childtimeoutparts[0])
         if len(childtimeoutparts) > 1:
             childtimeoutstatus = childtimeoutparts[1]
-    if childtimeoutstatus == None:
+    if childtimeoutstatus is None:
         childtimeoutstatus = "CRITICAL"
     infomsg(childtimeoutvalue)
     infomsg(childtimeoutstatus)

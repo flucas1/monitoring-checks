@@ -180,7 +180,7 @@ async def main(forcedargs=None):
         for interface in interfaces:
             infomsg(interface)
             speeds = getspeeds(interface, targetmac)
-            if speeds != None:
+            if speeds is not None:
                 upload = speeds[0]
                 download = speeds[1]
                 if (upload == "n/a") or (download == "n/a"):

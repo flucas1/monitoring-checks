@@ -227,7 +227,7 @@ def dodnssecverisigncall(mailfrom, tolerate, proxy):
                         partial = int(words[0])
                     except:
                         pass
-                    if partial != None:
+                    if partial is not None:
                         countError = countError + partial
             infomsg("extracting warns")
             warns = tryfindbyclassname(driver, "warn")
@@ -242,7 +242,7 @@ def dodnssecverisigncall(mailfrom, tolerate, proxy):
                         partial = int(words[0])
                     except:
                         pass
-                    if partial != None:
+                    if partial is not None:
                         countWarning = countWarning + partial
 
         if countError > 0:

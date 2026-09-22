@@ -205,7 +205,7 @@ def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         infomsg("finding base element")
         tablepath = "//div[@class=\"header\"]//table[@class=\"T1\"]"
         element = driver.find_element(By.XPATH, tablepath)
-        if element == None:
+        if element is None:
             exitnagios("CRITICAL", "no result from page")
 
         blocks = tryfindbyxpath(driver, tablepath + "/tbody/tr")

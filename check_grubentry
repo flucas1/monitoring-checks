@@ -68,7 +68,7 @@ def dogrubentrycall(expectedpos):
                 if len(singlequotes) > 0:
                     allcandidates.append(singlequotes[0])
                 doublequotes = re.findall('"([^"]*)"', line)
-                if doublequotes != None:
+                if doublequotes is not None:
                     if len(doublequotes) > 0:
                         allcandidates.append(doublequotes[0])
         validcandidates = []

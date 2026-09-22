@@ -139,7 +139,7 @@ class RouterInfo:
         :returns: JSON with last boot time and uptime in seconds
         """
         r = self.__get('uptime()')
-        if r == None:
+        if r is None:
             return None
         else:
             temp = json.loads(r)["uptime"]
@@ -154,7 +154,7 @@ class RouterInfo:
         :returns: integer - uptime in seconds
         """
         r = self.get_uptime()
-        if r == None:
+        if r is None:
             return None
         else:
             return int(r['uptime'])
@@ -166,7 +166,7 @@ class RouterInfo:
         :returns: JSON with memory variables
         """
         r = self.__get('memory_usage()')
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads('{' + r[17:])
@@ -179,7 +179,7 @@ class RouterInfo:
         :returns: JSON with CPU load statistics
         """
         r = self.__get('cpu_usage()')
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads('{' + r[14:])
@@ -206,7 +206,7 @@ class RouterInfo:
         :returns: JSON with list of clents and a list of mac addresses
         """
         r = self.__get('get_clientlist()')
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads(r)
@@ -219,7 +219,7 @@ class RouterInfo:
         :returns: JSON with sent and received Megabits since last boot
         """
         r = self.__get('netdev(appobj)')
-        if r == None:
+        if r is None:
             return None
         else:
             meas_2 = json.loads(r)
@@ -265,7 +265,7 @@ class RouterInfo:
         :returns: JSON with status information on the WAN connection
         """
         r = self.__get('wanlink()')
-        if r == None:
+        if r is None:
             return None
         else:
             status = {}
@@ -283,7 +283,7 @@ class RouterInfo:
         :returns: True if WAN is connected
         """
         r = self.get_status_wan()
-        if r == None:
+        if r is None:
             return None
         else:
             return r['status'] == '1'
@@ -305,7 +305,7 @@ class RouterInfo:
                   'lan_proto', 'x_Setting', 'label_mac', 'lan_netmask', 'lan_gateway',
                   'http_enable', 'https_lanport', 'wl0_country_code', 'wl1_country_code']:
             r = self.__get("nvram_get(" + s + ")")
-            if r != None:
+            if r is not None:
                 settings[s] = json.loads(r)[s]
         return settings
 
@@ -315,7 +315,7 @@ class RouterInfo:
         :return: IP address
         """
         r = self.__get("nvram_get(lan_ipaddr)")
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads(r)['lan_ipaddr']
@@ -326,7 +326,7 @@ class RouterInfo:
         :return: Netmask
         """
         r = self.__get("nvram_get(lan_netmask)")
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads(r)['lan_netmask']
@@ -337,7 +337,7 @@ class RouterInfo:
         :return: IP address of gateay
         """
         r = self.__get("nvram_get(lan_gateway)")
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads(r)['lan_gateway']
@@ -349,7 +349,7 @@ class RouterInfo:
         :returns: JSON with a list of DHCP leases
         """
         r = self.__get("dhcpLeaseMacList()")
-        if r == None:
+        if r is None:
             return None
         else:
             return json.loads(r)
@@ -361,7 +361,7 @@ class RouterInfo:
         :returns: JSON list with MAC addresses
         """
         clnts = self.get_clients_fullinfo()
-        if clnts == None:
+        if clnts is None:
             return None
         else:
             infomsg(clnts)
@@ -379,7 +379,7 @@ class RouterInfo:
         :return: JSON list of clients with main characteristics
         """
         clnts = self.get_clients_fullinfo()
-        if clnts == None:
+        if clnts is None:
             return None
         else:
             lst = []
@@ -408,7 +408,7 @@ class RouterInfo:
         :return: JSON with clientinfo (see get_clients_info() for description)
         """
         clnts = self.get_clients_fullinfo()['get_clientlist']
-        if clnts == None:
+        if clnts is None:
             return None
         else:
             if clientid in clnts:
@@ -467,7 +467,7 @@ def check_status(value, warn_low, warn_high, crit_low, crit_high):
 def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     ri = doasusroutercall(host, username, password, timeoutvalue)
     uptime = ri.get_uptime_secs()
-    if uptime != None:
+    if uptime is not None:
         infomsg(uptime)
         check_status(uptime, warn_low, warn_high, crit_low, crit_high)
     else:
@@ -477,7 +477,7 @@ def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_h
 def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     ri = doasusroutercall(host, username, password, timeoutvalue)
     memory = ri.get_memory_usage()
-    if memory != None:
+    if memory is not None:
         value = (int(memory["mem_used"]) / int(memory["mem_total"])) * 100
         infomsg(value)
         check_status(round(value, 2), warn_low, warn_high, crit_low, crit_high)
@@ -488,7 +488,7 @@ def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_h
 def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     ri = doasusroutercall(host, username, password, timeoutvalue)
     cpu = ri.get_cpu_usage()
-    if cpu != None:
+    if cpu is not None:
         cores = int(len(cpu) / 2)
         infomsg(cores)
         counter = 1

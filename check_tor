@@ -85,7 +85,7 @@ def dotorcall(protocol, response):
         br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
         res = br.open(url)
         content = res.read()
-        if content == None:
+        if content is None:
             exitnagios("CRITICAL", "no result from page")
 
         soup = BeautifulSoup(content, "html.parser")

@@ -144,7 +144,7 @@ def doisvpncall(expected, severity, proxy):
         wait.until(EC.presence_of_element_located((By.ID, "type")))
 
         element = driver.find_element(By.ID, "type")
-        if element == None:
+        if element is None:
             exitnagios("CRITICAL", "no result from page")
 
         value = element.text.strip()

@@ -58,7 +58,7 @@ extra_tz = None
 
 def get_extra_tz():
     global extra_tz
-    if extra_tz == None:
+    if extra_tz is None:
         extra_tz = {
             "A": 1 * 3600,
             "ACDT": 10.5 * 3600,

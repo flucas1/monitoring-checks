@@ -126,7 +126,7 @@ def dohstspreloadcall(proxy, domain):
         element = driver.find_element(By.ID, "status")
         infomsg(element)
         statustext = None
-        if element == None:
+        if element is None:
             exitnagios("CRITICAL", "cannot find the status element")
         else:
             statustext = element.text.strip()

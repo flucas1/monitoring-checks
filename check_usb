@@ -125,7 +125,7 @@ def is_usb_connected(device_identifiers, device_messages, device_expected):
         else:
             exitnagios("CRITICAL", "cannot find the USB device, or the count of them is not matching " + str(founddict) + " - expected " + str(device_expected))
     except Exception as e:
-        if totalfound == None:
+        if totalfound is None:
             exitnagios("CRITICAL", "cannot find " + device_identifiers + " " + device_messages)
         else:
             exitnagios("CRITICAL", "internal error - " + str(e))

@@ -84,18 +84,18 @@ def interface_to_address(interface, protocol):
             ip_info = []
             if protocol in ["-4", "4"]:
                 ip_info4 = addresses.get(netifaces.AF_INET)
-                if ip_info4 != None:
+                if ip_info4 is not None:
                     ip_info.append(ip_info4[0]["addr"])
             elif protocol in ["-6", "6"]:
                 ip_info6 = addresses.get(netifaces.AF_INET6)
-                if ip_info6 != None:
+                if ip_info6 is not None:
                     ip_info.append(ip_info6[0]["addr"])
             else:
                 ip_info4 = addresses.get(netifaces.AF_INET)
-                if ip_info4 != None:
+                if ip_info4 is not None:
                     ip_info.append(ip_info4[0]["addr"])
                 ip_info6 = addresses.get(netifaces.AF_INET6)
-                if ip_info6 != None:
+                if ip_info6 is not None:
                     ip_info.append(ip_info6[0]["addr"])
                 random.shuffle(ip_info)
             infomsg("------> " + str(ip_info))
@@ -115,7 +115,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
     cmdline = ["/usr/bin/ping"]
     if protocol not in ["", None]:
         cmdline = cmdline + [protocol]
-    if source != None:
+    if source is not None:
         cmdline = cmdline + ["-I", source]
     elif interface != "":
         cmdline = cmdline + ["-I", interface]

@@ -107,7 +107,7 @@ def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_h
     except:
         value = None
     infomsg(value)
-    if value != None:
+    if value is not None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
@@ -125,7 +125,7 @@ def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_h
     except:
         value = None
     infomsg(value)
-    if value != None:
+    if value is not None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
@@ -139,7 +139,7 @@ def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high
     except:
         value = None
     infomsg(value)
-    if value != None:
+    if value is not None:
         check_status(value, warn_low, warn_high, crit_low, crit_high)
     else:
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")

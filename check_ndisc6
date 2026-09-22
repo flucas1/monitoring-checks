@@ -61,7 +61,7 @@ def dondisc6call(hostname):
         routeparts = output.split()
         if len(routeparts) > 4:
             interface = routeparts[4]
-    if interface == None:
+    if interface is None:
         exitnagios("CRITICAL", "Cannot identify iterface for discovery")
     infomsg("interface -> " + interface)
 
@@ -82,7 +82,7 @@ def dondisc6call(hostname):
                 macfound = parts[3]
                 infomsg(macfound)
 
-    if macfound != None:
+    if macfound is not None:
         exitnagios("OK", hostname + " is respoding to NDD with mac " + macfound)
     else:
         exitnagios("CRITICAL", hostname + " is not responding to NDD")

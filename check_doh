@@ -94,7 +94,7 @@ def makedohtest(retries, targetdohurl, testquery):
             exitnagios("CRITICAL", "url " + targetdohurl + " caused an exception " + str(e))
         finally:
             infomsg("ended")
-            if client != None:
+            if client is not None:
                 client.close()
 
         counter = counter + 1

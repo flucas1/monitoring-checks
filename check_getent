@@ -60,7 +60,7 @@ def checkgetent(database, key, value, partial, outputlevel):
     except Exception as e:
         exitnagios("CRITICAL", "exception during getent call")
 
-    if output == None:
+    if output is None:
         exitnagios("CRITICAL", "no output from getent")
     else:
         lines = output.splitlines()

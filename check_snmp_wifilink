@@ -110,7 +110,7 @@ def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalu
     except:
         pass
 
-    if signal == None:
+    if signal is None:
         exitnagios("CRITICAL", "Cannot get the signal value")
     elif (critical != "") and (signal < float(critical)):
         exitnagios("CRITICAL", "The signal is less than " + str(critical) + " - currently " + str(signal) + " | signal=" + str(signal) + " noise=" + str(noise))

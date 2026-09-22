@@ -105,7 +105,7 @@ def dointernalcall(ipprotocol, tcporudp, hostname, port):
             except Exception as e:
                 infomsg("socket exception -> " + str(e))
 
-        if sock != None:
+        if sock is not None:
             sock.close()
     except Exception as e:
         infomsg("block exception -> " + str(e))
@@ -146,7 +146,7 @@ def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostnam
         else:
             content = dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
         infomsg(content)
-        if content == None:
+        if content is None:
             exitnagios("CRITICAL", "no result from page")
 
         lines = content.splitlines()

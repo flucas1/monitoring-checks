@@ -91,7 +91,7 @@ def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hostname,
                 method = key
                 break
 
-    if method == None:
+    if method is None:
         exitnagios("CRITICAL", "Unable to determine uptime")
 
     fractionaldays = uptime_sec / (3600 * 24)

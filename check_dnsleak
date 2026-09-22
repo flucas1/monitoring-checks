@@ -246,13 +246,13 @@ def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expecteddns,
                 resume = driver.find_element(By.ID, "dns-test")
             except Exception as e:
                 exitnagios("WARNING", "cannot find result element")
-            if resume == None:
+            if resume is None:
                 counter = counter + 1
                 time.sleep(3)
             else:
                 break
 
-        if resume == None:
+        if resume is None:
             exitnagios("WARNING", "no result from page")
         infomsg("test with results")
 

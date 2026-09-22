@@ -51,24 +51,24 @@ def exitnagios(status, message):
 
 
 def extract_element(rootobj, blockname, entryname):
-    if rootobj != None:
+    if rootobj is not None:
         try:
             blockobj = rootobj.find(blockname)
         except:
             blockobj = None
-        if blockobj != None:
+        if blockobj is not None:
             try:
                 entryobj = blockobj.find(entryname)
             except:
                 entryobj = None
-            if entryobj != None:
+            if entryobj is not None:
                 return entryobj.text
     return None
 
 
 def parse_element(rootobj, blockname, entryname):
     rawvalue = extract_element(rootobj, blockname, entryname)
-    if rawvalue != None:
+    if rawvalue is not None:
         parts = rawvalue.split()
         if len(parts) > 0:
             try:
@@ -119,7 +119,7 @@ def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_critical, t
     else:
         xml_root = xml.etree.ElementTree.fromstring(output)
         gpu = xml_root.find("gpu")
-        if gpu == None:
+        if gpu is None:
             exitnagios("CRITICAL", "no gpu information for device " + str(device))
         else:
             status_gpu = parse_element(gpu, "utilization", "gpu_util")
@@ -131,15 +131,15 @@ def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_critical, t
 
             finalstatus = ""
             issues = []
-            if status_gpu != None:
+            if status_gpu is not None:
                 partialstatus, partialissues = checklimits(status_gpu, gpu_warning, gpu_critical, "gpuload")
                 finalstatus = mergestatus(finalstatus, partialstatus)
                 issues = issues + partialissues
-            if status_memory != None:
+            if status_memory is not None:
                 partialstatus, partialissues = checklimits(status_memory, memory_warning, memory_critical, "memoryload")
                 finalstatus = mergestatus(finalstatus, partialstatus)
                 issues = issues + partialissues
-            if status_temperature != None:
+            if status_temperature is not None:
                 partialstatus, partialissues = checklimits(status_temperature, temperature_warning, temperature_critical, "temperature")
                 finalstatus = mergestatus(finalstatus, partialstatus)
                 issues = issues + partialissues

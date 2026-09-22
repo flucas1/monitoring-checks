@@ -211,7 +211,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     device = finddevice()
-    if device == None:
+    if device is None:
         exitnagios("CRITICAL", "Could not find any rtc device")
     else:
         infomsg("The selected rtc device is " + device)

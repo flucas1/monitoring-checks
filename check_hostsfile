@@ -69,7 +69,7 @@ def extractsearchlist():
                     result = parts[1].split()
                     break
     finally:
-        if handle != None:
+        if handle is not None:
             handle.close()
     return result
 
@@ -87,7 +87,7 @@ def extracthostslist():
                 key = parts[0]
                 result[key] = parts[1:]
     finally:
-        if handle != None:
+        if handle is not None:
             handle.close()
     return result
 

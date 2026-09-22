@@ -78,7 +78,7 @@ def doretrycall(cmdline):
 
 
 async def main(forcedargs=None):
-    if forcedargs == None:
+    if forcedargs is None:
         forcedargs = sys.argv[1:]
     cmdline = forcedargs
     doretrycall(cmdline)

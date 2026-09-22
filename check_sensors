@@ -65,7 +65,7 @@ def do_sensors_call(expected):
             infomsg(output)
             jsondata = None
 
-        if jsondata == None:
+        if jsondata is None:
             exitnagios("CRITICAL", "invalid json data")
 
         alarms = {}
@@ -90,7 +90,7 @@ def do_sensors_call(expected):
                                         inputvalue = float(inputvalue)
                                     except:
                                         inputvalue = None
-                                    if inputvalue != None:
+                                    if inputvalue is not None:
                                         infomsg(inputkey + " -> " + str(inputvalue))
                                         alarms[inputkey] = str(inputvalue)
                                     else:

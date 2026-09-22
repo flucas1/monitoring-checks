@@ -95,7 +95,7 @@ def dosmstoolscall(modem):
                         except:
                             pass
         finally:
-            if handle != None:
+            if handle is not None:
                 handle.close()
 
         if resultmsg != "" and resultstatus != "":

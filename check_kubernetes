@@ -110,7 +110,7 @@ def generic_compare_columns(kubeconfig, namespace, resource, columns):
                             # infomsg(exploded)
                             for test in exploded:
                                 # infomsg(test)
-                                if reference == None:
+                                if reference is None:
                                     reference = test
                                 elif test != reference:
                                     identical = False

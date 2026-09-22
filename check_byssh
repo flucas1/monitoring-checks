@@ -83,7 +83,7 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
         counter = counter + 1
 
         command = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
-        if key != "" and key != None:
+        if key != "" and key is not None:
             command = command + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
         if autoaccept:
             command = command + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]

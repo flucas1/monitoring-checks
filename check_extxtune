@@ -71,11 +71,11 @@ def checktune(partition, mountcount, mountperiod):
     currentperiod = None
     for line in output.splitlines():
         testcount = extractlinevalue(line, "Maximum mount count:")
-        if testcount != None:
+        if testcount is not None:
             currentcount = testcount.split()[0]
 
         testinterval = extractlinevalue(line, "Check interval:")
-        if testinterval != None:
+        if testinterval is not None:
             currentperiod = testinterval.split()[0]
 
     infomsg(currentcount)

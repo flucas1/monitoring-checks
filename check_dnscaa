@@ -65,7 +65,7 @@ def dodnscaacall(domain):
         soup = BeautifulSoup(content, "html.parser")
 
         element = soup.find("span", class_="success green")
-        if element != None:
+        if element is not None:
             exitnagios("OK", "the domain has valid CAA records")
         else:
             exitnagios("CRITICAL", "the domain has issues with the CAA records")

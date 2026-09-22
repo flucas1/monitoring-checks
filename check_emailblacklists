@@ -181,7 +181,7 @@ def resolverecord(protocol, hostname):
             record = "A"
         if protocol in ["-6", "6"]:
             record = "AAAA"
-        if record != None:
+        if record is not None:
             answers = dns.resolver.resolve(hostname, record)
             for rdata in answers:
                 result.append(rdata.to_text())
