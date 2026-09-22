@@ -10,6 +10,7 @@ import os
 import sys
 import pathlib
 import asyncio
+import socket
 
 # -------------------------------------------------------------------------------
 
@@ -489,8 +490,8 @@ def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high
     ri = doasusroutercall(host, username, password, timeoutvalue)
     cpu = ri.get_cpu_usage()
     if cpu != None:
-        infomsg(cores)
         cores = int(len(cpu) / 2)
+        infomsg(cores)
         counter = 1
         values = []
         while counter <= cores:

@@ -62,16 +62,23 @@ def doconnectionscall(warning, critical):
             totalline = lines[0]
             parts = totalline.split()
             if len(parts) > 1:
-                totalconnections = int(parts[1])
-                infomsg(totalconnections)
-                if (critical != None) and (critical != "") and (totalconnections > int(critical)):
-                    exitnagios("CRITICAL", "there are too many connections - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
-                elif (warning != None) and (warning != "") and (totalconnections > int(warning)):
-                    exitnagios("WARNING", "there are too many connections - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
-                else:
-                    exitnagios("OK", "no issues found - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
-
-    exitnagios("CRITICAL", "unexpected situation")
+                try:
+                    totalconnections = int(parts[1])
+                    infomsg(totalconnections)
+                    if critical and totalconnections > int(critical):
+                        exitnagios("CRITICAL", "there are too many connections - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
+                    elif warning and totalconnections > int(warning):
+                        exitnagios("WARNING", "there are too many connections - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
+                    else:
+                        exitnagios("OK", "no issues found - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
+                except ValueError:
+                    exitnagios("UNKNOWN", "failed to parse connection count from ss output")
+            else:
+                exitnagios("UNKNOWN", "unexpected ss output format - insufficient parts in first line")
+        else:
+            exitnagios("UNKNOWN", "unexpected ss output format - no lines returned")
+    else:
+        exitnagios("CRITICAL", "ss command failed: " + errors)
 
 # -------------------------------------------------------------------------------
 
@@ -81,7 +88,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-u", "--username", action="store", dest="username", default="", help="username to check")
     parser.add_argument("-w", "--warning", action="store", dest="warning", default="", help="warning hours")
     parser.add_argument("-c", "--critical", action="store", dest="critical", default="", help="critical hours")
-    parser.add_argument("-Â®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-®", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
 

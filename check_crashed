@@ -107,15 +107,16 @@ def dolastloginscall(warning, critical):
             infomsg("linecurrent is " + str(linecurrent))
             lineprevious = cleared[1].split()
             infomsg("lineprevious is " + str(lineprevious))
-            lasttext = lineprevious[len(lineprevious) - 1]
-            infomsg("evaluating text '" + lasttext + "'")
-            if lasttext not in ["crash"]:
-                crashed = False
-            else:
-                try:
-                    crashdate = dateutil.parser.parse(linecurrent[4])
-                except:
-                    pass
+            if len(lineprevious) > 0:
+                lasttext = lineprevious[len(lineprevious) - 1]
+                infomsg("evaluating text '" + lasttext + "'")
+                if lasttext not in ["crash"]:
+                    crashed = False
+                else:
+                    try:
+                        crashdate = dateutil.parser.parse(linecurrent[4])
+                    except:
+                        pass
         else:
             crashed = False
 
