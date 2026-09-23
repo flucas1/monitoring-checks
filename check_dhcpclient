@@ -3,11 +3,9 @@
 
 import os
 import sys
-import subprocess
 import re
 import socket
 import argparse
-import socket
 import fcntl
 import struct
 import asyncio
@@ -76,20 +74,26 @@ def allinterfaces():
     return interfaces
 
 
-def findservers(interface, requestmac, timeout):
+async def findservers(interface, requestmac, timeout):
 
     command = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
     infomsg(" ".join(command))
 
     try:
-        result = subprocess.check_output(command)
-        output = result.decode("utf-8")
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
         return output
     except Exception as e:
         return None
 
 
-def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
+async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     interfaceaddress = get_ip_address(interface)
     infomsg(interfaceaddress)
     requestmac = chaddr
@@ -99,7 +103,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
         if testaddress in validservers:
             validservers.remove(testaddress)
 
-    output = findservers(interface, requestmac, timeout)
+    output = await findservers(interface, requestmac, timeout)
     infomsg(output)
 
     sucesses = []
@@ -112,6 +116,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
         lines = output.splitlines()
         responses = []
         goodones = []
+        foundip = ""
         for line in lines:
             if line.startswith("Added offer from server"):
                 parts = line.split()
@@ -134,7 +139,7 @@ def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     return sucesses, warnings, criticals, total
 
 
-def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
+async def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     result = True
     infomsg("List of interfaces: " + " ".join(interfaces))
 
@@ -144,7 +149,7 @@ def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     performance = []
     for interface in interfaces:
         infomsg("evaluating: " + interface)
-        temp_sucesses, temp_warnings, temp_criticals, temp_total = checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
+        temp_sucesses, temp_warnings, temp_criticals, temp_total = await checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
         sucesses = sucesses + temp_sucesses
         warnings = warnings + temp_warnings
         criticals = criticals + temp_criticals
@@ -180,7 +185,7 @@ async def main(forcedargs=None):
     else:
         interfaces = args.interfaces.split(",")
 
-    checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
+    await checkall(interfaces, args.chaddr, int(args.warning), args.ciaddr, args.servers, args.timeout)
 
 # -------------------------------------------------------------------------------
 
