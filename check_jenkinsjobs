@@ -51,7 +51,7 @@ def exitnagios(status, message):
 
 async def docheckjenkinsjobs(directory, critical):
     jobspath = os.path.join(directory, "jobs")
-    if os.path.isdir(jobspath) == False:
+    if not jobs_path.is_dir():
         exitnagios("CRITICAL", "the jobs path " + directory + " does not exists")
 
     listjobs = []
@@ -63,7 +63,7 @@ async def docheckjenkinsjobs(directory, critical):
     issuesjobs = []
     alertsjobs = []
     for entry in listjobs:
-        if await isvalidjob(jobspath, entry) == False:
+        if not await isvalidjob(jobs_path, entry):
             if entry in critical:
                 alertsjobs.append(entry)
             else:
@@ -82,7 +82,7 @@ async def docheckjenkinsjobs(directory, critical):
 
 async def isvalidjob(jobspath, entry):
     permalinks = os.path.join(jobspath, entry, "builds", "permalinks")
-    if os.path.isfile(permalinks) == False:
+    if not permalinks.is_file():
         return False
     else:
         isOK = False
@@ -122,8 +122,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     critical = args.critical.split(",")
-    if "" in critical:
-        critical.remove("")
+    critical = [job for job in critical if job != ""]
     await docheckjenkinsjobs(args.directory, critical)
 
 # -------------------------------------------------------------------------------
