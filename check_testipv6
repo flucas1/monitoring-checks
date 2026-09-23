@@ -59,7 +59,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -77,9 +77,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -114,8 +114,8 @@ async def dotestipv6call(proxy):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 10)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 10)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://test-ipv6.com/"
@@ -127,7 +127,7 @@ async def dotestipv6call(proxy):
         infomsg("page loaded")
 
         try:
-            wait.until(EC.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "debugtable"), "Your readiness score"))
+            wait.until(selenium.webdriver.support.expected_conditions.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "debugtable"), "Your readiness score"))
         except Exception as e:
             pass
         finally:

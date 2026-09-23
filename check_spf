@@ -103,25 +103,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-def tryfindbyxpath(driver, xpath):
-    result = []
-    try:
-        result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
-    except:
-        pass
-    return result
-
-
-def tryfindbyid(driver, idname):
-    result = []
-    try:
-        result = driver.find_elements(selenium.webdriver.common.by.By.ID, idname)
-    except:
-        pass
-    return result
-
-
-def tryfindbyclassname(driver, classname):
+async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
@@ -152,12 +134,12 @@ async def dodnssecverisigncall(domain, proxy):
         wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "dns-results")))
 
         infomsg("finding base element")
-        element = tryfindbyclassname(driver, "panel-body")
+        element = await tryfindbyclassname(driver, "panel-body")
         if len(element) == 0:
             exitnagios("CRITICAL", "no result from page")
 
         infomsg("finding error message")
-        wellsmlist = tryfindbyclassname(driver, "well-sm")
+        wellsmlist = await tryfindbyclassname(driver, "well-sm")
         messages = []
         isValid = False
         isWarning = False
