@@ -4,8 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import ipaddress
 import pygeoip
 import asyncio
@@ -56,27 +54,35 @@ def get_fail2ban_client_path():
     return "/usr/bin/fail2ban-client"
 
 
-def run_command(cmdlist):
+async def run_command(cmdlist):
     try:
-        result = subprocess.run(cmdlist, text=True, capture_output=True, check=True)
-        return result.stdout.strip().split("\n")
-    except subprocess.CalledProcessError as e:
+        process = await asyncio.create_subprocess_exec(
+            *cmdlist,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + stderr.strip())
+        return stdout.strip().split("\n")
+    except Exception as e:
         exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + str(e))
 
 
-def check_fail2ban_status():
+async def check_fail2ban_status():
     cmdlist = [get_fail2ban_client_path(), "ping"]
     infomsg("DEBUG: Running command: " + str(cmdlist))
-    output = run_command(cmdlist)
+    output = await run_command(cmdlist)
     infomsg("DEBUG: Fail2Ban server response: " + str(output))
     if "Server replied: pong" not in output:
         exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
 
 
-def get_jail_list():
+async def get_jail_list():
     cmdlist = [get_fail2ban_client_path(), "status"]
     infomsg("DEBUG: Running command: " + str(cmdlist))
-    output = run_command(cmdlist)
+    output = await run_command(cmdlist)
     for line in output:
         if "Jail list:" in line:
             jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
@@ -85,10 +91,10 @@ def get_jail_list():
     exitnagios("CRITICAL", "Unable to retrieve the jail list.")
 
 
-def get_banned_ips(jail_name):
+async def get_banned_ips(jail_name):
     cmdlist = [get_fail2ban_client_path(), "status", jail_name]
     infomsg("DEBUG: Running command: " + str(cmdlist))
-    output = run_command(cmdlist)
+    output = await run_command(cmdlist)
     for line in output:
         if "Banned IP list:" in line:
             banned_ips = [ip.strip() for ip in line.split("Banned IP list:")[-1].strip().split()]
@@ -137,18 +143,18 @@ async def main(forcedargs=None):
     warning = int(args.warning)
     critical = int(args.critical)
 
-    check_fail2ban_status()
+    await check_fail2ban_status()
 
     jails = []
     if jail:
         jails = [jail]
     else:
-        jails = get_jail_list()
+        jails = await get_jail_list()
 
     dict_banned = {}
 
     for jail_name in jails:
-        banned_ips = get_banned_ips(jail_name)
+        banned_ips = await get_banned_ips(jail_name)
         infomsg("DEBUG: Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
         for banned_ip in banned_ips:
             if banned_ip not in dict_banned.keys():
@@ -166,7 +172,6 @@ async def main(forcedargs=None):
 
     exitnagios(state, str(countjails) + " detected jails with " + str(countbanned) + " banned IPs: " + str(dict_banned) + " | banned=" + str(countbanned) + " jails=" + str(countjails))
 
-# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())

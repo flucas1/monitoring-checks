@@ -4,8 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -59,12 +57,17 @@ def extractlinevalue(line, test):
     return result
 
 
-def checktune(partition, mountcount, mountperiod):
+async def checktune(partition, mountcount, mountperiod):
     cmdline = ["/usr/sbin/dumpe2fs", "-h", partition]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     infomsg(output)
 
     currentcount = None
@@ -89,12 +92,17 @@ def checktune(partition, mountcount, mountperiod):
     return result
 
 
-def dopostgresclustercountcall(mountcount, mountperiod):
+async def dopostgresclustercountcall(mountcount, mountperiod):
     cmdline = ["/usr/bin/findmnt", "--real", "--types=ext2,ext3,ext4", "--noheadings", "--list", "--uniq", "--nofsroot", "--notruncate", "--output=SOURCE"]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
 
     if exitcode == 0:
         lines = output.splitlines()
@@ -107,7 +115,7 @@ def dopostgresclustercountcall(mountcount, mountperiod):
 
         issues = []
         for partition in filesystems:
-            tuned = checktune(partition, mountcount, mountperiod)
+            tuned = await checktune(partition, mountcount, mountperiod)
             if not tuned:
                 issues = issues + [partition]
 
@@ -134,7 +142,7 @@ async def main(forcedargs=None):
 
     mountcount = 1
     mountperiod = 604800
-    dopostgresclustercountcall(mountcount, mountperiod)
+    await dopostgresclustercountcall(mountcount, mountperiod)
 
 # -------------------------------------------------------------------------------
 
