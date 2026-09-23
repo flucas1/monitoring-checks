@@ -94,14 +94,14 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ def tryfindbytagname(driver, tagname):
 # -------------------------------------------------------------------------------
 
 
-def dodnssecverisigncall(mailfrom, tolerate, proxy):
+async def dodnssecverisigncall(mailfrom, tolerate, proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -163,7 +163,7 @@ def dodnssecverisigncall(mailfrom, tolerate, proxy):
         infomsg("asking for navigating " + url)
 
         time.sleep(2)
-        wait_page_loaded(driver)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         infomsg("waiting for element")
@@ -268,7 +268,7 @@ async def main(forcedargs=None):
 
     proxy = ""
     tolerate = int(args.tolerate)
-    dodnssecverisigncall(args.mailfrom, tolerate, proxy)
+    await dodnssecverisigncall(args.mailfrom, tolerate, proxy)
 
 # -------------------------------------------------------------------------------
 

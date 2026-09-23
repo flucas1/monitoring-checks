@@ -91,14 +91,14 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
@@ -214,7 +214,7 @@ def alltripletsmatching(inputtriplets, expectedtriplets, tolerance):
     return successmatching, tolerated
 
 
-def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns):
+awync def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns):
     try:
         driver = generatedriver(proxy)
 
@@ -227,7 +227,7 @@ def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expecteddns,
         infomsg("asking for navigating " + url)
 
         time.sleep(5)
-        wait_page_loaded(driver)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         counter = 0
@@ -365,7 +365,7 @@ async def main(forcedargs=None):
     if (problematicip == "") and (problematicdns == "") and (expectedip == "") and (expecteddns == ""):
         exitnagios("CRITICAL", "a problematic or expected flag must be specified")
 
-    dodnsleakcall(args.proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns)
+    await dodnsleakcall(args.proxy, problematicip, problematicdns, expectedip, expecteddns, tolerancedns)
 
 # -------------------------------------------------------------------------------
 
