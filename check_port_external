@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -------------------------------------------------------------------------------
 
 import os
 import sys
@@ -40,7 +41,6 @@ def mapstatustoexitcode(status):
         exitcode = 4
     return exitcode
 
-
 def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
@@ -61,49 +61,48 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port):
             info = socket.getaddrinfo(hostname, None, sfamily)
             ip_address = info[0][4][0]
             infomsg("The ip address is " + ip_address)
-        except:
+        except Exception:
             return "ERROR: issue resolving ip address"
 
-        sock = None
-        if tcporudp == "tcp":
-            sock = socket.socket(sfamily, socket.SOCK_STREAM)
-        elif tcporudp == "udp":
-            sock = socket.socket(sfamily, socket.SOCK_DGRAM)
-        else:
-            return "ERROR: specify the protocol as tcp or udp instead of '" + tcporudp + "'"
-
         timeout = 5
-        sock.settimeout(timeout)
-
         content = "ERROR: uninitialized"
 
         if tcporudp == "tcp":
             try:
-                status = sock.connect_ex((ip_address, port))
-                infomsg("the tcp status is " + str(status))
-                if status == 0:
-                    content = "OPEN"
-                elif status in [110, 113, 11]:
-                    content = "TIMEOUT"
-                elif status in [111]:
-                    content = "CLOSED"
-                else:
-                    content = "ERROR: " + str(status)
-            except TimeoutError as e:
-                content = "TIMEOUT"
-            except Exception as e:
-                infomsg("socket exception -> " + str(e))
-        elif tcporudp == "udp":
-            try:
-                sock.sendto("", (ip_address, port))
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(ip_address, port),
+                    timeout=timeout
+                )
                 content = "OPEN"
-            except socket.error as e:
+                writer.close()
+                await writer.wait_closed()
+            except asyncio.TimeoutError:
+                content = "TIMEOUT"
+            except ConnectionRefusedError:
                 content = "CLOSED"
             except Exception as e:
                 infomsg("socket exception -> " + str(e))
+                content = "ERROR: " + str(e)
+        elif tcporudp == "udp":
+            try:
+                class DummyProtocol(asyncio.DatagramProtocol):
+                    pass
+                transport, protocol = await asyncio.wait_for(
+                    loop.create_datagram_endpoint(
+                        lambda: DummyProtocol(),
+                        remote_addr=(ip_address, port)
+                    ),
+                    timeout=timeout
+                )
+                transport.sendto(b"")
+                content = "OPEN"
+                transport.close()
+            except Exception as e:
+                infomsg("socket exception -> " + str(e))
+                content = "CLOSED"
+        else:
+            return "ERROR: specify the protocol as tcp or udp instead of '" + tcporudp + "'"
 
-        if sock is not None:
-            sock.close()
     except Exception as e:
         infomsg("block exception -> " + str(e))
         content = ""
