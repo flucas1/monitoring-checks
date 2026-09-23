@@ -128,12 +128,12 @@ async def main(forcedargs=None):
         stdout, stderr = await process.communicate()
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
-        response = process.returncode
+        exitcode = process.returncode
     except Exception as e:
         exitnagios("UNKNOWN", "Error executing ping: " + str(e))
 
-    # and then check the response...
-    if response != 0:
+    # and then check the exitcode...
+    if exitcode != 0:
         exitnagios("OK", args.hostname + " is not reacheable!")
     else:
         exitnagios("CRITICAL", args.hostname + " is reacheable!")

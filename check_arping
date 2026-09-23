@@ -56,12 +56,12 @@ async def doarpingcall(hostname, packets, timeout):
     stdout, stderr = await process.communicate()
     output = stdout.decode("utf-8").strip() if stdout else ""
     errors = stderr.decode("utf-8").strip() if stderr else ""
-    response = process.returncode
+    exitcode = process.returncode
 
     infomsg(output)
 
-    # and then check the response...
-    if response == 0:
+    # and then check the exitcode...
+    if exitcode == 0:
         alllines = output.splitlines()
 
         allmacs = []
