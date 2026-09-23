@@ -50,6 +50,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -130,6 +131,7 @@ async def wait_page_loaded(page):
             break
         await asyncio.sleep(1)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -167,6 +169,7 @@ async def tryfindbytagname(driver, tagname):
     except:
         pass
     return result
+
 
 # -------------------------------------------------------------------------------
 
@@ -531,6 +534,7 @@ async def doemailblacklistscall(protocol, hostname, ignorelist, tolerance, proxy
     result = await domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy)
     return result
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -570,6 +574,7 @@ async def main(forcedargs=None):
     ignorelist = args.ignore.split(",")
     tolerance = int(args.tolerance)
     await doemailblacklistscall(protocol, args.hostname, ignorelist, tolerance, proxy)
+
 
 # -------------------------------------------------------------------------------
 

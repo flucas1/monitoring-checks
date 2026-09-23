@@ -59,7 +59,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -104,21 +104,21 @@ async def wait_page_loaded(driver):
 
 
 def extractvalue(driver, entryname):
-    element = driver.find_element(By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
+    element = driver.find_element(selenium.webdriver.common.by.By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
     value = element.text
     infomsg(value)
     return value
 
 
 def extracttable(driver):
-    element = driver.find_element(By.ID, "dns-list")
+    element = driver.find_element(selenium.webdriver.common.by.By.ID, "dns-list")
     value = ""
-    lines = element.find_elements(By.TAG_NAME, "tr")
+    lines = element.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "tr")
     infomsg(element.text)
     for line in lines:
         if len(value) > 0:
             value = value + " § "
-        cells = line.find_elements(By.TAG_NAME, "td")
+        cells = line.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "td")
         entry = ""
         for cell in cells:
             if len(entry) > 0:
@@ -218,8 +218,8 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 10)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 10)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://browserleaks.com/dns"
@@ -236,13 +236,13 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
         while counter < retries:
             infomsg("retry " + str(counter))
             try:
-                wait.until(EC.text_to_be_present_in_element((By.ID, "dns-test"), "Found"))
+                wait.until(selenium.webdriver.support.expected_conditions.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "dns-test"), "Found"))
             except Exception as e:
                 pass
             finally:
                 infomsg("found element dns-test")
             try:
-                resume = driver.find_element(By.ID, "dns-test")
+                resume = driver.find_element(selenium.webdriver.common.by.By.ID, "dns-test")
             except Exception as e:
                 exitnagios("WARNING", "cannot find result element")
             if resume is None:
@@ -263,7 +263,7 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
 
         resulteddns = ""
         try:
-            wait.until(EC.presence_of_element_located((By.ID, "dns-list")))
+            wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "dns-list")))
             resulteddns = extracttable(driver).strip()
         except Exception as e:
             pass
