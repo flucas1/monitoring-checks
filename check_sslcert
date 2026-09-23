@@ -10,6 +10,7 @@ import collections
 import traceback
 import datetime
 import asyncio
+import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
@@ -118,7 +119,6 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
                 certexpirationraw = cert_data["notAfter"]
                 infomsg("Expiry date: " + str(certexpirationraw))
                 if certexpirationraw is not None:
-                    import dateutil.parser
                     certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
             except:
                 infomsg(str(traceback.format_exc()))

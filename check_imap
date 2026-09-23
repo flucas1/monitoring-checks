@@ -10,6 +10,7 @@ import socket
 import ssl
 import asyncio
 import traceback
+import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
@@ -96,7 +97,6 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     certexpirationraw = cert_data["notAfter"]
                     infomsg("Expiry date: " + str(certexpirationraw))
                     if certexpirationraw is not None:
-                        import dateutil.parser
                         certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
                 except:
                     infomsg(str(traceback.format_exc()))

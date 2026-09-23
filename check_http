@@ -15,6 +15,7 @@ import datetime
 import dns.resolver
 import asyncio
 import time
+import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
@@ -389,7 +390,6 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
                     certexpirationraw = certvarvalue
                     break
             if certexpirationraw is not None:
-                import dateutil.parser
                 infomsg(certexpirationraw)
                 certexpirationparsed = dateutil.parser.parse(certexpirationraw)
         except:
