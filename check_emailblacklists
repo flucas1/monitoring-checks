@@ -4,7 +4,6 @@
 import os
 import sys
 import time
-import subprocess
 import argparse
 import datetime
 import dns.resolver
@@ -130,7 +129,7 @@ async def wait_page_loaded(page):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
@@ -214,7 +213,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         # page = page.main_tab
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         await wait_page_loaded(page)
         infomsg("page loaded")
@@ -254,7 +253,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
             elements[0].send_keys(Keys.RETURN)
 
         infomsg("manual delay")
-        time.sleep(10)
+        await asyncio.sleep(10)
 
         infomsg("waiting for result")
         wait.until(EC.presence_of_element_located((By.ID, "blacklist_count")))
@@ -314,7 +313,7 @@ async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
         # page = page.main_tab
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         await wait_page_loaded(page)
         infomsg("page loaded")
@@ -357,7 +356,7 @@ async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, prox
         # page = page.main_tab
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         await wait_page_loaded(page)
         infomsg("page loaded")
@@ -400,7 +399,7 @@ async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
         # page = page.main_tab
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         await wait_page_loaded(page)
         infomsg("page loaded")
@@ -443,7 +442,7 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
         # page = page.main_tab
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         await wait_page_loaded(page)
         infomsg("page loaded")
@@ -466,14 +465,14 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
         infomsg("waiting for btnAction4")
         dropdown = await page.wait_for("#btnAction4", timeout=10)
         await dropdown.click()
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         infomsg("waiting for blacklist")
         blacklist_btn = await page.wait_for('button[data-cmd="blacklist"]', timeout=10)
         await blacklist_btn.click()
 
         infomsg("manual delay")
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         currentaction = await page.wait_for('#btnAction3', timeout=10)
         infomsg("current action: " + currentaction.text)
@@ -486,10 +485,10 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
         infomsg("waiting for btnAction3")
         dropdown = await page.wait_for("#btnAction3", timeout=10)
         await dropdown.click()
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         infomsg("manual delay")
-        time.sleep(10)
+        await asyncio.sleep(10)
 
         infomsg("waiting for result")
         answer = await page.wait_for("#lblResult", timeout=10)
