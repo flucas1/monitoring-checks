@@ -134,7 +134,7 @@ async def wait_page_loaded(page):
 # -------------------------------------------------------------------------------
 
 
-def tryfindbyxpath(driver, xpath):
+async def tryfindbyxpath(driver, xpath):
     result = []
     try:
         result = driver.find_elements(By.XPATH, xpath)
@@ -143,7 +143,7 @@ def tryfindbyxpath(driver, xpath):
     return result
 
 
-def tryfindbyid(driver, idname):
+async def tryfindbyid(driver, idname):
     result = []
     try:
         result = driver.find_elements(By.ID, idname)
@@ -152,7 +152,7 @@ def tryfindbyid(driver, idname):
     return result
 
 
-def tryfindbyclassname(driver, classname):
+async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(By.CLASS_NAME, classname)
@@ -161,7 +161,7 @@ def tryfindbyclassname(driver, classname):
     return result
 
 
-def tryfindbytagname(driver, tagname):
+async def tryfindbytagname(driver, tagname):
     result = []
     try:
         result = driver.find_elements(By.TAG_NAME, tagname)
@@ -244,7 +244,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         await page.wait_for("#ipbc_submit", timeout=20)
 
         infomsg("finding textbox element")
-        elements = tryfindbyid(driver, "ipbc_host")
+        elements = await tryfindbyid(driver, "ipbc_host")
         if len(elements) == 0:
             exitnagios("CRITICAL", "cannot find textbox")
         else:
@@ -259,17 +259,17 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         wait.until(EC.presence_of_element_located((By.ID, "blacklist_count")))
 
         infomsg("extracting listed")
-        blocks = tryfindbyid(driver, "ipbc_results_dnsbl")
-        lists = tryfindbytagname(blocks[0], "tr")
+        blocks = await tryfindbyid(driver, "ipbc_results_dnsbl")
+        lists = await tryfindbytagname(blocks[0], "tr")
         infomsg("row canidates: " + str(len(lists)))
         issues = []
         for item in lists:
-            providers = tryfindbytagname(item, "th")
+            providers = await tryfindbytagname(item, "th")
             if len(providers) == 1:
                 provider = providers[0].text
             else:
                 provider = ""
-            statuses = tryfindbytagname(item, "td")
+            statuses = await tryfindbytagname(item, "td")
             if len(statuses) == 2:
                 listed = statuses[0].text.split()[0]
             else:
