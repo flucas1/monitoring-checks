@@ -61,7 +61,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-await def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
