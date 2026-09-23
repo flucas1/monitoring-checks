@@ -81,7 +81,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -99,9 +99,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -129,8 +129,8 @@ async def doisvpncall(expected, severity, proxy):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://iphub.info/"
@@ -140,9 +140,9 @@ async def doisvpncall(expected, severity, proxy):
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
 
-        wait.until(EC.presence_of_element_located((By.ID, "type")))
+        wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "type")))
 
-        element = driver.find_element(By.ID, "type")
+        element = driver.find_element(selenium.webdriver.common.by.By.ID, "type")
         if element is None:
             exitnagios("CRITICAL", "no result from page")
 

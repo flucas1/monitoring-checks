@@ -4,19 +4,19 @@
 # https://raw.githubusercontent.com/asciiphil/check_openhab/master/check_openhab
 # aptitude install python3-dateutil
 
+import asyncio
 import datetime
 import json
-import re
-import sys
-import pytz
 import os
+import re
 import ssl
+import sys
 import argparse
+import pathlib
+import aiohttp
+import pytz
 import dateutil.parser
 import dateutil.relativedelta
-import pathlib
-import asyncio
-import aiohttp
 
 # -------------------------------------------------------------------------------
 
