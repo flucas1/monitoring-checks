@@ -389,9 +389,9 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
                     certexpirationraw = certvarvalue
                     break
             if certexpirationraw is not None:
-                from dateutil.parser import parse
+                import dateutil.parser
                 infomsg(certexpirationraw)
-                certexpirationparsed = parse(certexpirationraw)
+                certexpirationparsed = dateutil.parser.parse(certexpirationraw)
         except:
             infomsg(traceback.format_exc())
             pass
