@@ -327,8 +327,7 @@ async def main(forcedargs=None):
     object_name = temp[0].split(".")[0]
     object_name = object_name.replace("-", "_") + "_" + temp[1]
 
-    object_url = "%s://%s:%d%s/%s/%s" % \
-        ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
+    object_url = "%s://%s:%d%s/%s/%s" % ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
     object_json = await fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
