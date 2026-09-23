@@ -8,7 +8,6 @@ import subprocess
 import socket
 import concurrent.futures
 import netifaces
-import time
 import random
 import asyncio
 

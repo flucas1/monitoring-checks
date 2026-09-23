@@ -5,7 +5,6 @@ import argparse
 import sys
 import os
 import netifaces
-import time
 import asyncio
 
 import selenium
