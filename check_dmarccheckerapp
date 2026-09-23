@@ -10,6 +10,7 @@ import smtplib
 import asyncio
 from email.mime.text import MIMEText
 
+import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
