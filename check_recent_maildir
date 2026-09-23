@@ -336,7 +336,11 @@ def get_maildir_state(inbox, warninglimit, criticallimit):
 
 async def get_home_path(username):
     cmdline = ["/usr/bin/getent", "passwd", username]
-    process = await asyncio.create_subprocess_exec(*cmdline, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
     stdout, stderr = await process.communicate()
     output = stdout.decode("utf-8").strip() if stdout else ""
     errors = stderr.decode("utf-8").strip() if stderr else ""

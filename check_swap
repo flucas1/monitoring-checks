@@ -5,7 +5,6 @@ import argparse
 import sys
 import os
 import asyncio
-import subprocess
 import datetime
 import dateutil.parser
 
