@@ -94,19 +94,19 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
 
-def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningmax, criticalmax, hostname, timeoutvalue, timeoutstatus):
+async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningmax, criticalmax, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
@@ -141,7 +141,7 @@ def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningmax, cri
             url = "http://" + ip + "/#/login"
             driver.get(url)
             # time.sleep(5)
-            wait_page_loaded(driver)
+            await wait_page_loaded(driver)
 
             infomsg("asking for logging " + url)
             wait.until(EC.visibility_of_element_located((By.ID, "product-name")))
@@ -165,7 +165,7 @@ def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningmax, cri
             login.click()
 
             # time.sleep(5)
-            wait_page_loaded(driver)
+            await wait_page_loaded(driver)
             wait.until(EC.visibility_of_element_located((By.ID, "overview-route-system-status")))
 
             infomsg("A")
@@ -181,7 +181,7 @@ def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningmax, cri
             url = "http://" + ip + "/#/info/device"
             driver.get(url)
             # time.sleep(5)
-            wait_page_loaded(driver)
+            await wait_page_loaded(driver)
 
             wait.until(EC.visibility_of_element_located((By.ID, "uptime")))
             wait.until(EC.text_to_be_present_in_element((By.ID, "uptime"), "day"))
@@ -252,7 +252,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         proxy = ""
-        dodevolouptimecall(proxy, password, args.warningmin, args.criticalmin, args.warningmax, args.criticalmax, args.hostname, timeoutvalue, timeoutstatus)
+        await dodevolouptimecall(proxy, password, args.warningmin, args.criticalmin, args.warningmax, args.criticalmax, args.hostname, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
