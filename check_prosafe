@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
 import netifaces
 import time
 import asyncio
@@ -52,7 +51,7 @@ def mapstatustoexitcode(status):
     return exitcode
 
 
-def exitnagios(status, message):
+async def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
@@ -60,16 +59,21 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def findswitchesininterface(interface, model):
+async def findswitchesininterface(interface, model):
     result = []
 
     for index in range(2):
         infomsg("interface " + interface + " - iteration " + str(index))
         cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py", "--interface", interface, "discover"]
-        completedproc = subprocess.run(cmdline, capture_output=True)
-        output = completedproc.stdout.decode("utf-8").strip()
-        errors = completedproc.stderr.decode("utf-8").strip()
-        exitcode = completedproc.returncode
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
         if exitcode == 0:
             infos = {}
             for line in output.splitlines():
@@ -86,24 +90,24 @@ def findswitchesininterface(interface, model):
                         mac = infos["MAC"]
                         if mac not in result:
                             result.append(mac)
-        time.sleep(1)
+        await asyncio.sleep(1)
 
     infomsg("interfaces " + str(result))
     return result
 
 
-def findallswitches(model):
+async def findallswitches(model):
     switches = {}
     if_list = netifaces.interfaces()
     for interface in if_list:
         if (interface.startswith("veth") == False) and (interface.startswith("flannel") == False) and (interface.startswith("calico") == False) and (interface.startswith("cni") == False) and (interface.startswith("tun") == False) and (interface.startswith("tap") == False) and (interface not in ["pimreg", "lo"]):
-            foundmacs = findswitchesininterface(interface, model)
+            foundmacs = await findswitchesininterface(interface, model)
             if len(foundmacs) > 0:
                 switches[interface] = foundmacs
     return switches
 
 
-def queryversion(interface, mac, strict):
+async def queryversion(interface, mac, strict):
     result = None
 
     if strict:
@@ -112,10 +116,15 @@ def queryversion(interface, mac, strict):
         maxversions = 2
     for index in range(maxversions):
         cmdline = ["/etc/nagios/scripts/prosafe/psl-cli.py", "--interface", interface, "query", "--mac", mac, "firmwarever"]
-        completedproc = subprocess.run(cmdline, capture_output=True)
-        output = completedproc.stdout.decode("utf-8").strip()
-        errors = completedproc.stderr.decode("utf-8").strip()
-        exitcode = completedproc.returncode
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
         if exitcode == 0:
             for line in output.splitlines():
                 line = line.strip()
@@ -127,16 +136,16 @@ def queryversion(interface, mac, strict):
         if result is not None:
             break
         else:
-            time.sleep(1)
+            await asyncio.sleep(1)
 
     return result
 
 
-def getversions(switches, version, strict):
+async def getversions(switches, version, strict):
     results = {}
     for interface, macs in switches.items():
         for mac in macs:
-            version = queryversion(interface, mac, strict)
+            version = await queryversion(interface, mac, strict)
             results[mac] = {}
             results[mac]["interface"] = interface
             results[mac]["version"] = version
@@ -145,10 +154,10 @@ def getversions(switches, version, strict):
 # -------------------------------------------------------------------------------
 
 
-def doprosafecall(model, expected, strict):
-    switches = findallswitches(model)
+async def doprosafecall(model, expected, strict):
+    switches = await findallswitches(model)
     infomsg(str(switches))
-    versions = getversions(switches, expected, strict)
+    versions = await getversions(switches, expected, strict)
     infomsg(str(versions))
 
     valid = {}
@@ -161,14 +170,14 @@ def doprosafecall(model, expected, strict):
             failures[key] = value
 
     if len(failures) == 0:
-        exitnagios("OK", "all switches found are OK - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
+        await exitnagios("OK", "all switches found are OK - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
     else:
-        exitnagios("WARNING", "some switches are not as expected - failures " + str(failures) + " - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
+        await exitnagios("WARNING", "some switches are not as expected - failures " + str(failures) + " - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
 
 # -------------------------------------------------------------------------------
 
 
-def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -201,22 +210,22 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
 
-def getexpected(proxy, model):
+async def getexpected(proxy, model):
     expected = ""
     try:
-        driver = generatedriver(proxy)
+        driver = await generatedriver(proxy)
 
         wait = WebDriverWait(driver, 20)
         action = ActionChains(driver)
@@ -225,8 +234,8 @@ def getexpected(proxy, model):
 
         url = "https://www.netgear.com/support/product/" + model.lower() + "#download"
         driver.get(url)
-        time.sleep(1)
-        wait_page_loaded(driver)
+        await asyncio.sleep(1)
+        await wait_page_loaded(driver)
 
         wait.until(EC.visibility_of_element_located((By.ID, "topicsdownload")))
         titles = driver.find_elements(by=By.CLASS_NAME, value="accordion-title")
@@ -276,12 +285,12 @@ async def main(forcedargs=None):
     strict = args.strict
     if args.expected in ["auto", "", None]:
         proxy = ""
-        expected = getexpected(proxy, model)
+        expected = await getexpected(proxy, model)
         infomsg(expected)
     else:
         expected = args.expected
 
-    doprosafecall(model, expected, strict)
+    await doprosafecall(model, expected, strict)
 
 # -------------------------------------------------------------------------------
 
