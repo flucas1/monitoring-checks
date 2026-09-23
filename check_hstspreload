@@ -7,14 +7,14 @@ import argparse
 import time
 import asyncio
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import selenium
+import selenium.webdriver
+import selenium.webdriver.common.keys
+import selenium.webdriver.chrome.options
+import selenium.webdriver.action_chains
+import selenium.webdriver.common.by
+import selenium.webdriver.support.ui
+import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -77,9 +77,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -109,8 +109,8 @@ async def dohstspreloadcall(proxy, domain):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://hstspreload.org/?domain=" + domain
@@ -120,9 +120,9 @@ async def dohstspreloadcall(proxy, domain):
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
 
-        wait.until(EC.text_to_be_present_in_element((By.ID, "status"), "Status: "))
+        wait.until(selenium.webdriver.support.expected_conditions.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "status"), "Status: "))
 
-        element = driver.find_element(By.ID, "status")
+        element = driver.find_element(selenium.webdriver.common.by.By.ID, "status")
         infomsg(element)
         statustext = None
         if element is None:
@@ -131,7 +131,7 @@ async def dohstspreloadcall(proxy, domain):
             statustext = element.text.strip()
         infomsg(statustext)
 
-        errors = driver.find_elements(By.CLASS_NAME, "error")
+        errors = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, "error")
         errormsgs = []
         for error in errors:
             cleaned = error.text.strip().replace("\n", " ")
@@ -140,7 +140,7 @@ async def dohstspreloadcall(proxy, domain):
                 errormsgs.append(cleaned)
         errormsg = ". ".join(errormsgs)
         infomsg("ERRORS: " + errormsg)
-        warnings = driver.find_elements(By.CLASS_NAME, "warning")
+        warnings = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, "warning")
         warningmsgs = []
         for warning in warnings:
             cleaned = warning.text.strip().replace("\n", " ")
