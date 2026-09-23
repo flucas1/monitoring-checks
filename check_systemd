@@ -4,9 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import pwd
-import time
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -51,7 +48,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def execute_systemd_call(system, service, user):
+async def execute_systemd_call(system, service, user):
     cmdline = ["/usr/bin/systemctl"]
     if not system:
         cmdline = cmdline + ["-M", user + "@"]
@@ -65,10 +62,15 @@ def execute_systemd_call(system, service, user):
         cmdline = cmdline + ["--no-legend"]
     infomsg(" ".join(cmdline))
 
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     infomsg(output)
     infomsg(errors)
     infomsg(exitcode)
@@ -102,14 +104,14 @@ def parse_systemd_list(output, toleratecriticallist, toleratewarninglist, ignore
     return oks, warnings, criticals
 
 
-def generate_dicts(system, service, user, toleratecriticallist, toleratewarninglist, ignorelist):
+async def generate_dicts(system, service, user, toleratecriticallist, toleratewarninglist, ignorelist):
     valid = True
     oks = {}
     warnings = {}
     criticals = {}
 
     infomsg("calling first")
-    firstoutput = execute_systemd_call(system, service, user)
+    firstoutput = await execute_systemd_call(system, service, user)
     if firstoutput == "":
         valid = False
     else:
@@ -117,9 +119,9 @@ def generate_dicts(system, service, user, toleratecriticallist, toleratewarningl
         firstoks, firstwarnings, firstcriticals = parse_systemd_list(firstoutput, toleratecriticallist, toleratewarninglist, ignorelist)
         if len(firstwarnings) > 0 or len(firstcriticals) > 0:
             infomsg("waiting")
-            time.sleep(10)
+            await asyncio.sleep(10)
             infomsg("calling second")
-            secondoutput = execute_systemd_call(system, service, user)
+            secondoutput = await execute_systemd_call(system, service, user)
             if secondoutput == "":
                 valid = False
             else:
@@ -145,10 +147,10 @@ def generate_dicts(system, service, user, toleratecriticallist, toleratewarningl
     return valid, oks, warnings, criticals
 
 
-def systemd_check(service, system, user, toleratecriticallist, toleratewarninglist, ignorelist):
+async def systemd_check(service, system, user, toleratecriticallist, toleratewarninglist, ignorelist):
 
     if service is None:
-        valid, oks, warnings, criticals = generate_dicts(system, service, user, toleratecriticallist, toleratewarninglist, ignorelist)
+        valid, oks, warnings, criticals = await generate_dicts(system, service, user, toleratecriticallist, toleratewarninglist, ignorelist)
         if valid != True:
             exitnagios("CRITICAL", "issue calling systemd")
         else:
@@ -165,7 +167,7 @@ def systemd_check(service, system, user, toleratecriticallist, toleratewarningli
             else:
                 exitnagios("OK", "no issues found | oks=" + str(len(oks)) + " warnings=" + str(len(warnings)) + " criticals=" + str(len(criticals)))
     else:
-        output = execute_systemd_call(system, service, user)
+        output = await execute_systemd_call(system, service, user)
         if output == "":
             exitnagios("CRITICAL", "issue calling systemd")
         else:
@@ -201,7 +203,7 @@ async def main(forcedargs=None):
     toleratewarninglist = args.toleratewarning.replace(" ", ";").replace(",", ";").split(";")
     ignorelist = args.ignore.replace(" ", ";").replace(",", ";").split(";")
 
-    systemd_check(args.service, args.system, args.user, toleratecriticallist, toleratewarninglist, ignorelist)
+    await systemd_check(args.service, args.system, args.user, toleratecriticallist, toleratewarninglist, ignorelist)
 
 # -------------------------------------------------------------------------------
 
