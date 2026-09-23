@@ -70,7 +70,7 @@ async def doospfroutescall():
         if total > 0:
             exitnagios("OK", "there are remote OSPF routes | total=" + str(total))
         else:
-            exitnagios("CRITICAL", "there are no remote OSFP routes | total=" + str(total))
+            exitnagios("CRITICAL", "there are no remote OSPF routes | total=" + str(total))
     else:
         exitnagios("CRITICAL", "issue retrieving ospf routes | total=" + str(total))
 

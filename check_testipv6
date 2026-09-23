@@ -7,11 +7,11 @@ import time
 import argparse
 import asyncio
 
+import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver import ActionChains
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -104,7 +104,7 @@ async def wait_page_loaded(driver):
 
 
 def extractvalue(driver, entryname):
-    element = driver.find_element(By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
+    element = driver.find_element(selenium.webdriver.common.by.By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
     value = element.text
     infomsg(value)
     return value
@@ -127,14 +127,14 @@ async def dotestipv6call(proxy):
         infomsg("page loaded")
 
         try:
-            wait.until(EC.text_to_be_present_in_element((By.ID, "debugtable"), "Your readiness score"))
+            wait.until(EC.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "debugtable"), "Your readiness score"))
         except Exception as e:
             pass
         finally:
             infomsg("found element readiness score")
 
         try:
-            resume = driver.find_element(By.ID, "debugtable")
+            resume = driver.find_element(selenium.webdriver.common.by.By.ID, "debugtable")
         except Exception as e:
             exitnagios("WARNING", "cannot find result element")
         if resume is None:
