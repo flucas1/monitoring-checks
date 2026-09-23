@@ -3,10 +3,10 @@
 # aptitude install python-nagiosplugin
 
 import argparse
+import asyncio
 import socket
 import sys
 import re
-import asyncio
 
 # -------------------------------------------------------------------------------
 

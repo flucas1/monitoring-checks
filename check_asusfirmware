@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
-# aptitude install python3-mechanize
 
 import socket
 import sys
