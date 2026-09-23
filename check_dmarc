@@ -58,7 +58,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -143,7 +143,7 @@ def tryfindbytagname(driver, tagname):
 
 async def dodnssecverisigncall(domain, proxy):
     try:
-        driver = generatedriver(proxy)
+        driver = await generatedriver(proxy)
 
         wait = WebDriverWait(driver, 20)
         action = ActionChains(driver)

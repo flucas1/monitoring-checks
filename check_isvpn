@@ -80,7 +80,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def generatedriver(proxy):
+async def generatedriver(proxy):
     chrome_options = Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -127,7 +127,7 @@ async def wait_page_loaded(driver):
 
 async def doisvpncall(expected, severity, proxy):
     try:
-        driver = generatedriver(proxy)
+        driver = await generatedriver(proxy)
 
         wait = WebDriverWait(driver, 20)
         action = ActionChains(driver)
