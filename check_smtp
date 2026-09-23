@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import smtplib
+import aiosmtplib
 import argparse
 import sys
 import datetime
@@ -9,6 +9,7 @@ import socket
 import ssl
 import asyncio
 import dateutil.parser
+import traceback
 
 # -------------------------------------------------------------------------------
 
@@ -81,16 +82,17 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         if source is not None:
             sourcetuple = (source, 0)
 
-        # socket.setdefaulttimeout(timeoutvalue)
-        if dossl == True:
+        if dossl is True:
             ctx = ssl.create_default_context()
-            smtpconnection = smtplib.SMTP_SSL(host=hostname, port=port, timeout=timeoutvalue, context=ctx, source_address=sourcetuple)
+            smtpconnection = aiosmtplib.SMTPSSL(hostname=hostname, port=port, timeout=timeoutvalue, context=ctx, source_address=sourcetuple)
         else:
-            smtpconnection = smtplib.SMTP(host=hostname, port=port, timeout=timeoutvalue, source_address=sourcetuple)
+            smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, timeout=timeoutvalue, source_address=sourcetuple)
+
+        await smtpconnection.connect()
     except socket.error as e:
         infomsg("socket error - " + str(e) + " | time=-1 validity=-1")
 
-    if blocked == True:
+    if blocked is True:
         if smtpconnection is None:
             exitnagios("OK", "the connection is blocked as expected | time=-1 validity=-1")
         else:
@@ -98,33 +100,34 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
 
     if smtpconnection is not None:
         certexpirationparsed = None
-        if dossl == True:
+        if dossl is True:
             infomsg("doing SSL")
             certexpirationraw = None
             try:
-                cert_data = smtpconnection.sock.getpeercert()
+                cert_data = smtpconnection.transport.get_extra_info("peercert")
                 infomsg(cert_data)
-                certexpirationraw = cert_data["notAfter"]
-                infomsg("Expiry date: " + str(certexpirationraw))
-                if certexpirationraw is not None:
-                    certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
-            except:
+                if cert_data is not None:
+                    certexpirationraw = cert_data.get("notAfter")
+                    infomsg("Expiry date: " + str(certexpirationraw))
+                    if certexpirationraw is not None:
+                        certexpirationparsed = dateutil.parser.parse(certexpirationraw)
+            except Exception:
                 infomsg(str(traceback.format_exc()))
                 pass
 
-        smtpconnection.ehlo_or_helo_if_needed()
-        response, message = smtpconnection.noop()
-        # 220 after connection stablished, 250 after EHLO or HELO
+        await smtpconnection.ehlo()
+        response, message = await smtpconnection.noop()
+        # 220 after connection established, 250 after EHLO
         infomsg("initial response is " + str(response) + " " + str(message))
         if response not in [200, 250]:
             exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + message.decode() + " | time=-1 validity=-1")
 
         warningmsg = ""
         testemailaddress = "mailing-probe@example.net"
-        response, message = smtpconnection.docmd("MAIL FROM:", testemailaddress)
+        response, message = await smtpconnection.send_command("MAIL FROM:", testemailaddress)
         infomsg("mailfrom response is " + str(response) + " " + str(message))
         if response in [250]:
-            response, message = smtpconnection.docmd("RCPT TO:", testemailaddress)
+            response, message = await smtpconnection.send_command("RCPT TO:", testemailaddress)
             infomsg(response)
             infomsg(message)
             if response in [250, 251, 354]:
@@ -132,14 +135,14 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     exitnagios("CRITICAL", "found an open relay " + str(response) + ", but it should be closed | time=-1 validity=-1")
             elif response in [550]:
                 if relay != "closed":
-                    exitnagios("CRITICAL", "found an closed relay " + str(response) + ", but it should be open | time=-1 validity=-1")
+                    exitnagios("CRITICAL", "found a closed relay " + str(response) + ", but it should be open | time=-1 validity=-1")
             warningmsg = "exitstaus " + str(response) + ": " + message.decode()
         elif response in [555] and relay == "closed":
             exitnagios("OK", "closed relay with response " + str(response) + " | time=-1 validity=-1")
         else:
             exitnagios("CRITICAL", "sending test, unexpected state - " + str(response) + ": " + message.decode() + " | time=-1 validity=-1")
 
-        smtpconnection.quit()
+        await smtpconnection.quit()
 
         elapsed = datetime.datetime.now(datetime.timezone.utc) - start
         duration = elapsed.total_seconds()
@@ -149,7 +152,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         elif duration >= warning:
             exitnagios("WARNING", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
         else:
-            if dossl == True and certificatedays != "":
+            if dossl is True and certificatedays != "":
                 if certexpirationparsed is None:
                     exitnagios("CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' | time=" + str(duration) + " validity=0")
                 else:
@@ -204,14 +207,14 @@ async def main(forcedargs=None):
 
     protocol = None
     exclist = 0
-    if args.ipv0 == True:
+    if args.ipv0 is True:
         protocol = ""
         exclist = exclist + 1
-    if args.ipv4 == True:
+    if args.ipv4 is True:
         protocol = "-4"
         exclist = exclist + 1
         socket.getaddrinfo = forced_ipv4_gai_family
-    if args.ipv6 == True:
+    if args.ipv6 is True:
         protocol = "-6"
         exclist = exclist + 1
         socket.getaddrinfo = forced_ipv6_gai_family
