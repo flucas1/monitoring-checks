@@ -77,7 +77,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     smtpconnection = None
     try:
-        start = datetime.datetime.now(datetime.UTC)
+        start = datetime.datetime.now(datetime.timezone.utc)
         sourcetuple = None
         if source is not None:
             sourcetuple = (source, 0)
@@ -142,7 +142,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
 
         smtpconnection.quit()
 
-        elapsed = datetime.datetime.now(datetime.UTC) - start
+        elapsed = datetime.datetime.now(datetime.timezone.utc) - start
         duration = elapsed.total_seconds()
         daysremaining = -1
         if duration >= critical:
@@ -154,7 +154,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
                 if certexpirationparsed is None:
                     exitnagios("CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' | time=" + str(duration) + " validity=0")
                 else:
-                    today = datetime.datetime.now(datetime.UTC)
+                    today = datetime.datetime.now(datetime.timezone.utc)
                     timeremaining = certexpirationparsed.timestamp() - today.timestamp()
                     daysremaining = int(timeremaining / 86400)
 
