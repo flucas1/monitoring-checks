@@ -4,8 +4,6 @@
 import sys
 import os
 import argparse
-import subprocess
-import concurrent.futures
 import ipaddress
 import asyncio
 
@@ -60,13 +58,20 @@ def checkifaddress(test):
     return (converted != None)
 
 
-def donoroutehostgatewaycall(protocol, whitelist):
+async def donoroutehostgatewaycall(protocol, whitelist):
     cmdline = ["/usr/bin/ip", protocol, "route"]
     infomsg(cmdline)
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    exitcode = completedproc.returncode
+    
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+    
     if exitcode != 0:
         return [protocol + ": cannot read routes table"]
 
@@ -117,8 +122,8 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     errormsgs = []
-    errormsgs = errormsgs + donoroutehostgatewaycall("-4", args.whitelist)
-    errormsgs = errormsgs + donoroutehostgatewaycall("-6", args.whitelist)
+    errormsgs = errormsgs + await donoroutehostgatewaycall("-4", args.whitelist)
+    errormsgs = errormsgs + await donoroutehostgatewaycall("-6", args.whitelist)
 
     if len(errormsgs) == 0:
         exitnagios("OK", "routes table looks normal")
