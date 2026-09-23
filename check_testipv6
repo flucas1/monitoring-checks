@@ -4,7 +4,6 @@
 import os
 import sys
 import time
-import subprocess
 import argparse
 import asyncio
 
@@ -92,26 +91,26 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
 
 def extractvalue(driver, entryname):
     element = driver.find_element(By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
-
+    value = element.text
     infomsg(value)
     return value
 
 
-def dotestipv6call(proxy):
+async def dotestipv6call(proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -123,8 +122,8 @@ def dotestipv6call(proxy):
         driver.get(url)
         infomsg("asking for navigating " + url)
 
-        time.sleep(5)
-        wait_page_loaded(driver)
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
         infomsg("page loaded")
 
         try:
@@ -132,7 +131,7 @@ def dotestipv6call(proxy):
         except Exception as e:
             pass
         finally:
-            infomsg("found element rediness score")
+            infomsg("found element readiness score")
 
         try:
             resume = driver.find_element(By.ID, "debugtable")
@@ -176,7 +175,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    dotestipv6call(args.proxy)
+    await dotestipv6call(args.proxy)
 
 # -------------------------------------------------------------------------------
 
