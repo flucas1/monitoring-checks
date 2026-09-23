@@ -177,7 +177,7 @@ async def doprosafecall(model, expected, strict):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -195,9 +195,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -236,8 +236,8 @@ async def getexpected(proxy, model):
         await asyncio.sleep(1)
         await wait_page_loaded(driver)
 
-        wait.until(EC.visibility_of_element_located((By.ID, "topicsdownload")))
-        titles = driver.find_elements(by=By.CLASS_NAME, value="accordion-title")
+        wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((By.ID, "topicsdownload")))
+        titles = driver.find_elements(by=selenium.webdriver.common.by.By.CLASS_NAME, value="accordion-title")
         candidates = []
         for title in titles:
             text = title.get_attribute("text")
