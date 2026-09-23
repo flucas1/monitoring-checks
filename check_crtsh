@@ -6,6 +6,7 @@
 # wget "https://crt.sh/?q=google.com&output=json" -O - -q | jq
 
 import aiohttp
+import aiohttp_socks
 import argparse
 import sys
 import json
@@ -105,36 +106,9 @@ def ipv4_default_route_exists() -> bool:
 # -------------------------------------------------------------------------------
 
 
-async def load_json(proxy, domain, retries, timeoutvalue):
+async def load_json(mode, proxy, domain, retries, timeoutvalue):
     item_url = "https://crt.sh/?Identity=" + domain + "&exclude=expired&output=json"
     infomsg(item_url)
-
-    opener = None
-    if proxy:
-        if proxy.startswith("socks4://") or proxy.startswith("socks5://") or proxy.startswith("socks5h://"):
-            parsed = urlparse(proxy)
-            proxy_type = socks.SOCKS5
-            if parsed.scheme == "socks4":
-                proxy_type = socks.SOCKS4
-            elif parsed.scheme in ("socks5", "socks5h"):
-                proxy_type = socks.SOCKS5
-
-            host = parsed.hostname
-            port = parsed.port
-            # Set default SOCKS proxy for all connections
-            socks.set_default_proxy(proxy_type, host, port, rdns=(parsed.scheme == "socks5h"))
-            socket.socket = socks.socksocket
-
-            opener = urllib.request.build_opener()
-        else:
-            # HTTP/HTTPS proxy
-            proxy_handler = urllib.request.ProxyHandler({
-                "http": proxy,
-                "https": proxy
-            })
-            opener = urllib.request.build_opener(proxy_handler)
-    else:
-        opener = urllib.request.build_opener()
 
     headers = {
         "Upgrade-Insecure-Requests": "1",
@@ -154,7 +128,19 @@ async def load_json(proxy, domain, retries, timeoutvalue):
         "Sec-Fetch-User": "?1"
     }
 
-    connector = aiohttp.TCPConnector()
+    connector_kwargs = {}
+    if mode == "ipv6":
+        connector_kwargs["family"] = socket.AF_INET6
+    elif mode == "ipv4":
+        connector_kwargs["family"] = socket.AF_INET
+
+    request_proxy = None
+    if proxy.startswith("socks4://") or proxy.startswith("socks5://") or proxy.startswith("socks5h://"):
+        connector = aiohttp_socks.ProxyConnector.from_url(proxy, **connector_kwargs)
+    else:
+        connector = aiohttp.TCPConnector(**connector_kwargs)
+        request_proxy = proxy
+
     timeout = aiohttp.ClientTimeout(total=timeoutvalue)
 
     counter = 0
@@ -166,7 +152,7 @@ async def load_json(proxy, domain, retries, timeoutvalue):
                 counter += 1
                 infomsg("sending request")
                 
-                async with session.get(item_url, proxy=proxy) as response:
+                async with session.get(item_url, proxy=request_proxy) as response:
                     infomsg("request done")
 
                     if response.status == 429:
@@ -209,15 +195,9 @@ async def load_json(proxy, domain, retries, timeoutvalue):
 
 
 async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
-
-    mode = mode.lower()
-    if mode == "ipv6":
-        socket.getaddrinfo = forced_ipv6_gai_family
-    elif mode == "ipv4":
-        socket.getaddrinfo = forced_ipv4_gai_family
-    elif mode is None:
-        pass
-    else:
+    if mode:
+        mode = mode.lower()
+    if mode not in ("ipv6", "ipv4", None):
         exitnagios("CRITICAL", "invalid IP mode")
 
     hostnameparts = hostname.split(".")
@@ -230,7 +210,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     ignored = ignorecerts.split(";")
 
     start = datetime.datetime.now(datetime.timezone.utc)
-    parsed = await load_json(proxy, hostname, retries, timeoutvalue)
+    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue)
     elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
     if parsed is not None:
