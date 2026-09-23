@@ -59,7 +59,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -77,9 +77,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -106,7 +106,7 @@ async def wait_page_loaded(driver):
 def tryfindbyxpath(driver, xpath):
     result = []
     try:
-        result = driver.find_elements(By.XPATH, xpath)
+        result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
     except:
         pass
     return result
@@ -115,7 +115,7 @@ def tryfindbyxpath(driver, xpath):
 def tryfindbyid(driver, idname):
     result = []
     try:
-        result = driver.find_elements(By.ID, idname)
+        result = driver.find_elements(selenium.webdriver.common.by.By.ID, idname)
     except:
         pass
     return result
@@ -124,7 +124,7 @@ def tryfindbyid(driver, idname):
 def tryfindbyclassname(driver, classname):
     result = []
     try:
-        result = driver.find_elements(By.CLASS_NAME, classname)
+        result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
     except:
         pass
     return result
@@ -136,8 +136,8 @@ async def dodnssecverisigncall(domain, proxy):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://www.mailhardener.com/tools/mta-sts-validator?domain=" + domain
@@ -149,7 +149,7 @@ async def dodnssecverisigncall(domain, proxy):
         infomsg("page loaded")
 
         infomsg("waiting for element")
-        wait.until(EC.presence_of_element_located((By.ID, "domain")))
+        wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "domain")))
 
         infomsg("finding base element")
         element = tryfindbyid(driver, "success")
