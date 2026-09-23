@@ -85,13 +85,7 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port):
             try:
                 class DummyProtocol(asyncio.DatagramProtocol):
                     pass
-                transport, protocol = await asyncio.wait_for(
-                    loop.create_datagram_endpoint(
-                        lambda: DummyProtocol(),
-                        remote_addr=(ip_address, port)
-                    ),
-                    timeout=timeout
-                )
+                transport, protocol = await asyncio.wait_for(asyncio.get_running_loop().create_datagram_endpoint(lambda: DummyProtocol(), remote_addr=(ip_address, port)), timeout=timeout)
                 transport.sendto(b"")
                 content = "OPEN"
                 transport.close()
