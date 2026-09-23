@@ -4,11 +4,10 @@
 import argparse
 import sys
 import os
-import subprocess
+import asyncio
 import datetime
 import dateutil.parser
 import time
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -52,7 +51,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def get_wtmp_entries():
+async def get_wtmp_entries():
     today = datetime.datetime.now(datetime.UTC)
     seven_days_ago = today - datetime.timedelta(days=7)
     formatted_date = seven_days_ago.strftime("%Y-%m-%d")
@@ -60,10 +59,16 @@ def get_wtmp_entries():
 
     cmdline = ["/usr/bin/last", "--system", "--ip", "--time-format=iso", "--since=" + formatted_date, "shutdown", "reboot"]
     infomsg(" ".join(cmdline))
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+
     infomsg("----------")
     infomsg(output)
     infomsg("----------")
@@ -84,12 +89,12 @@ def get_wtmp_entries():
     return cleared
 
 
-def dolastloginscall(warning, critical):
+async def dolastloginscall(warning, critical):
     counter = 0
     retries = 10
     cleared = []
     while counter < retries:
-        cleared = get_wtmp_entries()
+        cleared = await get_wtmp_entries()
         if len(cleared) > 0:
             break
         else:
@@ -152,7 +157,7 @@ async def main(forcedargs=None):
 
     warning = int(args.warning)
     critical = int(args.critical)
-    dolastloginscall(warning, critical)
+    await dolastloginscall(warning, critical)
 
 # -------------------------------------------------------------------------------
 

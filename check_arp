@@ -59,8 +59,8 @@ async def doarpcall(exclusion):
         stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8")
-    errors = stderr.decode("utf-8")
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
     if exitcode != 0:
         exitnagios("CRITICAL", "cannot read ARP table | total_v6=-1 total_v4=-1 duplicated_v6=-1 duplicated_v4=-1")
