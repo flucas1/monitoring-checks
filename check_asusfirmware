@@ -9,14 +9,13 @@ import asyncio
 import datetime
 
 import selenium
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import selenium.webdriver
+import selenium.webdriver.common.keys
+import selenium.webdriver.chrome.options
+import selenium.webdriver.action_chains
+import selenium.webdriver.common.by
+import selenium.webdriver.support.ui
+import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
@@ -61,9 +60,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
+    chrome_options = selenium.webdriver.chrome.options.Options()
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -79,16 +76,15 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
-    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
+    # driver.implicitly_wait(10, TimeUnit.SECONDS)
 
     return driver
 
 
 def check_page_loaded(driver):
-    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
@@ -115,8 +111,8 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
 
     driver = await generatedriver(proxy)
 
-    wait = WebDriverWait(driver, 20)
-    action = ActionChains(driver)
+    wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+    action = selenium.webdriver.action_chains.ActionChains(driver)
 
     infomsg("browser initialized")
 
@@ -130,17 +126,17 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
         infomsg("page loaded")
-        wait.until(EC.visibility_of_element_located((By.ID, "login_filed")))
+        wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "login_filed")))
         infomsg("login page ready")
 
-        elemusername = driver.find_element(by=By.NAME, value="login_username")
+        elemusername = driver.find_element(by=selenium.webdriver.common.by.By.NAME, value="login_username")
         infomsg(elemusername.get_attribute("outerHTML"))
         action.move_to_element(elemusername).perform()
         elemusername.click()
         elemusername.send_keys(username)
         infomsg("username sent")
 
-        elempassword = driver.find_element(by=By.NAME, value="login_passwd")
+        elempassword = driver.find_element(by=selenium.webdriver.common.by.By.NAME, value="login_passwd")
         infomsg(elempassword.get_attribute("outerHTML"))
         action.move_to_element(elempassword).perform()
         elempassword.click()
@@ -150,12 +146,12 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
         login = None
         if login is None:
             try:
-                login = driver.find_element(by=By.ID, value="button")
+                login = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="button")
             except Exception as e:
                 pass
         if login is None:
             try:
-                login = driver.find_element(by=By.CLASS_NAME, value="button")
+                login = driver.find_element(by=selenium.webdriver.common.by.By.CLASS_NAME, value="button")
             except Exception as e:
                 pass
         infomsg(login.get_attribute("outerHTML"))
@@ -191,8 +187,8 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     await wait_page_loaded(driver)
     infomsg("firmware page loaged")
 
-    wait.until(EC.visibility_of_element_located((By.ID, "current_version")))
-    current = driver.find_element(by=By.ID, value="current_version")
+    wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "current_version")))
+    current = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="current_version")
     infomsg(current.get_attribute("outerHTML"))
     actual = current.get_attribute('innerHTML').split(":")[1].strip()
     infomsg(actual)
@@ -201,7 +197,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     await asyncio.sleep(10)
 
     while True:
-        working = driver.find_element(by=By.ID, value="update_scan")
+        working = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="update_scan")
         if working.is_displayed():
             await asyncio.sleep(10)
         else:
@@ -209,14 +205,14 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     infomsg("update scan found")
 
     try:
-        wait.until(EC.visibility_of_element_located((By.ID, "checkNewFW")))
+        wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "checkNewFW")))
         infomsg("check button found")
     except:
         exitnagios("WARNING", "issue detecting the update status")
 
-    available = driver.find_element(by=By.ID, value="checkNewFW")
+    available = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="checkNewFW")
     infomsg(available.get_attribute("outerHTML"))
-    elements = available.find_elements(by=By.CSS_SELECTOR, value="*")
+    elements = available.find_elements(by=selenium.webdriver.common.by.By.CSS_SELECTOR, value="*")
     if not elements:
         exitnagios("CRITICAL", "could not extract firmware update status text")
     target = elements[0].get_attribute('innerHTML').strip()
