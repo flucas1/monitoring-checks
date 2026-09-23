@@ -105,7 +105,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-def tryfindbyxpath(driver, xpath):
+async def tryfindbyxpath(driver, xpath):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
@@ -114,7 +114,7 @@ def tryfindbyxpath(driver, xpath):
     return result
 
 
-def tryfindbyid(driver, idname):
+async def tryfindbyid(driver, idname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.ID, idname)
@@ -123,7 +123,7 @@ def tryfindbyid(driver, idname):
     return result
 
 
-def tryfindbyclassname(driver, classname):
+async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
@@ -132,7 +132,7 @@ def tryfindbyclassname(driver, classname):
     return result
 
 
-def tryfindbytagname(driver, tagname):
+async def tryfindbytagname(driver, tagname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.TAG_NAME, tagname)
@@ -169,7 +169,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "email-address")))
 
         infomsg("finding base element")
-        elements = tryfindbyxpath(driver, ".//*[@id='email-address']//a")
+        elements = await tryfindbyxpath(driver, ".//*[@id='email-address']//a")
         if len(elements) == 0:
             exitnagios("CRITICAL", "no result from page")
 
@@ -197,13 +197,13 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         retry_interval = 5
         gotanswer = False
         while datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time < max_duration:
-            founddetails = tryfindbyclassname(driver, "report-details-table")
+            founddetails = await tryfindbyclassname(driver, "report-details-table")
             if len(founddetails) > 0:
                 infomsg("found details!")
                 gotanswer = True
                 break
             else:
-                foundcheck = tryfindbyid(driver, "check-status")
+                foundcheck = await tryfindbyid(driver, "check-status")
                 if len(foundcheck) > 0:
                     infomsg("the check status is " + foundcheck[0].text)
                 infomsg("extra wait for mail arrival")
@@ -213,7 +213,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
             exitnagios("CRITICAL", "could not find answer from remote website")
         else:
             infomsg("extracting errors")
-            errors = tryfindbyclassname(driver, "error")
+            errors = await tryfindbyclassname(driver, "error")
             infomsg(len(errors))
             countError = 0
             for item in errors:
@@ -228,7 +228,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
                     if partial is not None:
                         countError = countError + partial
             infomsg("extracting warns")
-            warns = tryfindbyclassname(driver, "warn")
+            warns = await tryfindbyclassname(driver, "warn")
             infomsg(len(warns))
             countWarning = 0
             for item in warns:

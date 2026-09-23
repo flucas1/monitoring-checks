@@ -103,7 +103,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-def tryfindbyxpath(driver, xpath):
+async def tryfindbyxpath(driver, xpath):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
@@ -112,7 +112,7 @@ def tryfindbyxpath(driver, xpath):
     return result
 
 
-def tryfindbyid(driver, idname):
+async def tryfindbyid(driver, idname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.ID, idname)
@@ -121,7 +121,7 @@ def tryfindbyid(driver, idname):
     return result
 
 
-def tryfindbyclassname(driver, classname):
+async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
@@ -130,7 +130,7 @@ def tryfindbyclassname(driver, classname):
     return result
 
 
-def tryfindbytagname(driver, tagname):
+async def tryfindbytagname(driver, tagname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.TAG_NAME, tagname)
@@ -161,12 +161,12 @@ async def dodnssecverisigncall(domain, proxy):
         wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "dns-results")))
 
         infomsg("finding base element")
-        element = tryfindbyclassname(driver, "panel-body")
+        element = await tryfindbyclassname(driver, "panel-body")
         if len(element) == 0:
             exitnagios("CRITICAL", "no result from page")
 
         infomsg("finding error message")
-        wellsmlist = tryfindbytagname(driver, "td")
+        wellsmlist = await tryfindbytagname(driver, "td")
         messages = []
         isValid = False
         isWarning = False

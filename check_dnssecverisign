@@ -103,7 +103,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-def tryfindbyxpath(driver, xpath):
+async def tryfindbyxpath(driver, xpath):
     result = None
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
@@ -120,7 +120,7 @@ def count_red_yellow_green(block, ignoremessages):
     okmsg = []
     ignoredmsg = []
 
-    blocknameelement = tryfindbyxpath(block, "./td[@class=\"T1L\"]")
+    blocknameelement = await tryfindbyxpath(block, "./td[@class=\"T1L\"]")
     if len(blocknameelement) > 0:
         blocknametext = blocknameelement[0].text.strip()
     else:
@@ -128,12 +128,12 @@ def count_red_yellow_green(block, ignoremessages):
     infomsg("======> Block name text -> " + str(blocknametext))
 
     redxpath = ".//img[@src=\"/red.png\"]"
-    redelements = tryfindbyxpath(block, redxpath)
+    redelements = await tryfindbyxpath(block, redxpath)
     infomsg("Found " + str(len(redelements)) + " red elements")
     if len(redelements) > 0:
         for element in redelements:
             try:
-                textelement = tryfindbyxpath(element, "../following-sibling::td")[0]
+                textelement = await tryfindbyxpath(element, "../following-sibling::td")[0]
                 msgtext = textelement.text.strip()
                 if msgtext != "":
                     if msgtext not in ignoremessages:
@@ -144,12 +144,12 @@ def count_red_yellow_green(block, ignoremessages):
                 infomsg("exception - " + str(e))
 
     yellowxpath = ".//img[@src=\"/yellow.png\"]"
-    yellowelements = tryfindbyxpath(block, yellowxpath)
+    yellowelements = await tryfindbyxpath(block, yellowxpath)
     infomsg("Found " + str(len(yellowelements)) + " yellow elements")
     if len(yellowelements) > 0:
         for element in yellowelements:
             try:
-                textelement = tryfindbyxpath(element, "../following-sibling::td")[0]
+                textelement = await tryfindbyxpath(element, "../following-sibling::td")[0]
                 msgtext = textelement.text.strip()
                 if msgtext != "":
                     if msgtext not in ignoremessages:
@@ -160,12 +160,12 @@ def count_red_yellow_green(block, ignoremessages):
                 infomsg("exception - " + str(e))
 
     greenxpath = ".//img[@src=\"/green.png\"]"
-    greenelements = tryfindbyxpath(block, greenxpath)
+    greenelements = await tryfindbyxpath(block, greenxpath)
     infomsg("Found " + str(len(greenelements)) + " green elements")
     if len(greenelements) > 0:
         for element in greenelements:
             try:
-                textelement = tryfindbyxpath(element, "../following-sibling::td")[0]
+                textelement = await tryfindbyxpath(element, "../following-sibling::td")[0]
                 msgtext = textelement.text.strip()
                 if msgtext != "":
                     if msgtext not in ignoremessages:
@@ -207,7 +207,7 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         if element is None:
             exitnagios("CRITICAL", "no result from page")
 
-        blocks = tryfindbyxpath(driver, tablepath + "/tbody/tr")
+        blocks = await tryfindbyxpath(driver, tablepath + "/tbody/tr")
         infomsg("Found " + str(len(blocks) - 1) + " blocks")
 
         criticalmsg = []
