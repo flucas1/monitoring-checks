@@ -61,7 +61,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -79,9 +79,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -126,8 +126,8 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
         try:
             driver = await generatedriver(proxy)
 
-            wait = WebDriverWait(driver, 20)
-            action = ActionChains(driver)
+            wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+            action = selenium.webdriver.action_chains.ActionChains(driver)
         except Exception as e:
             exitnagios("CRITICAL", str(e))
     else:
@@ -143,12 +143,12 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
             await wait_page_loaded(driver)
 
             infomsg("asking for logging " + url)
-            wait.until(EC.visibility_of_element_located((By.ID, "product-name")))
-            wait.until(EC.invisibility_of_element_located((By.ID, "spinner-container")))
-            wait.until(EC.visibility_of_element_located((By.ID, "login-password")))
-            wait.until(EC.visibility_of_element_located((By.ID, "btn-login")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "product-name")))
+            wait.until(selenium.webdriver.support.expected_conditions.invisibility_of_element_located((selenium.webdriver.common.by.By.ID, "spinner-container")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "login-password")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "btn-login")))
 
-            elempassword = driver.find_element(By.ID, "login-password")
+            elempassword = driver.find_element(selenium.webdriver.common.by.By.ID, "login-password")
             infomsg(elempassword.get_attribute("outerHTML"))
             action.move_to_element(elempassword).perform()
             elempassword.click()
@@ -158,14 +158,14 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
             elempassword.send_keys(password)
             # await asyncio.sleep(2)
 
-            login = driver.find_element(By.ID, "btn-login")
+            login = driver.find_element(selenium.webdriver.common.by.By.ID, "btn-login")
             infomsg(login.get_attribute("outerHTML"))
             action.move_to_element(login).perform()
             login.click()
 
             # await asyncio.sleep(5)
             await wait_page_loaded(driver)
-            wait.until(EC.visibility_of_element_located((By.ID, "overview-route-system-status")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "overview-route-system-status")))
 
             infomsg("A")
             current_url = driver.current_url
@@ -182,9 +182,9 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
             # await asyncio.sleep(5)
             await wait_page_loaded(driver)
 
-            wait.until(EC.visibility_of_element_located((By.ID, "uptime")))
-            wait.until(EC.text_to_be_present_in_element((By.ID, "uptime"), "day"))
-            uptime = driver.find_element(By.ID, "uptime")
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "uptime")))
+            wait.until(selenium.webdriver.support.expected_conditions.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "uptime"), "day"))
+            uptime = driver.find_element(selenium.webdriver.common.by.By.ID, "uptime")
             infomsg(uptime.text)
             infomsg(uptime.get_attribute("outerHTML"))
             uptimeparts = uptime.text.strip().split(",")
