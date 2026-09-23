@@ -10,14 +10,13 @@ import asyncio
 import email.mime.text
 
 import selenium
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import selenium.webdriver
+import selenium.webdriver.common.keys
+import selenium.webdriver.chrome.options
+import selenium.webdriver.action_chains
+import selenium.webdriver.common.by
+import selenium.webdriver.support.ui
+import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
