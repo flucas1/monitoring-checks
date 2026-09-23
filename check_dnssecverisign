@@ -4,7 +4,6 @@
 import os
 import sys
 import time
-import subprocess
 import argparse
 import asyncio
 
@@ -235,7 +234,7 @@ def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
                     tempwarn.append(test)
                 else:
                     extra.append(test)
-        warningmsg = tempwarn
+            warningmsg = tempwarn
 
         infomsg("final critical -> " + str(criticalmsg))
         infomsg("final warning -> " + str(warningmsg))
@@ -248,7 +247,7 @@ def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
             exitnagios("WARNING", " - ".join(warningmsg))
 
         if len(ignoredmsg) > 0:
-            exitnagios("OK", "all seems good - but matching ignores - " + " - ".join(validmsg) + " - " + " ".join(extra))
+            exitnagios("OK", "all seems good - but matching ignores - " + " - ".join(okmsg) + " - " + " ".join(extra))
         else:
             exitnagios("OK", "all seems good - " + " ".join(extra))
     except Exception as e:
