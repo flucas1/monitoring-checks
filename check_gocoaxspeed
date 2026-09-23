@@ -61,7 +61,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -79,9 +79,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -126,8 +126,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
         try:
             driver = await generatedriver(proxy)
 
-            wait = WebDriverWait(driver, 20)
-            action = ActionChains(driver)
+            wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+            action = selenium.webdriver.action_chains.ActionChains(driver)
         except Exception as e:
             exitnagios("CRITICAL", str(e))
     else:
@@ -143,17 +143,17 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
             await wait_page_loaded(driver)
 
             infomsg("asking for logging " + "http://" + ip + "/phyRates.html")
-            wait.until(EC.visibility_of_element_located((By.ID, "pageContent")))
-            wait.until(EC.visibility_of_element_located((By.ID, "table_data")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "pageContent")))
+            wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "table_data")))
 
-            tableelem = driver.find_element(By.ID, "table_data")
+            tableelem = driver.find_element(selenium.webdriver.common.by.By.ID, "table_data")
             tabletext = tableelem.text
             infomsg(tabletext)
 
             cells = []
             counter = 0
             while (counter < 15):
-                cells = tableelem.find_elements(By.TAG_NAME, "td")
+                cells = tableelem.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "td")
                 if len(cells) == 0:
                     counter = counter + 1
                     await asyncio.sleep(1)
@@ -162,12 +162,12 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
             infomsg("found " + str(len(cells)) + " cells")
 
             values = []
-            rows = tableelem.find_elements(By.XPATH, ".//tr")
+            rows = tableelem.find_elements(selenium.webdriver.common.by.By.XPATH, ".//tr")
             if len(rows) > 0:
                 rows.pop(0)
             for row in rows:
                 infomsg("row " + row.text)
-                cols = row.find_elements(By.TAG_NAME, "td")
+                cols = row.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "td")
                 if len(cols) > 0:
                     cols.pop(0)
                 cols.pop(0)
