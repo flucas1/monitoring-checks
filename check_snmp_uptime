@@ -50,27 +50,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-# -------------------------------------------------------------------------------
-
-
 async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hostname, port, community, timeoutvalue, timeoutstatus):
     alternatives = {}
     alternatives["engine"] = ("2c", ".1.3.6.1.6.3.10.2.1.3.0", "INTEGER:\\W*(\\d+)\\W*seconds", 1)
