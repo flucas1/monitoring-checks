@@ -5,9 +5,8 @@ import os
 import sys
 import asyncio
 import argparse
-import mechanize
-import asyncio
-from bs4 import BeautifulSoup
+import aiohttp
+import bs4
 
 # -------------------------------------------------------------------------------
 
@@ -52,59 +51,71 @@ def exitnagios(status, message):
 
 
 async def doportexternalcall(domain):
-    try:
-        valid = False
-        url = "https://code.kryo.se/iodine/check-it/"
-        retries = 3
-        counter = 0
-        while True:
+    url = "https://code.kryo.se/iodine/check-it/"
+    retries = 3
+    counter = 0
+    valid = False
+
+    async with aiohttp.ClientSession() as session:
+        while counter < retries:
             counter = counter + 1
             welldone = False
             try:
-                infomsg("initializing browser")
-                br = mechanize.Browser()
-                br.set_handle_robots(False)  # ignore robots file
-                # br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
-                br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
-                br.open(url)
-                infomsg("page opened")
-                br.select_form(nr=0)
-                br["domain"] = str(domain)
-                infomsg("going to submit!")
-                res = br.submit()
-                infomsg("submitted")
-                content = res.read()
-                infomsg("the result is of length " + str(len(content)))
+                infomsg("initializing request")
+                async with session.get(url) as response:
+                    infomsg("page opened")
+                    if response.status != 200:
+                        infomsg("unexpected status: " + str(response.status))
+                        continue
 
-                if content is not None:
-                    soup = BeautifulSoup(content, "html.parser")
-                    # infomsg(soup)
-                    div = soup.find("div", id="blaffa")
-                    # infomsg(div)
-                    wdbold = soup.find_all("b")
-                    welldone = False
-                    for item in wdbold:
-                        if item.text == "Well done":
-                            welldone = True
+                    # Parse form to extract any hidden fields (e.g., CSRF tokens)
+                    content = await response.text()
+                    soup = bs4.BeautifulSoup(content, "html.parser")
+                    form = soup.find("form")
+                    if form is None:
+                        infomsg("form not found")
+                        continue
+
+                    # Build form data
+                    form_data = aiohttp.FormData()
+                    form_data.add_field("domain", domain)
+
+                    # Collect all input fields from the form
+                    for input_tag in form.find_all("input"):
+                        name = input_tag.get("name")
+                        if name is None:
+                            continue
+                        value = input_tag.get("value", "")
+                        form_data.add_field(name, value)
+
+                    infomsg("going to submit!")
+                    async with session.post(url, data=form_data) as submit_response:
+                        infomsg("submitted")
+                        submit_content = await submit_response.text()
+                        infomsg("the result is of length " + str(len(submit_content)))
+
+                        soup = bs4.BeautifulSoup(content, "html.parser")
+                        wdbold = soup.find_all("b")
+                        for item in wdbold:
+                            if item.text == "Well done":
+                                welldone = True
+                                break
+
+                if welldone:
+                    valid = True
+                    break
+                else:
+                    infomsg("retrying in 10 seconds...")
+                    await asyncio.sleep(10)
             except Exception as e:
-                print(str(e), flush=True)
-            finally:
-                valid = False
-
-            if welldone == True:
-                valid = True
-                break
-            elif counter >= retries:
-                break
-            else:
+                infomsg("exception: " + str(e))
                 await asyncio.sleep(10)
 
-        if valid:
-            exitnagios("OK", "the tunnel is well done")
-        else:
-            exitnagios("WARNING", "the tunnel is not valid")
-    except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+    if valid:
+        exitnagios("OK", "the tunnel is well done")
+    else:
+        exitnagios("WARNING", "the tunnel is not valid")
+
 
 # -------------------------------------------------------------------------------
 
