@@ -11,7 +11,7 @@ import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.action_chains
+import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -219,7 +219,7 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 10)
-        action = selenium.webdriver.action_chains.ActionChains(driver)
+        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://browserleaks.com/dns"

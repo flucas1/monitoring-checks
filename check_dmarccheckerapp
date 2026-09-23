@@ -13,7 +13,7 @@ import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.action_chains
+import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -148,7 +148,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.action_chains.ActionChains(driver)
+        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         # OTHER ALTERNATIVES, BUT DO NOT CHECK DMARC
         # https://dkimvalidator.com/
