@@ -2,7 +2,6 @@
 
 import os
 import sys
-import subprocess
 import argparse
 import mechanize
 import socket
@@ -52,7 +51,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dointernalcall(ipprotocol, tcporudp, hostname, port):
+async def dointernalcall(ipprotocol, tcporudp, hostname, port):
     try:
         if ipprotocol == "4":
             sfamily = socket.AF_INET
@@ -114,7 +113,7 @@ def dointernalcall(ipprotocol, tcporudp, hostname, port):
     return content
 
 
-def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
+async def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
     try:
         url = baseurl + "?hostname=" + hostname + "&protocol=" + tcporudp + "&port=" + str(port)
         if ipprotocol != "":
@@ -137,14 +136,14 @@ def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
 # -------------------------------------------------------------------------------
 
 
-def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     try:
         ipprotocol = ipprotocol.strip().replace("-", "")
         tcporudp = tcporudp.lower().strip()
         if baseurl == "":
-            content = dointernalcall(ipprotocol, tcporudp, hostname, port)
+            content = await dointernalcall(ipprotocol, tcporudp, hostname, port)
         else:
-            content = dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
+            content = await dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
         infomsg(content)
         if content is None:
             exitnagios("CRITICAL", "no result from page")
@@ -170,15 +169,15 @@ def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostnam
         return ("CRITICAL", "unexpected error during the check " + str(e))
 
 
-def doportexternalcall(retries, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcall(retries, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     counter = 0
     while True:
-        exitlevel, message = doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
+        exitlevel, message = await doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
         if (exitlevel == "OK") or (counter >= retries):
             exitnagios(exitlevel, message)
         else:
             counter = counter + 1
-            time.sleep(5)
+            await asyncio.sleep(5)
     exitnagios("CRITICAL", "unexpected state")
 
 # -------------------------------------------------------------------------------
@@ -236,7 +235,7 @@ async def main(forcedargs=None):
                 accesstoken = handle.read().splitlines()[0]
         baseurl = args.baseurl
         retries = int(args.retries)
-        doportexternalcall(retries, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)
+        await doportexternalcall(retries, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
