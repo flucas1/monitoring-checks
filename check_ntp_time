@@ -73,7 +73,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, timeoutstatus):
+async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, timeoutstatus):
     client = ntplib.NTPClient()
     counter = 0
     retries = 3
@@ -100,7 +100,7 @@ def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, timeouts
             if counter > retries:
                 exitnagios(timeoutstatus, str(e))
             else:
-                time.sleep(5)
+                await asyncio.sleep(5)
 
 # -------------------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dontptimecheck(protocol, args.hostname, args.warning, args.critical, timeoutvalue, timeoutstatus)
+        await dontptimecheck(protocol, args.hostname, args.warning, args.critical, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 

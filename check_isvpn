@@ -137,7 +137,7 @@ async def doisvpncall(expected, severity, proxy):
         driver.get(url)
         infomsg("asking for navigating " + url)
 
-        time.sleep(5)
+        await asyncio.sleep(5)
         await wait_page_loaded(driver)
 
         wait.until(EC.presence_of_element_located((By.ID, "type")))
