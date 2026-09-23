@@ -4,7 +4,6 @@
 import os
 import sys
 import time
-import subprocess
 import socket
 import argparse
 import asyncio
@@ -126,7 +125,7 @@ def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-def doisvpncall(expected, severity, proxy):
+async def doisvpncall(expected, severity, proxy):
     try:
         driver = generatedriver(proxy)
 
@@ -209,7 +208,7 @@ async def main(forcedargs=None):
     if args.severity not in ["CRITICAL", "WARNING"]:
         exitnagios("CRITICAL", "the severity '" + args.severity + "' is not valid")
 
-    doisvpncall(expected, args.severity, proxy)
+    await doisvpncall(expected, args.severity, proxy)
 
 # -------------------------------------------------------------------------------
 
