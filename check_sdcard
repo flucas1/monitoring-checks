@@ -4,8 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -50,12 +48,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def doospfroutescall(device):
+async def doospfroutescall(device):
     cmdline = ["/usr/bin/mmc", "extcsd", "read", device]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    proc = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = proc.returncode
 
     if exitcode == 0:
         exitnagios("OK", "no issues detected with the sdcard")
@@ -76,7 +79,7 @@ async def main(forcedargs=None):
     if args.device == "":
         exitnagios("CRITICAL", "no device specified")
 
-    doospfroutescall(args.device)
+    await doospfroutescall(args.device)
 
 # -------------------------------------------------------------------------------
 

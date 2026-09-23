@@ -4,8 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -50,12 +48,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def doresolveddnsseccall():
+async def doresolveddnsseccall():
     cmdline = ["/usr/bin/resolvectl", "dnssec"]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
 
     if exitcode == 0:
         allenabled = True
@@ -87,7 +90,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    doresolveddnsseccall()
+    await doresolveddnsseccall()
 
 # -------------------------------------------------------------------------------
 

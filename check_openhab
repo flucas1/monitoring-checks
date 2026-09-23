@@ -90,7 +90,7 @@ def split_threshold(value, level, convert):
         if many == 2:
             return (convert(items[0], False), convert(items[1], True))
         else:
-            exitnagios("CRITICAL", "Malformed " + str(levle) + " value: " + str(value))
+            exitnagios("CRITICAL", "Malformed " + str(level) + " value: " + str(value))
     except:
         exitnagios("CRITICAL", "invalid value passed as %s parameter: %s" % (level, value))
 
@@ -237,7 +237,7 @@ def check_group(group_json, thresholds, args, timeoutstatus):
     return (final_rc, final_messages, perfdata)
 
 
-def fetch_object(item_url, args, timeoutstatus):
+async def fetch_object(item_url, args, timeoutstatus):
     infomsg("# " + str(item_url))
 
     password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
@@ -333,7 +333,7 @@ async def main(forcedargs=None):
 
     object_url = "%s://%s:%d%s/%s/%s" % \
         ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
-    object_json = fetch_object(object_url, args, timeoutstatus)
+    object_json = await fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
         rc, messages, perfdata = check_group(object_json, thresholds, args, timeoutstatus)

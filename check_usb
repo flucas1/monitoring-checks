@@ -3,7 +3,6 @@
 
 import re
 import sys
-import subprocess
 import argparse
 import asyncio
 
@@ -78,14 +77,19 @@ def check_the_line(lineid, linemsg, device_identifiers, device_messages):
     return matching
 
 
-def is_usb_connected(device_identifiers, device_messages, device_expected):
+async def is_usb_connected(device_identifiers, device_messages, device_expected):
     found = False
     try:
         cmdline = ["/usr/bin/lsusb"]
-        completedproc = subprocess.run(cmdline, capture_output=True)
-        output = completedproc.stdout.decode("utf-8")
-        errors = completedproc.stderr.decode("utf-8")
-        exitcode = completedproc.returncode
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
 
         founddict = {}
         if exitcode == 0:
@@ -143,7 +147,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    is_usb_connected(args.devices, args.messages, args.expected)
+    await is_usb_connected(args.devices, args.messages, args.expected)
 
 # -------------------------------------------------------------------------------
 
