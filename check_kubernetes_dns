@@ -169,7 +169,7 @@ async def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, 
         if serverv6 is not None:
             tasks.append(run_dns_check(protocol, nodename, timeoutvalue, serverv6, key, login, autoaccept, "IPv6"))
 
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=False)
 
     for result in results:
         if result is not None:
