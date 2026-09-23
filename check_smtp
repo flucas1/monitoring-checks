@@ -9,6 +9,7 @@ import datetime
 import socket
 import ssl
 import asyncio
+import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
@@ -73,7 +74,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
+async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     smtpconnection = None
     try:
         start = datetime.datetime.now(datetime.UTC)
@@ -107,8 +108,7 @@ def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
                 certexpirationraw = cert_data["notAfter"]
                 infomsg("Expiry date: " + str(certexpirationraw))
                 if certexpirationraw is not None:
-                    from dateutil.parser import parse
-                    certexpirationparsed = parse(cert_data["notAfter"])
+                    certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
             except:
                 infomsg(str(traceback.format_exc()))
                 pass
@@ -179,6 +179,7 @@ def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
     else:
         exitnagios("CRITICAL", "cannot init SMTP connection | time=-1 validity=-1")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -234,7 +235,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dosmtpcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays, args.relay, args.blocked, source)
+        await dosmtpcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays, args.relay, args.blocked, source)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
