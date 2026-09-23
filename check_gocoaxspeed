@@ -114,10 +114,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         result = sock.connect_ex((ip, 80))
-        if result == 0:
-            sock.close()
-        else:
-            sock.close()
+        sock.close()
+        if result != 0:
             raise Exception("Cannot reach target IP on port 80 " + ip)
     except Exception as e:
         exitnagios(timeoutstatus, str(e))
