@@ -70,10 +70,7 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port):
 
         if tcporudp == "tcp":
             try:
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(ip_address, port),
-                    timeout=timeout
-                )
+                reader, writer = await asyncio.wait_for(asyncio.open_connection(ip_address, port), timeout=timeout)
                 content = "OPEN"
                 writer.close()
                 await writer.wait_closed()
