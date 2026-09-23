@@ -2,11 +2,11 @@
 # -------------------------------------------------------------------------------
 
 import argparse
+import asyncio
 import gps
-import time
 import os
 import sys
-import asyncio
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ def parse_args(forcedargs=None):
     return args
 
 
-def dogpstimecheck(timeoutvalue, timeoutstatus):
+async def dogpstimecheck(timeoutvalue, timeoutstatus):
     gpsd = gps.gps(mode=gps.watch_options.WATCH_ENABLE | gps.watch_options.WATCH_NEWSTYLE)
 
     timeout = False
@@ -82,7 +82,7 @@ def dogpstimecheck(timeoutvalue, timeoutstatus):
                 timeout = True
                 break
             else:
-                time.sleep(1)
+                await asyncio.sleep(1)
     except Exception as e:
         exitnagios("UNKNOWN", "internal error - " + str(e))
     finally:
@@ -106,7 +106,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dogpstimecheck(timeoutvalue, timeoutstatus)
+        await dogpstimecheck(timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
