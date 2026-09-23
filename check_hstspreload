@@ -91,19 +91,19 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
 
-def dohstspreloadcall(proxy, domain):
+async def dohstspreloadcall(proxy, domain):
     infomsg(proxy)
     infomsg(domain)
     try:
@@ -118,7 +118,7 @@ def dohstspreloadcall(proxy, domain):
         infomsg("asking for navigating " + url)
 
         time.sleep(5)
-        wait_page_loaded(driver)
+        await wait_page_loaded(driver)
 
         wait.until(EC.text_to_be_present_in_element((By.ID, "status"), "Status: "))
 
@@ -186,7 +186,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "specify a host/domain to check")
 
     proxy = ""
-    dohstspreloadcall(proxy, args.host)
+    await dohstspreloadcall(proxy, args.host)
 
 # -------------------------------------------------------------------------------
 
