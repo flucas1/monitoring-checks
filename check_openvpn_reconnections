@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
 import platform
 import json
 import asyncio
@@ -51,13 +50,18 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
+async def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
     cmdline = ["/usr/bin/journalctl", "--utc", "--no-pager", "--unit", "openvpn@" + profile, "-g", "Started openvpn@", "--since", str(time) + " hours ago"]
     infomsg(cmdline)
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
 
     infomsg(output)
     if exitcode == 0:
@@ -95,7 +99,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    openvpnreconnections_check(args.critical, args.warning, args.profile, args.time)
+    await openvpnreconnections_check(args.critical, args.warning, args.profile, args.time)
 
 # -------------------------------------------------------------------------------
 
