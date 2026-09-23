@@ -4,10 +4,10 @@
 import argparse
 import sys
 import os
+import asyncio
 import subprocess
 import datetime
 import dateutil.parser
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -51,12 +51,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dofreeswapscall(warning, critical, minimum):
+async def dofreeswapscall(warning, critical, minimum):
     cmdline = ["/usr/bin/free", "--mega", "--wide"]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
 
     infomsg(output)
     if exitcode == 0:
@@ -102,7 +107,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    dofreeswapscall(args.warning, args.critical, args.minimum)
+    await dofreeswapscall(args.warning, args.critical, args.minimum)
 
 # -------------------------------------------------------------------------------
 

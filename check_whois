@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
 import json
 import dateutil
 import datetime
@@ -52,15 +51,20 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dordapcall(domain, warning, critical):
+async def dordapcall(domain, warning, critical):
     if domain in [None, ""]:
         exitnagios("CRITICAL", "no domain specified")
     else:
         cmdline = ["/usr/bin/go-rdap", "--json", domain]
-        completedproc = subprocess.run(cmdline, capture_output=True)
-        output = completedproc.stdout.decode("utf-8").strip()
-        errors = completedproc.stderr.decode("utf-8").strip()
-        exitcode = completedproc.returncode
+        proc = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = proc.returncode
 
         infomsg(output)
         if exitcode == 0:
@@ -115,7 +119,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dordapcall(args.hostname, args.warning, args.critical)
+    await dordapcall(args.hostname, args.warning, args.critical)
 
 # -------------------------------------------------------------------------------
 
