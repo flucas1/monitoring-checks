@@ -12,9 +12,6 @@ import json
 import datetime
 import dateutil.parser
 import socket
-import gzip
-import zlib
-import io
 import random
 import asyncio
 
@@ -157,60 +154,54 @@ async def load_json(proxy, domain, retries, timeoutvalue):
         "Sec-Fetch-User": "?1"
     }
 
+    connector = aiohttp.TCPConnector()
+    timeout = aiohttp.ClientTimeout(total=timeoutvalue)
+
     counter = 0
     object_json = None
-    while True:
-        try:
-            counter = counter + 1
 
-            infomsg("sending request")
-            response = opener.open(item_request, timeout=15)
-            infomsg("request done")
+    async with aiohttp.ClientSession(connector=connector, headers=headers, timeout=timeout) as session:
+        while True:
+            try:
+                counter += 1
+                infomsg("sending request")
+                
+                async with session.get(item_url, proxy=proxy) as response:
+                    infomsg("request done")
 
-            if response.getcode() == 429:
-                infomsg("got 'HTTP 429 (Too Many Requests)'")
+                    if response.status == 429:
+                        infomsg("got 'HTTP 429 (Too Many Requests)'")
+                        object_json = None
+                        break
+                    
+                    response.raise_for_status()
+                    
+                    decoded_data = await response.text()
+                    infomsg("decoding done")
+
+                    object_json = json.loads(decoded_data)
+                    count_json = len(object_json)
+                    infomsg("json done - items: " + str(count_json))
+
+            except aiohttp.ClientResponseError as e:
                 object_json = None
+                message = str(e)
+                infomsg("exception - " + message)
+                if e.status == 429:
+                    break
+                else:
+                    infomsg("server error " + str(e.status))
+            except Exception as e:
+                object_json = None
+                message = str(e)
+                infomsg("exception - " + message)
+
+            if object_json is not None:
+                break
+            elif counter > retries:
                 break
             else:
-                encoding = response.headers.get("Content-Encoding")
-                raw_data = response.read()
-                if encoding == "gzip":
-                    with gzip.GzipFile(fileobj=io.BytesIO(raw_data)) as gz:
-                        decoded_data = gz.read().decode("utf-8")
-                elif encoding == "deflate":
-                    try:
-                        decoded_data = zlib.decompress(raw_data).decode("utf-8")
-                    except zlib.error:
-                        # Some servers use raw deflate (no zlib headers)
-                        decoded_data = zlib.decompress(raw_data, -zlib.MAX_WBITS).decode("utf-8")
-                else:
-                    decoded_data = raw_data.decode("utf-8")
-                infomsg("decoding done")
-
-                object_json = json.loads(decoded_data)
-                count_json = len(object_json)
-                # infomsg(object_json)
-                infomsg("json done - items: " + str(count_json))
-
-        except Exception as e:
-            object_json = None
-            message = str(e)
-            infomsg("exception - " + message)
-            if message.startswith("HTTP Error 429"):
-                break
-            elif message.startswith("HTTP Error "):
-                parts = message.split(" ")
-                rawerrorcode = parts[2].replace(":", "")
-                parsederrorcode = int(rawerrorcode)
-                infomsg(parsederrorcode)
-                infomsg("server error " + str(parsederrorcode))
-
-        if object_json is not None:
-            break
-        elif counter > retries:
-            break
-        else:
-            await asyncio.sleep(5 + (counter * 2) + random.uniform(1, 5))
+                await asyncio.sleep(5 + (counter * 2) + random.uniform(1, 5))
 
     return object_json
 
