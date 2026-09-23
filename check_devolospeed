@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
-# aptitude install python-nagiosplugin
 
 import argparse
 import socket
@@ -142,6 +141,14 @@ def change_mac(base, offset):
     new_string = ":".join(s for s in re.split(r"(\w{2})", old_string.upper()) if s.isalnum())
     return new_string
 
+
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname)
+    except Exception:
+        return ""
+
+
 # -------------------------------------------------------------------------------
 
 
@@ -177,11 +184,7 @@ async def main(forcedargs=None):
         critical = int(args.critical)
 
     if (args.mac == None):
-        try:
-            targetip = socket.gethostbyname(hostname)
-        except socket.gaierror:
-            exitnagios("CRITICAL", "It was not possible to resolve hostname into IP having hostname as " + hostname)
-
+        targetip = await resolve_hostname_to_ip(hostname)
         if (targetip == ""):
             exitnagios("CRITICAL", "It was not possible to resolve hostname into IP having hostname as " + hostname)
 

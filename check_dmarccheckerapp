@@ -7,7 +7,7 @@ import argparse
 import datetime
 import smtplib
 import asyncio
-from email.mime.text import MIMEText
+import email.mime.text
 
 import selenium
 from selenium import webdriver
@@ -180,7 +180,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         dummystring = "TEST email to " + url + " at " + datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         email_body = dummystring
-        email_message = MIMEText(email_body)
+        email_message = email.mime.text.MIMEText(email_body)
         email_message["Subject"] = dummystring
         email_message["From"] = me
         email_message["To"] = targetemail
