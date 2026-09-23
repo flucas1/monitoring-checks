@@ -9,6 +9,7 @@ import datetime
 import socket
 import ssl
 import asyncio
+import traceback
 
 # -------------------------------------------------------------------------------
 
@@ -73,7 +74,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays):
+async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays):
     try:
         start = datetime.datetime.now(datetime.UTC)
         imapconnection = None
@@ -95,8 +96,8 @@ def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue
                     certexpirationraw = cert_data["notAfter"]
                     infomsg("Expiry date: " + str(certexpirationraw))
                     if certexpirationraw is not None:
-                        from dateutil.parser import parse
-                        certexpirationparsed = parse(cert_data["notAfter"])
+                        import dateutil.parser
+                        certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
                 except:
                     infomsg(str(traceback.format_exc()))
                     pass
@@ -180,7 +181,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        doimapcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays)
+        await doimapcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
