@@ -3,7 +3,6 @@
 # aptitude install python-nagiosplugin
 
 import argparse
-import subprocess
 import socket
 import sys
 import re
@@ -72,9 +71,16 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def getmacfromip(remoteIP):
-    command = ["/usr/sbin/arp", "-n", str(remoteIP)]
-    output = subprocess.check_output(command).decode("utf-8")
+async def getmacfromip(remoteIP):
+    process = await asyncio.create_subprocess_exec(
+        "/usr/sbin/arp", "-n", str(remoteIP),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     rows = output.split("\n")
     infomsg(rows)
     if len(rows) > 0:
@@ -86,10 +92,17 @@ def getmacfromip(remoteIP):
     return ""
 
 
-def findinterfaces():
+async def findinterfaces():
+    process = await asyncio.create_subprocess_exec(
+        "/usr/bin/plcdevs",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     result = []
-    command = ["/usr/bin/plcdevs"]
-    output = subprocess.check_output(command).decode("utf-8")
     for row in output.split("\n"):
         parts = row.split()
         if len(parts) > 0:
@@ -97,9 +110,16 @@ def findinterfaces():
     return result
 
 
-def getspeeds(interface, targetmac):
-    command = ["/usr/bin/plcstat", "-i", interface, "-t", "-q"]
-    output = subprocess.check_output(command).decode("utf-8")
+async def getspeeds(interface, targetmac):
+    process = await asyncio.create_subprocess_exec(
+        "/usr/bin/plcstat", "-i", interface, "-t", "-q",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     rows = output.split("\n")
     infomsg(rows)
     for row in output.split("\n"):
@@ -157,12 +177,16 @@ async def main(forcedargs=None):
         critical = int(args.critical)
 
     if (args.mac == None):
-        targetip = socket.gethostbyname(hostname)
-        if (targetip == ""):
-            exitnagios("CRITICAL", "It was not possible to resolve hostname into IP havig hostname as " + hostname)
+        try:
+            targetip = socket.gethostbyname(hostname)
+        except socket.gaierror:
+            exitnagios("CRITICAL", "It was not possible to resolve hostname into IP having hostname as " + hostname)
 
-        tempmac = getmacfromip(targetip)
-        infomsg(targetmac)
+        if (targetip == ""):
+            exitnagios("CRITICAL", "It was not possible to resolve hostname into IP having hostname as " + hostname)
+
+        tempmac = await getmacfromip(targetip)
+        infomsg(tempmac)
         if (tempmac == ""):
             exitnagios("CRITICAL", "It was not possible to resolve IP into MAC. having hostname as " + hostname + " and targetip as " + targetip)
         targetmac = change_mac(tempmac, 1)
@@ -176,10 +200,10 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        interfaces = findinterfaces()
+        interfaces = await findinterfaces()
         for interface in interfaces:
             infomsg(interface)
-            speeds = getspeeds(interface, targetmac)
+            speeds = await getspeeds(interface, targetmac)
             if speeds is not None:
                 upload = speeds[0]
                 download = speeds[1]
