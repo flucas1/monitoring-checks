@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
 import netifaces
 import ipaddress
 import asyncio
