@@ -64,8 +64,8 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
 
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=multitimeoutvalue)
-            output = stdout.decode("utf-8").strip()
-            errors = stderr.decode("utf-8").strip()
+            output = stdout.decode("utf-8").strip() if stdout else ""
+            errors = stderr.decode("utf-8").strip() if stderr else ""
             exitcode = process.returncode
         except asyncio.TimeoutError:
             try:

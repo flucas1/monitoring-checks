@@ -4,9 +4,7 @@
 import sys
 import os
 import argparse
-import subprocess
 import socket
-import concurrent.futures
 import netifaces
 import random
 import asyncio
@@ -108,7 +106,7 @@ def interface_to_address(interface, protocol):
     return primary_ip
 
 
-def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
     source = interface_to_address(interface, protocol)
 
     cmdline = ["/usr/bin/ping"]
@@ -124,11 +122,27 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
     infomsg(cmdline)
 
     try:
-        completedproc = subprocess.run(cmdline, capture_output=True, timeout=timeout)
-        output = completedproc.stdout.decode("utf-8")
-        errors = completedproc.stderr.decode("utf-8")
-        exitcode = completedproc.returncode
-    except:
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            limit=1024
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            output = stdout.decode("utf-8").strip() if stdout else ""
+            errors = stderr.decode("utf-8").strip() if stderr else ""
+            exitcode = process.returncode
+        except asyncio.TimeoutError:
+            try:
+                process.kill()
+            except:
+                pass
+            await process.wait()
+            output = ""
+            errors = ""
+            exitcode = 2
+    except Exception:
         output = ""
         errors = ""
         exitcode = 2
@@ -188,14 +202,14 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     else:
         protocolslist = []
 
-    executor = concurrent.futures.ThreadPoolExecutor()
-    futures = []
+    tasks = []
     for hostsingle in hosts:
         for protocol in protocolslist:
-            future = executor.submit(dopingtestsingle, protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
-            futures.append(future)
-    for future in concurrent.futures.as_completed(futures):
-        result = future.result()
+            task = await dopingtestsingle(protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
+            tasks.append(task)
+
+    results = await asyncio.gather(*tasks)
+    for result in results:
         if isinstance(result, list):
             average = average + result[1]
             percentloss = percentloss + result[2]
