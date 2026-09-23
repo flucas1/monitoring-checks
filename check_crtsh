@@ -5,12 +5,9 @@
 # and check that issuer+name and issuer_ca_id in list
 # wget "https://crt.sh/?q=google.com&output=json" -O - -q | jq
 
-import urllib.error
-import urllib.request
 import aiohttp
 import argparse
 import sys
-import os
 import json
 import datetime
 import dateutil.parser
@@ -111,7 +108,7 @@ def ipv4_default_route_exists() -> bool:
 # -------------------------------------------------------------------------------
 
 
-async def load_json(proxy, domain, retries):
+async def load_json(proxy, domain, retries, timeoutvalue):
     item_url = "https://crt.sh/?Identity=" + domain + "&exclude=expired&output=json"
     infomsg(item_url)
 
@@ -142,23 +139,23 @@ async def load_json(proxy, domain, retries):
     else:
         opener = urllib.request.build_opener()
 
-    version = 142
-    item_request = urllib.request.Request(item_url)
-    item_request.add_header("Upgrade-Insecure-Requests", "1")
-    item_request.add_header("Dnt", "1")
-    item_request.add_header("Priority", "u=0,1")
-    item_request.add_header("Cache-Control", "max-age=0")
-    item_request.add_header("Accept-Language", "en-US")
-    item_request.add_header("Accept-Encodinng", "gzip, deflate")
-    item_request.add_header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-    item_request.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + str(version) + ".0.0.0 Safari/537.36")
-    item_request.add_header("Sec-Ch-Ua", "\"Not;A=Brand\";v=\"99\", \"Google Chrome\";v=\"" + str(version) + "\", \"Chromium\";v=\"" + str(version) + "\"")
-    item_request.add_header("Sec-Ch-Ua-Mobile", "?0")
-    item_request.add_header("Sec-Ch-Ua-Platform", "Windows")
-    item_request.add_header("Sec-Fetch-Dest", "document")
-    item_request.add_header("Sec-Fetch-Mode", "navigate")
-    item_request.add_header("Sec-Fetch-Site", "none")
-    item_request.add_header("Sec-Fetch-User", "?1")
+    headers = {
+        "Upgrade-Insecure-Requests": "1",
+        "Dnt": "1",
+        "Priority": "u=0,1",
+        "Cache-Control": "max-age=0",
+        "Accept-Language": "en-US",
+        "Accept-Encoding": "gzip, deflate",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "Sec-Ch-Ua": '"Not;A=Brand";v="99", "Google Chrome";v="142", "Chromium";v="142"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "Windows",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1"
+    }
 
     counter = 0
     object_json = None
@@ -219,6 +216,7 @@ async def load_json(proxy, domain, retries):
 
 # -------------------------------------------------------------------------------
 
+
 async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
 
     mode = mode.lower()
@@ -241,7 +239,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     ignored = ignorecerts.split(";")
 
     start = datetime.datetime.now(datetime.timezone.utc)
-    parsed = await load_json(proxy, hostname, retries)
+    parsed = await load_json(proxy, hostname, retries, timeoutvalue)
     elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
     if parsed is not None:
@@ -261,7 +259,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
                     infomsg(item)
         if totalfound == 0:
             exitnagios("WARNING", "no certificates in crt.sh | found=" + str(totalfound) + " duration=" + str(duration))
-        elif valid == True:
+        elif valid:
             exitnagios("OK", "no issues found | found=" + str(totalfound) + " duration=" + str(duration))
         else:
             exitnagios("CRITICAL", "found problems --- " + str(problems) + " | found=" + str(totalfound) + " duration=" + str(duration))
@@ -283,9 +281,9 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    if (args.hostname == ""):
+    if args.hostname == "":
         exitnagios("CRITICAL", "hostname not defined")
-    elif (args.valid == ""):
+    elif args.valid == "":
         exitnagios("CRITICAL", "valid CA ids not defined")
 
     parts = args.timeout.split(":")
