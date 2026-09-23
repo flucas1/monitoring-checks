@@ -58,18 +58,19 @@ async def extractsearchlist():
     result = ""
     handle = None
     try:
-        handle = open("/etc/resolv.conf", "r")
-        lines = handle.read().splitlines()
-        for line in lines:
-            line = line.strip().split("#", 1)[0]
-            if len(line) > 0:
-                parts = line.split()
-                if parts[0] == "search":
-                    result = parts[1].split()
-                    break
+        async with aiofiles.open("/etc/resolv.conf", "r") as handle:
+            content = await handle.read()
+            lines = content.splitlines()
+            for line in lines:
+                line = line.strip().split("#", 1)[0]
+                if len(line) > 0:
+                    parts = line.split()
+                    if parts[0] == "search":
+                        result = parts[1].split()
+                        break
     finally:
         if handle is not None:
-            handle.close()
+            await handle.close()
     return result
 
 
@@ -77,17 +78,18 @@ async def extracthostslist():
     result = {}
     handle = None
     try:
-        handle = open("/etc/hosts", "r")
-        lines = handle.read().splitlines()
-        for line in lines:
-            line = line.strip().split("#", 1)[0]
-            if len(line) > 0:
-                parts = line.split()
-                key = parts[0]
-                result[key] = parts[1:]
+        async with aiofiles.open("/etc/hosts", "r") as handle:
+            content = await handle.read()
+            lines = content.splitlines()
+            for line in lines:
+                line = line.strip().split("#", 1)[0]
+                if len(line) > 0:
+                    parts = line.split()
+                    key = parts[0]
+                    result[key] = parts[1:]
     finally:
         if handle is not None:
-            handle.close()
+            await handle.close()
     return result
 
 
@@ -185,6 +187,7 @@ async def main(forcedargs=None):
 # -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
 
 # -------------------------------------------------------------------------------
