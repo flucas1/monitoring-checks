@@ -125,6 +125,14 @@ async def doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, 
     return exitmsg
 
 
+async def run_dns_check(protocol, nodename, timeoutvalue, server, key, login, autoaccept, ip_version):
+    remotecmdline = "nslookup www.google.com " + server
+    output = await doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
+    if output is None:
+        return "could not validate " + ip_version + " DNS traffic for node " + nodename
+    return None
+
+
 async def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, key, login, autoaccept):
     serverv4 = None
     serverv6 = None
@@ -150,23 +158,22 @@ async def dokubernetesdnscheck(protocol, hostname, timeoutvalue, timeoutstatus, 
         nodelist = output.split()
 
     finalmessages = []
-
-    # parallelize all nodes and protocols
+    tasks = []
 
     for nodename in nodelist:
         infomsg("testing node " + nodename)
 
         if serverv4 is not None:
-            remotecmdline = "nslookup www.google.com " + serverv4
-            output = await doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
-            if output is None:
-                finalmessages.append("could not validate IPv4 DNS traffic for node " + nodename)
+            tasks.append(run_dns_check(protocol, nodename, timeoutvalue, serverv4, key, login, autoaccept, "IPv4"))
 
         if serverv6 is not None:
-            remotecmdline = "nslookup www.google.com " + serverv6
-            output = await doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
-            if output is None:
-                finalmessages.append("could not validate IPv6 DNS traffic for node " + nodename)
+            tasks.append(run_dns_check(protocol, nodename, timeoutvalue, serverv6, key, login, autoaccept, "IPv6"))
+
+    results = await asyncio.gather(*tasks)
+
+    for result in results:
+        if result is not None:
+            finalmessages.append(result)
 
     if len(finalmessages) == 0:
         exitnagios("OK", "no issues found | nodecount=" + str(len(nodelist)) + " errorcount=0")
