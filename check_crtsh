@@ -135,7 +135,7 @@ async def load_json(mode, proxy, domain, retries, timeoutvalue):
         connector_kwargs["family"] = socket.AF_INET
 
     request_proxy = None
-    if proxy.startswith("socks4://") or proxy.startswith("socks5://") or proxy.startswith("socks5h://"):
+    if proxy and (proxy.startswith("socks4://") or proxy.startswith("socks5://") or proxy.startswith("socks5h://")):
         connector = aiohttp_socks.ProxyConnector.from_url(proxy, **connector_kwargs)
     else:
         connector = aiohttp.TCPConnector(**connector_kwargs)
