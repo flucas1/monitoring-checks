@@ -6,7 +6,6 @@ import os
 import argparse
 import traceback
 import datetime
-import time
 import ipaddress
 import dns.asyncresolver
 import dns.exception
