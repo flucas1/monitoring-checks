@@ -5,7 +5,6 @@ import os
 import sys
 import socket
 import argparse
-import mechanize
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
@@ -75,34 +74,41 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 async def dotorcall(protocol, response):
     try:
-        # https://check.torproject.org/api/ip
         url = "https://check.torproject.org/"
-        br = mechanize.Browser()
-        # proxyparts = proxy.split("://",1)
-        # br.set_proxies({proxyparts[0]: proxyparts[1]})
-        br.set_handle_robots(False)  # ignore robots file
-        # br.addheaders = [('User-agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')]
-        br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
-        res = br.open(url)
-        content = res.read()
-        if content is None:
-            exitnagios("CRITICAL", "no result from page")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0"
+        }
 
-        soup = BeautifulSoup(content, "html.parser")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status != 200:
+                    exitnagios("CRITICAL", "unexpected HTTP status: " + str(resp.status))
 
-        element = soup.find("h1")
-        status = element["class"][0]
-        if status == response:
-            exitnagios("OK", "the result '" + status + "' is as expected")
-        else:
-            exitnagios("CRITICAL", "the result '" + status + "' is not the expected value '" + response + "'")
+                content = await resp.text()
+                if content is None:
+                    exitnagios("CRITICAL", "no result from page")
 
+                soup = BeautifulSoup(content, "html.parser")
+
+                element = soup.find("h1")
+                if element is None:
+                    exitnagios("CRITICAL", "could not find <h1> element")
+
+                status = element.get("class")
+                if status is None or len(status) == 0:
+                    exitnagios("CRITICAL", "<h1> element has no class attribute")
+
+                status_value = status[0]
+                if status_value == response:
+                    exitnagios("OK", "the result '" + status_value + "' is as expected")
+                else:
+                    exitnagios("CRITICAL", "the result '" + status_value + "' is not the expected value '" + response + "'")
+
+    except aiohttp.ClientError as e:
+        exitnagios("WARNING", "cannot connect - " + str(e))
     except Exception as e:
         exceptionmsg = str(e)
-        if exceptionmsg in ["<urlopen error [Errno 104] Connection reset by peer>"]:
-            exitnagios("WARNING", "cannot connect")
-        else:
-            exitnagios("CRITICAL", "unexpected error during the check - " + exceptionmsg)
+        exitnagios("CRITICAL", "unexpected error during the check - " + exceptionmsg)
 
 # -------------------------------------------------------------------------------
 
