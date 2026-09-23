@@ -3,7 +3,6 @@
 
 import os
 import sys
-import subprocess
 import argparse
 import mechanize
 import asyncio
@@ -51,7 +50,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dodnscaacall(domain):
+async def dodnscaacall(domain):
     try:
         url = "https://caatest.co.uk/" + domain
         br = mechanize.Browser()
@@ -89,7 +88,7 @@ async def main(forcedargs=None):
     if args.host is None or args.host == "":
         exitnagios("CRITICAL", "specify a host/domain to check")
 
-    dodnscaacall(args.host)
+    await dodnscaacall(args.host)
 
 # -------------------------------------------------------------------------------
 
