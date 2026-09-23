@@ -123,6 +123,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
     cmdline = cmdline + ["-W", str(2)]
     cmdline = cmdline + [hostname]
     infomsg(cmdline)
+
     try:
         completedproc = subprocess.run(cmdline, capture_output=True, timeout=timeout)
         output = completedproc.stdout.decode("utf-8")
@@ -140,8 +141,12 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
         alllines = output.splitlines()
         linems = alllines[-1]
         linepercent = alllines[-2]
-        avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
-        percent = float(linepercent.split(",")[2].strip().split()[0].replace("%", ""))
+        try:
+            avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
+            percent = float(linepercent.split(",")[2].strip().split()[0].replace("%", ""))
+        except Exception:
+            avgms = -1
+            percent = 100.0
         reason = "undefinded"
         if avgms >= criticalms:
             reason = "critical latency"
@@ -165,7 +170,7 @@ def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms,
             return [0, avgms, percent, reason]
 
 
-def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     hosts = hostname.replace(",", " ").split()
     valid = 0
     warning = 0
@@ -213,6 +218,7 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
     percentloss = float(percentloss) / len(hosts)
     percent = 100 - percentloss
     valid = float(valid) / len(protocolslist)
+
     if valid >= minimum:
         return ("OK", hostname + " - " + str(valid) + " of at lest " + str(minimum) + " entries are reacheable - " + str(okreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(percent))
     elif valid + warning >= minimum:
@@ -221,15 +227,15 @@ def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, h
         return (timeoutstatus, hostname + " - only " + str(valid) + " of at least " + str(minimum) + " entries are reacheable - " + str(critreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=-1 percent=0")
 
 
-def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
+async def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     counter = 0
     while True:
-        exitlevel, message = dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
+        exitlevel, message = await dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent)
         if (exitlevel == "OK") or (counter >= retries):
             exitnagios(exitlevel, message)
         else:
             counter = counter + 1
-            time.sleep(5)
+            await asyncio.sleep(5)
     exitnagios("CRITICAL", "unexpected state")
 
 # -------------------------------------------------------------------------------
@@ -294,7 +300,7 @@ async def main(forcedargs=None):
     criticalpercent = int(float(criticalparts[1].replace("%", "")))
     retries = int(args.retries)
 
-    dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
+    await dopingtestretry(retries, protocol, args.interface, args.packets, timeoutvalue, timeoutstatus, args.hostname, args.minimum, warningms, warningpercent, criticalms, criticalpercent)
 
 # -------------------------------------------------------------------------------
 
