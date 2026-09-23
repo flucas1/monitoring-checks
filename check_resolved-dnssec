@@ -75,7 +75,7 @@ async def doresolveddnsseccall():
         else:
             exitnagios("CRITICAL", "some interfaces do not have dnssec activated: " + ", ".join(failed))
     else:
-        exitnagios("CRITICAL", "issue retrieving ospf routes")
+        exitnagios("CRITICAL", "issue retrieving DNSSEC status")
 
 # -------------------------------------------------------------------------------
 
