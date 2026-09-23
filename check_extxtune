@@ -60,7 +60,7 @@ def extractlinevalue(line, test):
 async def checktune(partition, mountcount, mountperiod):
     cmdline = ["/usr/sbin/dumpe2fs", "-h", partition]
     process = await asyncio.create_subprocess_exec(
-        *command,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -95,7 +95,7 @@ async def checktune(partition, mountcount, mountperiod):
 async def dopostgresclustercountcall(mountcount, mountperiod):
     cmdline = ["/usr/bin/findmnt", "--real", "--types=ext2,ext3,ext4", "--noheadings", "--list", "--uniq", "--nofsroot", "--notruncate", "--output=SOURCE"]
     process = await asyncio.create_subprocess_exec(
-        *command,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
