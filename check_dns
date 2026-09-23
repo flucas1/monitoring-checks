@@ -11,9 +11,10 @@ import dns.query
 import dns.zone
 import dns.resolver
 import dns.exception
+import dns.asyncresolver
+import dns.asyncquery
 import difflib
 import ipaddress
-import socks
 import traceback
 import random
 import asyncio
@@ -97,7 +98,7 @@ async def resolvewithretries(customresolver, zone, field, useTcp, retries=3):
     # None means error contacting the server
     for i in range(retries):
         try:
-            responses = customresolver.resolve(zone, field, tcp=useTcp, raise_on_no_answer=True)
+            responses = await customresolver.resolve(zone, field, tcp=useTcp, raise_on_no_answer=True)
         except dns.resolver.NXDOMAIN as e:
             # The DNS query name does not exist:
             infomsg("returning [] - " + type(e).__name__ + " - " + str(e))
@@ -318,9 +319,9 @@ async def get_resolver(addressinfo, timeoutvalue):
     else:
         port = 53
     if address == ".":
-        customresolver = dns.resolver.get_default_resolver()
+        customresolver = dns.asyncresolver.Resolver()
     else:
-        customresolver = dns.resolver.Resolver(configure=False)
+        customresolver = dns.asyncresolver.Resolver(configure=False)
         for counter in range(5):
             validparsing = False
             try:
@@ -343,7 +344,7 @@ async def get_resolver(addressinfo, timeoutvalue):
 # -------------------------------------------------------------------------------
 
 
-async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
+async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmincountcrit, recmincountwarn, recmincountcrit):
     try:
         addressinfo = get_address(protocol, server)
         if addressinfo is None:
@@ -619,7 +620,7 @@ async def main(forcedargs=None):
     parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
-#    parser.add_argument("-j", "--proxy",                                   dest="proxy",            default="",                                   help="use a proxy")
+#    parser.add_argument("-j", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
     parser.add_argument("-m", "--mode", dest="mode", default="", help="mode TCP/UDP")
     parser.add_argument("-r", "--record", dest="record", default="", help="record to query (exclusive with zone)")

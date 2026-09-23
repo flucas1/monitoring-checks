@@ -73,30 +73,22 @@ async def read_rtc(rtc_name):
     if not os.path.exists(time_file) or not os.path.exists(date_file):
         return (None, None)
 
-    f_time = None
-    f_date = None
     time_str = None
     date_str = None
 
     # Read time
     try:
-        f_time = open(time_file, "r")
-        time_str = f_time.read().strip()
-    except:
+        async with aiofiles.open(time_file, "r") as f_time:
+            time_str = (await f_time.read()).strip()
+    except Exception:
         pass
-    finally:
-        if f_time is not None:
-            f_time.close()
 
     # Read date
     try:
-        f_date = open(date_file, "r")
-        date_str = f_date.read().strip()
-    except:
+        async with aiofiles.open(date_file, "r") as f_date:
+            date_str = (await f_date.read()).strip()
+    except Exception:
         pass
-    finally:
-        if f_date is not None:
-            f_date.close()
 
     return (date_str, time_str)
 
@@ -135,13 +127,18 @@ async def finddevice():
 async def check_rtc_utc():
     adjfilename = "/etc/adjtime"
     if os.path.isfile(adjfilename) == True:
-        filehandle = open(adjfilename, "rt")
-        hwclockdata = filehandle.read().splitlines()
-        filehandle.close()
+        hwclockdata = None
+        try:
+            async with aiofiles.open(adjfilename, "rt") as filehandle:
+                content = await filehandle.read()
+                hwclockdata = content.splitlines()
+        except Exception:
+            pass
 
-        is_rtc_utc = (hwclockdata[2].strip().upper() == "UTC")
-        if is_rtc_utc == False:
-            exitnagios("CRITICAL", "hwclock is not UTC")
+        if hwclockdata is not None and len(hwclockdata) >= 3:
+            is_rtc_utc = (hwclockdata[2].strip().upper() == "UTC")
+            if is_rtc_utc == False:
+                exitnagios("CRITICAL", "hwclock is not UTC")
 
 
 async def get_rtc_data(device):
@@ -152,12 +149,14 @@ async def get_rtc_data(device):
 
     try:
         # Read date
-        with open(os.path.join(rtc_sys_path, "date"), "rt") as f:
-            date_str = f.read().strip()  # format: YYYY-MM-DD
+        date_str = None
+        async with aiofiles.open(os.path.join(rtc_sys_path, "date"), "rt") as f:
+            date_str = (await f.read()).strip()  # format: YYYY-MM-DD
 
         # Read time
-        with open(os.path.join(rtc_sys_path, "time"), "rt") as f:
-            time_str = f.read().strip()  # format: HH:MM:SS
+        time_str = None
+        async with aiofiles.open(os.path.join(rtc_sys_path, "time"), "rt") as f:
+            time_str = (await f.read()).strip()  # format: HH:MM:SS
 
         # Optional: check battery status
         batt_file = os.path.join(rtc_sys_path, "batt_status")
@@ -218,7 +217,7 @@ async def main(forcedargs=None):
         await check_rtc_utc()
         rtctime = await get_rtc_data(device)
         infomsg(rtctime)
-        systime = int(time.time())
+        systime = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
         infomsg(systime)
         difference = abs(rtctime - systime)
         evaluate(device, difference, args.warning, args.critical)
