@@ -4,9 +4,9 @@
 import os
 import sys
 import argparse
-import mechanize
+import aiohttp
 import asyncio
-from bs4 import BeautifulSoup
+import bs4
 
 # -------------------------------------------------------------------------------
 
@@ -53,23 +53,24 @@ def exitnagios(status, message):
 async def dodnscaacall(domain):
     try:
         url = "https://caatest.co.uk/" + domain
-        br = mechanize.Browser()
-        br.set_handle_robots(False)  # ignore robots file
-        br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0')]
-        res = br.open(url)
-        content = res.read()
-        if len(content) == 0:
-            exitnagios("CRITICAL", "no result from page")
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0"
+            }
+            async with session.get(url, headers=headers, ssl=False) as response:
+                if response.status != 200:
+                    exitnagios("CRITICAL", "unexpected HTTP status: " + str(response.status))
+                content = await response.read()
+                if len(content) == 0:
+                    exitnagios("CRITICAL", "no result from page")
 
-        soup = BeautifulSoup(content, "html.parser")
+                soup = bs4.BeautifulSoup(content, "html.parser")
 
-        element = soup.find("span", class_="success green")
-        if element is not None:
-            exitnagios("OK", "the domain has valid CAA records")
-        else:
-            exitnagios("CRITICAL", "the domain has issues with the CAA records")
-
-        br.close()
+                element = soup.find("span", class_="success green")
+                if element is not None:
+                    exitnagios("OK", "the domain has valid CAA records")
+                else:
+                    exitnagios("CRITICAL", "the domain has issues with the CAA records")
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
