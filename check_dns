@@ -344,7 +344,7 @@ async def get_resolver(addressinfo, timeoutvalue):
 # -------------------------------------------------------------------------------
 
 
-async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmincountcrit, recmincountwarn, recmincountcrit):
+async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmissingcrit, recmincountwarn, recmincountcrit):
     try:
         addressinfo = await get_address(protocol, server)
         if addressinfo is None:
