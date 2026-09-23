@@ -55,15 +55,15 @@ def exitnagios(status, message):
 
 
 def mostseverestatus(current, candidate):
-    if (current == ""):
+    if current == "":
         return candidate
-    if (current == "CRITICAL") or (candidate == "CRITICAL"):
+    if current == "CRITICAL" or candidate == "CRITICAL":
         return "CRITICAL"
-    elif (current == "WARNING") or (candidate == "WARNING"):
+    elif current == "WARNING" or candidate == "WARNING":
         return "WARNING"
-    elif (current == "UNKNOWN") or (candidate == "UNKNOWN"):
+    elif current == "UNKNOWN" or candidate == "UNKNOWN":
         return "UNKNOWN"
-    elif (current == "OK") or (candidate == "OK"):
+    elif current == "OK" or candidate == "OK":
         return "OK"
     else:
         return "UNKNOWN"
@@ -108,7 +108,7 @@ async def generic_compare_columns(kubeconfig, namespace, resource, columns):
                     parts = line.split()
                     # infomsg(parts)
                     if parts[0] == namespace or namespace == "":
-                        foundtotal = foundtotal + 1
+                        foundtotal += 1
                         identical = True
                         reference = None
                         for column in columns:
@@ -124,11 +124,11 @@ async def generic_compare_columns(kubeconfig, namespace, resource, columns):
                                     identical = False
                                     # infomsg("break")
                                     break
-                        if identical == True:
+                        if identical:
                             hasvalid = True
                         else:
                             haserror = True
-                            counterrors = counterrors + 1
+                            counterrors += 1
                 if foundtotal == 0:
                     status = "OK"
                 elif hasvalid:
@@ -205,7 +205,7 @@ async def test_kubernetes_nodes(kubeconfig):
                     hasvalid = True
                 else:
                     haserror = True
-                    counterrors = counterrors + 1
+                    counterrors += 1
             if hasvalid:
                 if haserror:
                     status = "WARNING"
@@ -250,12 +250,12 @@ async def test_kubernetes_pods(kubeconfig, namespace):
                 parts = line.split()
                 # infomsg(parts)
                 if parts[0] == namespace or namespace == "":
-                    foundtotal = foundtotal + 1
+                    foundtotal += 1
                     if parts[3].lower() == "running":
                         hasvalid = True
                     else:
                         haserror = True
-                        counterrors = counterrors + 1
+                        counterrors += 1
             if foundtotal == 0:
                 status = "OK"
             elif hasvalid:
@@ -284,8 +284,6 @@ async def test_kubernetes_pods(kubeconfig, namespace):
 async def test_kubernetes_replicasets(kubeconfig, namespace):
     return await generic_compare_columns(kubeconfig, namespace, "replicasets", [2, 3, 4])
 
-# kubectl --kubeconfig=/etc/kubernetes/admin.conf get statefulsets --no-headers --all-namespaces
-
 
 async def test_kubernetes_daemonsets(kubeconfig, namespace):
     return await generic_compare_columns(kubeconfig, namespace, "daemonsets", [2, 3, 4, 5, 6])
@@ -294,6 +292,7 @@ async def test_kubernetes_daemonsets(kubeconfig, namespace):
 async def test_kubernetes_deployments(kubeconfig, namespace):
     return await generic_compare_columns(kubeconfig, namespace, "deployments", [2, 3, 4])
 
+# kubectl --kubeconfig=/etc/kubernetes/admin.conf get statefulsets --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get persistentvolumeclaims --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get jobs --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get cronjobs --no-headers --all-namespaces
