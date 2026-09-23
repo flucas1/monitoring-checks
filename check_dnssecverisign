@@ -7,14 +7,15 @@ import time
 import argparse
 import asyncio
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver import ActionChains
-
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import selenium
+import selenium.webdriver
+import selenium.webdriver.common.keys
+import selenium.webdriver.chrome.options
+import selenium.webdriver
+import selenium.webdriver.action_chains
+import selenium.webdriver.common.by
+import selenium.webdriver.support.ui
+import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
@@ -59,7 +60,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -77,9 +78,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -106,7 +107,7 @@ async def wait_page_loaded(driver):
 def tryfindbyxpath(driver, xpath):
     result = None
     try:
-        result = driver.find_elements(By.XPATH, xpath)
+        result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
     except:
         pass
     return result
@@ -186,8 +187,8 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://dnssec-analyzer.verisignlabs.com/" + domain
@@ -199,11 +200,11 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         infomsg("page loaded")
 
         infomsg("waiting for element")
-        wait.until(EC.presence_of_element_located((By.XPATH, "//a[text()=\"↓ Advanced options\"]")))
+        wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.XPATH, "//a[text()=\"↓ Advanced options\"]")))
 
         infomsg("finding base element")
         tablepath = "//div[@class=\"header\"]//table[@class=\"T1\"]"
-        element = driver.find_element(By.XPATH, tablepath)
+        element = driver.find_element(selenium.webdriver.common.by.By.XPATH, tablepath)
         if element is None:
             exitnagios("CRITICAL", "no result from page")
 
