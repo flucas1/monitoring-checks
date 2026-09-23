@@ -49,27 +49,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-# -------------------------------------------------------------------------------
-
-
 async def getmacfromip(remoteIP):
     process = await asyncio.create_subprocess_exec(
         "/usr/sbin/arp", "-n", str(remoteIP),
