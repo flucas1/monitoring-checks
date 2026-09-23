@@ -2,6 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import argparse
+import datetime
 import gps
 import os
 import sys
@@ -64,8 +65,8 @@ async def dogpscountcall(timeout, warning, critical):
                         total_used.append(gpsd.satellites_used)
                         total_seen.append(len(gpsd.satellites))
                         break
-            if datetime.datetime.now(datetime.timezone.utc).timestamp() > start + timeout:
-                # total_seen = len(gpsd.satellites)
+            current_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            if current_time > start + timeout:
                 break
             else:
                 await asyncio.sleep(1)
@@ -74,7 +75,7 @@ async def dogpscountcall(timeout, warning, critical):
     finally:
         average_used = 0
         counter = 0
-        while (counter < len(total_used)):
+        while counter < len(total_used):
             average_used = average_used + total_used[counter]
             counter = counter + 1
         if counter > 0:
@@ -82,23 +83,21 @@ async def dogpscountcall(timeout, warning, critical):
 
         average_seen = 0
         counter = 0
-        while (counter < len(total_seen)):
+        while counter < len(total_seen):
             average_seen = average_seen + total_seen[counter]
             counter = counter + 1
         if counter > 0:
             average_seen = average_seen / counter
 
         message = "Total used: " + str(average_used) + " ; Total seen: " + str(average_seen) + " | used=" + str(average_used) + " seen=" + str(average_seen)
-        if (average_used <= critical):
+        if average_used <= critical:
             exitnagios("CRITICAL", message)
-        elif (average_used <= warning):
+        elif average_used <= warning:
             exitnagios("WARNING", message)
         else:
             exitnagios("OK", message)
 
 # -------------------------------------------------------------------------------
-
-# collect arguments
 
 
 def parse_args(forcedargs=None):

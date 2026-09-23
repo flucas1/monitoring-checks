@@ -591,11 +591,13 @@ async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, 
                 return build_exitinfo("CRITICAL", "there were issues with the transfer of zone " + zone + " from " + addressinfo)
         except dns.exception.Timeout as e:
             infomsg(timeoutstatus + ": timeout reaching " + addressinfo)
-    except dns.resolver.NoNameservers as e:
-        if str(e).endswith("No route to host"):
-            return build_exitinfo(timeoutstatus, "error during check transfer - " + type(e).__name__ + "  - " + str(e))
-        else:
-            raise
+        except dns.resolver.NoNameservers as e:
+            if str(e).endswith("No route to host"):
+                return build_exitinfo(timeoutstatus, "error during check transfer - " + type(e).__name__ + "  - " + str(e))
+            else:
+                raise
+        except Exception as e:
+            return build_exitinfo("CRITICAL", "error during check transfer - " + type(e).__name__ + " - " + str(e))
     except Exception as e:
         return build_exitinfo("CRITICAL", "error during check transfer - " + type(e).__name__ + " - " + str(e))
 
