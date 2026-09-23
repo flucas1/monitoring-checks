@@ -125,7 +125,7 @@ def build_name(entry, zone):
         return entry + "." + zone
 
 
-def get_address(protocol, serverinfo):
+async def get_address(protocol, serverinfo):
     infomsg("get_address using " + protocol + " for " + str(serverinfo))
 
     parts = serverinfo.split("@")
@@ -174,7 +174,8 @@ async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     for i in range(3):
         text = ""
         try:
-            xfr = dns.zone.from_xfr(dns.query.xfr(address, zone, relativize=True, timeout=timeoutvalue, use_udp=(not useTcp)), relativize=True)
+            xfr_iter = dns.asyncquery.xfr(address, zone, relativize=True, timeout=timeoutvalue, use_udp=(not useTcp))
+            xfr = await dns.zone.from_xfr(xfr_iter, relativize=True)
             names = list(xfr.keys())
             names.sort()
             for item in names:
@@ -197,7 +198,7 @@ async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
 async def get_mname(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "SOA", useTcp, retries=9)
-    if responses is None:
+    if responses is None or len(responses) == 0:
         return ""
     else:
         return (responses[0]).mname.to_text()
@@ -206,7 +207,7 @@ async def get_mname(useTcp, addressinfo, timeoutvalue, zone):
 async def get_serial(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "SOA", useTcp)
-    if responses is None:
+    if responses is None or len(responses) == 0:
         return ""
     else:
         return (responses[0]).serial
@@ -215,7 +216,7 @@ async def get_serial(useTcp, addressinfo, timeoutvalue, zone):
 async def get_retry(useTcp, addressinfo, timeoutvalue, zone):
     customresolver = await get_resolver(addressinfo, timeoutvalue)
     responses = await resolvewithretries(customresolver, zone, "SOA", useTcp)
-    if responses is None:
+    if responses is None or len(responses) == 0:
         return ""
     else:
         return (responses[0]).retry
@@ -345,7 +346,7 @@ async def get_resolver(addressinfo, timeoutvalue):
 
 async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, record, kind, expected, alternativeslogic, recmissingwarn, recmincountcrit, recmincountwarn, recmincountcrit):
     try:
-        addressinfo = get_address(protocol, server)
+        addressinfo = await get_address(protocol, server)
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
@@ -415,7 +416,7 @@ async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
 
 async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(protocol, server)
+        addressinfo = await get_address(protocol, server)
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
@@ -477,7 +478,7 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
 
 async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
     try:
-        addressinfo = get_address(protocol, server)
+        addressinfo = await get_address(protocol, server)
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
@@ -576,7 +577,7 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
 
 async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone):
     try:
-        addressinfo = get_address(protocol, server)
+        addressinfo = await get_address(protocol, server)
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
