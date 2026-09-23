@@ -114,7 +114,7 @@ async def tryfindbyxpath(driver, xpath):
 # -------------------------------------------------------------------------------
 
 
-def count_red_yellow_green(block, ignoremessages):
+async def count_red_yellow_green(block, ignoremessages):
     criticalmsg = []
     warningmsg = []
     okmsg = []
@@ -215,7 +215,7 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         okmsg = []
         ignoredmsg = []
         for block in blocks[1:]:
-            blocknametext, partcriticalmsg, partwarningmsg, partokmsg, partignoredmsg = count_red_yellow_green(block, ignoremessages)
+            blocknametext, partcriticalmsg, partwarningmsg, partokmsg, partignoredmsg = await count_red_yellow_green(block, ignoremessages)
             if blocknametext == domain:
                 infomsg("This is a final zonename block")
                 unreacheabletext = "No response from " + domain + " nameservers"
