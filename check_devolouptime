@@ -140,7 +140,7 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
 
             url = "http://" + ip + "/#/login"
             driver.get(url)
-            # time.sleep(5)
+            # await asyncio.sleep(5)
             await wait_page_loaded(driver)
 
             infomsg("asking for logging " + url)
@@ -153,18 +153,18 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
             infomsg(elempassword.get_attribute("outerHTML"))
             action.move_to_element(elempassword).perform()
             elempassword.click()
-            # time.sleep(1)
+            # await asyncio.sleep(1)
             # elempassword.clear()
-            # time.sleep(1)
+            # await asyncio.sleep(1)
             elempassword.send_keys(password)
-            # time.sleep(2)
+            # await asyncio.sleep(2)
 
             login = driver.find_element(By.ID, "btn-login")
             infomsg(login.get_attribute("outerHTML"))
             action.move_to_element(login).perform()
             login.click()
 
-            # time.sleep(5)
+            # await asyncio.sleep(5)
             await wait_page_loaded(driver)
             wait.until(EC.visibility_of_element_located((By.ID, "overview-route-system-status")))
 
@@ -180,7 +180,7 @@ async def dodevolouptimecall(proxy, password, warningmin, criticalmin, warningma
 
             url = "http://" + ip + "/#/info/device"
             driver.get(url)
-            # time.sleep(5)
+            # await asyncio.sleep(5)
             await wait_page_loaded(driver)
 
             wait.until(EC.visibility_of_element_located((By.ID, "uptime")))
