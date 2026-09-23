@@ -4,9 +4,8 @@
 import argparse
 import sys
 import os
-import subprocess
-import platform
 import asyncio
+import subprocess
 
 # -------------------------------------------------------------------------------
 
@@ -50,12 +49,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def doramspeedcall(expected):
+async def doramspeedcall(expected):
     cmdline = ["/usr/sbin/dmidecode", "--type", "memory"]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
 
     token = "Configured Memory Speed:"
     if exitcode == 0:
@@ -92,7 +96,7 @@ async def main(forcedargs=None):
         clean.append(part.strip())
     expected = " ; ".join(clean)
 
-    doramspeedcall(expected)
+    await doramspeedcall(expected)
 
 # -------------------------------------------------------------------------------
 
