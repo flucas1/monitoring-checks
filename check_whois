@@ -85,7 +85,7 @@ async def dordapcall(domain, warning, critical):
                     if parsed is None:
                         exitnagios("CRITICAL", "could not parse '" + expiration + "'")
                     else:
-                        now_utc = datetime.datetime.now(datetime.timezone.utc)
+                        now_utc = datetime.datetime.now(datetime.UTC)
                         interval = parsed.astimezone(datetime.timezone.utc).timestamp() - now_utc.timestamp()
                         days = int(interval / 86400)
                         if critical != "" and days < float(critical):
