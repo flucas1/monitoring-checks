@@ -23,7 +23,6 @@ def setcandebug(value):
 
 def candebug():
     global _candebug
-    # return sys.stdout.isatty()
     if _candebug:
         return True
     else:

@@ -52,7 +52,7 @@ def exitnagios(status, message):
 async def docheckjenkinsjobs(directory, critical):
     jobspath = os.path.join(directory, "jobs")
     if os.path.isdir(jobspath) == False:
-        exitnagios("CRITICAL", "the jobs path " + release + " does not exists")
+        exitnagios("CRITICAL", "the jobs path " + directory + " does not exists")
 
     listjobs = []
     for entry in os.listdir(jobspath):
