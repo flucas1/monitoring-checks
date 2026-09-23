@@ -52,7 +52,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def get_ip_address(ifname):
+async def get_ip_address(ifname):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         infomsg(sock)
@@ -95,7 +95,7 @@ async def findservers(interface, requestmac, timeout):
 
 
 async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
-    interfaceaddress = get_ip_address(interface)
+    interfaceaddress = await get_ip_address(interface)
     infomsg(interfaceaddress)
     requestmac = chaddr
     expectedip = re.compile(ciaddr)
