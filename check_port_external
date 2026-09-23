@@ -41,6 +41,7 @@ def mapstatustoexitcode(status):
         exitcode = 4
     return exitcode
 
+
 def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)

@@ -132,7 +132,7 @@ async def load_json(mode, proxy, domain, retries, timeoutvalue):
             try:
                 counter += 1
                 infomsg("sending request")
-                
+
                 async with session.get(item_url, proxy=request_proxy) as response:
                     infomsg("request done")
 
@@ -140,9 +140,9 @@ async def load_json(mode, proxy, domain, retries, timeoutvalue):
                         infomsg("got 'HTTP 429 (Too Many Requests)'")
                         object_json = None
                         break
-                    
+
                     response.raise_for_status()
-                    
+
                     decoded_data = await response.text()
                     infomsg("decoding done")
 
