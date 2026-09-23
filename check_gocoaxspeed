@@ -4,7 +4,6 @@
 import argparse
 import sys
 import re
-import subprocess
 import datetime
 import socket
 import time
@@ -62,7 +61,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def generatedriver(proxy):
+await def generatedriver(proxy):
     chrome_options = Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
@@ -95,19 +94,19 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-def wait_page_loaded(driver):
+await def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
         if check_page_loaded(driver) == True:
             break
         if time.time() - timestamp > 20:
             break
-        time.sleep(1)
+        asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
 
-def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
+await def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
@@ -126,7 +125,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
 
     if ip is not None:
         try:
-            driver = generatedriver(proxy)
+            driver = await generatedriver(proxy)
 
             wait = WebDriverWait(driver, 20)
             action = ActionChains(driver)
@@ -142,7 +141,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
             url = "http://" + username + ":" + password + "@" + ip + "/phyRates.html"
             driver.get(url)
             # time.sleep(5)
-            wait_page_loaded(driver)
+            await wait_page_loaded(driver)
 
             infomsg("asking for logging " + "http://" + ip + "/phyRates.html")
             wait.until(EC.visibility_of_element_located((By.ID, "pageContent")))
@@ -158,7 +157,7 @@ def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, ti
                 cells = tableelem.find_elements(By.TAG_NAME, "td")
                 if len(cells) == 0:
                     counter = counter + 1
-                    time.sleep(1)
+                    asyncio.sleep(1)
                 else:
                     break
             infomsg("found " + str(len(cells)) + " cells")
@@ -237,7 +236,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         proxy = ""
-        dogocoaxspeedcall(proxy, username, password, args.warning, args.critical, args.hostname, timeoutvalue, timeoutstatus)
+        await dogocoaxspeedcall(proxy, username, password, args.warning, args.critical, args.hostname, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
