@@ -88,7 +88,7 @@ class RouterInfo:
         self.headers = None
         self.__authenticate(ipaddress, username, password)
 
-    def __authenticate(self, ipaddress, username, password):
+    async def __authenticate(self, ipaddress, username, password):
         """
         Authenticate the object with the router
         Parameters:
@@ -115,7 +115,7 @@ class RouterInfo:
         else:
             return False
 
-    def __get(self, command):
+    async def __get(self, command):
         """
         Private get method to execute a hook on the router and return the result
         Parameters:
@@ -132,13 +132,13 @@ class RouterInfo:
         else:
             return None
 
-    def get_uptime(self):
+    async def get_uptime(self):
         """
         Return uptime of the router
         Format: {'since': 'Thu, 22 Jul 2021 14:32:38 +0200', 'uptime': '375001'}
         :returns: JSON with last boot time and uptime in seconds
         """
-        r = self.__get('uptime()')
+        r = await self.__get('uptime()')
         if r is None:
             return None
         else:
@@ -148,43 +148,43 @@ class RouterInfo:
             up = parts[1].split()[0]
             return json.loads('{' + '"since":"{}", "uptime":"{}"'.format(since, up) + '}')
 
-    def get_uptime_secs(self):
+    async def get_uptime_secs(self):
         """
         Return uptime of the router in seconds
         :returns: integer - uptime in seconds
         """
-        r = self.get_uptime()
+        r = await self.get_uptime()
         if r is None:
             return None
         else:
             return int(r['uptime'])
 
-    def get_memory_usage(self):
+    async def get_memory_usage(self):
         """
         Return memory usage of the router
         Format: {'mem_total': '262144', 'mem_free': '107320', 'mem_used': '154824'}
         :returns: JSON with memory variables
         """
-        r = self.__get('memory_usage()')
+        r = await self.__get('memory_usage()')
         if r is None:
             return None
         else:
             return json.loads('{' + r[17:])
 
-    def get_cpu_usage(self):
+    async def get_cpu_usage(self):
         """
         Return CPU usage of the router
         Format: {'cpu1_total': '38106047', 'cpu1_usage': '3395512',
                  'cpu2_total': '38106008', 'cpu2_usage': '2384694'}
         :returns: JSON with CPU load statistics
         """
-        r = self.__get('cpu_usage()')
+        r = await self.__get('cpu_usage()')
         if r is None:
             return None
         else:
             return json.loads('{' + r[14:])
 
-    def get_clients_fullinfo(self):
+    async def get_clients_fullinfo(self):
         """
         Obtain a list of all clients
         Format: {"get_clientlist":{"AC:84:C6:6C:A7:C0":{"type": "2", "defaultType": "0", "name": "Archer_C1200",
@@ -205,20 +205,20 @@ class RouterInfo:
                                   "ClientAPILevel": "2" }}
         :returns: JSON with list of clents and a list of mac addresses
         """
-        r = self.__get('get_clientlist()')
+        r = await self.__get('get_clientlist()')
         if r is None:
             return None
         else:
             return json.loads(r)
 
     # Total traffic in Mb/s
-    def get_traffic_total(self):
+    async def get_traffic_total(self):
         """
         Get total amount of traffic since last restart (Megabit format)
         Format: {'sent': '15901.92873764038', 'recv': '10926.945571899414'}
         :returns: JSON with sent and received Megabits since last boot
         """
-        r = self.__get('netdev(appobj)')
+        r = await self.__get('netdev(appobj)')
         if r is None:
             return None
         else:
@@ -229,7 +229,7 @@ class RouterInfo:
 
     # Traffic in Mb/s . Megabit per second
     # Note this method has a 2 second delay to calculate current throughput
-    def get_traffic(self):
+    async def get_traffic(self):
         """
         Get total and current amount of traffic since last restart (Megabit format)
         Note there is a two second delay to determine current traffic
@@ -237,9 +237,9 @@ class RouterInfo:
                  "total": {"sent": 15902.060073852539, "recv": 10931.135665893555}}
         :returns: JSON with current up and down stream in Mbit/s and totals since last reboot
         """
-        meas_1 = self.__get('netdev(appobj)')
-        time.sleep(2)
-        meas_2 = self.__get('netdev(appobj)')
+        meas_1 = await self.__get('netdev(appobj)')
+        await asyncio.sleep(2)
+        meas_2 = await self.__get('netdev(appobj)')
         meas_1 = json.loads(meas_1)
         meas_2 = json.loads(meas_2)
         persec = {}
@@ -254,7 +254,7 @@ class RouterInfo:
         persec['rx'] = rx
         return json.dumps({'speed': persec, 'total': totaldata})
 
-    def get_status_wan(self):
+    async def get_status_wan(self):
         """
         Get the status of the WAN connection
         Format: {"status": "1", "statusstr": "'Connected'", "type": "'dhcp'", "ipaddr": "'192.168.1.2'",
@@ -264,7 +264,7 @@ class RouterInfo:
                  "xexpires": "0"}
         :returns: JSON with status information on the WAN connection
         """
-        r = self.__get('wanlink()')
+        r = await self.__get('wanlink()')
         if r is None:
             return None
         else:
@@ -277,18 +277,18 @@ class RouterInfo:
                         status[key] = value
             return json.loads(json.dumps(status))
 
-    def is_wan_online(self):
+    async def is_wan_online(self):
         """
         Returns if the WAN connection in onlise
         :returns: True if WAN is connected
         """
-        r = self.get_status_wan()
+        r = await self.get_status_wan()
         if r is None:
             return None
         else:
             return r['status'] == '1'
 
-    def get_settings(self):
+    async def get_settings(self):
         """
         Get settings from the router
         Format:{'time_zone': 'MEZ-1DST', 'time_zone_dst': '1', 'time_zone_x': 'MEZ-1DST,M3.2.0/2,M10.2.0/2',
@@ -304,63 +304,63 @@ class RouterInfo:
                   'ntp_server0', 'acs_dfs', 'productid', 'apps_sq', 'lan_hwaddr', 'lan_ipaddr',
                   'lan_proto', 'x_Setting', 'label_mac', 'lan_netmask', 'lan_gateway',
                   'http_enable', 'https_lanport', 'wl0_country_code', 'wl1_country_code']:
-            r = self.__get("nvram_get(" + s + ")")
+            r = await self.__get("nvram_get(" + s + ")")
             if r is not None:
                 settings[s] = json.loads(r)[s]
         return settings
 
-    def get_lan_ip_address(self):
+    async def get_lan_ip_address(self):
         """
         Obtain the IP address of the router
         :return: IP address
         """
-        r = self.__get("nvram_get(lan_ipaddr)")
+        r = await self.__get("nvram_get(lan_ipaddr)")
         if r is None:
             return None
         else:
             return json.loads(r)['lan_ipaddr']
 
-    def get_lan_netmask(self):
+    async def get_lan_netmask(self):
         """
         Obtain the Netmask for the LAN network
         :return: Netmask
         """
-        r = self.__get("nvram_get(lan_netmask)")
+        r = await self.__get("nvram_get(lan_netmask)")
         if r is None:
             return None
         else:
             return json.loads(r)['lan_netmask']
 
-    def get_lan_gateway(self):
+    async def get_lan_gateway(self):
         """
         Obtain the gateway for the LAN network
         :return: IP address of gateay
         """
-        r = self.__get("nvram_get(lan_gateway)")
+        r = await self.__get("nvram_get(lan_gateway)")
         if r is None:
             return None
         else:
             return json.loads(r)['lan_gateway']
 
-    def get_dhcp_list(self):
+    async def get_dhcp_list(self):
         """
         Obtain a list of DHCP leases
         Format: { "dhcpLeaseMacList":[["00:00:00:00:00:00", "name"], ...]
         :returns: JSON with a list of DHCP leases
         """
-        r = self.__get("dhcpLeaseMacList()")
+        r = await self.__get("dhcpLeaseMacList()")
         if r is None:
             return None
         else:
             return json.loads(r)
 
-    def get_online_clients(self):
+    async def get_online_clients(self):
         """
         Obtain a list of MAC-addresses from online clients
         Format: [{"mac": "00:00:00:00:00:00"}, ...]
         :returns: JSON list with MAC addresses
         """
-        clnts = self.get_clients_fullinfo()
+        clnts = await self.get_clients_fullinfo()
         if clnts is None:
             return None
         else:
@@ -371,14 +371,14 @@ class RouterInfo:
                     lst.append({"mac": c})
             return json.dumps(lst)
 
-    def get_clients_info(self):
+    async def get_clients_info(self):
         """
         Obtain info on all clients (limited list of datafields)
         Format: [{"name": "Archer_C1200", "nickName": "Router Forlindon", "ip": "192.168.2.175",
                   "mac": "AC:84:C6:6C:A7:C0", "isOnline": "1", "curTx": "", "curRx": "", "totalTx": ""}, ...]
         :return: JSON list of clients with main characteristics
         """
-        clnts = self.get_clients_fullinfo()
+        clnts = await self.get_clients_fullinfo()
         if clnts is None:
             return None
         else:
@@ -401,13 +401,13 @@ class RouterInfo:
                     )
             return json.loads(json.dumps(lst))
 
-    def get_client_info(self, clientid):
+    async def get_client_info(self, clientid):
         """
         Get info on a single client
         :param clientid: MAC address of the client requested
         :return: JSON with clientinfo (see get_clients_info() for description)
         """
-        clnts = self.get_clients_fullinfo()['get_clientlist']
+        clnts = await self.get_clients_fullinfo()['get_clientlist']
         if clnts is None:
             return None
         else:
@@ -419,28 +419,28 @@ class RouterInfo:
 # -------------------------------------------------------------------------------
 
 
-def doasusroutercall(host, username, password, timeoutvalue):
+async def doasusroutercall(host, username, password, timeoutvalue):
     try:
         ri = RouterInfo(host, username, password)
         infomsg(ri)
 
-        infomsg("Uptime    : " + str(ri.get_uptime_secs()))
-        infomsg("Memory    : " + str(ri.get_memory_usage()))
-        infomsg("CPU       : " + str(ri.get_cpu_usage()))
-        infomsg("Data      : " + str(ri.get_traffic_total()))
-        infomsg("Settings  : " + str(ri.get_settings()))
-        infomsg("Uptime    : " + str(ri.get_uptime()))
-        infomsg("Online    : " + str(ri.is_wan_online()))
-        infomsg("Clients   : " + str(ri.get_clients_fullinfo()))
-        infomsg("Clients   : " + str(ri.get_clients_info()))
-        infomsg("Online    : " + str(ri.get_online_clients()))
-        infomsg("IP addr   : " + str(ri.get_lan_ip_address()))
-        infomsg("Netmask   : " + str(ri.get_lan_netmask()))
-        infomsg("Gateway   : " + str(ri.get_lan_gateway()))
-        infomsg("DHCP      : " + str(ri.get_dhcp_list()))
-        infomsg("Bandwidth : " + str(ri.get_traffic()))
-        infomsg("WAN       : " + str(ri.get_status_wan()))
-        infomsg("Client   : " + str(ri.get_client_info('B8:2C:A0:5F:37:52')))
+        infomsg("Uptime    : " + str(await ri.get_uptime_secs()))
+        infomsg("Memory    : " + str(await ri.get_memory_usage()))
+        infomsg("CPU       : " + str(await ri.get_cpu_usage()))
+        infomsg("Data      : " + str(await ri.get_traffic_total()))
+        infomsg("Settings  : " + str(await ri.get_settings()))
+        infomsg("Uptime    : " + str(await ri.get_uptime()))
+        infomsg("Online    : " + str(await ri.is_wan_online()))
+        infomsg("Clients   : " + str(await ri.get_clients_fullinfo()))
+        infomsg("Clients   : " + str(await ri.get_clients_info()))
+        infomsg("Online    : " + str(await ri.get_online_clients()))
+        infomsg("IP addr   : " + str(await ri.get_lan_ip_address()))
+        infomsg("Netmask   : " + str(await ri.get_lan_netmask()))
+        infomsg("Gateway   : " + str(await ri.get_lan_gateway()))
+        infomsg("DHCP      : " + str(await ri.get_dhcp_list()))
+        infomsg("Bandwidth : " + str(await ri.get_traffic()))
+        infomsg("WAN       : " + str(await ri.get_status_wan()))
+        infomsg("Client   : " + str(await ri.get_client_info('B8:2C:A0:5F:37:52')))
 
         # status = "dummy"
         # exitnagios("OK","the result '"+status+"' is as expected")
@@ -464,9 +464,9 @@ def check_status(value, warn_low, warn_high, crit_low, crit_high):
 # -------------------------------------------------------------------------------
 
 
-def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    ri = doasusroutercall(host, username, password, timeoutvalue)
-    uptime = ri.get_uptime_secs()
+async def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = await doasusroutercall(host, username, password, timeoutvalue)
+    uptime = await ri.get_uptime_secs()
     if uptime is not None:
         infomsg(uptime)
         check_status(uptime, warn_low, warn_high, crit_low, crit_high)
@@ -474,9 +474,9 @@ def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_h
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    ri = doasusroutercall(host, username, password, timeoutvalue)
-    memory = ri.get_memory_usage()
+async def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = await doasusroutercall(host, username, password, timeoutvalue)
+    memory = await ri.get_memory_usage()
     if memory is not None:
         value = (int(memory["mem_used"]) / int(memory["mem_total"])) * 100
         infomsg(value)
@@ -485,9 +485,9 @@ def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_h
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    ri = doasusroutercall(host, username, password, timeoutvalue)
-    cpu = ri.get_cpu_usage()
+async def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+    ri = await doasusroutercall(host, username, password, timeoutvalue)
+    cpu = await ri.get_cpu_usage()
     if cpu is not None:
         cores = int(len(cpu) / 2)
         infomsg(cores)
@@ -580,11 +580,11 @@ async def main(forcedargs=None):
         crit_high = None
 
     if args.mode == "uptime":
-        douptimecall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await douptimecall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "memory":
-        domemorycall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await domemorycall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "cpu":
-        docpucall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await docpucall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
 
     exitnagios("CRITICAL", "unexpected case")
 
