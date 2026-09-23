@@ -255,7 +255,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
                 rawnotafter = str(item["not_after"])
                 parsednotafter = dateutil.parser.parse(rawnotafter)
                 infomsg(parsednotafter)
-                if parsednotafter >= datetime.datetime.now():
+                if parsednotafter >= datetime.datetime.now(datetime.timezone.utc):
                     valid = False
                     problems.append(item)
                     infomsg(item)

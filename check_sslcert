@@ -79,7 +79,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
     cert_data = None
     lasterror = ""
     duration = None
-    start = datetime.datetime.now(datetime.UTC)
+    start = datetime.datetime.now(datetime.timezone.utc)
     try:
         context = ssl.create_default_context()
         with socket.create_connection((hostname, port)) as sock:
@@ -88,7 +88,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
                 cert_data = ssock.getpeercert()
     except Exception as e:
         lasterror = str(e)
-    elapsed = datetime.datetime.now(datetime.UTC) - start
+    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
     # daysremaining = -1
 
@@ -127,7 +127,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
             if certexpirationparsed is None:
                 exitnagios("CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' | time=" + str(duration) + " validity=0")
             else:
-                today = datetime.datetime.now(datetime.UTC)
+                today = datetime.datetime.now(datetime.timezone.utc)
                 timeremaining = certexpirationparsed.timestamp() - today.timestamp()
                 daysremaining = int(timeremaining / 86400)
 
