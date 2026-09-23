@@ -3,8 +3,6 @@
 
 import sys
 import os
-import subprocess
-import concurrent.futures
 import argparse
 import time
 import asyncio
@@ -51,7 +49,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dosmstoolscall(modem):
+async def dosmstoolscall(modem):
     filename = "/var/log/smstools/smsd_stats/status"
     resultstatus = ""
     resultmsg = ""
@@ -102,7 +100,7 @@ def dosmstoolscall(modem):
             exitnagios(resultstatus, resultmsg)
         else:
             infomsg("sleeping...")
-            time.sleep(5)
+            await asyncio.sleep(5)
 
     exitnagios("CRITICAL", "modem ID " + modem + " could not be parsed or is not defined | signal=0")
 
@@ -117,7 +115,7 @@ async def main(forcedargs=None):
 
     setcandebug(args.debug)
 
-    dosmstoolscall(args.modem)
+    await dosmstoolscall(args.modem)
 
 # -------------------------------------------------------------------------------
 
