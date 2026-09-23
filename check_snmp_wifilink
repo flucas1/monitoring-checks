@@ -4,8 +4,6 @@
 import argparse
 import sys
 import re
-import subprocess
-import datetime
 import socket
 import asyncio
 
@@ -83,7 +81,7 @@ def extractvalue(rawdata):
     return result
 
 
-def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalue, timeoutstatus):
+async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalue, timeoutstatus):
     version = "1"
 
     parameters = {}
@@ -92,7 +90,7 @@ def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalu
 
     values = {}
     for key, oid in parameters.items():
-        mycode, stdout = snmpget(hostname, port, version, community, oid)
+        mycode, stdout = await snmpget(hostname, port, version, community, oid)
         if mycode == 0:
             values[key] = extractvalue(stdout)
         else:
@@ -120,14 +118,20 @@ def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeoutvalu
         exitnagios("OK", "The signal is " + str(signal) + " | signal=" + str(signal) + " noise=" + str(noise))
 
 
-def snmpget(hostname, port, version, community, oid):
+async def snmpget(hostname, port, version, community, oid):
     cmdline = ["/usr/bin/snmpget", "-v", version, "-c", community, hostname + ":" + str(port), oid]
     infomsg("[ '" + ("' '".join(cmdline)) + "' ]")
 
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8").strip()
-    errors = completedproc.stderr.decode("utf-8").strip()
-    exitcode = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+
     if errors.startswith("Timeout: No Response from "):
         exitcode = None
         output = None
@@ -160,7 +164,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dosnmpwifilinkcall(args.warning, args.critical, args.hostname, int(args.port), args.community, timeoutvalue, timeoutstatus)
+        await dosnmpwifilinkcall(args.warning, args.critical, args.hostname, int(args.port), args.community, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
