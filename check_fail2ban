@@ -67,7 +67,7 @@ async def run_command(cmdlist):
         exitcode = process.returncode
         if exitcode != 0:
             exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + output)
-        return stdout.strip().split("\n")
+        return output.splitlines()
     except Exception as e:
         exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + str(e))
 
