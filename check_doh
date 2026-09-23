@@ -84,7 +84,7 @@ async def makedohtest(retries, targetdohurl, testquery, timeout_val):
             try:
                 q = dns.message.make_query(testquery, dns.rdatatype.ANY)
                 infomsg("query ready")
-                r = await dns.asyncquery.https(q, targetdohurl, session=client, timeout=timeout_val)
+                r = await dns.asyncquery.https(q, targetdohurl, client=client, timeout=timeout_val)
                 infomsg("got answer!")
                 if len(r.answer) > 0:
                     result = True
