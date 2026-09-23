@@ -11,9 +11,10 @@ import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
+import selenium.webdriver.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
-import selenium.webdriver.support.expected_conditions as EC
+import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
@@ -152,14 +153,14 @@ async def dodkimcall(domain, selector, proxy):
         infomsg("page loaded")
 
         infomsg("waiting for input element")
-        wait.until(EC.presence_of_element_located((selenium.webdriver.common.by.By.ID, "inspectBtn")))
+        wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "inspectBtn")))
 
         input_element = driver.find_element(selenium.webdriver.common.by.By.ID, "address")
         input_element.send_keys(fullkey)
         input_element.send_keys(selenium.webdriver.common.keys.Keys.RETURN)
 
         infomsg("waiting for result element")
-        wait.until(EC.presence_of_element_located((selenium.webdriver.common.by.By.ID, "dkim_details")))
+        wait.until(selenium.webdriver.support.expected_conditions.presence_of_element_located((selenium.webdriver.common.by.By.ID, "dkim_details")))
 
         infomsg("finding base element")
         element = []
