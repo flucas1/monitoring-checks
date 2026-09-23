@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import subprocess
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -48,16 +47,20 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-
-def dondisc6call(hostname):
+async def dondisc6call(hostname):
     cmdline = ["/usr/bin/ip", "route", "get", hostname]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     infomsg(output)
     interface = None
-    if response == 0:
+    if exitcode == 0:
         routeparts = output.split()
         if len(routeparts) > 4:
             interface = routeparts[4]
@@ -66,13 +69,18 @@ def dondisc6call(hostname):
     infomsg("interface -> " + interface)
 
     cmdline = ["/usr/bin/ndisc6", hostname, interface]
-    completedproc = subprocess.run(cmdline, capture_output=True)
-    output = completedproc.stdout.decode("utf-8")
-    errors = completedproc.stderr.decode("utf-8")
-    response = completedproc.returncode
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
     infomsg(output)
     macfound = None
-    if response == 0:
+    if exitcode == 0:
         alllines = output.splitlines()
         if len(alllines) > 1:
             line = alllines[1]
@@ -88,8 +96,6 @@ def dondisc6call(hostname):
         exitnagios("CRITICAL", hostname + " is not responding to NDD")
 
 # -------------------------------------------------------------------------------
-
-# collect arguments
 
 
 def parse_args(forcedargs=None):
@@ -108,7 +114,7 @@ async def main(forcedargs=None):
     if not args.hostname:
         exitnagios("CRITICAL", "Must give a hostname.")
 
-    dondisc6call(args.hostname)
+    await dondisc6call(args.hostname)
 
 # -------------------------------------------------------------------------------
 
