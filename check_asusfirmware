@@ -103,11 +103,12 @@ async def wait_page_loaded(driver):
 
 async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatus):
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = sock.connect_ex((ip, 80))
-    sock.close()
-    if result != 0:
-        exitnagios(timeoutstatus, "not reacheable " + ip)
+    try:
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(ip, 80), timeout=5.0)
+        writer.close()
+        await writer.wait_closed()
+    except (OSError, asyncio.TimeoutError):
+        exitnagios(timeoutstatus, "Cannot reach target IP on port 80 " + ip)
 
     driver = await generatedriver(proxy)
 
