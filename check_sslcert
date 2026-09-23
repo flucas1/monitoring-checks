@@ -3,9 +3,7 @@
 
 import sys
 import os
-import subprocess
 import argparse
-import io
 import socket
 import ssl
 import collections
@@ -76,7 +74,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, certificatedays):
+async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, certificatedays):
     cert_data = None
     lasterror = ""
     duration = None
@@ -120,8 +118,8 @@ def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, certif
                 certexpirationraw = cert_data["notAfter"]
                 infomsg("Expiry date: " + str(certexpirationraw))
                 if certexpirationraw is not None:
-                    from dateutil.parser import parse
-                    certexpirationparsed = parse(cert_data["notAfter"])
+                    import dateutil.parser
+                    certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
             except:
                 infomsg(str(traceback.format_exc()))
                 pass
@@ -194,7 +192,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        dosslcertcheck(protocol, args.hostname, args.port, timeoutvalue, timeoutstatus, args.certificatedays)
+        await dosslcertcheck(protocol, args.hostname, args.port, timeoutvalue, timeoutstatus, args.certificatedays)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
