@@ -204,7 +204,7 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     tasks = []
     for hostsingle in hosts:
         for protocol in protocolslist:
-            task = await dopingtestsingle(protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
+            task = dopingtestsingle(protocol, interface, packets, timeoutvalue, hostsingle, warningms, warningpercent, criticalms, criticalpercent)
             tasks.append(task)
 
     results = await asyncio.gather(*tasks)

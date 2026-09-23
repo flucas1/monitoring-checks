@@ -61,8 +61,8 @@ async def doospfroutescall():
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
 
+    total = 0
     if exitcode == 0:
-        total = 0
         for line in output.splitlines():
             if line.startswith("O") and ("is directly connected" not in line):
                 total = total + 1

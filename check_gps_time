@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import datetime
 import gps
-import os
 import sys
 
 # -------------------------------------------------------------------------------
