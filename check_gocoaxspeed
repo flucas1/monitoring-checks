@@ -94,14 +94,14 @@ def check_page_loaded(driver):
     return page_state == "complete"
 
 
-await def wait_page_loaded(driver):
+async def wait_page_loaded(driver):
     timestamp = time.time()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if time.time() - timestamp > 20:
             break
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
 
 # -------------------------------------------------------------------------------
 
