@@ -47,6 +47,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def dondisc6call(hostname):
     cmdline = ["/usr/bin/ip", "route", "get", hostname]
     process = await asyncio.create_subprocess_exec(

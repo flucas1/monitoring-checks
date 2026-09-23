@@ -89,7 +89,7 @@ async def main(forcedargs=None):
         port = int(args.port)
     except ValueError:
         exitnagios("CRITICAL", "port must be a valid integer")
-    
+
     if port <= 0:
         exitnagios("CRITICAL", "port must be a positive integer")
 

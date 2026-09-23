@@ -70,6 +70,7 @@ def mostseverestatus(current, candidate):
 
 # -------------------------------------------------------------------------------
 
+
 async def run_command(cmdline):
     process = await asyncio.create_subprocess_exec(
         *cmdline,
@@ -156,6 +157,7 @@ async def generic_compare_columns(kubeconfig, namespace, resource, columns):
     return status, message, perf
 
 # -------------------------------------------------------------------------------
+
 
 async def test_kubernetes_version(kubeconfig):
     status = ""
@@ -298,6 +300,7 @@ async def test_kubernetes_deployments(kubeconfig, namespace):
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get cronjobs --no-headers --all-namespaces
 
 # -------------------------------------------------------------------------------
+
 
 async def dokubernetescall(kubeconfig, namespace):
     status = ""

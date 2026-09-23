@@ -46,6 +46,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def doarpingcall(hostname, packets, timeout):
     cmdline = ["/usr/sbin/arping", "-C", str(packets), "-w", str(timeout), hostname]
     process = await asyncio.create_subprocess_exec(

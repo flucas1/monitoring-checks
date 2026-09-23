@@ -123,6 +123,7 @@ async def finddevice():
 
 # -------------------------------------------------------------------------------
 
+
 async def check_rtc_utc():
     adjfilename = "/etc/adjtime"
     if os.path.isfile(adjfilename):
