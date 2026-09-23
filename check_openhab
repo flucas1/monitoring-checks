@@ -8,8 +8,6 @@ import datetime
 import json
 import re
 import sys
-import urllib.error
-import urllib.request
 import pytz
 import os
 import ssl
@@ -18,6 +16,7 @@ import dateutil.parser
 import dateutil.relativedelta
 import pathlib
 import asyncio
+import aiohttp
 
 # -------------------------------------------------------------------------------
 
@@ -190,14 +189,14 @@ class Thresholds:
         return ("OK", "%s state within fallback sittuation: %s | value=%s" % (name, state, state))
 
 
-def check_item(object_json, thresholds, timeoutstatus):
+async def check_item(object_json, thresholds, timeoutstatus):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
         return (timeoutstatus, "%s is uninitialized." % object_json["name"])
     else:
         return thresholds.check(object_json["state"], object_json["name"])
 
 
-def check_thing(object_json, args):
+async def check_thing(object_json, args):
     status = object_json["statusInfo"]["status"]
     if status == "ONLINE":
         rc = "OK"
@@ -208,22 +207,21 @@ def check_thing(object_json, args):
     return (rc, "%s is %s." % (object_json["UID"], status))
 
 
-def check_group(group_json, thresholds, args, timeoutstatus):
+async def check_group(group_json, thresholds, args, timeoutstatus):
     final_rc = "OK"
     final_messages = []
     perfdata = ""
     for i in group_json["members"]:
         if i["type"] == "GroupItem":
-            rc, messages, perfdata = check_group(fetch_object(i["link"], args, timeoutstatus), thresholds, args, timeoutstatus)
+            rc, messages, perfdata = await check_group(await fetch_object(i["link"], args, timeoutstatus), thresholds, args, timeoutstatus)
             final_messages += messages
             perfdata += perfdata
         else:
-            rc, message = check_item(i, thresholds, timeoutstatus)
+            rc, message = await check_item(i, thresholds, timeoutstatus)
             try:
                 state_float = float(i["state"])
                 perfdata += ("%s=%s " % (i["name"], i["state"]))
             except:
-                # state isn't numeric, so don't add perfdata
                 pass
 
             if rc != "OK":
@@ -240,14 +238,17 @@ def check_group(group_json, thresholds, args, timeoutstatus):
 async def fetch_object(item_url, args, timeoutstatus):
     infomsg("# " + str(item_url))
 
-    password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
     if args.exclude is True:
-        ctx = ssl.create_default_context()
-        # ctx.check_hostname = False
-        # ctx.verify_mode = ssl.CERT_NONE
-        ssl_handler = urllib.request.HTTPSHandler(context=ctx)
-        ssl_opener = urllib.request.build_opener(ssl_handler)
-        urllib.request.install_opener(ssl_opener)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+    else:
+        ssl_context = None
+
+    headers = {
+        "Accept": "application/json"
+    }
+
     if args.authorization is not None:
         auth_params = args.authorization.split(":")
         if len(auth_params) != 2:
@@ -259,26 +260,21 @@ async def fetch_object(item_url, args, timeoutstatus):
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
 
-        password_manager.add_password(None, item_url, auth_params[0], auth_params[1])
-        auth_handler = urllib.request.HTTPBasicAuthHandler(password_manager)
-        auth_opener = urllib.request.build_opener(auth_handler)
-        urllib.request.install_opener(auth_opener)
+        auth_header = aiohttp.encode_basic_auth(auth_params[0], auth_params[1])
+        headers['Authorization'] = auth_header
 
-    item_request = urllib.request.Request(item_url)
-    item_request.add_header("Accept", "application/json")
     try:
-        item_raw = urllib.request.urlopen(item_request)
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            exitnagios(timeoutstatus, "item %s does not exist." % item_url)
-        else:
-            exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
+        async with aiohttp.ClientSession() as session:
+            async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
+                if response.status == 404:
+                    exitnagios(timeoutstatus, "item %s does not exist." % item_url)
+                elif response.status != 200:
+                    exitnagios(timeoutstatus, "exception fetching item data - HTTP %d" % response.status)
+                object_json = await response.json()
+                infomsg("# " + str(json.dumps(object_json)))
+                return object_json
     except Exception as e:
         exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
-
-    object_json = json.load(item_raw)
-    infomsg("# " + str(json.dumps(object_json)))
-    return object_json
 
 # -------------------------------------------------------------------------------
 
@@ -336,7 +332,7 @@ async def main(forcedargs=None):
     object_json = await fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
-        rc, messages, perfdata = check_group(object_json, thresholds, args, timeoutstatus)
+        rc, messages, perfdata = await check_group(object_json, thresholds, args, timeoutstatus)
         if len(messages) == 0:
             final_message = "All group members within bounds."
         elif len(messages) == 1:
@@ -345,10 +341,10 @@ async def main(forcedargs=None):
             final_message = "%d problems in group %s.\n%s" % (len(messages), object_json["name"], "\n".join(messages))
         exitnagios(rc, final_message + " | " + perfdata)
     elif args.item:
-        rc, message = check_item(object_json, thresholds, timeoutstatus)
+        rc, message = await check_item(object_json, thresholds, timeoutstatus)
         exitnagios(rc, message)
     elif args.thing:
-        rc, message = check_thing(object_json, args)
+        rc, message = await check_thing(object_json, args)
         exitnagios(rc, message)
 
 # -------------------------------------------------------------------------------
