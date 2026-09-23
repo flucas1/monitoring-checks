@@ -106,7 +106,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-await def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
+async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
@@ -140,7 +140,7 @@ await def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
 
             url = "http://" + username + ":" + password + "@" + ip + "/phyRates.html"
             driver.get(url)
-            # time.sleep(5)
+            # await asyncio.sleep(5)
             await wait_page_loaded(driver)
 
             infomsg("asking for logging " + "http://" + ip + "/phyRates.html")

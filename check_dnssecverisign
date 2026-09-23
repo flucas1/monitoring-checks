@@ -194,7 +194,7 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         driver.get(url)
         infomsg("asking for navigating " + url)
 
-        time.sleep(5)
+        await asyncio.sleep(5)
         await wait_page_loaded(driver)
         infomsg("page loaded")
 

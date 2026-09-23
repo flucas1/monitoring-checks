@@ -162,7 +162,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         driver.get(url)
         infomsg("asking for navigating " + url)
 
-        time.sleep(2)
+        await asyncio.sleep(2)
         await wait_page_loaded(driver)
         infomsg("page loaded")
 
@@ -191,7 +191,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         s.sendmail(me, [targetemail], email_message.as_string())
         s.quit()
 
-        time.sleep(5)
+        await asyncio.sleep(5)
         infomsg("waiting for element")
         start_time = time.time()
         max_duration = 180
@@ -208,7 +208,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
                 if len(foundcheck) > 0:
                     infomsg("the check status is " + foundcheck[0].text)
                 infomsg("extra wait for mail arrival")
-                time.sleep(retry_interval)
+                await asyncio.sleep(retry_interval)
 
         if gotanswer == False:
             exitnagios("CRITICAL", "could not find answer from remote website")

@@ -99,7 +99,7 @@ async def dolastloginscall(warning, critical):
             break
         else:
             counter = counter + 1
-            time.sleep(1)
+            await asyncio.sleep(1)
             infomsg("sleeping and will do retry " + str(counter))
     infomsg(cleared)
 

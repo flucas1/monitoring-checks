@@ -148,7 +148,7 @@ async def dodkimcall(domain, selector, proxy):
         driver.get(url)
         infomsg("asking for navigating " + url)
 
-        time.sleep(1)
+        await asyncio.sleep(1)
         await wait_page_loaded(driver)
         infomsg("page loaded")
 
@@ -178,7 +178,7 @@ async def dodkimcall(domain, selector, proxy):
                     element = []
                     if counter < retries:
                         infomsg("waiting a bit")
-                        time.sleep(5)
+                        await asyncio.sleep(5)
                         counter = counter + 1
                     else:
                         infomsg("too many retries")
