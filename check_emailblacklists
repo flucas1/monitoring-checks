@@ -9,7 +9,7 @@ import dns.resolver
 import asyncio
 
 import nodriver as uc
-# from fake_useragent import UserAgent
+# import fake_useragent
 
 # -------------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ async def generatedriver(proxy):
     browserargs.append("--disable-popup-blocking")
     if proxy not in ["", None]:
         browserargs.append("--proxy-server=" + proxy)
-    # ua = UserAgent()
+    # ua = fake_useragent.UserAgent()
     # browserargs.append(f'user-agent={ua.random}')
     browserargs.append("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
     browserconfig = uc.Config(browser_args=browserargs)
@@ -249,13 +249,13 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         else:
             infomsg("sending ip")
             elements[0].send_keys(targetip)
-            elements[0].send_keys(Keys.RETURN)
+            elements[0].send_keys(uc.Keys.RETURN)
 
         infomsg("manual delay")
         await asyncio.sleep(10)
 
         infomsg("waiting for result")
-        wait.until(EC.presence_of_element_located((By.ID, "blacklist_count")))
+        await page.wait_for("#blacklist_count", timeout=20)
 
         infomsg("extracting listed")
         blocks = await tryfindbyid(driver, "ipbc_results_dnsbl")
