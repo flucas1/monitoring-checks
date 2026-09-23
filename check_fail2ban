@@ -72,33 +72,33 @@ async def run_command(cmdlist):
 
 async def check_fail2ban_status():
     cmdlist = [get_fail2ban_client_path(), "ping"]
-    infomsg("DEBUG: Running command: " + str(cmdlist))
+    infomsg("Running command: " + str(cmdlist))
     output = await run_command(cmdlist)
-    infomsg("DEBUG: Fail2Ban server response: " + str(output))
+    infomsg("Fail2Ban server response: " + str(output))
     if "Server replied: pong" not in output:
         exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
 
 
 async def get_jail_list():
     cmdlist = [get_fail2ban_client_path(), "status"]
-    infomsg("DEBUG: Running command: " + str(cmdlist))
+    infomsg("Running command: " + str(cmdlist))
     output = await run_command(cmdlist)
     for line in output:
         if "Jail list:" in line:
             jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
-            infomsg("DEBUG: Jails list: " + ", ".join(jail_list))
+            infomsg("Jails list: " + ", ".join(jail_list))
             return jail_list
     exitnagios("CRITICAL", "Unable to retrieve the jail list.")
 
 
 async def get_banned_ips(jail_name):
     cmdlist = [get_fail2ban_client_path(), "status", jail_name]
-    infomsg("DEBUG: Running command: " + str(cmdlist))
+    infomsg("Running command: " + str(cmdlist))
     output = await run_command(cmdlist)
     for line in output:
         if "Banned IP list:" in line:
             banned_ips = [ip.strip() for ip in line.split("Banned IP list:")[-1].strip().split()]
-            infomsg("DEBUG: Currently banned IPs for jail " + jail_name + ": " + " ".join(banned_ips))
+            infomsg("Currently banned IPs for jail " + jail_name + ": " + " ".join(banned_ips))
             return banned_ips
     return []
 
@@ -155,7 +155,7 @@ async def main(forcedargs=None):
 
     for jail_name in jails:
         banned_ips = await get_banned_ips(jail_name)
-        infomsg("DEBUG: Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
+        infomsg("Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
         for banned_ip in banned_ips:
             if banned_ip not in dict_banned.keys():
                 country, city = get_city_country(banned_ip)
