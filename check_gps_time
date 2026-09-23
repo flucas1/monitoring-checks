@@ -67,7 +67,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
     timeout = False
     gps_time = None
     try:
-        start = time.time()
+        start = datetime.datetime.now(datetime.timezone.utc).timestamp()
         while True:
             if gpsd.waiting():
                 if gpsd.read() == 0:
@@ -78,7 +78,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
                         if (test_time != ''):
                             gps_time = test_time
                             break
-            if time.time() > start + timeoutvalue:
+            if datetime.datetime.now(datetime.timezone.utc).timestamp() > start + timeoutvalue:
                 timeout = True
                 break
             else:

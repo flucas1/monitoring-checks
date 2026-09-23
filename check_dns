@@ -581,9 +581,9 @@ async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, 
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
-            start = datetime.datetime.now(datetime.UTC)
+            start = datetime.datetime.now(datetime.timezone.utc)
             text = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
-            elapsed = datetime.datetime.now(datetime.UTC) - start
+            elapsed = datetime.datetime.now(datetime.timezone.utc) - start
             duration = elapsed.total_seconds()
             if text != "":
                 return build_exitinfo("OK", "transfer of zone " + zone + " from " + addressinfo + " successful | duration=" + str(duration))

@@ -7,7 +7,6 @@ import os
 import asyncio
 import datetime
 import dateutil.parser
-import time
 
 # -------------------------------------------------------------------------------
 
@@ -52,7 +51,7 @@ def exitnagios(status, message):
 
 
 async def get_wtmp_entries():
-    today = datetime.datetime.now(datetime.UTC)
+    today = datetime.datetime.now(datetime.timezone.utc)
     seven_days_ago = today - datetime.timedelta(days=7)
     formatted_date = seven_days_ago.strftime("%Y-%m-%d")
     infomsg(formatted_date)
@@ -106,7 +105,7 @@ async def dolastloginscall(warning, critical):
     infomsg("----------")
     if len(cleared) > 0:
         crashed = True
-        crashdate = datetime.datetime.now(datetime.UTC)
+        crashdate = datetime.datetime.now(datetime.timezone.utc)
         if len(cleared) > 1:
             linecurrent = cleared[0].split()
             infomsg("linecurrent is " + str(linecurrent))

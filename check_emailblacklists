@@ -122,12 +122,12 @@ async def check_page_loaded(page):
 
 
 async def wait_page_loaded(page):
-    timestamp = time.time()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
     while True:
         loaded = await check_page_loaded(page)
         if loaded == True:
             break
-        if time.time() - timestamp > 20:
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
         await asyncio.sleep(1)
 

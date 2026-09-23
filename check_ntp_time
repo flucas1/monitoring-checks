@@ -92,7 +92,7 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
             else:
                 status = "OK"
 
-            now = datetime.datetime.now(datetime.UTC)
+            now = datetime.datetime.now(datetime.timezone.utc)
             exitnagios(status, f"NTP offset {offset:.3f}s at {now.isoformat()} UTC")
 
         except Exception as e:

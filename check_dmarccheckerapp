@@ -96,11 +96,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = time.time()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
     while True:
         if check_page_loaded(driver):
             break
-        if time.time() - timestamp > 20:
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
         await asyncio.sleep(1)
 
@@ -178,7 +178,7 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         infomsg("extracting email")
         targetemail = elements[0].text
         me = mailfrom
-        dummystring = "TEST email to " + url + " at " + datetime.datetime.now(datetime.UTC).isoformat()
+        dummystring = "TEST email to " + url + " at " + datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         email_body = dummystring
         email_message = MIMEText(email_body)
@@ -194,11 +194,11 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
 
         await asyncio.sleep(5)
         infomsg("waiting for element")
-        start_time = time.time()
+        start_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
         max_duration = 180
         retry_interval = 5
         gotanswer = False
-        while time.time() - start_time < max_duration:
+        while datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time < max_duration:
             founddetails = tryfindbyclassname(driver, "report-details-table")
             if len(founddetails) > 0:
                 infomsg("found details!")

@@ -55,7 +55,7 @@ async def dogpscountcall(timeout, warning, critical):
     total_used = []
     total_seen = []
     try:
-        start = time.time()
+        start = datetime.datetime.now(datetime.timezone.utc).timestamp()
         while True:
             if gpsd.waiting():
                 if gpsd.read():
@@ -65,7 +65,7 @@ async def dogpscountcall(timeout, warning, critical):
                         total_used.append(gpsd.satellites_used)
                         total_seen.append(len(gpsd.satellites))
                         break
-            if time.time() > start + timeout:
+            if datetime.datetime.now(datetime.timezone.utc).timestamp() > start + timeout:
                 # total_seen = len(gpsd.satellites)
                 break
             else:
