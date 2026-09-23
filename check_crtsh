@@ -7,13 +7,13 @@
 
 import urllib.error
 import urllib.request
+import aiohttp
 import argparse
 import sys
 import os
 import json
 import datetime
 import dateutil.parser
-import time
 import socket
 import gzip
 import zlib
@@ -111,7 +111,7 @@ def ipv4_default_route_exists() -> bool:
 # -------------------------------------------------------------------------------
 
 
-def load_json(proxy, domain, retries):
+async def load_json(proxy, domain, retries):
     # if args.exclude is True:
     #    ctx = ssl.create_default_context()
     #    ssl_handler = urllib.request.HTTPSHandler(context=ctx)
@@ -219,14 +219,13 @@ def load_json(proxy, domain, retries):
         elif counter > retries:
             break
         else:
-            time.sleep(5 + (counter * 2) + random.uniform(1, 5))
+            await asyncio.sleep(5 + (counter * 2) + random.uniform(1, 5))
 
     return object_json
 
 # -------------------------------------------------------------------------------
 
-
-def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
+async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
 
     mode = mode.lower()
     if mode == "ipv6":
@@ -248,7 +247,7 @@ def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retr
     ignored = ignorecerts.split(";")
 
     start = datetime.datetime.now(datetime.UTC)
-    parsed = load_json(proxy, hostname, retries)
+    parsed = await load_json(proxy, hostname, retries)
     elapsed = datetime.datetime.now(datetime.UTC) - start
     duration = elapsed.total_seconds()
     if parsed is not None:
@@ -305,16 +304,16 @@ async def main(forcedargs=None):
     proxies = []
 
     start = datetime.datetime.now(datetime.UTC)
-    time.sleep(random.uniform(1, 5))
+    await asyncio.sleep(random.uniform(1, 5))
     if ipv6_default_route_exists():
         infomsg("call ipv6")
-        docrtshcall("ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await docrtshcall("ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     if ipv4_default_route_exists():
         infomsg("call ipv4")
-        docrtshcall("ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await docrtshcall("ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     for proxy in proxies:
         infomsg("call " + str(proxy))
-        docrtshcall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await docrtshcall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     elapsed = datetime.datetime.now(datetime.UTC) - start
     duration = elapsed.total_seconds()
 
