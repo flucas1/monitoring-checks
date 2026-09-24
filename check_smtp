@@ -83,7 +83,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         if source is not None:
             sourcetuple = (source, 0)
 
-        infomsg("ssl is "+str(dossl))
+        infomsg("ssl is " + str(dossl))
         smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
