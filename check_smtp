@@ -83,16 +83,13 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         if source is not None:
             sourcetuple = (source, 0)
 
-        if dossl is True:
-            ctx = ssl.create_default_context()
-            smtpconnection = aiosmtplib.SMTPSSL(hostname=hostname, port=port, timeout=timeoutvalue, context=ctx, source_address=sourcetuple)
-        else:
-            smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, timeout=timeoutvalue, source_address=sourcetuple)
+        infomsg("ssl is "+str(dossl))
+        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
         is_connected = True
     except (socket.error, Exception) as e:
-        infomsg("connection error - " + str(e) + " | time=-1 validity=-1")
+        infomsg("connection error - " + str(e))
 
     if blocked is True:
         if not is_connected:
@@ -116,21 +113,22 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             except Exception:
                 infomsg(str(traceback.format_exc()))
                 pass
+        else:
+            infomsg("skipping ssl test")
 
         await smtpconnection.ehlo()
         response, message = await smtpconnection.noop()
-        # 220 after connection established, 250 after EHLO
         infomsg("initial response is " + str(response) + " " + str(message))
         if response not in [200, 250]:
             exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
 
         warningmsg = ""
-        testemailaddress = "mailing-probe@example.net"
-        response, message = await smtpconnection.execute_command("MAIL FROM:", testemailaddress)
+        testemailaddress = b"mailing-probe@example.net"
+        response, message = await smtpconnection.execute_command(b"MAIL FROM: " + testemailaddress)
         infomsg("mailfrom response is " + str(response) + " " + str(message))
 
         if response in [250]:
-            response, message = await smtpconnection.execute_command("RCPT TO:", testemailaddress)
+            response, message = await smtpconnection.execute_command(b"RCPT TO: " + testemailaddress)
             infomsg(response)
             infomsg(message)
             if response in [250, 251, 354]:
