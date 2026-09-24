@@ -2,7 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import argparse
-import paramiko
+import asyncssh
 import os
 import sys
 import socket
@@ -71,28 +71,20 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlist):
-    t = None
+async def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlist):
     try:
-        t = paramiko.Transport((host, port))
-        t.connect()
+        allowed_types_set = await asyncio.wait_for(asyncssh.get_server_auth_methods(host, port=port, username=""), timeout=timeoutvalue)
+        allowed_types = list(allowed_types_set)
     except Exception as e:
-        if t is not None:
-            t.close()
         exitnagios(timeoutstatus, "SSH connection failed " + host + ":" + str(port) + " - cause: " + str(e))
 
-    try:
-        t.auth_none("")
-    except paramiko.BadAuthenticationType as e:
-        if len(expectedlist) == len(e.allowed_types):
-            for item in expectedlist:
-                if item not in e.allowed_types:
-                    exitnagios("WARNING", "The allowed methods are " + str(e.allowed_types) + " but it was expected " + str(expectedlist))
-            exitnagios("OK", "The allowed methods are " + str(e.allowed_types) + " as expected")
-        else:
-            exitnagios("CRITICAL", "The allowed methods are " + str(e.allowed_types) + " but it was expected " + str(expectedlist))
-    finally:
-        t.close()
+    if len(expectedlist) == len(allowed_types):
+        for item in expectedlist:
+            if item not in allowed_types:
+                exitnagios("WARNING", "The allowed methods are " + str(allowed_types) + " but it was expected " + str(expectedlist))
+        exitnagios("OK", "The allowed methods are " + str(allowed_types) + " as expected")
+    else:
+        exitnagios("CRITICAL", "The allowed methods are " + str(allowed_types) + " but it was expected " + str(expectedlist))
 
 # -------------------------------------------------------------------------------
 
@@ -143,7 +135,7 @@ async def main(forcedargs=None):
     if (len(expectedlist) == 0):
         exitnagios("CRITICAL", "no expected methods")
 
-    test_ssh_auth(protocol, args.host, int(args.port), timeoutvalue, timeoutstatus, expectedlist)
+    await test_ssh_auth(protocol, args.host, int(args.port), timeoutvalue, timeoutstatus, expectedlist)
 
 # -------------------------------------------------------------------------------
 
