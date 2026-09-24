@@ -174,20 +174,21 @@ async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     for i in range(3):
         text = ""
         try:
-            xfr_iter = dns.asyncquery.xfr(address, zone, relativize=True, timeout=timeoutvalue, use_udp=(not useTcp))
-            xfr = await dns.zone.from_xfr(xfr_iter, relativize=True)
-            names = list(xfr.keys())
+            zone_obj = dns.zone.Zone(origin=zone, relativize=True)
+            await dns.asyncquery.inbound_xfr(where=address, txn_manager=zone_obj, timeout=timeoutvalue)
+            names = list(zone_obj.keys())
             names.sort()
+            zone_lines = []
             for item in names:
-                node = xfr[item]
-                line = node.to_text(item, origin=xfr.origin, relativize=True, sorted=True)
-                parts = line.splitlines()
-                parts.sort()
-                line = os.linesep.join(parts)
-                text = text + os.linesep + line
-        except:
+                node = zone_obj[item]
+                line = node.to_text(item, origin=zone_obj.origin, relativize=True, sorted=True)
+                node_lines = line.splitlines()
+                node_lines.sort()
+                zone_lines.append(os.linesep.join(node_lines))
+            text = os.linesep.join(zone_lines)
+        except Exception as e:
+            infomsg(str(e))
             text = ""
-            pass
         if text == "":
             await asyncio.sleep(0.1)
         else:
