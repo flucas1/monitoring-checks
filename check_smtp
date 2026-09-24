@@ -76,6 +76,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     smtpconnection = None
+    is_connected = False
     try:
         start = datetime.datetime.now(datetime.timezone.utc)
         sourcetuple = None
@@ -89,20 +90,21 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
-    except socket.error as e:
-        infomsg("socket error - " + str(e) + " | time=-1 validity=-1")
+        is_connected = True
+    except (socket.error, Exception) as e:
+        infomsg("connection error - " + str(e) + " | time=-1 validity=-1")
 
     if blocked is True:
-        if smtpconnection is None:
+        if not is_connected:
             exitnagios("OK", "the connection is blocked as expected | time=-1 validity=-1")
         else:
             exitnagios(timeoutstatus, "the connection is responding but it was expected to be blocked | time=-1 validity=-1")
 
-    if smtpconnection is not None:
+    if is_connected:
         certexpirationparsed = None
+        certexpirationraw = None
         if dossl is True:
             infomsg("doing SSL")
-            certexpirationraw = None
             try:
                 cert_data = smtpconnection.transport.get_extra_info("peercert")
                 infomsg(cert_data)
@@ -120,14 +122,15 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         # 220 after connection established, 250 after EHLO
         infomsg("initial response is " + str(response) + " " + str(message))
         if response not in [200, 250]:
-            exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + message.decode() + " | time=-1 validity=-1")
+            exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
 
         warningmsg = ""
         testemailaddress = "mailing-probe@example.net"
-        response, message = await smtpconnection.send_command("MAIL FROM:", testemailaddress)
+        response, message = await smtpconnection.execute_command("MAIL FROM:", testemailaddress)
         infomsg("mailfrom response is " + str(response) + " " + str(message))
+
         if response in [250]:
-            response, message = await smtpconnection.send_command("RCPT TO:", testemailaddress)
+            response, message = await smtpconnection.execute_command("RCPT TO:", testemailaddress)
             infomsg(response)
             infomsg(message)
             if response in [250, 251, 354]:
@@ -136,17 +139,18 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             elif response in [550]:
                 if relay != "closed":
                     exitnagios("CRITICAL", "found a closed relay " + str(response) + ", but it should be open | time=-1 validity=-1")
-            warningmsg = "exitstaus " + str(response) + ": " + message.decode()
+            warningmsg = "exitstatus " + str(response) + ": " + str(message)
         elif response in [555] and relay == "closed":
             exitnagios("OK", "closed relay with response " + str(response) + " | time=-1 validity=-1")
         else:
-            exitnagios("CRITICAL", "sending test, unexpected state - " + str(response) + ": " + message.decode() + " | time=-1 validity=-1")
+            exitnagios("CRITICAL", "sending test, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
 
         await smtpconnection.quit()
 
         elapsed = datetime.datetime.now(datetime.timezone.utc) - start
         duration = elapsed.total_seconds()
         daysremaining = -1
+
         if duration >= critical:
             exitnagios("CRITICAL", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
         elif duration >= warning:
@@ -160,24 +164,19 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     timeremaining = certexpirationparsed.timestamp() - today.timestamp()
                     daysremaining = int(timeremaining / 86400)
 
-            if duration >= critical:
-                exitnagios("CRITICAL", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
-            elif duration >= warning:
-                exitnagios("WARNING", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
-            else:
-                certificatedaysparts = certificatedays.split(",")
-                criticaldays = int(certificatedaysparts[0])
-                if len(certificatedaysparts) > 1:
-                    warningdays = int(certificatedaysparts[1])
-                else:
-                    warningdays = -1
+                    certificatedaysparts = certificatedays.split(",")
+                    criticaldays = int(certificatedaysparts[0])
+                    if len(certificatedaysparts) > 1:
+                        warningdays = int(certificatedaysparts[1])
+                    else:
+                        warningdays = -1
 
-                if daysremaining >= 0 and daysremaining < criticaldays:
-                    exitnagios("CRITICAL", "the certificate is expiring in '" + str(daysremaining) + "' days | time=" + str(duration) + " validity=" + str(daysremaining))
-                elif daysremaining >= 0 and daysremaining < warningdays:
-                    exitnagios("WARNING", "the certificate is expiring in '" + str(daysremaining) + "' days | time=" + str(duration) + " validity=" + str(daysremaining))
-                else:
-                    exitnagios("OK", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
+                    if daysremaining >= 0 and daysremaining < criticaldays:
+                        exitnagios("CRITICAL", "the certificate is expiring in '" + str(daysremaining) + "' days | time=" + str(duration) + " validity=" + str(daysremaining))
+                    elif daysremaining >= 0 and daysremaining < warningdays:
+                        exitnagios("WARNING", "the certificate is expiring in '" + str(daysremaining) + "' days | time=" + str(duration) + " validity=" + str(daysremaining))
+
+            exitnagios("OK", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
     else:
         exitnagios("CRITICAL", "cannot init SMTP connection | time=-1 validity=-1")
 
