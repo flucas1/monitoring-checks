@@ -170,12 +170,17 @@ async def get_address(protocol, serverinfo):
 async def get_zone(useTcp, addressinfo, timeoutvalue, zone):
     parts = addressinfo.split("@")
     address = parts[0]
+    # Map your boolean to the new enum
+    # NEVER = TCP only (AXFR standard)
+    # ONLY = UDP only
+    # TRY_FIRST = UDP first, fallback to TCP if truncated
+    mode = dns.query.UDPMode.NEVER if useTcp else dns.query.UDPMode.ONLY
     text = ""
     for i in range(3):
         text = ""
         try:
             zone_obj = dns.zone.Zone(origin=zone, relativize=True)
-            await dns.asyncquery.inbound_xfr(where=address, txn_manager=zone_obj, timeout=timeoutvalue)
+            await dns.asyncquery.inbound_xfr(where=address, txn_manager=zone_obj, timeout=timeoutvalue, udp_mode=mode)
             names = list(zone_obj.keys())
             names.sort()
             zone_lines = []
