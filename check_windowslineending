@@ -97,7 +97,7 @@ async def scan_directory(path, debug):
 # -------------------------------------------------------------------------------
 
 
-async def main():
+async def main(forcedargs=None):
     args = parse_args()
     all_found_files = []
 
