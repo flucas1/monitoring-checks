@@ -63,8 +63,8 @@ async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
     parser.add_argument("-H", "--hostaddress", required=True, help="Host address of the Bind9 server")
     parser.add_argument("-p", "--port", required=True, help="Port of the Bind9 statistics channel")
-    parser.add_argument("-w", "--warning", type=int, help="Warning threshold for total queries")
-    parser.add_argument("-c", "--critical", type=int, help="Critical threshold for total queries")
+    parser.add_argument("-w", "--warning", type=int, default=100000, help="Warning threshold for total queries (default: 100000)")
+    parser.add_argument("-c", "--critical", type=int, default=250000, help="Critical threshold for total queries (default: 250000)")
     args = parser.parse_args()
 
     url = f"http://{args.hostaddress}:{args.port}/xml/v3/server"
