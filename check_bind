@@ -3,6 +3,7 @@
 
 import sys
 import urllib.request
+import urllib.error
 import xml.etree.ElementTree
 import asyncio
 import argparse
@@ -55,30 +56,13 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 TIMEOUT = 20
 
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
+    parser.add_argument("-H", "--hostaddress", required=True, help="Host address of the Bind9 server")
+    parser.add_argument("-p", "--port", required=True, help="Port of the Bind9 statistics channel")
+    args = parser.parse_args()
 
-async def main(forcedargs=None)
-
-    args = sys.argv[1:]
-    hostaddress = None
-    hostport = None
-
-    while args:
-        arg = args.pop(0)
-        elif arg in ('-H', '--hostaddress'):
-            if args:
-                hostaddress = args.pop(0)
-        elif arg in ('-p', '--port'):
-            if args:
-                hostport = args.pop(0)
-        else:
-            print(f"Unknown argument: {arg}")
-            sys.exit(STATE_UNKNOWN)
-
-    if not hostaddress or not hostport:
-        print(f"missing argument")
-        sys.exit(STATE_UNKNOWN)
-
-    url = f"http://{hostaddress}:{hostport}/xml/v3/server"
+    url = f"http://{args.hostaddress}:{args.port}/xml/v3/server"
 
     try:
         req = urllib.request.urlopen(url, timeout=TIMEOUT)
@@ -121,7 +105,8 @@ async def main(forcedargs=None)
     rtt_out = []
     mapping = [("10", "10"), ("100", "100"), ("500", "500"), ("800", "800"), ("1600", "1600"), ("1600+", "Over1600")]
     for key, label in mapping:
-        rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
+        if rtt[key]:
+            rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
 
     output = ["OK: Bind 9 Stats Collected |"]
     if total_queries:
