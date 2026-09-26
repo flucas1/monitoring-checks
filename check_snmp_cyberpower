@@ -66,9 +66,9 @@ async def snmp_get(oid, host, community):
         raise Exception(f"CRITICAL: Unable to retrieve SNMP data: {e}")
 
 
-def check_input_voltage(oids, host, community, inlow, inhigh):
+async def check_input_voltage(oids, host, community, inlow, inhigh):
     """Check and return the input voltage status and performance data."""
-    rawvalue = snmp_get(oids["MIBinVolts"], host, community)
+    rawvalue = await snmp_get(oids["MIBinVolts"], host, community)
     input_voltage = int(rawvalue) / 10
     if input_voltage < inlow:
         return 1, f"WARNING: Input voltage {input_voltage}V is below {inlow}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
@@ -78,9 +78,9 @@ def check_input_voltage(oids, host, community, inlow, inhigh):
         return 0, f"OK: Input voltage is {input_voltage}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
 
 
-def check_load_percentage(oids, host, community, warnload, critload):
+async def check_load_percentage(oids, host, community, warnload, critload):
     """Check and return the load percentage status and performance data."""
-    rawvalue = snmp_get(oids["MIBoutLoad"], host, community)
+    rawvalue = await snmp_get(oids["MIBoutLoad"], host, community)
     load = int(rawvalue)
     if load > critload:
         return 2, f"CRITICAL: Load is {load}% which exceeds {critload}%.", f"load={load}%;{warnload};{critload};0;100"
@@ -90,9 +90,9 @@ def check_load_percentage(oids, host, community, warnload, critload):
         return 0, f"OK: Load is {load}%.", f"load={load}%;{warnload};{critload};0;100"
 
 
-def check_runtime(oids, host, community, warnrun, critrun):
+async def check_runtime(oids, host, community, warnrun, critrun):
     """Check and return the runtime status and performance data."""
-    rawvalue = snmp_get(oids["MIBrunTime"], host, community)
+    rawvalue = await snmp_get(oids["MIBrunTime"], host, community)
     rawticks = rawvalue.split()[0].replace("(", "").replace(")", "")
     runtime = int(rawticks) // 6000
     if runtime < critrun:
@@ -137,19 +137,19 @@ async def main(forcedargs=None):
         model = await snmp_get(oids["MIBmodel"], args.host, args.community)
 
         # Check input voltage
-        status, message, perf_data = check_input_voltage(oids, args.host, args.community, args.inlow, args.inhigh)
+        status, message, perf_data = await check_input_voltage(oids, args.host, args.community, args.inlow, args.inhigh)
         statuses.append(status)
         output_messages.append(message)
         performance_data.append(perf_data)
 
         # Check load percentage
-        status, message, perf_data = check_load_percentage(oids, args.host, args.community, args.warnload, args.critload)
+        status, message, perf_data = await check_load_percentage(oids, args.host, args.community, args.warnload, args.critload)
         statuses.append(status)
         output_messages.append(message)
         performance_data.append(perf_data)
 
         # Check runtime
-        status, message, perf_data = check_runtime(oids, args.host, args.community, args.warnrun, args.critrun)
+        status, message, perf_data = await check_runtime(oids, args.host, args.community, args.warnrun, args.critrun)
         statuses.append(status)
         output_messages.append(message)
         performance_data.append(perf_data)
