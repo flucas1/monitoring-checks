@@ -89,17 +89,17 @@ async def fetch_status(url, auth, verify, timeout):
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-H', '--hostname', required=True)
-    parser.add_argument('-p', '--port', type=int)
-    parser.add_argument('-u', '--uri', default='/server-status?auto')
-    parser.add_argument('-U', '--username', default='')
-    parser.add_argument('-P', '--password', default='')
-    parser.add_argument('-s', '--ssl', action='store_true')
-    parser.add_argument('-N', '--no_validate', action='store_true')
-    parser.add_argument('-w', '--warning', default='')
-    parser.add_argument('-c', '--critical', default='')
-    parser.add_argument('-R', '--unreachable', action='store_true')
-    parser.add_argument('-t', '--timeout', type=int, default=15)
+    parser.add_argument("-H", "--hostname", required=True)
+    parser.add_argument("-p", "--port", type=int)
+    parser.add_argument("-u", "--uri", default="/server-status?auto")
+    parser.add_argument("-U", "--username", default="")
+    parser.add_argument("-P", "--password", default="")
+    parser.add_argument("-s", "--ssl", action="store_true")
+    parser.add_argument("-N", "--no_validate", action="store_true")
+    parser.add_argument("-w", "--warning", default="")
+    parser.add_argument("-c", "--critical", default="")
+    parser.add_argument("-R", "--unreachable", action="store_true")
+    parser.add_argument("-t", "--timeout", type=int, default=15)
     args = parser.parse_args()
 
     unreachable_status = CRITICAL if args.unreachable else UNKNOWN
@@ -107,11 +107,11 @@ async def main(forcedargs=None):
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(args.timeout)
 
-    warnings = args.warning.split(',') if args.warning else []
-    criticals = args.critical.split(',') if args.critical else []
+    warnings = args.warning.split(",") if args.warning else []
+    criticals = args.critical.split(",") if args.critical else []
 
-    warnings += [''] * (6 - len(warnings))
-    criticals += [''] * (6 - len(criticals))
+    warnings += [""] * (6 - len(warnings))
+    criticals += [""] * (6 - len(criticals))
 
     if bool(args.username) != bool(args.password):
         print("UNKNOWN - If you specify an username, you have to set a password too!")
@@ -119,11 +119,11 @@ async def main(forcedargs=None):
 
     auth = (args.username, args.password) if args.username and args.password else None
 
-    proto = 'https://' if args.ssl else 'http://'
+    proto = "https://" if args.ssl else "http://"
     port_str = f":{args.port}" if args.port else ""
 
     url = f"{proto}{args.hostname}{port_str}{args.uri}"
-    if '?' not in url:
+    if "?" not in url:
         url += "?auto"
     elif not url.endswith("auto"):
         url += "?auto"
@@ -135,13 +135,13 @@ async def main(forcedargs=None):
     try:
         response = await fetch_status(url, auth, verify, args.timeout)
         if response.status_code >= 500:
-            print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - {response.reason}")
+            print(f"{"CRITICAL" if args.unreachable else "UNKNOWN"} - {response.reason}")
             sys.exit(unreachable_status)
         elif response.status_code != 200:
             print(f"CRITICAL - {response.reason}")
             sys.exit(CRITICAL)
     except asyncio.TimeoutError:
-        print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - plugin timed out")
+        print(f"{"CRITICAL" if args.unreachable else "UNKNOWN"} - plugin timed out")
         sys.exit(unreachable_status)
     except Exception as e:
         print(f"CRITICAL - {str(e)}")
@@ -149,7 +149,7 @@ async def main(forcedargs=None):
 
     content = response.text
 
-    match = re.search(r'ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)', content, re.DOTALL)
+    match = re.search(r"ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)", content, re.DOTALL)
     if not match:
         print(f"UNKNOWN - No status information found at {url}")
         sys.exit(UNKNOWN)
@@ -160,9 +160,9 @@ async def main(forcedargs=None):
     idle_workers = match.group(4)
     scoreboard = match.group(5)
 
-    open_slots = scoreboard.count('.') + scoreboard.count('_')
+    open_slots = scoreboard.count(".") + scoreboard.count("_")
 
-    match_bpr = re.search(r'BytesPerReq:\s([0-9\.]+)', content, re.DOTALL)
+    match_bpr = re.search(r"BytesPerReq:\s([0-9\.]+)", content, re.DOTALL)
     bytes_per_req = match_bpr.group(1) if match_bpr else "0"
 
     metrics = [
