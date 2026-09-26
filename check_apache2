@@ -2,12 +2,11 @@
 # -------------------------------------------------------------------------------
 
 import argparse
-import requests
+import asyncio
 import re
 import sys
 import signal
 import urllib3
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -38,7 +37,14 @@ def timeout_handler(signum, frame):
     sys.exit(UNKNOWN)
 
 
-def main():
+async def fetch_status(url, auth, verify, timeout):
+    import httpx
+    async with httpx.AsyncClient(auth=auth, verify=verify, timeout=timeout) as client:
+        response = await client.get(url)
+        return response
+
+
+async def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-H', '--hostname', required=True)
     parser.add_argument('-p', '--port', type=int)
@@ -84,17 +90,17 @@ def main():
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     try:
-        response = requests.get(url, auth=auth, verify=verify, timeout=args.timeout)
+        response = await fetch_status(url, auth, verify, args.timeout)
         if response.status_code >= 500:
             print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - {response.reason}")
             sys.exit(unreachable_status)
         elif response.status_code != 200:
             print(f"CRITICAL - {response.reason}")
             sys.exit(CRITICAL)
-    except requests.exceptions.Timeout:
+    except asyncio.TimeoutError:
         print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - plugin timed out")
         sys.exit(unreachable_status)
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"CRITICAL - {str(e)}")
         sys.exit(CRITICAL)
 

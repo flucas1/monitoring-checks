@@ -2,10 +2,9 @@
 # -------------------------------------------------------------------------------
 
 import argparse
-import subprocess
+import asyncio
 import sys
 import re
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -70,7 +69,22 @@ def exit_plugin(status, message, perfdata=""):
     sys.exit(status)
 
 
-def main():
+async def run_squidclient(squidclient, host, port, user, password):
+    cmd = [squidclient, '-h', host, '-p', str(port), '-U', user, '-W', password, 'mgr:info']
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+
+    if process.returncode != 0:
+        raise RuntimeError(f"Command failed with return code {process.returncode}")
+
+    return stdout.decode('utf-8')
+
+
+async def main():
     parser = argparse.ArgumentParser(usage="%(prog)s [ -H <host> ] [ -f <filename> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]")
     parser.add_argument('-H', '--host', default='localhost')
     parser.add_argument('-f', '--filecreds')
@@ -82,7 +96,7 @@ def main():
     parser.add_argument('-c', '--critical')
     parser.add_argument('-s', '--squidclient', default='/usr/bin/squidclient')
 
-    args = parser.parse_args()[cite: 1]
+    args = parser.parse_args()
 
     host = args.host
     port = args.port
@@ -104,20 +118,15 @@ def main():
         except Exception as e:
             exit_plugin(STATUS_CRITICAL, f"Could not open {args.filecreds} for reading: {e}")
 
-    cmd = [squidclient, '-h', host, '-p', str(port), '-U', user, '-W', password, 'mgr:info'][cite: 1]
-
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)[cite: 1]
-        output = result.stdout
-    except subprocess.CalledProcessError:
-        exit_plugin(STATUS_CRITICAL, f"error executing {squidclient}")
-    except FileNotFoundError:
-        exit_plugin(STATUS_CRITICAL, f"error executing {squidclient}")
+        output = await run_squidclient(squidclient, host, port, user, password)
+    except Exception as e:
+        exit_plugin(STATUS_CRITICAL, f"error executing {squidclient}: {e}")
 
     parsed_data = {}
 
     for line in output.splitlines():
-        m = re.search(r'\s+Number of clients accessing cache:\s+([0-9]+)', line)[cite: 1]
+        m = re.search(r'\s+Number of clients accessing cache:\s+([0-9]+)', line)
         if m:
             parsed_data['connection_nbclient'] = m.group(1)
 
@@ -157,7 +166,7 @@ def main():
             parsed_data['cache_bytehitratio5'] = m.group(1)
             parsed_data['cache_bytehitratio60'] = m.group(2)
 
-        m = re.search(r'\s+CPU Usage:\s+([0-9\.]+)%', line)[cite: 1]
+        m = re.search(r'\s+CPU Usage:\s+([0-9\.]+)%', line)
         if m:
             parsed_data['resource_cpu5s'] = m.group(1)
 
@@ -186,7 +195,6 @@ def main():
             parsed_data['fd_used'] = m.group(1)
 
     if re.search(r'Connections', data_type, re.IGNORECASE):
-        [cite: 1]
         if 'connection_nbclient' not in parsed_data:
             exit_plugin(STATUS_CRITICAL, 'cannot parse connections data')
         else:
@@ -232,4 +240,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

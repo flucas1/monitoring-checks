@@ -49,7 +49,7 @@ def timeout_handler(signum, frame):
     sys.exit(3)
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-T', '--timezone', type=str)
     parser.add_argument('-A', '--alternate', type=str)
@@ -115,4 +115,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

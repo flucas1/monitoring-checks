@@ -2,11 +2,10 @@
 # -------------------------------------------------------------------------------
 
 import argparse
+import asyncio
 import os
 import re
-import subprocess
 import sys
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -40,85 +39,57 @@ def get_memory_info(opt_C, opt_v):
     hugepages_size = 0
     hugepages_kb = 0
 
-    uname_out = ""
-    if os.path.exists('/usr/bin/uname'):
-        uname_out = subprocess.check_output(['/usr/bin/uname', '-a']).decode('utf-8')
-    elif os.path.exists('/bin/uname'):
-        uname_out = subprocess.check_output(['/bin/uname', '-a']).decode('utf-8')
-    else:
-        print("Unable to find uname in /usr/bin or /bin!")
-        sys.exit(EXIT_CODES['UNKNOWN'])
+    try:
+        with open('/proc/meminfo', 'r') as f:
+            for line in f:
+                line = line.strip()
+                m1 = re.match(r'^Mem(Total|Free):\s+(\d+) kB', line)
+                if m1:
+                    if m1.group(1) == 'Free':
+                        free_memory_kb = int(m1.group(2))
+                    elif m1.group(1) == 'Total':
+                        total_memory_kb = int(m1.group(2))
+                    continue
+                m2 = re.match(r'^(Buffers|Cached|SReclaimable):\s+(\d+) kB', line)
+                if m2:
+                    caches_kb += int(m2.group(2))
+                    continue
+                m3 = re.match(r'^Shmem:\s+(\d+) kB', line)
+                if m3:
+                    caches_kb -= int(m3.group(1))
+                    continue
+                m4 = re.match(r'^HugePages_Total:\s+(\d+)', line)
+                if m4:
+                    hugepages_nr = int(m4.group(1))
+                    continue
+                m5 = re.match(r'^Hugepagesize:\s+(\d+) kB', line)
+                if m5:
+                    hugepages_size = int(m5.group(1))
+                    continue
+    except IOError:
+        pass
 
-    if opt_v:
-        print(f"uname returns {uname_out.strip()}")
+    hugepages_kb = hugepages_nr * hugepages_size
+    used_memory_kb = total_memory_kb - free_memory_kb
 
-    if "Linux" in uname_out:
-        try:
-            with open('/proc/meminfo', 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    m1 = re.match(r'^Mem(Total|Free):\s+(\d+) kB', line)
-                    if m1:
-                        if m1.group(1) == 'Free':
-                            free_memory_kb = int(m1.group(2))
-                        elif m1.group(1) == 'Total':
-                            total_memory_kb = int(m1.group(2))
-                        continue
-                    m2 = re.match(r'^(Buffers|Cached|SReclaimable):\s+(\d+) kB', line)
-                    if m2:
-                        caches_kb += int(m2.group(2))
-                        continue
-                    m3 = re.match(r'^Shmem:\s+(\d+) kB', line)
-                    if m3:
-                        caches_kb -= int(m3.group(1))
-                        continue
-                    m4 = re.match(r'^HugePages_Total:\s+(\d+)', line)
-                    if m4:
-                        hugepages_nr = int(m4.group(1))
-                        continue
-                    m5 = re.match(r'^Hugepagesize:\s+(\d+) kB', line)
-                    if m5:
-                        hugepages_size = int(m5.group(1))
-                        continue
-        except IOError:
-            pass
-
-        hugepages_kb = hugepages_nr * hugepages_size
-        used_memory_kb = total_memory_kb - free_memory_kb
-
-        sysfs_dir = '/sys/kernel/mm/hugepages'
-        if os.path.isdir(sysfs_dir):
-            hugepages_kb = 0
-            for entry in os.listdir(sysfs_dir):
-                m = re.match(r'^hugepages-(\d+)kB', entry)
-                if m:
-                    h_size = int(m.group(1))
-                    try:
-                        with open(os.path.join(sysfs_dir, entry, 'nr_hugepages'), 'r') as f:
-                            h_nr = int(f.read().strip())
-                        hugepages_kb += h_nr * h_size
-                    except IOError:
-                        pass
-    else:
-        if opt_C:
-            print(f"You can't report on {uname_out.strip()} caches!")
-            sys.exit(EXIT_CODES['UNKNOWN'])
-        try:
-            p1 = subprocess.Popen(['vmstat'], stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(['tail', '-1'], stdin=p1.stdout, stdout=subprocess.PIPE)
-            p3 = subprocess.Popen(['awk', '{print $4,$5}'], stdin=p2.stdout, stdout=subprocess.PIPE)
-            out, _ = p3.communicate()
-            parts = out.decode('utf-8').strip().split()
-            if len(parts) >= 2:
-                used_memory_kb = int(float(parts[0]) / 1024)
-                free_memory_kb = int(float(parts[1]) / 1024)
-        except Exception:
-            pass
+    sysfs_dir = '/sys/kernel/mm/hugepages'
+    if os.path.isdir(sysfs_dir):
+        hugepages_kb = 0
+        for entry in os.listdir(sysfs_dir):
+            m = re.match(r'^hugepages-(\d+)kB', entry)
+            if m:
+                h_size = int(m.group(1))
+                try:
+                    with open(os.path.join(sysfs_dir, entry, 'nr_hugepages'), 'r') as f:
+                        h_nr = int(f.read().strip())
+                    hugepages_kb += h_nr * h_size
+                except IOError:
+                    pass
 
     return free_memory_kb, used_memory_kb, caches_kb, hugepages_kb
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-f', action='store_true')
     parser.add_argument('-u', action='store_true')
@@ -147,7 +118,7 @@ def main():
         print("*** WARN level must not be greater than CRITICAL when checking USED memory!")
         usage()
 
-    free_kb, used_kb, caches_kb, hugepages_kb = get_memory_info(args.C, args.v)
+    free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info(args.C, args.v)
 
     if args.v:
         print(f"{free_kb} Free\n{used_kb} Used\n{caches_kb} Cache")
@@ -202,4 +173,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

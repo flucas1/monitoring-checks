@@ -2,10 +2,9 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import subprocess
+import asyncio
 import argparse
 import re
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -47,7 +46,19 @@ def compare(val, op, limit):
     return False
 
 
-def main():
+async def run_command(cmd):
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"Command {' '.join(cmd)} failed with code {proc.returncode}")
+    return stdout.decode().strip()
+
+
+async def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-V", "--version", action="store_true")
     parser.add_argument("-h", "--help", action="store_true")
@@ -129,24 +140,20 @@ NUT status is a combination of the following tags:
         print("you have to specify some value to check")
         sys.exit(ERRORS_UNKNOWN)
 
-    ps_cmd = ["/bin/ps", "h", "-C", "upsd"]
     try:
-        subprocess.run(ps_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
+        await run_command(["/bin/ps", "h", "-C", "upsd"])
+    except RuntimeError:
         print("NUT Daemon maybe DOWN")
         sys.exit(ERRORS_UNKNOWN)
-    except FileNotFoundError:
-        pass
 
-    upsc_cmd = ["/bin/upsc", args.device]
     try:
-        res = subprocess.run(upsc_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True)
-    except Exception as e:
+        res = await run_command(["/bin/upsc", args.device])
+    except RuntimeError as e:
         print(f"can't run '/bin/upsc {args.device}': {e}")
         sys.exit(ERRORS_UNKNOWN)
 
     ups_data = {}
-    for line in res.stdout.splitlines():
+    for line in res.splitlines():
         if ": " in line:
             key, val = line.split(": ", 1)
             ups_data[key] = val
@@ -216,4 +223,4 @@ NUT status is a combination of the following tags:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
