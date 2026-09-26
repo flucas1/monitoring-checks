@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mode", action="store", dest="mode", default="pipeline", help="choose one of: monitoring,pipeline")
+    parser.add_argument("-n", "--namespace", action="store", dest="namespace", default="", help="only check this namespace")
+    args = parser.parse_args(forcedargs)
+
+    fullcheckpath = "/etc/nagios/scripts/check_kubernetes"
+    cmdline = [fullcheckpath, "-m", args.mode, "-n", args.namespace]
+
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        start_new_session=True
+    )
+    stdout, stderr = await process.communicate()
+    exitcode = process.returncode
+
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
