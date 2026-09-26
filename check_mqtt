@@ -80,7 +80,7 @@ DEFAULTS = {
 operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
 status = "OK"
-message = ""
+message = "no issues"
 args = {}
 
 
@@ -253,6 +253,7 @@ async def main(forcedargs=None):
         message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(type(e)) + " " + str(e))
         exitnagios(status, message)
 
+    infomsg("Starting loop")
     rc = 0
     while userdata["have_response"] == False and rc == 0:
         rc = mqttc.loop()
@@ -261,6 +262,8 @@ async def main(forcedargs=None):
             status = timeoutstatus
             break
         await asyncio.sleep(args.sleep)
+    infomsg("Ending loop")
+    infomsg("status: "+str(status))
 
     mqttc.disconnect()
     exitnagios(status, message)

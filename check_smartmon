@@ -51,20 +51,20 @@ def exitnagios(status, message):
 def check_device_permissions(path):
     infomsg("Check if %s does exist and can be read" % path)
     if not os.access(path, os.F_OK):
-        return (2, "CRITICAL: no such device found")
+        return (2, "no such device found")
     elif not os.access(path, os.R_OK):
-        return (2, "CRITICAL: no read permission given")
+        return (2, "no read permission given")
     else:
         return (0, "")
 
 async def call_smartmontools(device):
-    cmdline = ["/usr/sbin/smartctl", "-a", device]
     infomsg("Get device health status: %s" % device)
     result = ""
     message = ""
     code_to_return = "OK"
 
     try:
+        cmdline = ["/usr/sbin/smartctl", "-a", device]
         process = await asyncio.create_subprocess_shell(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -72,45 +72,38 @@ async def call_smartmontools(device):
         )
         stdout, stderr = await process.communicate()
         output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
 
         if exitcode != 0:
-            # Bit 0
             if exitcode & 1:
                 message += "smartctl parsing error "
                 code_to_return = "UNKNOWN"
-            # Bit 1
             if exitcode & 2:
                 message += "could not open device "
                 code_to_return = "CRITICAL"
-            # Bit 2
             if exitcode & 4:
                 result = output
                 message += "some SMART or ATA command to disk failed "
                 code_to_return = "CRITICAL"
-            # Bit 3
             if exitcode & 8:
                 result = output
                 message += "SMART status is DISK FAILING "
                 code_to_return = "CRITICAL"
-            # Bit 4
             if exitcode & 16:
                 result = output
                 message += "prefail attributes found "
                 code_to_return = "CRITICAL"
-            # Bit 5
             if exitcode & 32:
                 result = output
                 message += "some prefail attributes were critical in the past "
-                if code_to_return == "OK": 
+                if code_to_return == "OK":
                     code_to_return = "WARNING"
-            # Bit 6
             if exitcode & 64:
                 result = output
                 message += "errors recorded in error log "
-                if code_to_return == "OK": 
+                if code_to_return == "OK":
                     code_to_return = "WARNING"
-            # Bit 7
             if exitcode & 128:
                 result = output
                 message += "self-test log contains errors "
@@ -180,18 +173,15 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
     performance_status = ""
 
     if health_status == "":
-        return (3, "UNKNOWN: could not parse output", "")
+        return (3, "could not parse output", "")
 
     if health_status not in ["PASSED", "OK"]:
         return_status = 2
-        device_status += "CRITICAL: device does not pass health status "
+        device_status += "device does not pass health status "
 
-    if reallocated_sector_ct > tolerated_reallocated_sector_ct or \
-            reallocated_event_count > tolerated_reallocated_event_count or \
-            current_pending_sector > tolerated_current_pending_sector or \
-            offline_uncorrectable > tolerated_offline_uncorrectable:
+    if reallocated_sector_ct > tolerated_reallocated_sector_ct or reallocated_event_count > tolerated_reallocated_event_count or current_pending_sector > tolerated_current_pending_sector or offline_uncorrectable > tolerated_offline_uncorrectable:
         return_status = 2
-        device_status += "CRITICAL: there is a problem with bad sectors on the drive. "
+        device_status += "There is a problem with bad sectors on the drive, "
         device_status += "Reallocated_Sector_Ct:%d, " % reallocated_sector_ct
         device_status += "Reallocated_Event_Count:%d, " % reallocated_event_count
         device_status += "Current_Pending_Sector:%d, " % current_pending_sector
@@ -199,19 +189,19 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
 
     if temperature > critical_temp:
         return_status = 2
-        device_status += "CRITICAL: device temperature (%d) exceeds critical temperature threshold (%s) " % (temperature, critical_temp)
+        device_status += "device temperature (%d) exceeds critical temperature threshold (%s) " % (temperature, critical_temp)
     elif temperature > warning_temp:
         if return_status < 2:
             return_status = 1
-        device_status += "WARNING: device temperature (%d) exceeds warning temperature threshold (%s) " % (temperature, warning_temp)
+        device_status += "device temperature (%d) exceeds warning temperature threshold (%s) " % (temperature, warning_temp)
 
     if error_count > 0:
         if return_status < 2:
             return_status = 1
-        device_status += "WARNING: error count %d " % error_count
+        device_status += "error count %d " % error_count
 
     if return_status == 0:
-        device_status += "OK: device is functional and stable (temperature: %ddeg) " % temperature
+        device_status += "device is functional and stable (temperature: %ddeg) " % temperature
 
     performance_status += " temp_" + identifier + "=" + str(temperature)
 
@@ -253,9 +243,9 @@ async def process_device(device, args):
 
     infomsg("Call smartctl")
     return_status_str, output, message = await call_smartmontools(device)
-    
+
     return_status = mapstatustoexitcode(return_status_str)
-    
+
     if return_status != 0:
         if dev_exit_status < return_status:
             dev_exit_status = return_status
@@ -272,7 +262,7 @@ async def process_device(device, args):
             args.tolerated_reallocated_event_count,
             args.tolerated_current_pending_sector,
             args.tolerated_offline_uncorrectable)
-        
+
         if dev_exit_status < return_status_parse:
             dev_exit_status = return_status_parse
         dev_return_text += device_status
