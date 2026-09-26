@@ -65,7 +65,7 @@ async def call_smartmontools(device):
 
     try:
         cmdline = ["/usr/sbin/smartctl", "-a", device]
-        process = await asyncio.create_subprocess_shell(
+        process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
@@ -146,10 +146,7 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
             if parts[0] == "5" and parts[1] == "Reallocated_Sector_Ct" and reallocated_sector_ct == 0:
                 reallocated_sector_ct = int(parts[9])
                 infomsg("Reallocated_Sector_Ct: %d" % reallocated_sector_ct)
-            elif parts[0] == "190" and temperature == 0:
-                temperature = int(parts[9])
-                infomsg("Temperature: %d" % temperature)
-            elif parts[0] == "194" and temperature == 0:
+            elif parts[0] in ["190", "194"] and temperature == 0:
                 temperature = int(parts[9])
                 infomsg("Temperature: %d" % temperature)
             elif parts[0] == "196" and reallocated_event_count == 0:
