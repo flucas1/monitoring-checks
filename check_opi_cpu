@@ -54,7 +54,7 @@ async def checkbootstatus(cluster):
 
     cmdline = ["/usr/bin/efivar", "--name=10f41c33-a468-42cd-85ee-7043213f73a3-CpuPerf_CPU" + cluster + "ClusterClockPreset", "-d"]
     infomsg("Running command: " + " ".join(cmdline))
-    
+
     process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,
@@ -78,7 +78,7 @@ async def checkcpuid():
 
     cmdline = ["/usr/bin/lscpu"]
     infomsg("Running command: " + " ".join(cmdline))
-    
+
     process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,

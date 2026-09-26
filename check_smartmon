@@ -48,6 +48,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 def check_device_permissions(path):
     infomsg("Check if %s does exist and can be read" % path)
     if not os.access(path, os.F_OK):
@@ -56,6 +57,7 @@ def check_device_permissions(path):
         return (2, "no read permission given")
     else:
         return (0, "")
+
 
 async def call_smartmontools(device):
     infomsg("Get device health status: %s" % device)

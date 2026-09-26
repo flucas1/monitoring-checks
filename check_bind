@@ -11,12 +11,14 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 TIMEOUT = 20
 
+
 def print_usage():
     print("\ncheck_bind.py Revision 0.1 - Check Bind9 Statistics(new format)\n")
     print("Usage: check_bind.py [-H | --hostaddress ] [-p | --port ]\n")
     print("    -h  Show this page")
     print("    -H  Host address\n")
     sys.exit(0)
+
 
 if len(sys.argv) < 2:
     print_usage()

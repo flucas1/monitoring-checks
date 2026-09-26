@@ -270,7 +270,7 @@ async def main(forcedargs=None):
             break
         await asyncio.sleep(args.sleep)
     infomsg("Ending loop")
-    infomsg("status: "+str(status))
+    infomsg("status: " + str(status))
 
     mqttc.disconnect()
     exitnagios(status, message)

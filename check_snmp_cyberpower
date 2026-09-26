@@ -158,9 +158,9 @@ async def main(forcedargs=None):
         final_status_code = max(statuses)
         status_map = {0: "OK", 1: "WARNING", 2: "CRITICAL"}
         final_status = status_map.get(final_status_code, "UNKNOWN")
-        
+
         full_message = " - ".join(output_messages) + " | " + " ".join(performance_data)
-        
+
         # Utilize exitnagios instead of sys.exit()
         exitnagios(final_status, full_message)
 
