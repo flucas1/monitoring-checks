@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import argparse
 import asyncio
 
@@ -30,7 +31,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug() is True:
         print(msg, flush=True)
 
 
@@ -57,7 +58,7 @@ def exitnagios(status, message):
 
 
 async def generatedriver(proxy):
-    chrome_options = Options()
+    chrome_options = selenium.webdriver.chrome.options.Options()
     # chrome_options.add_argument("--incognito")
     # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
@@ -75,9 +76,9 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         chrome_options.add_argument("--proxy-server=" + proxy)
 
-    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
-    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
@@ -90,11 +91,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    timestamp = time.time()
     while True:
-        if check_page_loaded(driver):
+        if check_page_loaded(driver) is True:
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.time() - timestamp > 20:
             break
         await asyncio.sleep(1)
 
@@ -105,8 +106,8 @@ async def dowebgl(proxy):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://browserleaks.com/webgl"
@@ -116,11 +117,11 @@ async def dowebgl(proxy):
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
 
-        element = driver.find_element(By.ID, "gl1-status")
+        element = driver.find_element(selenium.webdriver.common.by.By.ID, "gl1-status")
         text = element.get_attribute("innerText")
         infomsg(text)
 
-        element = driver.find_element(By.ID, "gl2-status")
+        element = driver.find_element(selenium.webdriver.common.by.By.ID, "gl2-status")
         text = element.get_attribute("innerText")
         infomsg(text)
 
