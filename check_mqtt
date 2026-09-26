@@ -1,0 +1,274 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import paho.mqtt.client
+import jsonpath_rw
+import json
+import ssl
+import time
+import sys
+import os
+import argparse
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+DEFAULTS = {
+    "mqtt_host": "localhost",
+    "mqtt_port": 1883,
+    "mqtt_username": None,
+    "mqtt_password": None,
+    "max_wait": 4,
+    "keepalive": 60,
+    "sleep": 0.1,
+    "mqtt_cafile": None,
+    "mqtt_certfile": None,
+    "mqtt_keyfile": None,
+    "mqtt_insecure": False,
+    "check_topic": "nagios/test",
+    "check_subscription": None,
+    "mqtt_readonly": False,
+    "mqtt_payload": "PiNG",
+    "mqtt_jsonpath": None,
+    "mqtt_value": "PiNG",
+    "mqtt_operator": "equal",
+    "warning": None,
+    "critical": None,
+    "short_output": False,
+}
+
+operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
+
+status = "OK"
+message = ""
+args = {}
+
+
+def on_connect(mosq, userdata, flags, reason_code, properties):
+    global args
+
+    mosq.subscribe(args.check_subscription, 0)
+    mosq.loop()
+
+
+def on_publish(mosq, userdata, mid, reason_code, properties):
+    pass
+
+
+def on_subscribe(mosq, userdata, mid, reason_code_list, properties):
+    global args
+
+    if not args.mqtt_readonly:
+        (res, mid) = mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
+        mosq.loop()
+
+
+def on_message(mosq, userdata, msg):
+    global args
+    global message
+    global status
+
+    try:
+        temppayload = msg.payload.decode("utf-8")
+        jspayload = json.loads(temppayload)
+        jspath = jsonpath_rw.parse(args.mqtt_jsonpath)
+        extractpayload = [match.value for match in jspath.find(jspayload)]
+        payload = extractpayload[0]
+    except Exception:
+        payload = None
+
+    elapsed = (time.time() - userdata["start_time"])
+    userdata["have_response"] = True
+
+    if args.short_output:
+        message = "value=%s | response_time=%.2f value=%s" % (str(payload), elapsed, str(payload))
+    else:
+        message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
+
+    if args.critical is not None or args.warning is not None:
+        status = "OK"
+        if args.critical is not None:
+            try:
+                if eval(args.critical):
+                    status = "CRITICAL"
+            except Exception:
+                status = "CRITICAL"
+                message = "critical expression error '{}'".format(args.critical)
+        if status == "OK" and args.warning is not None:
+            try:
+                if eval(args.warning):
+                    status = "WARNING"
+            except Exception:
+                status = "CRITICAL"
+                message = "warning expression error '{}'".format(args.warning)
+    else:
+        status = "CRITICAL"
+        try:
+            if (args.mqtt_operator == "lt" or args.mqtt_operator == "lessthan") and float(payload) < float(args.mqtt_value):
+                status = "OK"
+            if (args.mqtt_operator == "gt" or args.mqtt_operator == "greaterthan") and float(payload) > float(args.mqtt_value):
+                status = "OK"
+            if (args.mqtt_operator == "eq" or args.mqtt_operator == "equal") and str(payload) == args.mqtt_value:
+                status = "OK"
+            if (args.mqtt_operator == "ct" or args.mqtt_operator == "contains") and str(payload).find(args.mqtt_value) != -1:
+                status = "OK"
+            if (args.mqtt_operator == "any") and payload:
+                status = "OK"
+        except Exception:
+            status = "CRITICAL"
+
+
+def on_log(mosq, userdata, level, buf):
+    print(buf, file=sys.stderr)
+
+
+def on_disconnect(mosq, userdata, disconnect_flags, reason_code, properties):
+    if reason_code != 0:
+        exitnagios("UNKNOWN", "Unexpected disconnection. Incorrect credentials?")
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    global args
+    global message
+    global status
+
+    parser = argparse.ArgumentParser(description="Nagios/Icinga plugin for checking connectivity or status of MQTT clients on an MQTT broker.",
+                                     epilog="There are no required arguments, defaults are displayed using --help. If --warning and/or --critical is used then possible given --operator and --value arguments are ignored.")
+
+    parser.add_argument("-H", "--host", metavar="<hostname>", help="mqtt host to connect to (default: {})".format(DEFAULTS["mqtt_host"]), dest="mqtt_host", default=DEFAULTS["mqtt_host"])
+    parser.add_argument("-P", "--port", metavar="<port>", help="network port to connect to (default: {})".format(DEFAULTS["mqtt_port"]), dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
+
+    parser.add_argument("-u", "--username", metavar="<username>", help="MQTT username (default: {})".format(DEFAULTS["mqtt_username"]), dest="mqtt_username", default=DEFAULTS["mqtt_username"])
+    parser.add_argument("-p", "--password", metavar="<password>", help="MQTT password (default: {})".format(DEFAULTS["mqtt_password"]), dest="mqtt_password", default=DEFAULTS["mqtt_password"])
+
+    parser.add_argument("-m", "--max-wait", metavar="<seconds>", help="maximum time to wait for the check (default: {} seconds)".format(DEFAULTS["max_wait"]), dest="max_wait", default=DEFAULTS["max_wait"], type=int)
+    parser.add_argument("-e", "--keepalive", metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: {} seconds)".format(DEFAULTS["keepalive"]), dest="keepalive", default=DEFAULTS["keepalive"], type=int)
+    parser.add_argument("--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS["sleep"]), dest="sleep", default=DEFAULTS["sleep"], type=float)
+
+    parser.add_argument("-a", "--cafile", metavar="<cafile>", help="cafile (default: {})".format(DEFAULTS["mqtt_cafile"]), dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
+    parser.add_argument("-C", "--certfile", metavar="<certfile>", help="certfile (default: {})".format(DEFAULTS["mqtt_certfile"]), dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
+    parser.add_argument("-k", "--keyfile", metavar="<keyfile>", help="keyfile (default: {})".format(DEFAULTS["mqtt_keyfile"]), dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
+    parser.add_argument("-n", "--insecure", help="suppress TLS verification of server hostname{}".format(" (default)" if DEFAULTS["mqtt_insecure"] else ""), dest="mqtt_insecure", default=DEFAULTS["mqtt_insecure"], action="store_true")
+
+    parser.add_argument("-i", "--topic", metavar="<topic>", help="topic to use for the active check (default: {})".format(DEFAULTS["check_topic"]), dest="check_topic", default=DEFAULTS["check_topic"])
+    parser.add_argument("-s", "--subscription", metavar="<subscription>", help="topic to use for the passive check (default: {})".format(DEFAULTS["check_subscription"]), dest="check_subscription", default=DEFAULTS["check_subscription"])
+    parser.add_argument("-r", "--readonly", help="just read the value of the topic{}".format(" (default)" if DEFAULTS["mqtt_readonly"] else ""), dest="mqtt_readonly", default=DEFAULTS["mqtt_readonly"], action="store_true")
+    parser.add_argument("-l", "--payload", metavar="<payload>", help="payload which will be PUBLISHed (default: {}). If it starts with an exclamation mark (!) the output of the command will be used".format(DEFAULTS["mqtt_payload"]), dest="mqtt_payload", default=DEFAULTS["mqtt_payload"])
+    parser.add_argument("-j", "--jsonpath", metavar="<jsonpath>", help="if given, payload is interpreted as JSON string and value is extracted using <jsonpath> (default: {})".format(DEFAULTS["mqtt_jsonpath"]), dest="mqtt_jsonpath", default=DEFAULTS["mqtt_jsonpath"])
+    parser.add_argument("-v", "--value", metavar="<value>", help="value to compare against received payload (default: {}). If it starts with an exclamation mark (!) the output of the command will be used".format(DEFAULTS["mqtt_value"]), dest="mqtt_value", default=DEFAULTS["mqtt_value"])
+    parser.add_argument("-o", "--operator", metavar="<operator>", help="operator to compare received value with value. Choose from {} (default: {}). 'eq' compares Strings, the other convert the arguments to float before compare".format(operators, DEFAULTS["mqtt_operator"]), dest="mqtt_operator", default=DEFAULTS["mqtt_operator"], choices=operators)
+    parser.add_argument("-w", "--warning", metavar="<expr>", help="Exit with WARNING status if <expr> is true (default: {}). <expr> can be any Python expression, use <payload> within expression for current payload value.".format(DEFAULTS["warning"]), dest="warning", default=DEFAULTS["warning"])
+    parser.add_argument("-c", "--critical", metavar="<expr>", help="Exit with CRITICAL status if <expr> is true (default: {}). <expr> can be any Python expression, use <payload> within expression for current payload value.".format(DEFAULTS["critical"]), dest="critical", default=DEFAULTS["critical"])
+    parser.add_argument("-S", "--short", help="use a shorter string on output{}".format(" (default)" if DEFAULTS["short_output"] else ""), dest="short_output", default=DEFAULTS["short_output"], action="store_true")
+    parser.add_argument("-t", "--timeout", action="store", default="10:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    timeoutparts = args.timeout.split(":")
+    timeoutvalue = int(timeoutparts[0])
+    timeoutstatus = "CRITICAL"
+    if len(timeoutparts) > 1:
+        timeoutstatus = timeoutparts[1]
+
+    if args.check_subscription is None:
+        args.check_subscription = args.check_topic
+
+    userdata = {
+        "have_response": False,
+        "start_time": time.time(),
+    }
+    mqttc = paho.Client(paho.CallbackAPIVersion.VERSION2, "nagios-%d" % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+    mqttc.on_message = on_message
+    mqttc.on_connect = on_connect
+    mqttc.on_disconnect = on_disconnect
+    mqttc.on_publish = on_publish
+    mqttc.on_subscribe = on_subscribe
+
+    if args.debug:
+        mqttc.on_log = on_log
+
+    if args.mqtt_cafile is not None:
+        if args.mqtt_certfile is not None:
+            mqttc.tls_set(args.mqtt_cafile, certfile=args.mqtt_certfile, keyfile=args.mqtt_keyfile, cert_reqs=ssl.CERT_REQUIRED)
+        else:
+            mqttc.tls_set(args.mqtt_cafile, cert_reqs=ssl.CERT_REQUIRED)
+        mqttc.tls_insecure_set(args.mqtt_insecure)
+
+    if args.mqtt_username is not None:
+        mqttc.username_pw_set(args.mqtt_username, args.mqtt_password)
+
+    try:
+        mqttc.connect(args.mqtt_host, args.mqtt_port, args.keepalive)
+    except TimeoutError as e:
+        status = timeoutstatus
+        message = "Connection to %s:%d timed out: %s" % (args.mqtt_host, args.mqtt_port, str(type(e)) + " " + str(e))
+        exitnagios(status, message)
+    except Exception as e:
+        status = "CRITICAL"
+        message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(type(e)) + " " + str(e))
+        exitnagios(status, message)
+
+    rc = 0
+    while userdata["have_response"] == False and rc == 0:
+        rc = mqttc.loop()
+        if time.time() - userdata["start_time"] > args.max_wait:
+            message = "timeout waiting for message"
+            status = timeoutstatus
+            break
+        await asyncio.sleep(args.sleep)
+
+    mqttc.disconnect()
+    exitnagios(status, message)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
