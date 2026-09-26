@@ -143,19 +143,22 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
 
         parts = line.split()
         if len(parts) > 0:
-            if parts[0] in ["5"] and parts[1] == "Reallocated_Sector_Ct" and reallocated_sector_ct == 0:
+            if parts[0] == "5" and parts[1] == "Reallocated_Sector_Ct" and reallocated_sector_ct == 0:
                 reallocated_sector_ct = int(parts[9])
                 infomsg("Reallocated_Sector_Ct: %d" % reallocated_sector_ct)
-            elif parts[0] in ["190", "194"] and temperature == 0:
+            elif parts[0] == "190" and temperature == 0:
                 temperature = int(parts[9])
                 infomsg("Temperature: %d" % temperature)
-            elif parts[0] in ["196"] and reallocated_event_count == 0:
+            elif parts[0] == "194" and temperature == 0:
+                temperature = int(parts[9])
+                infomsg("Temperature: %d" % temperature)
+            elif parts[0] == "196" and reallocated_event_count == 0:
                 reallocated_event_count = int(parts[9])
                 infomsg("Reallocated_Event_Count: %d" % reallocated_event_count)
-            elif parts[0] in ["197"] and current_pending_sector == 0:
+            elif parts[0] == "197" and current_pending_sector == 0:
                 current_pending_sector = int(parts[9])
                 infomsg("Current_Pending_Sector: %d" % current_pending_sector)
-            elif parts[0] in ["198"] and offline_uncorrectable == 0:
+            elif parts[0] == "198" and offline_uncorrectable == 0:
                 offline_uncorrectable = int(parts[9])
                 infomsg("Offline_Uncorrectable: %d" % offline_uncorrectable)
             elif "ATA Error Count" in line:
