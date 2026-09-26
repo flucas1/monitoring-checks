@@ -7,11 +7,16 @@ import re
 import sys
 import signal
 import urllib3
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 OK = 0
 WARNING = 1
 CRITICAL = 2
 UNKNOWN = 3
+
 
 def check_threshold(value, warn, crit):
     status = OK
@@ -27,9 +32,11 @@ def check_threshold(value, warn, crit):
         pass
     return status
 
+
 def timeout_handler(signum, frame):
     print("UNKNOWN - plugin timed out")
     sys.exit(UNKNOWN)
+
 
 def main():
     parser = argparse.ArgumentParser(add_help=False)
@@ -62,10 +69,10 @@ def main():
         sys.exit(UNKNOWN)
 
     auth = (args.username, args.password) if args.username and args.password else None
-    
+
     proto = 'https://' if args.ssl else 'http://'
     port_str = f":{args.port}" if args.port else ""
-    
+
     url = f"{proto}{args.hostname}{port_str}{args.uri}"
     if '?' not in url:
         url += "?auto"
@@ -142,6 +149,7 @@ def main():
 
     print(f"{status_str} - {output} | {perf_string}")
     sys.exit(overall_status)
+
 
 if __name__ == '__main__':
     main()

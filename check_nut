@@ -5,11 +5,16 @@ import sys
 import subprocess
 import argparse
 import re
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 ERRORS_OK = 0
 ERRORS_WARNING = 1
 ERRORS_CRITICAL = 2
 ERRORS_UNKNOWN = 3
+
 
 def compare(val, op, limit):
     try:
@@ -41,6 +46,7 @@ def compare(val, op, limit):
         return not bool(re.search(str(limit), str(val)))
     return False
 
+
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-V", "--version", action="store_true")
@@ -48,13 +54,13 @@ def main():
     parser.add_argument("-d", "--device", type=str)
     parser.add_argument("-D", "--debug", action="store_true")
     parser.add_argument("-v", "--value", action="append", default=[])
-    
+
     args = parser.parse_args()
-    
+
     if args.version:
         print("check_nut_plus 1.6")
         sys.exit(ERRORS_OK)
-        
+
     if args.help:
         help_text = """check_nut_plus 1.6
 Copyright (c) 2013 Chris Recktenwald for LiHAS http://lihas.de
@@ -105,24 +111,24 @@ NUT status is a combination of the following tags:
     FSD and SD - Forced Shutdown"""
         print(help_text)
         sys.exit(ERRORS_OK)
-        
+
     if not args.device:
         print("Device not specified")
         sys.exit(ERRORS_UNKNOWN)
-        
+
     if args.debug:
         print("DEBUG")
-        
+
     limits = {}
     for v in args.value:
         if "=" in v:
             key, val = v.split("=", 1)
             limits[key] = val
-            
+
     if not limits:
         print("you have to specify some value to check")
         sys.exit(ERRORS_UNKNOWN)
-        
+
     ps_cmd = ["/bin/ps", "h", "-C", "upsd"]
     try:
         subprocess.run(ps_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -131,33 +137,33 @@ NUT status is a combination of the following tags:
         sys.exit(ERRORS_UNKNOWN)
     except FileNotFoundError:
         pass
-        
+
     upsc_cmd = ["/bin/upsc", args.device]
     try:
         res = subprocess.run(upsc_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True)
     except Exception as e:
         print(f"can't run '/bin/upsc {args.device}': {e}")
         sys.exit(ERRORS_UNKNOWN)
-        
+
     ups_data = {}
     for line in res.stdout.splitlines():
         if ": " in line:
             key, val = line.split(": ", 1)
             ups_data[key] = val
-            
+
     alarmlevel = ERRORS_OK
     critmesg = []
     warnmesg = []
     okmesg = []
-    
+
     for key, limstring in limits.items():
         if key not in ups_data:
             print(f"key '{key}' is not defined in output from /bin/upsc")
             sys.exit(ERRORS_UNKNOWN)
-            
+
         kvtriples = limstring.split(":")
         cmp_dict = {"c": [], "w": []}
-        
+
         for kvtriple in kvtriples:
             match = re.match(r"^(c|w)(>=|>|==|=|<>|<=|<|!=|!~|~)(.*?)$", kvtriple)
             if match:
@@ -168,7 +174,7 @@ NUT status is a combination of the following tags:
             else:
                 print(f"ERROR: '{kvtriple}' is invalid")
                 sys.exit(ERRORS_UNKNOWN)
-                
+
         if cmp_dict["c"]:
             cnthits = 0
             for comparison in cmp_dict["c"]:
@@ -184,7 +190,7 @@ NUT status is a combination of the following tags:
                     cnthits += 1
             if cnthits:
                 continue
-                
+
         if cmp_dict["w"]:
             cnthits = 0
             for comparison in cmp_dict["w"]:
@@ -198,15 +204,16 @@ NUT status is a combination of the following tags:
                     cnthits += 1
             if cnthits:
                 continue
-                
+
         if args.debug:
             print(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
         okmesg.append(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
-        
+
     for m in critmesg + warnmesg + okmesg:
         print(m)
-        
+
     sys.exit(alarmlevel)
+
 
 if __name__ == "__main__":
     main()

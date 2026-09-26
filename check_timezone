@@ -8,12 +8,18 @@ import time
 import filecmp
 import signal
 import re
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 LOCALTIME_FILE = "/etc/localtime"
 ZONEINFO_DIR = "/usr/share/zoneinfo"
 
+
 def is_path_qualified(path):
     return path.startswith('./') or path.startswith('/')
+
 
 def is_filename(filename):
     if not filename or not filename.strip() or filename.endswith('/'):
@@ -24,6 +30,7 @@ def is_filename(filename):
     if match:
         return match.group(1)
     return None
+
 
 def validate_filename(filename, name="filename", noquit=False):
     if not filename or not filename.strip():
@@ -36,9 +43,11 @@ def validate_filename(filename, name="filename", noquit=False):
         return None
     return filename2
 
+
 def timeout_handler(signum, frame):
     print("UNKNOWN self timed out after 10 seconds")
     sys.exit(3)
+
 
 def main():
     parser = argparse.ArgumentParser(add_help=False)
@@ -103,6 +112,7 @@ def main():
 
     print(f"UNKNOWN {msg}")
     sys.exit(3)
+
 
 if __name__ == '__main__':
     main()

@@ -5,6 +5,10 @@ import sys
 import subprocess
 import argparse
 import ntplib
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 def usage():
     print(" check_ntp_time.py <-H ntpserver> <-w warnlevel> <-c critlevel>\n")
@@ -14,13 +18,14 @@ def usage():
     print(" -c seconds     Difference in seconds from the ntpserver clock and the server clock which the plugin will emit a critical alarm - Default = 300 seconds (above or below)\n")
     sys.exit(0)
 
+
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-h', action='store_true')
     parser.add_argument('-H', dest='ntpserver', default="172.16.4.253")
     parser.add_argument('-w', dest='warnlevel', type=float, default=150.0)
     parser.add_argument('-c', dest='critlevel', type=float, default=300.0)
-    
+
     args = parser.parse_args()
 
     if args.h:
@@ -43,7 +48,7 @@ def main():
     ntpserver = args.ntpserver
 
     ping_cmd = f'ping {ntpserver} -n 1 -m 2 | grep "packet loss" | awk \'{{print $7}}\' | tr -d \'%\''
-    
+
     try:
         hostalive_output = subprocess.check_output(ping_cmd, shell=True, text=True, stderr=subprocess.STDOUT).strip()
         hostalive = float(hostalive_output) if hostalive_output else 100.0
@@ -72,7 +77,7 @@ def main():
         else:
             print(f"OK: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningpos:.6f};{criticalpos:.6f};")
             sys.exit(0)
-    
+
     if offset <= criticalneg:
         print(f"CRITICAL: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningneg:.6f};{criticalneg:.6f};")
         sys.exit(2)
@@ -82,6 +87,7 @@ def main():
     else:
         print(f"OK: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningneg:.6f};{criticalneg:.6f};")
         sys.exit(0)
+
 
 if __name__ == '__main__':
     main()

@@ -6,6 +6,10 @@ import os
 import re
 import subprocess
 import sys
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 EXIT_CODES = {
     'OK': 0,
@@ -14,15 +18,18 @@ EXIT_CODES = {
     'UNKNOWN': 3
 }
 
+
 def finish(msg, state):
     print(msg)
     sys.exit(state)
+
 
 def usage():
     print("options:\n -f           Check FREE memory\n -u           Check USED memory")
     print(" -C           Count OS caches as FREE memory\n -h           Remove hugepages from the total memory count")
     print(" -w PERCENT   Percent free/used when to warn\n -c PERCENT   Percent free/used when critical\n")
     sys.exit(0)
+
 
 def get_memory_info(opt_C, opt_v):
     used_memory_kb = 0
@@ -110,6 +117,7 @@ def get_memory_info(opt_C, opt_v):
 
     return free_memory_kb, used_memory_kb, caches_kb, hugepages_kb
 
+
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-f', action='store_true')
@@ -191,6 +199,7 @@ def main():
             finish(f"WARNING - {percent:.1f}% ({used_kb} kB) used!{perfdata}", EXIT_CODES['WARNING'])
         else:
             finish(f"OK - {percent:.1f}% ({used_kb} kB) used.{perfdata}", EXIT_CODES['OK'])
+
 
 if __name__ == '__main__':
     main()
