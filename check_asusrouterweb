@@ -282,6 +282,9 @@ async def get_client_info(url, headers, clientid):
         else:
             return None
 
+# -------------------------------------------------------------------------------
+
+
 async def doasusroutercall(host, username, password, timeoutvalue):
     try:
         url = 'http://{}/appGet.cgi'.format(host)
@@ -291,6 +294,7 @@ async def doasusroutercall(host, username, password, timeoutvalue):
         exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")
 
     return url, headers
+
 
 def check_status(value, warn_low, warn_high, crit_low, crit_high):
     if ((crit_low != None) and (crit_high != None)) and ((value < crit_low) or (value > crit_high)):
@@ -426,6 +430,7 @@ async def main(forcedargs=None):
     exitnagios("CRITICAL", "unexpected case")
 
 # -------------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     asyncio.run(main())
