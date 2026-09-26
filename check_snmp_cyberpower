@@ -60,10 +60,10 @@ async def snmp_get(oid, host, community):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode != 0:
-            raise Exception(f"CRITICAL: Unable to retrieve SNMP data: {errors}")
+            raise Exception(f"Unable to retrieve SNMP data: {errors}")
         return output.split("=", 1)[1].strip().split(":", 1)[-1].strip()
     except Exception as e:
-        raise Exception(f"CRITICAL: Unable to retrieve SNMP data: {e}")
+        raise Exception(f"Unable to retrieve SNMP data: {e}")
 
 
 async def check_input_voltage(oids, host, community, inlow, inhigh):
@@ -71,11 +71,11 @@ async def check_input_voltage(oids, host, community, inlow, inhigh):
     rawvalue = await snmp_get(oids["MIBinVolts"], host, community)
     input_voltage = int(rawvalue) / 10
     if input_voltage < inlow:
-        return 1, f"WARNING: Input voltage {input_voltage}V is below {inlow}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 1, f"Input voltage {input_voltage}V is below {inlow}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
     elif input_voltage > inhigh:
-        return 1, f"WARNING: Input voltage {input_voltage}V is above {inhigh}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 1, f"Input voltage {input_voltage}V is above {inhigh}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
     else:
-        return 0, f"OK: Input voltage is {input_voltage}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 0, f"Input voltage is {input_voltage}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
 
 
 async def check_load_percentage(oids, host, community, warnload, critload):
@@ -83,11 +83,11 @@ async def check_load_percentage(oids, host, community, warnload, critload):
     rawvalue = await snmp_get(oids["MIBoutLoad"], host, community)
     load = int(rawvalue)
     if load > critload:
-        return 2, f"CRITICAL: Load is {load}% which exceeds {critload}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 2, f"Load is {load}% which exceeds {critload}%.", f"load={load}%;{warnload};{critload};0;100"
     elif load > warnload:
-        return 1, f"WARNING: Load is {load}% which exceeds {warnload}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 1, f"Load is {load}% which exceeds {warnload}%.", f"load={load}%;{warnload};{critload};0;100"
     else:
-        return 0, f"OK: Load is {load}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 0, f"Load is {load}%.", f"load={load}%;{warnload};{critload};0;100"
 
 
 async def check_runtime(oids, host, community, warnrun, critrun):
@@ -96,11 +96,11 @@ async def check_runtime(oids, host, community, warnrun, critrun):
     rawticks = rawvalue.split()[0].replace("(", "").replace(")", "")
     runtime = int(rawticks) // 6000
     if runtime < critrun:
-        return 2, f"CRITICAL: Runtime is {runtime} minutes which is below {critrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 2, f"Runtime is {runtime} minutes which is below {critrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
     elif runtime < warnrun:
-        return 1, f"WARNING: Runtime is {runtime} minutes which is below {warnrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 1, f"Runtime is {runtime} minutes which is below {warnrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
     else:
-        return 0, f"OK: Runtime is {runtime} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 0, f"Runtime is {runtime} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
 
 # -------------------------------------------------------------------------------
 
@@ -154,14 +154,19 @@ async def main(forcedargs=None):
         output_messages.append(message)
         performance_data.append(perf_data)
 
-        # Determine final status
-        final_status = max(statuses)
-        print(" ".join(output_messages) + " | " + " ".join(performance_data))
-        sys.exit(final_status)
+        # Determine final status code and map to string for exitnagios
+        final_status_code = max(statuses)
+        status_map = {0: "OK", 1: "WARNING", 2: "CRITICAL"}
+        final_status = status_map.get(final_status_code, "UNKNOWN")
+        
+        full_message = " - ".join(output_messages) + " | " + " ".join(performance_data)
+        
+        # Utilize exitnagios instead of sys.exit()
+        exitnagios(final_status, full_message)
 
     except Exception as e:
-        print(e)
-        sys.exit(2)
+        exit_msg = str(e).replace("CRITICAL: ", "").strip()
+        exitnagios("CRITICAL", exit_msg)
 
 # -------------------------------------------------------------------------------
 
