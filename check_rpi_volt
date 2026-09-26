@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+# -------------------------------------------------------------------------------
+
+import asyncio
+import sys
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+async def main(forcedargs=None):
+    # https://retropie.org.uk/forum/topic/2295/runcommand-warning-if-voltage-temperature-throttling
+
+    try:
+        cmdline = ['/usr/bin/vcgencmd', 'get_throttled']
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
+        value = output.split('=')[1]
+        status = int(value, 16)
+    except (subprocess.CalledProcessError, IndexError, ValueError):
+        exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status")
+
+    if (status & 0x1) != 0:
+        exitnagios("CRITICAL", "currently undervolted")
+    elif (status & 0x10000) != 0:
+        exitnagios("WARNING", "has undervolted")
+    else:
+        exitnagios("OK", "no issues")
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
