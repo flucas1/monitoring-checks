@@ -3,7 +3,11 @@
 
 import sys
 import urllib.request
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree
+import asyncio
+
+# -------------------------------------------------------------------------------
+
 
 STATE_OK = 0
 STATE_WARNING = 1
@@ -62,7 +66,7 @@ if not xml_data:
     sys.exit(STATE_UNKNOWN)
 
 try:
-    root = ET.fromstring(xml_data)
+    root = xml.etree.ElementTree.fromstring(xml_data)
 except Exception:
     print("Stats collection failed")
     sys.exit(STATE_UNKNOWN)
