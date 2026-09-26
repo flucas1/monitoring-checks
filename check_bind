@@ -98,17 +98,17 @@ async def main(forcedargs=None):
 
     queries = []
     for elem in root.findall(".//*[@type='qtype']"):
-        if 'name' in elem.attrib and elem.text is not None:
+        if "name" in elem.attrib and elem.text is not None:
             queries.append(f"query_{elem.attrib['name']}={elem.text}c")
 
     out_queries = []
     for elem in root.findall(".//*[@type='resqtype']"):
-        if 'name' in elem.attrib and elem.text is not None:
+        if "name" in elem.attrib and elem.text is not None:
             out_queries.append(f"query-out_{elem.attrib['name']}={elem.text}c")
 
     rtt = {"10": "", "100": "", "500": "", "800": "", "1600": "", "1600+": ""}
     for elem in root.findall(".//*[@name]"):
-        name = elem.attrib['name']
+        name = elem.attrib["name"]
         if name.startswith("QryRTT") and name[6:] in rtt:
             rtt[name[6:]] = elem.text if elem.text is not None else ""
 
