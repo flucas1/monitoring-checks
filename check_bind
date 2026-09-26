@@ -48,6 +48,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def fetch_data(url, timeout):
     try:
         async with aiohttp.ClientSession() as session:
