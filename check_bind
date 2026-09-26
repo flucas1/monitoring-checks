@@ -17,10 +17,6 @@ def print_usage():
     print("    -h  Show this page")
     print("    -H  Host address\n")
 
-def print_help():
-    print_usage()
-    print("\nRevision 0.1 bjorn@frostberg.net\n\n")
-    sys.exit(0)
 
 if len(sys.argv) < 2:
     print_usage()
@@ -33,8 +29,8 @@ hostport = None
 while args:
     arg = args.pop(0)
     if arg in ('-h', '--help'):
-        print_help()
-        sys.exit(STATE_OK)
+        print_usage()
+        sys.exit(STATE_UNKNOWN)
     elif arg in ('-H', '--hostaddress'):
         if args:
             hostaddress = args.pop(0)
