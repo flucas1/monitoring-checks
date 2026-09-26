@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+
+import argparse
+import asyncio
+import sys
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def snmp_get(oid, host, community):
+    """Perform an SNMP GET operation using the snmpget command asynchronously."""
+    try:
+        cmdline = ["snmpget", "-v2c", "-c", community, host, oid]
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
+        if exitcode != 0:
+            raise Exception(f"CRITICAL: Unable to retrieve SNMP data: {errors}")
+        return output.split("=", 1)[1].strip().split(":", 1)[-1].strip()
+    except Exception as e:
+        raise Exception(f"CRITICAL: Unable to retrieve SNMP data: {e}")
+
+
+def check_input_voltage(oids, host, community, inlow, inhigh):
+    """Check and return the input voltage status and performance data."""
+    rawvalue = snmp_get(oids["MIBinVolts"], host, community)
+    input_voltage = int(rawvalue) / 10
+    if input_voltage < inlow:
+        return 1, f"WARNING: Input voltage {input_voltage}V is below {inlow}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+    elif input_voltage > inhigh:
+        return 1, f"WARNING: Input voltage {input_voltage}V is above {inhigh}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+    else:
+        return 0, f"OK: Input voltage is {input_voltage}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+
+
+def check_load_percentage(oids, host, community, warnload, critload):
+    """Check and return the load percentage status and performance data."""
+    rawvalue = snmp_get(oids["MIBoutLoad"], host, community)
+    load = int(rawvalue)
+    if load > critload:
+        return 2, f"CRITICAL: Load is {load}% which exceeds {critload}%.", f"load={load}%;{warnload};{critload};0;100"
+    elif load > warnload:
+        return 1, f"WARNING: Load is {load}% which exceeds {warnload}%.", f"load={load}%;{warnload};{critload};0;100"
+    else:
+        return 0, f"OK: Load is {load}%.", f"load={load}%;{warnload};{critload};0;100"
+
+
+def check_runtime(oids, host, community, warnrun, critrun):
+    """Check and return the runtime status and performance data."""
+    rawvalue = snmp_get(oids["MIBrunTime"], host, community)
+    rawticks = rawvalue.split()[0].replace("(", "").replace(")", "")
+    runtime = int(rawticks) // 6000
+    if runtime < critrun:
+        return 2, f"CRITICAL: Runtime is {runtime} minutes which is below {critrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+    elif runtime < warnrun:
+        return 1, f"WARNING: Runtime is {runtime} minutes which is below {warnrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+    else:
+        return 0, f"OK: Runtime is {runtime} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--host", required=True, help="Hostname or IP of the UPS.")
+    parser.add_argument("-C", "--community", default="public", help="SNMP community string.")
+    parser.add_argument("-i", "--inlow", type=int, default=205, help="Warning threshold for low input voltage.")
+    parser.add_argument("-I", "--inhigh", type=int, default=240, help="Warning threshold for high input voltage.")
+    parser.add_argument("-l", "--warnload", type=int, default=70, help="Warning threshold for load percentage.")
+    parser.add_argument("-L", "--critload", type=int, default=80, help="Critical threshold for load percentage.")
+    parser.add_argument("-r", "--warnrun", type=int, default=10, help="Warning threshold for runtime in minutes.")
+    parser.add_argument("-R", "--critrun", type=int, default=8, help="Critical threshold for runtime in minutes.")
+
+    args = parser.parse_args(forcedargs)
+
+    # OIDs for CyberPower UPS
+    oids = {
+        "sysName": "1.3.6.1.2.1.1.5.0",
+        "MIBmodel": "1.3.6.1.4.1.3808.1.1.1.1.1.1.0",
+        "MIBinVolts": "1.3.6.1.4.1.3808.1.1.1.3.2.1.0",
+        "MIBoutLoad": "1.3.6.1.4.1.3808.1.1.1.4.2.3.0",
+        "MIBrunTime": "1.3.6.1.4.1.3808.1.1.1.2.2.4.0",
+    }
+
+    output_messages = []
+    performance_data = []
+    statuses = []
+
+    try:
+        # Get UPS details
+        sys_name = await snmp_get(oids["sysName"], args.host, args.community)
+        model = await snmp_get(oids["MIBmodel"], args.host, args.community)
+
+        # Check input voltage
+        status, message, perf_data = check_input_voltage(oids, args.host, args.community, args.inlow, args.inhigh)
+        statuses.append(status)
+        output_messages.append(message)
+        performance_data.append(perf_data)
+
+        # Check load percentage
+        status, message, perf_data = check_load_percentage(oids, args.host, args.community, args.warnload, args.critload)
+        statuses.append(status)
+        output_messages.append(message)
+        performance_data.append(perf_data)
+
+        # Check runtime
+        status, message, perf_data = check_runtime(oids, args.host, args.community, args.warnrun, args.critrun)
+        statuses.append(status)
+        output_messages.append(message)
+        performance_data.append(perf_data)
+
+        # Determine final status
+        final_status = max(statuses)
+        print(" ".join(output_messages) + " | " + " ".join(performance_data))
+        sys.exit(final_status)
+
+    except Exception as e:
+        print(e)
+        sys.exit(2)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
