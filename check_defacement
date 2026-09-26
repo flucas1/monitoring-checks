@@ -60,19 +60,27 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
     if ignore:
         keywords = []
     else:
-        keywords = ['Anonymous', 'Hacked', 'Hacker', 'hack', 'h4ck3d',
-                    'attack', 'Hacktivist', 'virus', 'defaced',
-                    'Gary McKinnon', 'LulzSec', 'Lulz Security', 'lulz',
-                    'Adrian Lamo', 'Astra', 'MafiaBoy', 'YTCracker', '414s',
-                    'FinnSec Security', 'Chaos Computer Club', 'Cicada 3301',
-                    'Croatian Revolution Hackers', 'Cult of the Dead Cow',
-                    'cDc', 'Decocidio', '#Ө', 'Digital DawgPound', 'Global kOS ',
-                    'globalHell', 'Goatse Security', 'GoatSec', 'Hacking Team',
-                    'Hacking', 'Hackweiser', 'Honker Union', 'L0pht', 'Mazafaka',
-                    'milw0rm', 'NCPH', 'OurMine', 'Syrian Electronic Army',
-                    'TeaMp0isoN', 'UGNazi', 'bl@ck dr@gon', 'Lizard Squad',
-                    'Tarh Andishan', 'ArabAttack', 'k4zuk3', 'kdms team',
-                    'Dragonfly']
+        keywords = [
+            "Anonymous", "Hacked", "Hacker", "hack", "h4ck3d",
+            "attack", "Hacktivist", "virus", "defaced",
+            "Gary McKinnon", "LulzSec", "Lulz Security", "lulz",
+            "Adrian Lamo", "Astra", "MafiaBoy", "YTCracker", "414s",
+            "FinnSec Security", "Chaos Computer Club", "Cicada 3301",
+            "Croatian Revolution Hackers", "Cult of the Dead Cow",
+            "cDc", "Decocidio", "#Ө", "Digital DawgPound", "Global kOS ",
+            "globalHell", "Goatse Security", "GoatSec", "Hacking Team",
+            "Hacking", "Hackweiser", "Honker Union", "L0pht", "Mazafaka",
+            "milw0rm", "NCPH", "OurMine", "Syrian Electronic Army",
+            "TeaMp0isoN", "UGNazi", "bl@ck dr@gon", "Lizard Squad",
+            "Tarh Andishan", "ArabAttack", "k4zuk3", "kdms team",
+            "Dragonfly", "LockBit", "Cl0p", "Akira", "Play", "Black Basta",
+            "Medusa", "RansomHub", "APT28", "Fancy Bear", "APT29", "Cozy Bear",
+            "Lazarus Group", "REvil", "Sandworm", "Equation Group", "Scattered Spider",
+            "DarkSide", "Conti", "Wizard Spider", "APT41", "Wicked Panda", "FIN7",
+            "Emotet", "Legion of Doom", "Masters of Deception", "Anonymous Sudan",
+            "Hive", "Homebrew Computer Club", "BlackCat", "ALPHV", "BianLian",
+            "INC Ransom", "Hunters International", "Rhysida"
+        ]
 
     if len(keywordlist) > 0:
         keywords = list(set(keywords) + set(keywordlist))
@@ -86,7 +94,7 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
             word_match.append(word)
 
     if len(word_match) > 0:
-        exitnagios("CRITICAL", 'Dangerous words were found, verify that the following %s words "%s", are legitimate in the following web page: %s' % (len(word_match), (", ".join(word_match)), url))
+        exitnagios("CRITICAL", "Dangerous words were found, verify that the following %s words '%s', are legitimate in the following web page: %s" % (len(word_match), (", ".join(word_match)), url))
     else:
         exitnagios("OK", "No dangerous words are found")
 
