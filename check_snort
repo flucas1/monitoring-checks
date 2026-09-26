@@ -1,0 +1,280 @@
+import sys
+import os
+import time
+import datetime
+import subprocess
+import argparse
+import socket
+import signal
+
+SNORT_DB = "snort"
+SNORT_DB_HOST = "localhost"
+SNORT_DB_PORT = "3306"
+SNORT_DB_USER = "snortuser"
+SNORT_DB_PASS = "snortpass"
+
+SPOOL_DATA_DIR = "/var/log/nagios"
+DEBUG = False
+NOW_DATE = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
+LOG_FILE = f"{SPOOL_DATA_DIR}/check_snort.{datetime.datetime.now().strftime('%a')}.log"
+HOSTNAME = socket.getfqdn()
+
+INTERVAL = "2"
+WARNING_THRESH = 500
+CRITICAL_THRESH = 1000
+PRIORITY_LEVEL = 3
+
+SNORT_SYSLOG = "/var/log/syslog"
+DROPPED_WARNING = 5
+DROPPED_CRITICAL = 10
+
+EXIT_STATUS = "UNKNOWN"
+EXIT_TEXT = f"{HOSTNAME} unknown status {NOW_DATE}"
+EXIT_VALUE = 3
+EXIT_PERF_DATA = ""
+
+MODUS = ""
+COUNT_LAST = 1
+COUNT_AVG = 1
+AVG_AVG = 1
+VALUES_LOG_FILE = ""
+
+def exit_now():
+    perf_str = f" | {EXIT_PERF_DATA}" if EXIT_PERF_DATA else ""
+    print(f"SNORT_CHECK {EXIT_STATUS} - [{MODUS}] {EXIT_TEXT}{perf_str}")
+    sys.exit(EXIT_VALUE)
+
+def print_log(msg):
+    log_insert = f"{NOW_DATE}  -  [ {MODUS} ] - {msg}\n"
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(log_insert)
+    except IOError:
+        pass
+
+def print_debug(msg):
+    if DEBUG:
+        print_log(msg)
+
+def stamp2date(ts):
+    return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+
+def run_mysql_query(query):
+    cmd = [
+        "mysql", "--skip-column-names",
+        "-h", SNORT_DB_HOST,
+        "-P", str(SNORT_DB_PORT),
+        "-u", SNORT_DB_USER,
+        f"--password={SNORT_DB_PASS}",
+        "-e", query, SNORT_DB
+    ]
+    try:
+        result = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode().strip()
+        return int(result) if result and result != "0" else 1
+    except Exception:
+        return 1
+
+def get_last_count(actual_alerts):
+    global COUNT_LAST
+    now = int(time.time())
+    time_diff = stamp2date(now - actual_alerts)
+    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '{PRIORITY_LEVEL - 1}' and timestamp(event.timestamp) > '{time_diff}';"
+    print_debug(f"get_last -> {query}")
+    COUNT_LAST = run_mysql_query(query)
+    print_debug(f"time_diff -> {time_diff} / COUNT_LAST: -> {COUNT_LAST}")
+
+def get_avg_count(average_alerts):
+    global COUNT_AVG
+    now = int(time.time())
+    time_diff = stamp2date(now - average_alerts)
+    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '{PRIORITY_LEVEL - 1}' and timestamp(event.timestamp) > '{time_diff}';"
+    COUNT_AVG = run_mysql_query(query)
+    print_debug(f"time_diff -> {time_diff} / COUNT_AVG: -> {COUNT_AVG}")
+
+def get_latest_values():
+    global EXIT_STATUS, EXIT_VALUE, EXIT_TEXT
+    if not os.path.isfile(VALUES_LOG_FILE):
+        EXIT_STATUS = "WARNING"
+        EXIT_VALUE = 2
+        EXIT_TEXT = f"check_file not found -> {VALUES_LOG_FILE} (trying to create) "
+        print_debug(EXIT_TEXT)
+        open(VALUES_LOG_FILE, 'a').close()
+        exit_now()
+    
+    print_debug(f"reading {VALUES_LOG_FILE}")
+    try:
+        with open(VALUES_LOG_FILE, "r") as f:
+            line = f.readline().strip()
+            if line:
+                parts = [p.strip() for p in line.split(":")]
+                last_status = parts[0] if len(parts) > 0 else ""
+                last_last = parts[1] if len(parts) > 1 else ""
+                last_avg = parts[2] if len(parts) > 2 else ""
+                last_date = parts[3] if len(parts) > 3 else ""
+                if last_status == "SUPERCRITICAL":
+                    EXIT_STATUS = "CRITICAL"
+                    EXIT_VALUE = 2
+                    EXIT_TEXT = f"critical status found > {VALUES_LOG_FILE} -> {line}"
+                    exit_now()
+                print_debug(f" > last_status -> {last_status} / last_last -> {last_last} / last_avg -> {last_avg} / last_date -> {last_date} --> {VALUES_LOG_FILE}")
+    except Exception:
+        pass
+
+def write_latest_values():
+    with open(VALUES_LOG_FILE, "w") as f:
+        f.write(f"{EXIT_STATUS} : {COUNT_LAST} : {AVG_AVG} : {NOW_DATE}\n")
+    print_debug(f"{EXIT_STATUS} : {COUNT_LAST} : {AVG_AVG} values_log_file -> {VALUES_LOG_FILE}")
+
+def check_host():
+    global EXIT_TEXT, EXIT_STATUS, EXIT_VALUE, EXIT_PERF_DATA
+    try:
+        pid_out = subprocess.check_output(["pidof", "snort"]).decode().strip()
+        snort_pid = int(pid_out.split()[0])
+    except Exception:
+        EXIT_TEXT += " ::  no pid for snort found _pidof snort_  (sorry)"
+        exit_now()
+
+    try:
+        os.kill(snort_pid, signal.SIGUSR1)
+        time.sleep(1)
+        syslog_lines = subprocess.check_output(["sudo", "tail", "-n", "200", SNORT_SYSLOG]).decode().splitlines()
+    except Exception:
+        EXIT_TEXT += " ::  failed to signal snort or read syslog"
+        exit_now()
+
+    start_stats = False
+    received_pckt = 0
+    dropped_pckt = 0
+    
+    for line in syslog_lines:
+        if "snort" not in line:
+            continue
+        
+        if "Packet Wire Totals" in line:
+            start_stats = True
+        
+        if start_stats:
+            if "Received" in line:
+                received_pckt = int(line.split(":")[-1].strip().split()[0])
+            elif "Dropped" in line:
+                dropped_pckt = int(line.split(":")[-1].strip().split()[0])
+            elif "Outstanding" in line:
+                break
+
+    if received_pckt == 0:
+        EXIT_TEXT += " :: division by zero in packet stats"
+        exit_now()
+
+    dropped_perc = int(100 / received_pckt * dropped_pckt)
+    EXIT_PERF_DATA = f"dropped_perc={dropped_perc};{DROPPED_WARNING};{DROPPED_CRITICAL}; dropped_total={dropped_pckt}"
+
+    if dropped_perc > DROPPED_CRITICAL:
+        EXIT_STATUS = "CRITICAL"
+        EXIT_VALUE = 2
+    elif dropped_perc > DROPPED_WARNING:
+        EXIT_STATUS = "WARNING"
+        EXIT_VALUE = 1
+    else:
+        EXIT_STATUS = "OK"
+        EXIT_VALUE = 0
+
+    EXIT_TEXT = f"snort-stats total received: {received_pckt}, dropped: {dropped_pckt} / {dropped_perc} % :: warning: {DROPPED_WARNING}, :: critical: {DROPPED_CRITICAL} "
+    write_latest_values()
+    print_log(f"{NOW_DATE} :: {EXIT_STATUS}  :: {EXIT_TEXT}  :perfdata: {EXIT_PERF_DATA} :: file: {VALUES_LOG_FILE}")
+    exit_now()
+
+def check_alerts():
+    global AVG_AVG, EXIT_STATUS, EXIT_VALUE, EXIT_TEXT, EXIT_PERF_DATA, VALUES_LOG_FILE
+    intervals = {
+        "1": (3600, 300, 12, "5min-1hr"),
+        "2": (86400, 3600, 24, "1hr-24hr"),
+        "3": (604800, 86400, 7, "24hr-7d"),
+        "4": (2592000, 604800, 4, "7d-30d"),
+        "5": (7776000, 604800, 13, "7d-90d")
+    }
+    
+    average_alerts, actual_alerts, divider, count_interval = intervals.get(INTERVAL, (86400, 3600, 24, "1hr-24hr"))
+    
+    print_debug(f"\n----[ {NOW_DATE} ]-----------------------------------------------\n")
+    
+    last_tag, avg_tag = count_interval.split("-")
+    VALUES_LOG_FILE = f"{SPOOL_DATA_DIR}/{PRIORITY_LEVEL}-{count_interval}.check"
+    
+    get_latest_values()
+    get_last_count(actual_alerts)
+    get_avg_count(average_alerts)
+    
+    AVG_AVG = COUNT_AVG // divider
+    if AVG_AVG == 0:
+        AVG_AVG = 1
+        
+    w_limit = AVG_AVG + int(AVG_AVG * WARNING_THRESH / 100)
+    c_limit = AVG_AVG + int(AVG_AVG * CRITICAL_THRESH / 100)
+    
+    print_debug(f"check_options: AVG -> {average_alerts} / ACT -> {actual_alerts} / INT -> {count_interval} / DIV -> {divider}")
+    print_debug(f"\nPRIORITY  -> {PRIORITY_LEVEL}\nINTERVAL  -> {count_interval}\nLAST      -> {COUNT_LAST}\nAVG       -> {COUNT_AVG}\nAVG_AVG   -> {AVG_AVG}\nw_limit   -> {w_limit}\nc_limit   -> {c_limit}\n")
+    
+    EXIT_PERF_DATA = f"{last_tag}={COUNT_LAST};{w_limit};{c_limit}; {avg_tag}={COUNT_AVG}; {avg_tag}-avg={AVG_AVG}"
+    
+    if COUNT_LAST > c_limit:
+        EXIT_STATUS = "CRITICAL"
+        EXIT_VALUE = 2
+    elif COUNT_LAST > w_limit:
+        EXIT_STATUS = "WARNING"
+        EXIT_VALUE = 1
+    else:
+        EXIT_STATUS = "OK"
+        EXIT_VALUE = 0
+        
+    EXIT_TEXT = f"p-{PRIORITY_LEVEL} :: {count_interval} :: last: {COUNT_LAST} - avg: {AVG_AVG} / thresh: {w_limit}/{c_limit} [{WARNING_THRESH}%/{CRITICAL_THRESH}%]"
+    
+    write_latest_values()
+    print_log(f"{NOW_DATE} :: {EXIT_STATUS}  :: {EXIT_TEXT}  :perfdata: {EXIT_PERF_DATA} :: file: {VALUES_LOG_FILE}")
+    exit_now()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-m", dest="modus")
+    parser.add_argument("-i", dest="interval", default="2")
+    parser.add_argument("-c", dest="critical_thresh", type=int, default=1000)
+    parser.add_argument("-w", dest="warning_thresh", type=int, default=500)
+    parser.add_argument("-p", dest="priority_level", type=int, default=3)
+    parser.add_argument("-s", dest="sid")
+    parser.add_argument("-d", dest="debug", action="store_true")
+    parser.add_argument("-l", dest="log_file")
+    parser.add_argument("-o", dest="spool_data_dir")
+    parser.add_argument("-h", dest="help", action="store_true")
+    
+    args, unknown = parser.parse_known_args()
+    
+    if args.help or not args.modus:
+        print("USAGE: check_snort [options]\n-m [modus]\n-c [percent]\n-w [percent]\n-i [INTERVAL]\n-p [PRIORITY]\n-d\n-l [logfile]\n-o [out_dir]")
+        sys.exit(0)
+        
+    MODUS = args.modus
+    INTERVAL = args.interval
+    CRITICAL_THRESH = args.critical_thresh
+    DROPPED_CRITICAL = args.critical_thresh
+    WARNING_THRESH = args.warning_thresh
+    DROPPED_WARNING = args.warning_thresh
+    PRIORITY_LEVEL = args.priority_level
+    DEBUG = args.debug
+    
+    if args.log_file:
+        LOG_FILE = args.log_file
+    if args.spool_data_dir:
+        SPOOL_DATA_DIR = args.spool_data_dir
+        LOG_FILE = f"{SPOOL_DATA_DIR}/check_snort.{datetime.datetime.now().strftime('%a')}.log"
+        
+    if not os.path.isdir(SPOOL_DATA_DIR):
+        print(f"\n> error no output_dir given/created; run\n> $ mkdir -p {SPOOL_DATA_DIR} && chown nagios:nagios {SPOOL_DATA_DIR}\n> to create that dir\n")
+        EXIT_TEXT += f" :: SPOOL_DATA_DIR not found -> {SPOOL_DATA_DIR}"
+        exit_now()
+        
+    if MODUS == "host":
+        check_host()
+    elif MODUS == "alerts":
+        check_alerts()
+    else:
+        EXIT_TEXT += " :: no modus selected (use -m switch) -> help: check_snort -h "
+        exit_now()

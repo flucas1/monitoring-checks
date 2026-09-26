@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+
+EXIT_CODES = {
+    'OK': 0,
+    'WARNING': 1,
+    'CRITICAL': 2,
+    'UNKNOWN': 3
+}
+
+def finish(msg, state):
+    print(msg)
+    sys.exit(state)
+
+def usage():
+    print("options:\n -f           Check FREE memory\n -u           Check USED memory")
+    print(" -C           Count OS caches as FREE memory\n -h           Remove hugepages from the total memory count")
+    print(" -w PERCENT   Percent free/used when to warn\n -c PERCENT   Percent free/used when critical\n")
+    sys.exit(0)
+
+def get_memory_info(opt_C, opt_v):
+    used_memory_kb = 0
+    free_memory_kb = 0
+    total_memory_kb = 0
+    caches_kb = 0
+    hugepages_nr = 0
+    hugepages_size = 0
+    hugepages_kb = 0
+
+    uname_out = ""
+    if os.path.exists('/usr/bin/uname'):
+        uname_out = subprocess.check_output(['/usr/bin/uname', '-a']).decode('utf-8')
+    elif os.path.exists('/bin/uname'):
+        uname_out = subprocess.check_output(['/bin/uname', '-a']).decode('utf-8')
+    else:
+        print("Unable to find uname in /usr/bin or /bin!")
+        sys.exit(EXIT_CODES['UNKNOWN'])
+
+    if opt_v:
+        print(f"uname returns {uname_out.strip()}")
+
+    if "Linux" in uname_out:
+        try:
+            with open('/proc/meminfo', 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    m1 = re.match(r'^Mem(Total|Free):\s+(\d+) kB', line)
+                    if m1:
+                        if m1.group(1) == 'Free':
+                            free_memory_kb = int(m1.group(2))
+                        elif m1.group(1) == 'Total':
+                            total_memory_kb = int(m1.group(2))
+                        continue
+                    m2 = re.match(r'^(Buffers|Cached|SReclaimable):\s+(\d+) kB', line)
+                    if m2:
+                        caches_kb += int(m2.group(2))
+                        continue
+                    m3 = re.match(r'^Shmem:\s+(\d+) kB', line)
+                    if m3:
+                        caches_kb -= int(m3.group(1))
+                        continue
+                    m4 = re.match(r'^HugePages_Total:\s+(\d+)', line)
+                    if m4:
+                        hugepages_nr = int(m4.group(1))
+                        continue
+                    m5 = re.match(r'^Hugepagesize:\s+(\d+) kB', line)
+                    if m5:
+                        hugepages_size = int(m5.group(1))
+                        continue
+        except IOError:
+            pass
+
+        hugepages_kb = hugepages_nr * hugepages_size
+        used_memory_kb = total_memory_kb - free_memory_kb
+
+        sysfs_dir = '/sys/kernel/mm/hugepages'
+        if os.path.isdir(sysfs_dir):
+            hugepages_kb = 0
+            for entry in os.listdir(sysfs_dir):
+                m = re.match(r'^hugepages-(\d+)kB', entry)
+                if m:
+                    h_size = int(m.group(1))
+                    try:
+                        with open(os.path.join(sysfs_dir, entry, 'nr_hugepages'), 'r') as f:
+                            h_nr = int(f.read().strip())
+                        hugepages_kb += h_nr * h_size
+                    except IOError:
+                        pass
+    else:
+        if opt_C:
+            print(f"You can't report on {uname_out.strip()} caches!")
+            sys.exit(EXIT_CODES['UNKNOWN'])
+        try:
+            p1 = subprocess.Popen(['vmstat'], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(['tail', '-1'], stdin=p1.stdout, stdout=subprocess.PIPE)
+            p3 = subprocess.Popen(['awk', '{print $4,$5}'], stdin=p2.stdout, stdout=subprocess.PIPE)
+            out, _ = p3.communicate()
+            parts = out.decode('utf-8').strip().split()
+            if len(parts) >= 2:
+                used_memory_kb = int(float(parts[0]) / 1024)
+                free_memory_kb = int(float(parts[1]) / 1024)
+        except Exception:
+            pass
+
+    return free_memory_kb, used_memory_kb, caches_kb, hugepages_kb
+
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-f', action='store_true')
+    parser.add_argument('-u', action='store_true')
+    parser.add_argument('-C', action='store_true')
+    parser.add_argument('-h', action='store_true', dest='opt_h')
+    parser.add_argument('-v', action='store_true')
+    parser.add_argument('-w', type=float)
+    parser.add_argument('-c', type=float)
+
+    if len(sys.argv) <= 1:
+        usage()
+
+    args, _ = parser.parse_known_args()
+
+    if args.w is None or args.w == 0 or args.c is None or args.c == 0:
+        print("*** You must define WARN and CRITICAL levels!")
+        usage()
+    elif not args.f and not args.u:
+        print("*** You must select to monitor either USED or FREE memory!")
+        usage()
+
+    if args.w <= args.c and args.f:
+        print("*** WARN level must not be less than CRITICAL when checking FREE memory!")
+        usage()
+    elif args.w >= args.c and args.u:
+        print("*** WARN level must not be greater than CRITICAL when checking USED memory!")
+        usage()
+
+    free_kb, used_kb, caches_kb, hugepages_kb = get_memory_info(args.C, args.v)
+
+    if args.v:
+        print(f"{free_kb} Free\n{used_kb} Used\n{caches_kb} Cache")
+        if args.opt_h:
+            print(f"{hugepages_kb} Hugepages")
+
+    if args.C:
+        used_kb -= caches_kb
+        free_kb += caches_kb
+
+    if args.opt_h:
+        used_kb -= hugepages_kb
+
+    if args.v:
+        print(f"{used_kb} Used (after Hugepages)")
+
+    free_kb = int(free_kb)
+    used_kb = int(used_kb)
+    caches_kb = int(caches_kb)
+
+    total = free_kb + used_kb
+    if args.v:
+        print(f"{total} Total")
+
+    if args.u:
+        perf_warn = int(total * args.w / 100)
+        perf_crit = int(total * args.c / 100)
+    else:
+        perf_warn = int(total * (100 - args.w) / 100)
+        perf_crit = int(total * (100 - args.c) / 100)
+
+    perfdata = f"|TOTAL={total}KB;;;; USED={used_kb}KB;{perf_warn};{perf_crit};; FREE={free_kb}KB;;;; CACHES={caches_kb}KB;;;;"
+    if args.opt_h:
+        perfdata += f" HUGEPAGES={hugepages_kb}KB;;;;"
+
+    if args.f:
+        percent = float(free_kb) / total * 100 if total else 0
+        if percent <= args.c:
+            finish(f"CRITICAL - {percent:.1f}% ({free_kb} kB) free!{perfdata}", EXIT_CODES['CRITICAL'])
+        elif percent <= args.w:
+            finish(f"WARNING - {percent:.1f}% ({free_kb} kB) free!{perfdata}", EXIT_CODES['WARNING'])
+        else:
+            finish(f"OK - {percent:.1f}% ({free_kb} kB) free.{perfdata}", EXIT_CODES['OK'])
+    elif args.u:
+        percent = float(used_kb) / total * 100 if total else 0
+        if percent >= args.c:
+            finish(f"CRITICAL - {percent:.1f}% ({used_kb} kB) used!{perfdata}", EXIT_CODES['CRITICAL'])
+        elif percent >= args.w:
+            finish(f"WARNING - {percent:.1f}% ({used_kb} kB) used!{perfdata}", EXIT_CODES['WARNING'])
+        else:
+            finish(f"OK - {percent:.1f}% ({used_kb} kB) used.{perfdata}", EXIT_CODES['OK'])
+
+if __name__ == '__main__':
+    main()

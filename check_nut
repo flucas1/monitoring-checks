@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import subprocess
+import argparse
+import re
+
+ERRORS_OK = 0
+ERRORS_WARNING = 1
+ERRORS_CRITICAL = 2
+ERRORS_UNKNOWN = 3
+
+def compare(val, op, limit):
+    try:
+        fval = float(val)
+        flimit = float(limit)
+        is_num = True
+    except ValueError:
+        is_num = False
+
+    if op == ">=":
+        return is_num and fval >= flimit
+    if op == ">":
+        return is_num and fval > flimit
+    if op == "<=":
+        return is_num and fval <= flimit
+    if op == "<":
+        return is_num and fval < flimit
+    if op == "==":
+        return str(val) == str(limit)
+    if op == "=":
+        return is_num and fval == flimit
+    if op == "<>":
+        return is_num and fval != flimit
+    if op == "!=":
+        return str(val) != str(limit)
+    if op == "~":
+        return bool(re.search(str(limit), str(val)))
+    if op == "!~":
+        return not bool(re.search(str(limit), str(val)))
+    return False
+
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-V", "--version", action="store_true")
+    parser.add_argument("-h", "--help", action="store_true")
+    parser.add_argument("-d", "--device", type=str)
+    parser.add_argument("-D", "--debug", action="store_true")
+    parser.add_argument("-v", "--value", action="append", default=[])
+    
+    args = parser.parse_args()
+    
+    if args.version:
+        print("check_nut_plus 1.6")
+        sys.exit(ERRORS_OK)
+        
+    if args.help:
+        help_text = """check_nut_plus 1.6
+Copyright (c) 2013 Chris Recktenwald for LiHAS http://lihas.de
+Copyright (c) 2007 Luca Bertoncello <lucabert@lucabert.de>
+
+This plugin reports the status of the UPS using NUT
+
+Usage:
+check_nut_plus -d DEVICE -v CHECK_DESC [ -v CHECK_DESC ... ]
+
+DEVICE := a device description upsc would accept
+CHECK_DESC := UPSCKEY '=' SEVERITY OPERATOR VALUE [ ':' SEVERITY OPERATOR VALUE ] ...
+UPSCKEY : key string as listed by upsc, see 'man upsc'
+SEVERITY := { 'w' | 'c' } ( 'w' for warning, 'c' for critical errors )
+    'w' : warning
+    'c' : critical
+OPERATOR := { '>=' | '>' | '<=' | | '<' '==' | '=' | '<>' | '!=' | '~' | '!~' }
+    '>=' : numerical comparison, reported value is greater or equal than VALUE 
+    '>'  : numerical comparison, reported value is greater than VALUE 
+    '<=' : numerical comparison, reported value is less or equal than VALUE 
+    '<'  : numerical comparison, reported value is less than VALUE 
+    '='  : numerical comparison, reported value is equal to VALUE 
+    '<>' : numerical comparison, reported value is not equal to VALUE 
+    '==' : string comparison, reported value is identical to VALUE 
+    '!=' : string comparison, reported value is not identical to VALUE 
+    '~'  : regex match, reported value matches the perl regular expression 
+           given by VALUE 
+    '!~' : regex match, reported value does not match the perl regular 
+           expression given by VALUE 
+    (for perl regular expressions see 'man perlre') 
+VALUE : the value representing the preset, might be a string, integer 
+        or float, depending on OPERATOR
+
+NUT status is a combination of the following tags:
+    OL - On line (mains is present)
+    OB - On battery (mains is not present)
+    LB - Low battery
+    HB - High battery
+    RB - The battery needs to be replaced
+    CHRG - The battery is charging
+    DISCHRG - The battery is discharging (inverter is providing load power)
+    BYPASS - UPS bypass circuit is active -- no battery protection is available
+    CAL - UPS is currently performing runtime calibration (on battery)
+    OFF - UPS is offline and is not supplying power to the load
+    OVER - UPS is overloaded
+    TRIM - UPS is trimming incoming voltage (called 'buck' in some hardware)
+    BOOST - UPS is boosting incoming voltage
+    FSD and SD - Forced Shutdown"""
+        print(help_text)
+        sys.exit(ERRORS_OK)
+        
+    if not args.device:
+        print("Device not specified")
+        sys.exit(ERRORS_UNKNOWN)
+        
+    if args.debug:
+        print("DEBUG")
+        
+    limits = {}
+    for v in args.value:
+        if "=" in v:
+            key, val = v.split("=", 1)
+            limits[key] = val
+            
+    if not limits:
+        print("you have to specify some value to check")
+        sys.exit(ERRORS_UNKNOWN)
+        
+    ps_cmd = ["/bin/ps", "h", "-C", "upsd"]
+    try:
+        subprocess.run(ps_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError:
+        print("NUT Daemon maybe DOWN")
+        sys.exit(ERRORS_UNKNOWN)
+    except FileNotFoundError:
+        pass
+        
+    upsc_cmd = ["/bin/upsc", args.device]
+    try:
+        res = subprocess.run(upsc_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True)
+    except Exception as e:
+        print(f"can't run '/bin/upsc {args.device}': {e}")
+        sys.exit(ERRORS_UNKNOWN)
+        
+    ups_data = {}
+    for line in res.stdout.splitlines():
+        if ": " in line:
+            key, val = line.split(": ", 1)
+            ups_data[key] = val
+            
+    alarmlevel = ERRORS_OK
+    critmesg = []
+    warnmesg = []
+    okmesg = []
+    
+    for key, limstring in limits.items():
+        if key not in ups_data:
+            print(f"key '{key}' is not defined in output from /bin/upsc")
+            sys.exit(ERRORS_UNKNOWN)
+            
+        kvtriples = limstring.split(":")
+        cmp_dict = {"c": [], "w": []}
+        
+        for kvtriple in kvtriples:
+            match = re.match(r"^(c|w)(>=|>|==|=|<>|<=|<|!=|!~|~)(.*?)$", kvtriple)
+            if match:
+                severity, op, value = match.groups()
+                cmp_dict[severity].append({"op": op, "value": value})
+                if args.debug:
+                    print(f"KV3: ({severity},{op},{value})")
+            else:
+                print(f"ERROR: '{kvtriple}' is invalid")
+                sys.exit(ERRORS_UNKNOWN)
+                
+        if cmp_dict["c"]:
+            cnthits = 0
+            for comparison in cmp_dict["c"]:
+                if args.debug:
+                    print(f"{key} {ups_data[key]} {comparison['op']} {comparison['value']}")
+                if compare(ups_data[key], comparison["op"], comparison["value"]):
+                    msg = f"CRITICAL: {ups_data[key]} {comparison['op']} {comparison['value']} | {key}={ups_data[key]}"
+                    if args.debug:
+                        print(msg)
+                    critmesg.append(msg)
+                    if alarmlevel < ERRORS_CRITICAL:
+                        alarmlevel = ERRORS_CRITICAL
+                    cnthits += 1
+            if cnthits:
+                continue
+                
+        if cmp_dict["w"]:
+            cnthits = 0
+            for comparison in cmp_dict["w"]:
+                if compare(ups_data[key], comparison["op"], comparison["value"]):
+                    msg = f"WARNING: {ups_data[key]} {comparison['op']} {comparison['value']} | {key}={ups_data[key]}"
+                    if args.debug:
+                        print(msg)
+                    warnmesg.append(msg)
+                    if alarmlevel < ERRORS_WARNING:
+                        alarmlevel = ERRORS_WARNING
+                    cnthits += 1
+            if cnthits:
+                continue
+                
+        if args.debug:
+            print(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
+        okmesg.append(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
+        
+    for m in critmesg + warnmesg + okmesg:
+        print(m)
+        
+    sys.exit(alarmlevel)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import requests
+import re
+import sys
+import signal
+import urllib3
+
+OK = 0
+WARNING = 1
+CRITICAL = 2
+UNKNOWN = 3
+
+def check_threshold(value, warn, crit):
+    status = OK
+    try:
+        val = float(value)
+        if crit:
+            if val >= float(crit):
+                return CRITICAL
+        if warn:
+            if val >= float(warn):
+                status = WARNING
+    except ValueError:
+        pass
+    return status
+
+def timeout_handler(signum, frame):
+    print("UNKNOWN - plugin timed out")
+    sys.exit(UNKNOWN)
+
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-H', '--hostname', required=True)
+    parser.add_argument('-p', '--port', type=int)
+    parser.add_argument('-u', '--uri', default='/server-status?auto')
+    parser.add_argument('-U', '--username', default='')
+    parser.add_argument('-P', '--password', default='')
+    parser.add_argument('-s', '--ssl', action='store_true')
+    parser.add_argument('-N', '--no_validate', action='store_true')
+    parser.add_argument('-w', '--warning', default='')
+    parser.add_argument('-c', '--critical', default='')
+    parser.add_argument('-R', '--unreachable', action='store_true')
+    parser.add_argument('-t', '--timeout', type=int, default=15)
+    args = parser.parse_args()
+
+    unreachable_status = CRITICAL if args.unreachable else UNKNOWN
+
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(args.timeout)
+
+    warnings = args.warning.split(',') if args.warning else []
+    criticals = args.critical.split(',') if args.critical else []
+
+    warnings += [''] * (6 - len(warnings))
+    criticals += [''] * (6 - len(criticals))
+
+    if bool(args.username) != bool(args.password):
+        print("UNKNOWN - If you specify an username, you have to set a password too!")
+        sys.exit(UNKNOWN)
+
+    auth = (args.username, args.password) if args.username and args.password else None
+    
+    proto = 'https://' if args.ssl else 'http://'
+    port_str = f":{args.port}" if args.port else ""
+    
+    url = f"{proto}{args.hostname}{port_str}{args.uri}"
+    if '?' not in url:
+        url += "?auto"
+    elif not url.endswith("auto"):
+        url += "?auto"
+
+    verify = not args.no_validate
+    if not verify:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    try:
+        response = requests.get(url, auth=auth, verify=verify, timeout=args.timeout)
+        if response.status_code >= 500:
+            print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - {response.reason}")
+            sys.exit(unreachable_status)
+        elif response.status_code != 200:
+            print(f"CRITICAL - {response.reason}")
+            sys.exit(CRITICAL)
+    except requests.exceptions.Timeout:
+        print(f"{'CRITICAL' if args.unreachable else 'UNKNOWN'} - plugin timed out")
+        sys.exit(unreachable_status)
+    except requests.exceptions.RequestException as e:
+        print(f"CRITICAL - {str(e)}")
+        sys.exit(CRITICAL)
+
+    content = response.text
+
+    match = re.search(r'ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)', content, re.DOTALL)
+    if not match:
+        print(f"UNKNOWN - No status information found at {url}")
+        sys.exit(UNKNOWN)
+
+    req_per_sec = match.group(1)
+    bytes_per_sec = match.group(2)
+    busy_workers = match.group(3)
+    idle_workers = match.group(4)
+    scoreboard = match.group(5)
+
+    open_slots = scoreboard.count('.') + scoreboard.count('_')
+
+    match_bpr = re.search(r'BytesPerReq:\s([0-9\.]+)', content, re.DOTALL)
+    bytes_per_req = match_bpr.group(1) if match_bpr else "0"
+
+    metrics = [
+        ("OpenSlots", str(open_slots), warnings[0], criticals[0], ""),
+        ("BusyWorkers", busy_workers, warnings[1], criticals[1], ""),
+        ("IdleWorkers", idle_workers, warnings[2], criticals[2], ""),
+        ("ReqPerSec", req_per_sec, warnings[3], criticals[3], ""),
+        ("BytesPerSec", bytes_per_sec, warnings[4], criticals[4], "B"),
+        ("BytesPerReq", bytes_per_req, warnings[5], criticals[5], "B")
+    ]
+
+    overall_status = OK
+    perfdata = []
+
+    for name, val, w, c, uom in metrics:
+        st = check_threshold(val, w, c)
+        overall_status = max(overall_status, st)
+        w_str = w if w else ""
+        c_str = c if c else ""
+        perfdata.append(f"{name}={val}{uom};{w_str};{c_str};;")
+
+    output = f"OpenSlots:{open_slots} BusyWorkers:{busy_workers} IdleWorkers:{idle_workers} ReqPerSec:{req_per_sec} BytesPerSec:{bytes_per_sec} BytesPerReq:{bytes_per_req}"
+    perf_string = " ".join(perfdata)
+
+    if overall_status == OK:
+        status_str = "OK"
+    elif overall_status == WARNING:
+        status_str = "WARNING"
+    elif overall_status == CRITICAL:
+        status_str = "CRITICAL"
+    else:
+        status_str = "UNKNOWN"
+
+    print(f"{status_str} - {output} | {perf_string}")
+    sys.exit(overall_status)
+
+if __name__ == '__main__':
+    main()

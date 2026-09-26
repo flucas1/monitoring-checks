@@ -16,7 +16,7 @@ def print_usage():
     print("Usage: check_bind.py [-H | --hostaddress ] [-p | --port ]\n")
     print("    -h  Show this page")
     print("    -H  Host address\n")
-
+    sys.exit(0)
 
 if len(sys.argv) < 2:
     print_usage()
@@ -30,7 +30,7 @@ while args:
     arg = args.pop(0)
     if arg in ('-h', '--help'):
         print_usage()
-        sys.exit(STATE_UNKNOWN)
+        sys.exit(STATE_OK)
     elif arg in ('-H', '--hostaddress'):
         if args:
             hostaddress = args.pop(0)
