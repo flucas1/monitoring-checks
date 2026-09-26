@@ -311,7 +311,7 @@ async def main(forcedargs=None):
         if exit_status < dev_status:
             exit_status = dev_status
         if i > 0:
-            return_text += "\n"
+            return_text += " - "
         return_text += dev_text
         return_performance += dev_perf
 
@@ -333,7 +333,7 @@ async def main(forcedargs=None):
         nagios_state = "CRITICAL"
         nagios_msg = "undefined error"
 
-    full_message = f"{nagios_msg}\n{return_text} | {return_performance}"
+    full_message = f"{nagios_msg.strip()} - {return_text.strip()} | {return_performance.strip()}"
     exitnagios(nagios_state, full_message)
 
 # -------------------------------------------------------------------------------
