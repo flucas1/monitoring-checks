@@ -48,19 +48,13 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-
-STATE_OK = 0
-STATE_UNKNOWN = 3
-
-
 async def fetch_data(url, timeout):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=timeout) as response:
                 return await response.read()
     except Exception:
-        print("Stats collection failed")
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Stats collection failed")
 
 # -------------------------------------------------------------------------------\
 
@@ -77,14 +71,12 @@ async def main(forcedargs=None):
     xml_data = await fetch_data(url, TIMEOUT)
 
     if not xml_data:
-        print("Stats collection failed")
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Stats collection failed")
 
     try:
         root = xml.etree.ElementTree.fromstring(xml_data)
     except Exception:
-        print("Stats collection failed")
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Stats collection failed")
 
     total_queries = ""
     for elem in root.findall(".//*[@name='QUERY']"):
@@ -113,16 +105,13 @@ async def main(forcedargs=None):
         if rtt[key]:
             rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
 
-    output = ["OK: Bind 9 Stats Collected |"]
+    output = ["Bind 9 Stats Collected |"]
     if total_queries:
         output.append(f"total_queries={total_queries}c")
-
     output.extend(queries)
     output.extend(out_queries)
     output.extend(rtt_out)
-
-    print(" ".join(output))
-    sys.exit(STATE_OK)
+    exitnagios("OK", " ".join(output))
 
 
 # -------------------------------------------------------------------------------
