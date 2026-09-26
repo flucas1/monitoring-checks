@@ -2,7 +2,6 @@
 
 import os
 import sys
-import time
 import argparse
 import asyncio
 
@@ -91,11 +90,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = time.time()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
-        if time.time() - timestamp > 20:
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
         await asyncio.sleep(1)
 

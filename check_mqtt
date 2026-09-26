@@ -5,7 +5,6 @@ import paho.mqtt.client
 import jsonpath_rw
 import json
 import ssl
-import time
 import sys
 import os
 import argparse
@@ -117,7 +116,7 @@ def on_message(mosq, userdata, msg):
     except Exception:
         payload = None
 
-    elapsed = (time.time() - userdata["start_time"])
+    elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - userdata["start_time"])
     userdata["have_response"] = True
 
     if args.short_output:
@@ -220,7 +219,7 @@ async def main(forcedargs=None):
 
     userdata = {
         "have_response": False,
-        "start_time": time.time(),
+        "start_time": datetime.datetime.now(datetime.timezone.utc).timestamp(),
     }
     mqttc = paho.Client(paho.CallbackAPIVersion.VERSION2, "nagios-%d" % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
     mqttc.on_message = on_message
@@ -256,7 +255,7 @@ async def main(forcedargs=None):
     rc = 0
     while userdata["have_response"] == False and rc == 0:
         rc = mqttc.loop()
-        if time.time() - userdata["start_time"] > args.max_wait:
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - userdata["start_time"] > args.max_wait:
             message = "timeout waiting for message"
             status = timeoutstatus
             break
