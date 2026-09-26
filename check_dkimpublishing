@@ -59,7 +59,7 @@ async def buildpublickey(candidate):
         mode = "pkey"
 
     publickey = None
-    if mode != None:
+    if mode is not None:
         cmdline = ["/usr/bin/openssl", mode, "-in", candidate, "-pubout", "-out", "-"]
         infomsg(str(cmdline))
 
@@ -88,7 +88,7 @@ async def buildpublickey(candidate):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            temp_stdout, temp_stderr = await process.communicate(input=output)
+            temp_stdout, temp_stderr = await process.communicate(input=output.encode("utf-8"))
             if process.returncode == 0:
                 temp = base64.b64encode(temp_stdout)
                 publickey = temp.decode()
@@ -176,8 +176,11 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     dkimpath = args.dkimpath.strip()
-    if dkimpath == "":
+    if not dkimpath:
         exitnagios("CRITICAL", "dkimpath not specified | failures=0 count=0")
+
+    if not os.path.isdir(dkimpath):
+        exitnagios("UNKNOWN", f"dkimpath '{dkimpath}' does not exist or is not a directory | failures=0 count=0")
 
     failurelist, validlist = await check_dkimpublishing(dkimpath)
     infomsg("-----")
