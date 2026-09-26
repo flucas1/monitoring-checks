@@ -18,7 +18,10 @@ def usage():
     sys.exit(0)
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-h', action='store_true')
     parser.add_argument('-H', dest='ntpserver', default="172.16.4.253")
@@ -88,5 +91,9 @@ async def main():
         sys.exit(0)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

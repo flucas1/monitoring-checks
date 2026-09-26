@@ -89,7 +89,10 @@ def get_memory_info(opt_C, opt_v):
     return free_memory_kb, used_memory_kb, caches_kb, hugepages_kb
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-f', action='store_true')
     parser.add_argument('-u', action='store_true')
@@ -172,5 +175,9 @@ async def main():
             finish(f"OK - {percent:.1f}% ({used_kb} kB) used.{perfdata}", EXIT_CODES['OK'])
 
 
-if __name__ == '__main__':
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

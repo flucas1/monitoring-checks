@@ -256,7 +256,10 @@ async def check_alerts():
     print_log(f"{NOW_DATE} :: {EXIT_STATUS}  :: {EXIT_TEXT}  :perfdata: {EXIT_PERF_DATA} :: file: {VALUES_LOG_FILE}")
     exit_now()
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-m", dest="modus")
     parser.add_argument("-i", dest="interval", default="2")
@@ -305,5 +308,10 @@ async def main():
         EXIT_TEXT += " :: no modus selected (use -m switch) -> help: check_snort -h "
         exit_now()
 
+
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

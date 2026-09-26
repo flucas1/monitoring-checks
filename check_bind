@@ -24,86 +24,98 @@ def print_usage():
     sys.exit(0)
 
 
-if len(sys.argv) < 2:
-    print_usage()
-    sys.exit(STATE_UNKNOWN)
+# -------------------------------------------------------------------------------
 
-args = sys.argv[1:]
-hostaddress = None
-hostport = None
 
-while args:
-    arg = args.pop(0)
-    if arg in ('-h', '--help'):
-        print_usage()
-        sys.exit(STATE_OK)
-    elif arg in ('-H', '--hostaddress'):
-        if args:
-            hostaddress = args.pop(0)
-    elif arg in ('-p', '--port'):
-        if args:
-            hostport = args.pop(0)
-    else:
-        print(f"Unknown argument: {arg}")
+async def main(forcedargs=None):
+    if len(sys.argv) < 2:
         print_usage()
         sys.exit(STATE_UNKNOWN)
 
-if not hostaddress or not hostport:
-    print_usage()
-    sys.exit(STATE_UNKNOWN)
+    args = sys.argv[1:]
+    hostaddress = None
+    hostport = None
 
-url = f"http://{hostaddress}:{hostport}/xml/v3/server"
+    while args:
+        arg = args.pop(0)
+        if arg in ('-h', '--help'):
+            print_usage()
+            sys.exit(STATE_OK)
+        elif arg in ('-H', '--hostaddress'):
+            if args:
+                hostaddress = args.pop(0)
+        elif arg in ('-p', '--port'):
+            if args:
+                hostport = args.pop(0)
+        else:
+            print(f"Unknown argument: {arg}")
+            print_usage()
+            sys.exit(STATE_UNKNOWN)
 
-try:
-    req = urllib.request.urlopen(url, timeout=TIMEOUT)
-    xml_data = req.read()
-except Exception:
-    print("Stats collection failed")
-    sys.exit(STATE_UNKNOWN)
+    if not hostaddress or not hostport:
+        print_usage()
+        sys.exit(STATE_UNKNOWN)
 
-if not xml_data:
-    print("Stats collection failed")
-    sys.exit(STATE_UNKNOWN)
+    url = f"http://{hostaddress}:{hostport}/xml/v3/server"
 
-try:
-    root = xml.etree.ElementTree.fromstring(xml_data)
-except Exception:
-    print("Stats collection failed")
-    sys.exit(STATE_UNKNOWN)
+    try:
+        req = urllib.request.urlopen(url, timeout=TIMEOUT)
+        xml_data = req.read()
+    except Exception:
+        print("Stats collection failed")
+        sys.exit(STATE_UNKNOWN)
 
-total_queries = ""
-for elem in root.findall(".//*[@name='QUERY']"):
-    total_queries = elem.text
-    break
+    if not xml_data:
+        print("Stats collection failed")
+        sys.exit(STATE_UNKNOWN)
 
-queries = []
-for elem in root.findall(".//*[@type='qtype']"):
-    if 'name' in elem.attrib and elem.text is not None:
-        queries.append(f"query_{elem.attrib['name']}={elem.text}c")
+    try:
+        root = xml.etree.ElementTree.fromstring(xml_data)
+    except Exception:
+        print("Stats collection failed")
+        sys.exit(STATE_UNKNOWN)
 
-out_queries = []
-for elem in root.findall(".//*[@type='resqtype']"):
-    if 'name' in elem.attrib and elem.text is not None:
-        out_queries.append(f"query-out_{elem.attrib['name']}={elem.text}c")
+    total_queries = ""
+    for elem in root.findall(".//*[@name='QUERY']"):
+        total_queries = elem.text
+        break
 
-rtt = {"10": "", "100": "", "500": "", "800": "", "1600": "", "1600+": ""}
-for elem in root.findall(".//*[@name]"):
-    name = elem.attrib['name']
-    if name.startswith("QryRTT") and name[6:] in rtt:
-        rtt[name[6:]] = elem.text if elem.text is not None else ""
+    queries = []
+    for elem in root.findall(".//*[@type='qtype']"):
+        if 'name' in elem.attrib and elem.text is not None:
+            queries.append(f"query_{elem.attrib['name']}={elem.text}c")
 
-rtt_out = []
-mapping = [("10", "10"), ("100", "100"), ("500", "500"), ("800", "800"), ("1600", "1600"), ("1600+", "Over1600")]
-for key, label in mapping:
-    rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
+    out_queries = []
+    for elem in root.findall(".//*[@type='resqtype']"):
+        if 'name' in elem.attrib and elem.text is not None:
+            out_queries.append(f"query-out_{elem.attrib['name']}={elem.text}c")
 
-output = ["OK: Bind 9 Stats Collected |"]
-if total_queries:
-    output.append(f"total_queries={total_queries}c")
+    rtt = {"10": "", "100": "", "500": "", "800": "", "1600": "", "1600+": ""}
+    for elem in root.findall(".//*[@name]"):
+        name = elem.attrib['name']
+        if name.startswith("QryRTT") and name[6:] in rtt:
+            rtt[name[6:]] = elem.text if elem.text is not None else ""
 
-output.extend(queries)
-output.extend(out_queries)
-output.extend(rtt_out)
+    rtt_out = []
+    mapping = [("10", "10"), ("100", "100"), ("500", "500"), ("800", "800"), ("1600", "1600"), ("1600+", "Over1600")]
+    for key, label in mapping:
+        rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
 
-print(" ".join(output))
-sys.exit(STATE_OK)
+    output = ["OK: Bind 9 Stats Collected |"]
+    if total_queries:
+        output.append(f"total_queries={total_queries}c")
+
+    output.extend(queries)
+    output.extend(out_queries)
+    output.extend(rtt_out)
+
+    print(" ".join(output))
+    sys.exit(STATE_OK)
+
+
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

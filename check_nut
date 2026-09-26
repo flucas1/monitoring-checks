@@ -58,7 +58,10 @@ async def run_command(cmd):
     return stdout.decode().strip()
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-V", "--version", action="store_true")
     parser.add_argument("-h", "--help", action="store_true")
@@ -222,5 +225,9 @@ NUT status is a combination of the following tags:
     sys.exit(alarmlevel)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

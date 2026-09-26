@@ -44,7 +44,10 @@ async def fetch_status(url, auth, verify, timeout):
         return response
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-H', '--hostname', required=True)
     parser.add_argument('-p', '--port', type=int)
@@ -157,5 +160,9 @@ async def main():
     sys.exit(overall_status)
 
 
-if __name__ == '__main__':
-    main()
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

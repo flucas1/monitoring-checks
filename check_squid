@@ -84,7 +84,10 @@ async def run_squidclient(squidclient, host, port, user, password):
     return stdout.decode('utf-8')
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(usage="%(prog)s [ -H <host> ] [ -f <filename> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]")
     parser.add_argument('-H', '--host', default='localhost')
     parser.add_argument('-f', '--filecreds')
@@ -239,5 +242,9 @@ async def main():
             exit_plugin(status, msg, perf)
 
 
-if __name__ == '__main__':
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
