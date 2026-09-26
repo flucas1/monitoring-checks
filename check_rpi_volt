@@ -20,7 +20,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug() is True:
         print(msg, flush=True)
 
 
