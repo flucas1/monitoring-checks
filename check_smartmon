@@ -1,0 +1,345 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import re
+import argparse
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def call_smartmontools(device):
+    cmdline = ["/usr/sbin/smartctl", "-a", device]
+    infomsg("Get device health status: %s" % device)
+    result = ""
+    message = ""
+    code_to_return = "OK"
+    try:
+        process = await asyncio.create_subprocess_shell(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
+
+        if exitcode != 0:
+            if exitcode % 2**1 > 0:
+                message += "smartctl parsing error "
+                exitcode -= 2**0
+                code_to_return = "UNKNOWN"
+            if exitcode % 2**2 > 0:
+                message += "could not open device "
+                exitcode -= 2**1
+                code_to_return = "CRITICAL"
+            if exitcode % 2**3 > 0:
+                result = output
+                message += "some SMART or ATA command to disk failed "
+                exitcode -= 2**2
+                code_to_return = "CRITICAL"
+            if exitcode % 2**4 > 0:
+                result = output
+                message += "SMART statis is DISK FAILING "
+                exitcode -= 2**3
+                code_to_return = "CRITICAL"
+            if exitcode % 2**5 > 0:
+                result = output
+                message += "prefail attributes found "
+                exitcode -= 2**4
+                code_to_return = "CRITICAL"
+            if exitcode % 2**6 > 0:
+                result = output
+                message += "some prefail attributes were critical in the past "
+                exitcode -= 2**5
+                code_to_return = "WARNING"
+            if exitcode % 2**7 > 0:
+                result = output
+                message += "errors recorded in error log "
+                exitcode -= 2**6
+                code_to_return = "WARNING"
+            if exitcode % 2**8 > 0:
+                result = output
+                message += "self-test log contains errors "
+                exitcode -= 2**7
+                code_to_return = "CRITICAL"
+        else:
+            result = output
+
+    except Exception as error:
+        message = "call exits unexpectedly (%s)" % error
+        code_to_return = "UNKNOWN"
+
+    return (code_to_return, result, message)
+
+
+def parse_output(output, identifier, warning_temp, critical_temp, tolerated_reallocated_sector_ct, tolerated_reallocated_event_count, tolerated_current_pending_sector, tolerated_offline_uncorrectable):
+    status_line = ""
+    health_status = ""
+    reallocated_sector_ct = 0
+    temperature = 0
+    reallocated_event_count = 0
+    current_pending_sector = 0
+    offline_uncorrectable = 0
+    error_count = 0
+
+    lines = output.splitlines()
+    for line in lines:
+        if "overall-health self-assessment test result" in line:
+            status_line = line
+            parts = status_line.strip().split()
+            health_status = parts[-1:][0]
+            infomsg("Health status: %s" % health_status)
+        if "Health Status" in line:
+            status_line = line
+            parts = status_line.strip().split()
+            health_status = parts[-1:][0]
+            infomsg("Health status: %s" % health_status)
+
+        parts = line.split()
+        if len(parts) > 0:
+            if parts[0] == "5" and parts[1] == "Reallocated_Sector_Ct" and reallocated_sector_ct == 0:
+                reallocated_sector_ct = int(parts[9])
+                infomsg("Reallocated_Sector_Ct: %d" % reallocated_sector_ct)
+            elif parts[0] == "190" and temperature == 0:
+                temperature = int(parts[9])
+                infomsg("Temperature: %d" % temperature)
+            elif parts[0] == "194" and temperature == 0:
+                temperature = int(parts[9])
+                infomsg("Temperature: %d" % temperature)
+            elif parts[0] == "196" and reallocated_event_count == 0:
+                reallocated_event_count = int(parts[9])
+                infomsg("Reallocated_Event_Count: %d" % reallocated_event_count)
+            elif parts[0] == "197" and current_pending_sector == 0:
+                current_pending_sector = int(parts[9])
+                infomsg("Current_Pending_Sector: %d" % current_pending_sector)
+            elif parts[0] == "198" and offline_uncorrectable == 0:
+                offline_uncorrectable = int(parts[9])
+                infomsg("Offline_Uncorrectable: %d" % offline_uncorrectable)
+            elif "ATA Error Count" in line:
+                error_count = int(parts[3])
+                infomsg("ATA error count: %d" % error_count)
+            elif "No Errors Logged" in line:
+                error_count = 0
+                infomsg("ATA error count: 0")
+
+    return_status = 0
+    device_status = ""
+    performance_status = ""
+
+    if health_status == "":
+        return (3, "UNKNOWN: could not parse output", "")
+
+    if health_status not in ["PASSED", "OK"]:
+        return_status = 2
+        device_status += "CRITICAL: device does not pass health status "
+
+    if reallocated_sector_ct > tolerated_reallocated_sector_ct or \
+            reallocated_event_count > tolerated_reallocated_event_count or \
+            current_pending_sector > tolerated_current_pending_sector or \
+            offline_uncorrectable > tolerated_offline_uncorrectable:
+        return_status = 2
+        device_status += "CRITICAL: there is a problem with bad sectors on the drive. "
+        device_status += "Reallocated_Sector_Ct:%d, " % reallocated_sector_ct
+        device_status += "Reallocated_Event_Count:%d, " % reallocated_event_count
+        device_status += "Current_Pending_Sector:%d, " % current_pending_sector
+        device_status += "Offline_Uncorrectable:%d " % offline_uncorrectable
+
+    if temperature > critical_temp:
+        return_status = 2
+        device_status += "CRITICAL: device temperature (%d) exceeds critical temperature threshold (%s) " % (temperature, critical_temp)
+    elif temperature > warning_temp:
+        if return_status < 2:
+            return_status = 1
+        device_status += "WARNING: device temperature (%d) exceeds warning temperature threshold (%s) " % (temperature, warning_temp)
+
+    if error_count > 0:
+        if return_status < 2:
+            return_status = 1
+        device_status += "WARNING: error count %d " % error_count
+
+    if return_status == 0:
+        device_status += "OK: device is functional and stable (temperature: %ddeg) " % temperature
+
+    performance_status += " temp_" + identifier + "=" + str(temperature)
+
+    return (return_status, device_status, performance_status)
+
+
+async def calculatedevicelist():
+    cmdline = ["/usr/sbin/smartctl", "--scan"]
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+    result = []
+    for line in output.splitlines():
+        parts = line.split("#", 1)
+        device = parts[0]
+        result.append(device.split()[0])
+    return result
+
+
+async def process_device(device, args):
+
+    infomsg("Device: %s" % device)
+    dev_return_text = "%s: " % device
+    dev_return_performance = ""
+    dev_exit_status = 0
+
+    infomsg("Check device")
+    (return_status, message) = check_device_permissions(device)
+    if return_status != 0:
+        dev_exit_status = return_status
+        dev_return_text += message
+        return (dev_exit_status, dev_return_text, dev_return_performance)
+
+    infomsg("Call smartctl")
+    return_status_str, output, message = await call_smartmontools(device)
+    
+    return_status = mapstatustoexitcode(return_status_str)
+    
+    if return_status != 0:
+        if dev_exit_status < return_status:
+            dev_exit_status = return_status
+        dev_return_text += message
+
+    if output != "":
+        infomsg("Parse smartctl output")
+        return_status_parse, device_status, performance_status = parse_output(
+            output,
+            device.replace("/", "_"),
+            args.warning_temp,
+            args.critical_temp,
+            args.tolerated_reallocated_sector_ct,
+            args.tolerated_reallocated_event_count,
+            args.tolerated_current_pending_sector,
+            args.tolerated_offline_uncorrectable)
+        
+        if dev_exit_status < return_status_parse:
+            dev_exit_status = return_status_parse
+        dev_return_text += device_status
+        dev_return_performance += performance_status
+
+    return (dev_exit_status, dev_return_text, dev_return_performance)
+
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--device", action="store", dest="device", default="", help="device to check")
+    parser.add_argument("-a", "--all-disks", action="store_true", dest="alldisks", default="", help="Check all disks")
+    parser.add_argument("-w", "--warning-threshold", action="store", type=int, dest="warning_temp", default=55, help="set temperature warning threshold to given temperature (default:55)")
+    parser.add_argument("-c", "--critical-threshold", action="store", type=int, dest="critical_temp", default=60, help="set temperature critical threshold to given temperature (default:60)")
+    parser.add_argument("-S", "--tolerated_reallocated_sector_ct", action="store", type=int, dest="tolerated_reallocated_sector_ct", default=0, help="")
+    parser.add_argument("-E", "--tolerated_reallocated_event_count", action="store", type=int, dest="tolerated_reallocated_event_count", default=0, help="")
+    parser.add_argument("-P", "--tolerated_current_pending_sector", action="store", type=int, dest="tolerated_current_pending_sector", default=0, help="")
+    parser.add_argument("-O", "--tolerated_offline_uncorrectable", action="store", type=int, dest="tolerated_offline_uncorrectable", default=0, help="")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+
+    infomsg("Get device name")
+    if not args.alldisks:
+        devices = [args.device]
+    else:
+        devices = await calculatedevicelist()
+        infomsg("Devices: %s" % devices)
+
+    tasks = [process_device(dev, args) for dev in devices]
+    results = await asyncio.gather(*tasks)
+
+    exit_status = 0
+    return_text = ""
+    return_performance = ""
+
+    for i, (dev_status, dev_text, dev_perf) in enumerate(results):
+        if exit_status < dev_status:
+            exit_status = dev_status
+        if i > 0:
+            return_text += "\n"
+        return_text += dev_text
+        return_performance += dev_perf
+
+    nagios_state = ""
+    nagios_msg = ""
+    if exit_status == 0:
+        nagios_state = "OK"
+        nagios_msg = "no issues in any disk"
+    elif exit_status == 1:
+        nagios_state = "WARNING"
+        nagios_msg = "some disk is in warning"
+    elif exit_status == 2:
+        nagios_state = "CRITICAL"
+        nagios_msg = "some disk is in critical"
+    elif exit_status == 3:
+        nagios_state = "UNKNOWN"
+        nagios_msg = "cannot determine the status"
+    else:
+        nagios_state = "CRITICAL"
+        nagios_msg = "undefined error"
+
+    full_message = f"{nagios_msg}\n{return_text} | {return_performance}"
+    exitnagios(nagios_state, full_message)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
