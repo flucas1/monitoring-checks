@@ -26,7 +26,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug() is True:
         print(msg, flush=True)
 
 
@@ -221,7 +221,7 @@ async def main(forcedargs=None):
         "have_response": False,
         "start_time": datetime.datetime.now(datetime.timezone.utc).timestamp(),
     }
-    mqttc = paho.Client(paho.CallbackAPIVersion.VERSION2, "nagios-%d" % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+    mqttc = paho.mqtt.client.Client(paho.CallbackAPIVersion.VERSION2, "nagios-%d" % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
     mqttc.on_message = on_message
     mqttc.on_connect = on_connect
     mqttc.on_disconnect = on_disconnect
