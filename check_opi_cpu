@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import asyncio
+import datetime
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def checkbootstatus(cluster):
+    result = None
+
+    cmdline = ["/usr/bin/efivar", "--name=10f41c33-a468-42cd-85ee-7043213f73a3-CpuPerf_CPU" + cluster + "ClusterClockPreset", "-d"]
+    infomsg("Running command: " + " ".join(cmdline))
+    
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+
+    if exitcode == 0:
+        efibytes = output.split()
+        efibytes.reverse()
+        return int(efibytes[-1])
+
+    return result
+
+
+async def checkcpuid():
+    result = None
+
+    cmdline = ["/usr/bin/lscpu"]
+    infomsg("Running command: " + " ".join(cmdline))
+    
+    process = await asyncio.create_subprocess_exec(
+        *cmdline,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
+    output = stdout.decode("utf-8").strip() if stdout else ""
+    errors = stderr.decode("utf-8").strip() if stderr else ""
+    exitcode = process.returncode
+
+    if exitcode == 0:
+        values = []
+        token = "BIOS Model name:"
+        for line in output.splitlines():
+            clearedline = line.strip()
+            if clearedline.startswith(token):
+                lineinfo = clearedline[len(token):].strip()
+                parts = lineinfo.split("@")
+                speed = "0"
+                if len(parts) > 0:
+                    speed = parts[1].strip()
+                values.append(speed)
+        result = ",".join(values)
+
+    return result
+
+
+async def doopicpucall(expected):
+    try:
+        cpufinal = await checkcpuid()
+        if (expected != "") and (cpufinal != expected):
+            exitnagios("WARNING", "cpu info " + str(cpufinal) + " is not as expected " + expected)
+
+        cpuspeedL = await checkbootstatus("L")
+        if cpuspeedL != 2:
+            exitnagios("WARNING", "cluster " + str(cpuspeedL) + " speed is not as expected")
+
+        cpuspeedB01 = await checkbootstatus("B01")
+        if cpuspeedB01 != 2:
+            exitnagios("WARNING", "cluster " + str(cpuspeedB01) + " speed is not as expected")
+
+        cpuspeedB23 = await checkbootstatus("B23")
+        if cpuspeedB23 != 2:
+            exitnagios("WARNING", "cluster " + str(cpuspeedB23) + " speed is not as expected")
+    except Exception as e:
+        exitnagios("CRITICAL", "exception - " + str(e))
+
+    exitnagios("OK", "cpu info within expected parameters")
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected cpu values")
+    args = parser.parse_args(forcedargs)
+
+    await doopicpucall(args.expected)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

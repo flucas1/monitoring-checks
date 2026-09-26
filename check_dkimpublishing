@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import asyncio
+import re
+import argparse
+import dns.asyncresolver
+import base64
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def buildpublickey(candidate):
+    mode = None
+    if candidate.endswith("-rsa2048-private.pem"):
+        mode = "rsa"
+    elif candidate.endswith("-ed25519-private.pem"):
+        mode = "pkey"
+
+    publickey = None
+    if mode != None:
+        cmdline = ["/usr/bin/openssl", mode, "-in", candidate, "-pubout", "-out", "-"]
+        infomsg(str(cmdline))
+
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
+        if exitcode == 0:
+            lines = output.strip().splitlines()
+            if len(lines) > 2:
+                cleaned = lines[1:-1]
+                publickey = "".join(cleaned)
+
+        if mode == "pkey":
+            cmdline = ["/usr/bin/openssl", "asn1parse", "-in", "-", "-offset", "12", "-noout", "-out", "-"]
+            infomsg(str(cmdline))
+
+            process = await asyncio.create_subprocess_exec(
+                *cmdline,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            temp_stdout, temp_stderr = await process.communicate(input=output)
+            if process.returncode == 0:
+                temp = base64.b64encode(temp_stdout)
+                publickey = temp.decode()
+            else:
+                publickey = None
+
+    infomsg("the publickey is <" + str(publickey) + ">")
+
+    return publickey
+
+
+async def getpublishedkey(dnsentry):
+    txtfullrecord = ""
+    try:
+        resolver = dns.asyncresolver.Resolver()
+        answers = await resolver.resolve(dnsentry, "TXT")
+        for rdata in answers:
+            for txt_string in rdata.strings:
+                txtfullrecord = txtfullrecord + txt_string.decode()
+    except Exception as e:
+        infomsg("exception - " + str(e))
+        txtrecord = None
+    infomsg("the TXT record is <" + str(txtfullrecord) + ">")
+
+    publishedkey = None
+    if txtfullrecord != None:
+        parts = txtfullrecord.split(";")
+        for part in parts:
+            part = part.strip()
+            if part.startswith("p="):
+                publishedkey = part[2:]
+    infomsg("the published key is <" + str(publishedkey) + ">")
+
+    return publishedkey
+
+
+async def testdkimpublishing(candidate, dnsentry):
+    publickey = await buildpublickey(candidate)
+    publishedkey = await getpublishedkey(dnsentry)
+    equals = (publickey == publishedkey) and (publickey != None) and (publishedkey != None) and (publickey != "") and (publishedkey != "")
+    infomsg("The result for " + candidate + " is " + str(equals))
+    return equals
+
+
+async def check_dkimpublishing(dkimpath):
+    candidates = []
+    for item in os.listdir(dkimpath):
+        fullname = os.path.join(dkimpath, item)
+        if os.path.isfile(fullname):
+            infomsg("found file " + fullname)
+            if fullname.endswith("-private.pem"):
+                infomsg("selecting file " + fullname)
+                candidates.append(fullname)
+    infomsg(candidates)
+    candidates.sort()
+
+    failurelist = []
+    validlist = []
+    for candidate in candidates:
+        cleaned = os.path.splitext(os.path.basename(candidate))[0]
+        parts = cleaned.split("-")
+        infomsg(parts)
+        try:
+            dnsentry = "mail-" + parts[1] + "._domainkey." + parts[0]
+            infomsg(dnsentry)
+            if await testdkimpublishing(candidate, dnsentry):
+                validlist.append([parts[0], parts[1]])
+            else:
+                failurelist.append([parts[0], parts[1]])
+        except Exception as e:
+            infomsg("exception - " + str(e))
+            failurelist.append([parts[0], parts[1]])
+
+    return failurelist, validlist
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--dkimpath", dest="dkimpath", default="", help="path where the dkim keys are stored")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    dkimpath = args.dkimpath.strip()
+    if dkimpath == "":
+        exitnagios("CRITICAL", "dkimpath not specified | failures=0 count=0")
+
+    failurelist, validlist = await check_dkimpublishing(dkimpath)
+    infomsg("-----")
+    infomsg("failures -> " + str(failurelist))
+    infomsg("valid -> " + str(validlist))
+    infomsg("-----")
+
+    if len(failurelist) == 0:
+        exitnagios("OK", "no issues found | failures=0 valid=" + str(len(validlist)))
+    else:
+        exitnagios("CRITICAL", "there are issues with some keys: " + str(failurelist) + " | failures=" + str(len(failurelist)) + " valid=" + str(len(validlist)))
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
