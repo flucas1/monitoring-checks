@@ -85,10 +85,12 @@ COUNT_AVG = 1
 AVG_AVG = 1
 VALUES_LOG_FILE = ""
 
+
 def exit_now():
     perf_str = f" | {EXIT_PERF_DATA}" if EXIT_PERF_DATA else ""
     print(f"SNORT_CHECK {EXIT_STATUS} - [{MODUS}] {EXIT_TEXT}{perf_str}")
     sys.exit(EXIT_VALUE)
+
 
 def print_log(msg):
     log_insert = f"{NOW_DATE}  -  [ {MODUS} ] - {msg}\n"
@@ -98,12 +100,15 @@ def print_log(msg):
     except IOError:
         pass
 
+
 def print_debug(msg):
     if DEBUG:
         print_log(msg)
 
+
 def stamp2date(ts):
     return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+
 
 async def run_mysql_query(query):
     cmd = [
@@ -126,6 +131,7 @@ async def run_mysql_query(query):
     except Exception:
         return 1
 
+
 async def get_last_count(actual_alerts):
     global COUNT_LAST
     now = int(time.time())
@@ -135,6 +141,7 @@ async def get_last_count(actual_alerts):
     COUNT_LAST = await run_mysql_query(query)
     print_debug(f"time_diff -> {time_diff} / COUNT_LAST: -> {COUNT_LAST}")
 
+
 async def get_avg_count(average_alerts):
     global COUNT_AVG
     now = int(time.time())
@@ -142,6 +149,7 @@ async def get_avg_count(average_alerts):
     query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '{PRIORITY_LEVEL - 1}' and timestamp(event.timestamp) > '{time_diff}';"
     COUNT_AVG = await run_mysql_query(query)
     print_debug(f"time_diff -> {time_diff} / COUNT_AVG: -> {COUNT_AVG}")
+
 
 async def get_latest_values():
     global EXIT_STATUS, EXIT_VALUE, EXIT_TEXT
@@ -152,7 +160,7 @@ async def get_latest_values():
         print_debug(EXIT_TEXT)
         open(VALUES_LOG_FILE, 'a').close()
         exit_now()
-    
+
     print_debug(f"reading {VALUES_LOG_FILE}")
     try:
         with open(VALUES_LOG_FILE, "r") as f:
@@ -172,10 +180,12 @@ async def get_latest_values():
     except Exception:
         pass
 
+
 def write_latest_values():
     with open(VALUES_LOG_FILE, "w") as f:
         f.write(f"{EXIT_STATUS} : {COUNT_LAST} : {AVG_AVG} : {NOW_DATE}\n")
     print_debug(f"{EXIT_STATUS} : {COUNT_LAST} : {AVG_AVG} values_log_file -> {VALUES_LOG_FILE}")
+
 
 async def check_host():
     global EXIT_TEXT, EXIT_STATUS, EXIT_VALUE, EXIT_PERF_DATA
@@ -209,14 +219,14 @@ async def check_host():
     start_stats = False
     received_pckt = 0
     dropped_pckt = 0
-    
+
     for line in syslog_lines:
         if "snort" not in line:
             continue
-        
+
         if "Packet Wire Totals" in line:
             start_stats = True
-        
+
         if start_stats:
             if "Received" in line:
                 received_pckt = int(line.split(":")[-1].strip().split()[0])
@@ -247,6 +257,7 @@ async def check_host():
     print_log(f"{NOW_DATE} :: {EXIT_STATUS}  :: {EXIT_TEXT}  :perfdata: {EXIT_PERF_DATA} :: file: {VALUES_LOG_FILE}")
     exit_now()
 
+
 async def check_alerts():
     global AVG_AVG, EXIT_STATUS, EXIT_VALUE, EXIT_TEXT, EXIT_PERF_DATA, VALUES_LOG_FILE
     intervals = {
@@ -256,30 +267,30 @@ async def check_alerts():
         "4": (2592000, 604800, 4, "7d-30d"),
         "5": (7776000, 604800, 13, "7d-90d")
     }
-    
+
     average_alerts, actual_alerts, divider, count_interval = intervals.get(INTERVAL, (86400, 3600, 24, "1hr-24hr"))
-    
+
     print_debug(f"\n----[ {NOW_DATE} ]-----------------------------------------------\n")
-    
+
     last_tag, avg_tag = count_interval.split("-")
     VALUES_LOG_FILE = f"{SPOOL_DATA_DIR}/{PRIORITY_LEVEL}-{count_interval}.check"
-    
+
     await get_latest_values()
     await get_last_count(actual_alerts)
     await get_avg_count(average_alerts)
-    
+
     AVG_AVG = COUNT_AVG // divider
     if AVG_AVG == 0:
         AVG_AVG = 1
-        
+
     w_limit = AVG_AVG + int(AVG_AVG * WARNING_THRESH / 100)
     c_limit = AVG_AVG + int(AVG_AVG * CRITICAL_THRESH / 100)
-    
+
     print_debug(f"check_options: AVG -> {average_alerts} / ACT -> {actual_alerts} / INT -> {count_interval} / DIV -> {divider}")
     print_debug(f"\nPRIORITY  -> {PRIORITY_LEVEL}\nINTERVAL  -> {count_interval}\nLAST      -> {COUNT_LAST}\nAVG       -> {COUNT_AVG}\nAVG_AVG   -> {AVG_AVG}\nw_limit   -> {w_limit}\nc_limit   -> {c_limit}\n")
-    
+
     EXIT_PERF_DATA = f"{last_tag}={COUNT_LAST};{w_limit};{c_limit}; {avg_tag}={COUNT_AVG}; {avg_tag}-avg={AVG_AVG}"
-    
+
     if COUNT_LAST > c_limit:
         EXIT_STATUS = "CRITICAL"
         EXIT_VALUE = 2
@@ -289,9 +300,9 @@ async def check_alerts():
     else:
         EXIT_STATUS = "OK"
         EXIT_VALUE = 0
-        
+
     EXIT_TEXT = f"p-{PRIORITY_LEVEL} :: {count_interval} :: last: {COUNT_LAST} - avg: {AVG_AVG} / thresh: {w_limit}/{c_limit} [{WARNING_THRESH}%/{CRITICAL_THRESH}%]"
-    
+
     write_latest_values()
     print_log(f"{NOW_DATE} :: {EXIT_STATUS}  :: {EXIT_TEXT}  :perfdata: {EXIT_PERF_DATA} :: file: {VALUES_LOG_FILE}")
     exit_now()
@@ -311,13 +322,13 @@ async def main(forcedargs=None):
     parser.add_argument("-l", dest="log_file")
     parser.add_argument("-o", dest="spool_data_dir")
     parser.add_argument("-h", dest="help", action="store_true")
-    
+
     args, unknown = parser.parse_known_args()
-    
+
     if args.help or not args.modus:
         print("USAGE: check_snort [options]\n-m [modus]\n-c [percent]\n-w [percent]\n-i [INTERVAL]\n-p [PRIORITY]\n-d\n-l [logfile]\n-o [out_dir]")
         sys.exit(0)
-        
+
     global MODUS, INTERVAL, CRITICAL_THRESH, DROPPED_CRITICAL, WARNING_THRESH, DROPPED_WARNING, PRIORITY_LEVEL, DEBUG, LOG_FILE, SPOOL_DATA_DIR
 
     MODUS = args.modus
@@ -328,18 +339,18 @@ async def main(forcedargs=None):
     DROPPED_WARNING = args.warning_thresh
     PRIORITY_LEVEL = args.priority_level
     DEBUG = args.debug
-    
+
     if args.log_file:
         LOG_FILE = args.log_file
     if args.spool_data_dir:
         SPOOL_DATA_DIR = args.spool_data_dir
         LOG_FILE = f"{SPOOL_DATA_DIR}/check_snort.{datetime.datetime.now().strftime('%a')}.log"
-        
+
     if not os.path.isdir(SPOOL_DATA_DIR):
         print(f"\n> error no output_dir given/created; run\n> $ mkdir -p {SPOOL_DATA_DIR} && chown nagios:nagios {SPOOL_DATA_DIR}\n> to create that dir\n")
         EXIT_TEXT += f" :: SPOOL_DATA_DIR not found -> {SPOOL_DATA_DIR}"
         exit_now()
-        
+
     if MODUS == "host":
         await check_host()
     elif MODUS == "alerts":

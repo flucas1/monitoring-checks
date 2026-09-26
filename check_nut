@@ -106,20 +106,20 @@ async def run_command(cmd):
 #     'w' : warning
 #     'c' : critical
 # OPERATOR := { '>=' | '>' | '<=' | | '<' '==' | '=' | '<>' | '!=' | '~' | '!~' }
-#     '>=' : numerical comparison, reported value is greater or equal than VALUE 
-#     '>'  : numerical comparison, reported value is greater than VALUE 
-#     '<=' : numerical comparison, reported value is less or equal than VALUE 
-#     '<'  : numerical comparison, reported value is less than VALUE 
-#     '='  : numerical comparison, reported value is equal to VALUE 
-#     '<>' : numerical comparison, reported value is not equal to VALUE 
-#     '==' : string comparison, reported value is identical to VALUE 
-#     '!=' : string comparison, reported value is not identical to VALUE 
-#     '~'  : regex match, reported value matches the perl regular expression 
-#            given by VALUE 
-#     '!~' : regex match, reported value does not match the perl regular 
-#            expression given by VALUE 
-#     (for perl regular expressions see 'man perlre') 
-# VALUE : the value representing the preset, might be a string, integer 
+#     '>=' : numerical comparison, reported value is greater or equal than VALUE
+#     '>'  : numerical comparison, reported value is greater than VALUE
+#     '<=' : numerical comparison, reported value is less or equal than VALUE
+#     '<'  : numerical comparison, reported value is less than VALUE
+#     '='  : numerical comparison, reported value is equal to VALUE
+#     '<>' : numerical comparison, reported value is not equal to VALUE
+#     '==' : string comparison, reported value is identical to VALUE
+#     '!=' : string comparison, reported value is not identical to VALUE
+#     '~'  : regex match, reported value matches the perl regular expression
+#            given by VALUE
+#     '!~' : regex match, reported value does not match the perl regular
+#            expression given by VALUE
+#     (for perl regular expressions see 'man perlre')
+# VALUE : the value representing the preset, might be a string, integer
 #         or float, depending on OPERATOR
 
 # NUT status is a combination of the following tags:
