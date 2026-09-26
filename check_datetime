@@ -6,17 +6,45 @@ import argparse
 import ntplib
 import asyncio
 
+
 # -------------------------------------------------------------------------------
 
+_candebug = False
 
-def usage():
-    print(" check_ntp_time.py <-H ntpserver> <-w warnlevel> <-c critlevel>\n")
-    print("options:\n")
-    print(" -H ntpserver   Hostname or IP address of the ntp server\n")
-    print(" -w seconds     Difference in seconds from the ntpserver clock and the server clock which the plugin will emit a warning alarm - Default = 150 seconds (above or below)\n")
-    print(" -c seconds     Difference in seconds from the ntpserver clock and the server clock which the plugin will emit a critical alarm - Default = 300 seconds (above or below)\n")
-    sys.exit(0)
 
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
 
 # -------------------------------------------------------------------------------
 

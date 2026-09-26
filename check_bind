@@ -5,6 +5,46 @@ import sys
 import urllib.request
 import xml.etree.ElementTree
 import asyncio
+import argparse
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
 
 # -------------------------------------------------------------------------------
 
@@ -15,22 +55,7 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 TIMEOUT = 20
 
-
-def print_usage():
-    print("\ncheck_bind.py Revision 0.1 - Check Bind9 Statistics(new format)\n")
-    print("Usage: check_bind.py [-H | --hostaddress ] [-p | --port ]\n")
-    print("    -h  Show this page")
-    print("    -H  Host address\n")
-    sys.exit(0)
-
-
-# -------------------------------------------------------------------------------
-
-
-async def main(forcedargs=None):
-    if len(sys.argv) < 2:
-        print_usage()
-        sys.exit(STATE_UNKNOWN)
+async def main(forcedargs=None)
 
     args = sys.argv[1:]
     hostaddress = None
@@ -38,9 +63,6 @@ async def main(forcedargs=None):
 
     while args:
         arg = args.pop(0)
-        if arg in ('-h', '--help'):
-            print_usage()
-            sys.exit(STATE_OK)
         elif arg in ('-H', '--hostaddress'):
             if args:
                 hostaddress = args.pop(0)
@@ -49,11 +71,10 @@ async def main(forcedargs=None):
                 hostport = args.pop(0)
         else:
             print(f"Unknown argument: {arg}")
-            print_usage()
             sys.exit(STATE_UNKNOWN)
 
     if not hostaddress or not hostport:
-        print_usage()
+        print(f"missing argument")
         sys.exit(STATE_UNKNOWN)
 
     url = f"http://{hostaddress}:{hostport}/xml/v3/server"

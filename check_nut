@@ -6,6 +6,46 @@ import asyncio
 import argparse
 import re
 
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
 # -------------------------------------------------------------------------------
 
 
@@ -60,71 +100,52 @@ async def run_command(cmd):
 
 # -------------------------------------------------------------------------------
 
+# CHECK_DESC := UPSCKEY '=' SEVERITY OPERATOR VALUE [ ':' SEVERITY OPERATOR VALUE ]
+# UPSCKEY : key string as listed by upsc, see 'man upsc'
+# SEVERITY := { 'w' | 'c' } ( 'w' for warning, 'c' for critical errors )
+#     'w' : warning
+#     'c' : critical
+# OPERATOR := { '>=' | '>' | '<=' | | '<' '==' | '=' | '<>' | '!=' | '~' | '!~' }
+#     '>=' : numerical comparison, reported value is greater or equal than VALUE 
+#     '>'  : numerical comparison, reported value is greater than VALUE 
+#     '<=' : numerical comparison, reported value is less or equal than VALUE 
+#     '<'  : numerical comparison, reported value is less than VALUE 
+#     '='  : numerical comparison, reported value is equal to VALUE 
+#     '<>' : numerical comparison, reported value is not equal to VALUE 
+#     '==' : string comparison, reported value is identical to VALUE 
+#     '!=' : string comparison, reported value is not identical to VALUE 
+#     '~'  : regex match, reported value matches the perl regular expression 
+#            given by VALUE 
+#     '!~' : regex match, reported value does not match the perl regular 
+#            expression given by VALUE 
+#     (for perl regular expressions see 'man perlre') 
+# VALUE : the value representing the preset, might be a string, integer 
+#         or float, depending on OPERATOR
+
+# NUT status is a combination of the following tags:
+#     OL - On line (mains is present)
+#     OB - On battery (mains is not present)
+#     LB - Low battery
+#     HB - High battery
+#     RB - The battery needs to be replaced
+#     CHRG - The battery is charging
+#     DISCHRG - The battery is discharging (inverter is providing load power)
+#     BYPASS - UPS bypass circuit is active -- no battery protection is available
+#     CAL - UPS is currently performing runtime calibration (on battery)
+#     OFF - UPS is offline and is not supplying power to the load
+#     OVER - UPS is overloaded
+#     TRIM - UPS is trimming incoming voltage (called 'buck' in some hardware)
+#     BOOST - UPS is boosting incoming voltage
+#     FSD and SD - Forced Shutdown
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("-V", "--version", action="store_true")
     parser.add_argument("-h", "--help", action="store_true")
     parser.add_argument("-d", "--device", type=str)
     parser.add_argument("-D", "--debug", action="store_true")
     parser.add_argument("-v", "--value", action="append", default=[])
 
     args = parser.parse_args()
-
-    if args.version:
-        print("check_nut_plus 1.6")
-        sys.exit(ERRORS_OK)
-
-    if args.help:
-        help_text = """check_nut_plus 1.6
-Copyright (c) 2013 Chris Recktenwald for LiHAS http://lihas.de
-Copyright (c) 2007 Luca Bertoncello <lucabert@lucabert.de>
-
-This plugin reports the status of the UPS using NUT
-
-Usage:
-check_nut_plus -d DEVICE -v CHECK_DESC [ -v CHECK_DESC ... ]
-
-DEVICE := a device description upsc would accept
-CHECK_DESC := UPSCKEY '=' SEVERITY OPERATOR VALUE [ ':' SEVERITY OPERATOR VALUE ] ...
-UPSCKEY : key string as listed by upsc, see 'man upsc'
-SEVERITY := { 'w' | 'c' } ( 'w' for warning, 'c' for critical errors )
-    'w' : warning
-    'c' : critical
-OPERATOR := { '>=' | '>' | '<=' | | '<' '==' | '=' | '<>' | '!=' | '~' | '!~' }
-    '>=' : numerical comparison, reported value is greater or equal than VALUE 
-    '>'  : numerical comparison, reported value is greater than VALUE 
-    '<=' : numerical comparison, reported value is less or equal than VALUE 
-    '<'  : numerical comparison, reported value is less than VALUE 
-    '='  : numerical comparison, reported value is equal to VALUE 
-    '<>' : numerical comparison, reported value is not equal to VALUE 
-    '==' : string comparison, reported value is identical to VALUE 
-    '!=' : string comparison, reported value is not identical to VALUE 
-    '~'  : regex match, reported value matches the perl regular expression 
-           given by VALUE 
-    '!~' : regex match, reported value does not match the perl regular 
-           expression given by VALUE 
-    (for perl regular expressions see 'man perlre') 
-VALUE : the value representing the preset, might be a string, integer 
-        or float, depending on OPERATOR
-
-NUT status is a combination of the following tags:
-    OL - On line (mains is present)
-    OB - On battery (mains is not present)
-    LB - Low battery
-    HB - High battery
-    RB - The battery needs to be replaced
-    CHRG - The battery is charging
-    DISCHRG - The battery is discharging (inverter is providing load power)
-    BYPASS - UPS bypass circuit is active -- no battery protection is available
-    CAL - UPS is currently performing runtime calibration (on battery)
-    OFF - UPS is offline and is not supplying power to the load
-    OVER - UPS is overloaded
-    TRIM - UPS is trimming incoming voltage (called 'buck' in some hardware)
-    BOOST - UPS is boosting incoming voltage
-    FSD and SD - Forced Shutdown"""
-        print(help_text)
-        sys.exit(ERRORS_OK)
 
     if not args.device:
         print("Device not specified")

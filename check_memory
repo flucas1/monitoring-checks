@@ -7,6 +7,46 @@ import os
 import re
 import sys
 
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
 # -------------------------------------------------------------------------------
 
 
@@ -21,13 +61,6 @@ EXIT_CODES = {
 def finish(msg, state):
     print(msg)
     sys.exit(state)
-
-
-def usage():
-    print("options:\n -f           Check FREE memory\n -u           Check USED memory")
-    print(" -C           Count OS caches as FREE memory\n -h           Remove hugepages from the total memory count")
-    print(" -w PERCENT   Percent free/used when to warn\n -c PERCENT   Percent free/used when critical\n")
-    sys.exit(0)
 
 
 def get_memory_info(opt_C, opt_v):
@@ -102,24 +135,17 @@ async def main(forcedargs=None):
     parser.add_argument('-w', type=float)
     parser.add_argument('-c', type=float)
 
-    if len(sys.argv) <= 1:
-        usage()
-
     args, _ = parser.parse_known_args()
 
     if args.w is None or args.w == 0 or args.c is None or args.c == 0:
         print("*** You must define WARN and CRITICAL levels!")
-        usage()
     elif not args.f and not args.u:
         print("*** You must select to monitor either USED or FREE memory!")
-        usage()
 
     if args.w <= args.c and args.f:
         print("*** WARN level must not be less than CRITICAL when checking FREE memory!")
-        usage()
     elif args.w >= args.c and args.u:
         print("*** WARN level must not be greater than CRITICAL when checking USED memory!")
-        usage()
 
     free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info(args.C, args.v)
 
