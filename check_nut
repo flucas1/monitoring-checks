@@ -94,31 +94,31 @@ async def run_command(cmd):
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(f"Command {' '.join(cmd)} failed with code {proc.returncode}")
+        raise RuntimeError(f"Command {" ".join(cmd)} failed with code {proc.returncode}")
     return stdout.decode().strip()
 
 
 # -------------------------------------------------------------------------------
 
-# CHECK_DESC := UPSCKEY '=' SEVERITY OPERATOR VALUE [ ':' SEVERITY OPERATOR VALUE ]
-# UPSCKEY : key string as listed by upsc, see 'man upsc'
-# SEVERITY := { 'w' | 'c' } ( 'w' for warning, 'c' for critical errors )
-#     'w' : warning
-#     'c' : critical
-# OPERATOR := { '>=' | '>' | '<=' | | '<' '==' | '=' | '<>' | '!=' | '~' | '!~' }
-#     '>=' : numerical comparison, reported value is greater or equal than VALUE
-#     '>'  : numerical comparison, reported value is greater than VALUE
-#     '<=' : numerical comparison, reported value is less or equal than VALUE
-#     '<'  : numerical comparison, reported value is less than VALUE
-#     '='  : numerical comparison, reported value is equal to VALUE
-#     '<>' : numerical comparison, reported value is not equal to VALUE
-#     '==' : string comparison, reported value is identical to VALUE
-#     '!=' : string comparison, reported value is not identical to VALUE
-#     '~'  : regex match, reported value matches the perl regular expression
+# CHECK_DESC := UPSCKEY "=" SEVERITY OPERATOR VALUE [ ":" SEVERITY OPERATOR VALUE ]
+# UPSCKEY : key string as listed by upsc, see "man upsc"
+# SEVERITY := { "w" | "c" } ( "w" for warning, "c" for critical errors )
+#     "w" : warning
+#     "c" : critical
+# OPERATOR := { ">=" | ">" | "<=" | | "<" "==" | "=" | "<>" | "!=" | "~" | "!~" }
+#     ">=" : numerical comparison, reported value is greater or equal than VALUE
+#     ">"  : numerical comparison, reported value is greater than VALUE
+#     "<=" : numerical comparison, reported value is less or equal than VALUE
+#     "<"  : numerical comparison, reported value is less than VALUE
+#     "="  : numerical comparison, reported value is equal to VALUE
+#     "<>" : numerical comparison, reported value is not equal to VALUE
+#     "==" : string comparison, reported value is identical to VALUE
+#     "!=" : string comparison, reported value is not identical to VALUE
+#     "~"  : regex match, reported value matches the perl regular expression
 #            given by VALUE
-#     '!~' : regex match, reported value does not match the perl regular
+#     "!~" : regex match, reported value does not match the perl regular
 #            expression given by VALUE
-#     (for perl regular expressions see 'man perlre')
+#     (for perl regular expressions see "man perlre")
 # VALUE : the value representing the preset, might be a string, integer
 #         or float, depending on OPERATOR
 
@@ -134,7 +134,7 @@ async def run_command(cmd):
 #     CAL - UPS is currently performing runtime calibration (on battery)
 #     OFF - UPS is offline and is not supplying power to the load
 #     OVER - UPS is overloaded
-#     TRIM - UPS is trimming incoming voltage (called 'buck' in some hardware)
+#     TRIM - UPS is trimming incoming voltage (called "buck" in some hardware)
 #     BOOST - UPS is boosting incoming voltage
 #     FSD and SD - Forced Shutdown
 
@@ -210,9 +210,9 @@ async def main(forcedargs=None):
             cnthits = 0
             for comparison in cmp_dict["c"]:
                 if args.debug:
-                    print(f"{key} {ups_data[key]} {comparison['op']} {comparison['value']}")
+                    print(f"{key} {ups_data[key]} {comparison["op"]} {comparison["value"]}")
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = f"CRITICAL: {ups_data[key]} {comparison['op']} {comparison['value']} | {key}={ups_data[key]}"
+                    msg = f"CRITICAL: {ups_data[key]} {comparison["op"]} {comparison["value"]} | {key}={ups_data[key]}"
                     if args.debug:
                         print(msg)
                     critmesg.append(msg)
@@ -226,7 +226,7 @@ async def main(forcedargs=None):
             cnthits = 0
             for comparison in cmp_dict["w"]:
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = f"WARNING: {ups_data[key]} {comparison['op']} {comparison['value']} | {key}={ups_data[key]}"
+                    msg = f"WARNING: {ups_data[key]} {comparison["op"]} {comparison["value"]} | {key}={ups_data[key]}"
                     if args.debug:
                         print(msg)
                     warnmesg.append(msg)

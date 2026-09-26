@@ -58,14 +58,14 @@ ZONEINFO_DIR = "/usr/share/zoneinfo"
 
 
 def is_path_qualified(path):
-    return path.startswith('./') or path.startswith('/')
+    return path.startswith("./") or path.startswith("/")
 
 
 def is_filename(filename):
-    if not filename or not filename.strip() or filename.endswith('/'):
+    if not filename or not filename.strip() or filename.endswith("/"):
         return None
-    dirname_regex = r'[\/\w\s\\.,:*()=%?+-]+'
-    filename_regex = dirname_regex + r'[^\/]'
+    dirname_regex = r"[\/\w\s\\.,:*()=%?+-]+"
+    filename_regex = dirname_regex + r"[^\/]"
     match = re.match(f"^({filename_regex})$", filename)
     if match:
         return match.group(1)
@@ -79,7 +79,7 @@ def validate_filename(filename, name="filename", noquit=False):
     filename2 = is_filename(filename)
     if not filename2:
         if not noquit:
-            print(f"invalid {name} (does not match regex critera): '{filename}'")
+            print(f"invalid {name} (does not match regex critera): "{filename}"")
         return None
     return filename2
 
@@ -94,15 +94,15 @@ def timeout_handler(signum, frame):
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument('-T', '--timezone', type=str)
-    parser.add_argument('-A', '--alternate', type=str)
-    parser.add_argument('-Z', '--zoneinfo-file', type=str)
-    parser.add_argument('-h', '--help', action='store_true')
+    parser.add_argument("-T", "--timezone", type=str)
+    parser.add_argument("-A", "--alternate", type=str)
+    parser.add_argument("-Z", "--zoneinfo-file", type=str)
+    parser.add_argument("-h", "--help", action="store_true")
 
     args = parser.parse_args()
 
     if args.help:
-        print("T|timezone=s Timezone to expect the server in as shown by the 'date' command (eg. GMT)")
+        print("T|timezone=s Timezone to expect the server in as shown by the "date" command (eg. GMT)")
         print("A|alternate=s Alternative timezone to expect the server in. Optional (defaults to same as --timezone). Useful to allow daylight saving time shifts by specifying a second timezone to allow (eg. BST)")
         print(f"Z|zoneinfo-file=s Timezone file to compare {LOCALTIME_FILE} to. Optional (defaults to --timezone suffixed to {ZONEINFO_DIR}). Useful when your localtime is set to say Europe/London which shows up as GMT/BST but you still want to validate that {LOCALTIME_FILE} is set to Europe/London for following daylight saving time changes back and forth. Can be any valid timezone file under {ZONEINFO_DIR}/ (eg. UTC or GMT) or a fully qualified path to a timezone file")
         sys.exit(0)
@@ -111,7 +111,7 @@ async def main(forcedargs=None):
         print("ERROR: timezone not specified")
         sys.exit(3)
 
-    if not re.match(r'^[\w\/\+-]+$', args.timezone):
+    if not re.match(r"^[\w\/\+-]+$", args.timezone):
         print("ERROR: invalid timezone specified")
         sys.exit(3)
 
@@ -132,13 +132,13 @@ async def main(forcedargs=None):
         print("CRITICAL: failed to get timezone")
         sys.exit(2)
 
-    msg = f"timezone is '{server_timezone}'"
+    msg = f"timezone is "{server_timezone}""
 
     if server_timezone != args.timezone and server_timezone != alternate_timezone:
         if args.timezone != alternate_timezone:
-            msg += f" (expected: '{args.timezone}' or '{alternate_timezone}')"
+            msg += f" (expected: "{args.timezone}" or "{alternate_timezone}")"
         else:
-            msg += f" (expected: '{args.timezone}')"
+            msg += f" (expected: "{args.timezone}")"
         print(f"CRITICAL: {msg}")
         sys.exit(2)
 
@@ -147,10 +147,10 @@ async def main(forcedargs=None):
             print(f"OK: {msg}")
             sys.exit(0)
         else:
-            print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
+            print(f"CRITICAL: {msg}, localtime file "{LOCALTIME_FILE}" does not match timezone file "{zoneinfo_file}"!")
             sys.exit(2)
     except FileNotFoundError:
-        print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
+        print(f"CRITICAL: {msg}, localtime file "{LOCALTIME_FILE}" does not match timezone file "{zoneinfo_file}"!")
         sys.exit(2)
 
     print(f"UNKNOWN {msg}")
