@@ -2,11 +2,10 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import urllib.request
-import urllib.error
-import xml.etree.ElementTree
 import asyncio
+import aiohttp
 import argparse
+import xml.etree.ElementTree
 
 # -------------------------------------------------------------------------------
 
@@ -51,10 +50,20 @@ def exitnagios(status, message):
 
 
 STATE_OK = 0
-STATE_WARNING = 1
-STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
-TIMEOUT = 20
+
+
+async def fetch_data(url, timeout):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=timeout) as response:
+                return await response.read()
+    except Exception:
+        print("Stats collection failed")
+        sys.exit(STATE_UNKNOWN)
+
+# -------------------------------------------------------------------------------\
+
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
@@ -64,12 +73,8 @@ async def main(forcedargs=None):
 
     url = f"http://{args.hostaddress}:{args.port}/xml/v3/server"
 
-    try:
-        req = urllib.request.urlopen(url, timeout=TIMEOUT)
-        xml_data = req.read()
-    except Exception:
-        print("Stats collection failed")
-        sys.exit(STATE_UNKNOWN)
+    TIMEOUT = 20
+    xml_data = await fetch_data(url, TIMEOUT)
 
     if not xml_data:
         print("Stats collection failed")
