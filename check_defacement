@@ -1,0 +1,130 @@
+#! /usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import argparse
+import re
+import asyncio
+import aiohttp
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+            text = await resp.text()
+    except Exception:
+        exitnagios("UNKNOWN", "Error accessing url: %s" % url)
+
+    if ignore:
+        keywords = []
+    else:
+        keywords = ['Anonymous', 'Hacked', 'Hacker', 'hack', 'h4ck3d',
+                    'attack', 'Hacktivist', 'virus', 'defaced',
+                    'Gary McKinnon', 'LulzSec', 'Lulz Security', 'lulz',
+                    'Adrian Lamo', 'Astra', 'MafiaBoy', 'YTCracker', '414s',
+                    'FinnSec Security', 'Chaos Computer Club', 'Cicada 3301',
+                    'Croatian Revolution Hackers', 'Cult of the Dead Cow',
+                    'cDc', 'Decocidio', '#Ө', 'Digital DawgPound', 'Global kOS ',
+                    'globalHell', 'Goatse Security', 'GoatSec', 'Hacking Team',
+                    'Hacking', 'Hackweiser', 'Honker Union', 'L0pht', 'Mazafaka',
+                    'milw0rm', 'NCPH', 'OurMine', 'Syrian Electronic Army',
+                    'TeaMp0isoN', 'UGNazi', 'bl@ck dr@gon', 'Lizard Squad',
+                    'Tarh Andishan', 'ArabAttack', 'k4zuk3', 'kdms team',
+                    'Dragonfly']
+
+    if len(keywordlist) > 0:
+        keywords = list(set(keywords) + set(keywordlist))
+
+    if len(excludelist) > 0:
+        keywords = list(set(keywords) - set(excludelist))
+
+    word_match = []
+    for word in keywords:
+        if word in text:
+            word_match.append(word)
+
+    if len(word_match) > 0:
+        exitnagios("CRITICAL", 'Dangerous words were found, verify that the following %s words "%s", are legitimate in the following web page: %s' % (len(word_match), (", ".join(word_match)), url))
+    else:
+        exitnagios("OK", "No dangerous words are found")
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-U", "--url", dest="url", help="Specify the full url you want to check, i.e. -U https://www.google.com")
+    parser.add_argument("-K", "--keyword", dest="keyword", help="Put the words you want to search, i.e. -K hacker,hacked,anonymous")
+    parser.add_argument("-i", "--ignore", action="store_true", dest="ignore", default=False, help="Use this option to ignore all pre-installed suspect words")
+    parser.add_argument("-x", "--exclude", dest="exclude", help="Use this option to ignore one or multiple pre-installed suspect words")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    if args.ignore:
+        if not args.keyword:
+            exitnagios("UNKNOWN", "When using -i option, you need to specify at least one suspect word.")
+    if not args.url:
+        exitnagios("UNKNOWN", "Please, this program requires url arguments.")
+
+    exclude_list = []
+    if args.exclude:
+        exclude_list = args.exclude.split(",")
+
+    keyword_list = []
+    if args.keyword:
+        keyword_list = args.keyword.split(",")
+
+    async with aiohttp.ClientSession() as session:
+        await dodefacementcheck(args.url, args.ignore, exclude_list, keyword_list, session)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
