@@ -52,7 +52,7 @@ async def main(forcedargs=None):
     parser.add_argument("-e", "--expression", default="", help="expression for the check")
     args = parser.parse_args(forcedargs)
 
-    cmdline = ["/etc/nagios/scripts/check_nut", "-d", args.host, "-v", args.expression,]
+    cmdline = ["/etc/nagios/scripts/check_nut", "-d", args.host, "-v", args.expression]
     process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,

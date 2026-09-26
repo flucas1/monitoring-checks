@@ -48,6 +48,14 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+def check_device_permissions(path):
+    infomsg("Check if %s does exist and can be read" % path)
+    if not os.access(path, os.F_OK):
+        return (2, "CRITICAL: no such device found")
+    elif not os.access(path, os.R_OK):
+        return (2, "CRITICAL: no read permission given")
+    else:
+        return (0, "")
 
 async def call_smartmontools(device):
     cmdline = ["/usr/sbin/smartctl", "-a", device]
