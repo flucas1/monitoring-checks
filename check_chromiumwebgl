@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import time
+import argparse
+import asyncio
+
+import selenium
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import ActionChains
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def generatedriver(proxy):
+    chrome_options = Options()
+    # chrome_options.add_argument("--incognito")
+    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
+    chrome_options.add_argument("--disk-cache-size=0")
+    chrome_options.add_argument("--media-cache-size=0")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--renderer-process-limit=1")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--in-process-gpu")
+    chrome_options.add_argument("--use-gl=angle")
+    chrome_options.add_argument("--use-angle=swiftshader-webgl")
+    chrome_options.add_argument("--disable-popup-blocking")
+    if proxy not in ["", None]:
+        chrome_options.add_argument("--proxy-server=" + proxy)
+
+    chrome_service = webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = webdriver.Chrome(options=chrome_options, service=chrome_service)
+    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
+
+    return driver
+
+
+def check_page_loaded(driver):
+    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
+    page_state = driver.execute_script("return document.readyState;")
+    return page_state == "complete"
+
+
+async def wait_page_loaded(driver):
+    timestamp = time.time()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if time.time() - timestamp > 20:
+            break
+        await asyncio.sleep(1)
+
+# -------------------------------------------------------------------------------
+
+
+async def dowebgl(proxy):
+    try:
+        driver = await generatedriver(proxy)
+
+        wait = WebDriverWait(driver, 20)
+        action = ActionChains(driver)
+
+        infomsg("browser OK")
+        url = "https://browserleaks.com/webgl"
+        driver.get(url)
+        infomsg("asking for navigating " + url)
+
+        await asyncio.sleep(5)
+        await wait_page_loaded(driver)
+
+        element = driver.find_element(By.ID, "gl1-status")
+        text = element.get_attribute("innerText")
+        infomsg(text)
+
+        element = driver.find_element(By.ID, "gl2-status")
+        text = element.get_attribute("innerText")
+        infomsg(text)
+
+        exitnagios("CRITICAL", "unimplemented")
+        exitnagios("OK", "Chrome is supporting WebGL")
+
+    except Exception as e:
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+    proxy = ""
+    await dowebgl(proxy)
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
