@@ -108,14 +108,19 @@ def on_message(mosq, userdata, msg):
     global message
     global status
 
-    try:
-        temppayload = msg.payload.decode("utf-8")
-        jspayload = json.loads(temppayload)
-        jspath = jsonpath_rw.parse(args.mqtt_jsonpath)
-        extractpayload = [match.value for match in jspath.find(jspayload)]
-        payload = extractpayload[0]
-    except Exception:
-        payload = None
+    rawpayload = msg.payload.decode("utf-8")
+    infomsg("The rawpayload is " + str(rawpayload))
+    if args.mqtt_jsonpath:
+        try:
+            jspayload = json.loads(rawpayload)
+            jspath = jsonpath_rw.parse(args.mqtt_jsonpath)
+            extractpayload = [match.value for match in jspath.find(jspayload)]
+            payload = extractpayload[0]
+        except Exception:
+            payload = None
+    else:
+        payload = rawpayload
+    infomsg("The payload is " + str(payload))
 
     elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - userdata["start_time"])
     userdata["have_response"] = True
@@ -126,6 +131,7 @@ def on_message(mosq, userdata, msg):
         message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
 
     if args.critical is not None or args.warning is not None:
+        infomsg("non-value checks")
         status = "OK"
         if args.critical is not None:
             try:
@@ -142,6 +148,7 @@ def on_message(mosq, userdata, msg):
                 status = "CRITICAL"
                 message = "warning expression error '{}'".format(args.warning)
     else:
+        infomsg("value checks")
         status = "CRITICAL"
         try:
             if (args.mqtt_operator == "lt" or args.mqtt_operator == "lessthan") and float(payload) < float(args.mqtt_value):
