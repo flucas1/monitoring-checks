@@ -63,6 +63,7 @@ async def call_smartmontools(device):
     result = ""
     message = ""
     code_to_return = "OK"
+
     try:
         process = await asyncio.create_subprocess_shell(
             *cmdline,
@@ -71,47 +72,48 @@ async def call_smartmontools(device):
         )
         stdout, stderr = await process.communicate()
         output = stdout.decode("utf-8").strip() if stdout else ""
-        errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
 
         if exitcode != 0:
-            if exitcode % 2**1 > 0:
+            # Bit 0
+            if exitcode & 1:
                 message += "smartctl parsing error "
-                exitcode -= 2**0
                 code_to_return = "UNKNOWN"
-            if exitcode % 2**2 > 0:
+            # Bit 1
+            if exitcode & 2:
                 message += "could not open device "
-                exitcode -= 2**1
                 code_to_return = "CRITICAL"
-            if exitcode % 2**3 > 0:
+            # Bit 2
+            if exitcode & 4:
                 result = output
                 message += "some SMART or ATA command to disk failed "
-                exitcode -= 2**2
                 code_to_return = "CRITICAL"
-            if exitcode % 2**4 > 0:
+            # Bit 3
+            if exitcode & 8:
                 result = output
-                message += "SMART statis is DISK FAILING "
-                exitcode -= 2**3
+                message += "SMART status is DISK FAILING "
                 code_to_return = "CRITICAL"
-            if exitcode % 2**5 > 0:
+            # Bit 4
+            if exitcode & 16:
                 result = output
                 message += "prefail attributes found "
-                exitcode -= 2**4
                 code_to_return = "CRITICAL"
-            if exitcode % 2**6 > 0:
+            # Bit 5
+            if exitcode & 32:
                 result = output
                 message += "some prefail attributes were critical in the past "
-                exitcode -= 2**5
-                code_to_return = "WARNING"
-            if exitcode % 2**7 > 0:
+                if code_to_return == "OK": 
+                    code_to_return = "WARNING"
+            # Bit 6
+            if exitcode & 64:
                 result = output
                 message += "errors recorded in error log "
-                exitcode -= 2**6
-                code_to_return = "WARNING"
-            if exitcode % 2**8 > 0:
+                if code_to_return == "OK": 
+                    code_to_return = "WARNING"
+            # Bit 7
+            if exitcode & 128:
                 result = output
                 message += "self-test log contains errors "
-                exitcode -= 2**7
                 code_to_return = "CRITICAL"
         else:
             result = output
