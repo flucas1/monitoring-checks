@@ -14,16 +14,7 @@ def main():
     parser.add_argument('-p', dest='port', default='1080')
     parser.add_argument('--target', dest='target', default='https://www.google.com')
     parser.add_argument('--max-time', dest='max_time', default=10, type=int)
-
-    try:
-        args, unknown = parser.parse_known_args()
-    except SystemExit:
-        print("UNKNOWN - Failed parsing options.")
-        sys.exit(3)
-
-    if unknown:
-        print("UNKNOWN - Failed parsing options.")
-        sys.exit(3)
+    args = parser.parse_args()
 
     if not args.ip or not args.port or not args.target:
         print('UNKNOWN - Missing required parameter(s).')

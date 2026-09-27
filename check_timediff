@@ -34,7 +34,7 @@ def main():
     parser.add_argument('-w', type=int, default=2, dest='warning_seconds')
     parser.add_argument('-f', dest='server_time_format', choices=['euro', 'iso8601', 'strict-iso8601', 'us'])
     parser.add_argument('-t', dest='server_time', type=str)
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     # Validate required arguments
     if not args.server_time_format:

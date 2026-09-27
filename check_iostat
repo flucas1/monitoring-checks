@@ -54,7 +54,7 @@ def main():
     parser.add_argument("-W", dest="waittime", action="store_true", help="Wait Time Mode")
     parser.add_argument("-p", dest="printperfdata", action="store_true", help="Provide performance data")
     parser.add_argument("-g", dest="samples", action="store_const", const="1", default="2", help="Since last reboot")
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     # Checks that only one query type is run
     if sum([args.io, args.queue, args.waittime]) != 1:

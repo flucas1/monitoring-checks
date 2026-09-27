@@ -11,8 +11,7 @@ def main():
     parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
     parser.add_argument('-t', '--timeout', dest='timeoutmerged', type=str, default='30:CRITICAL')
     parser.add_argument('-p', '--port', dest='rsync_port', type=int, default=873)
-
-    args, unknown_args = parser.parse_known_args()
+    args = parser.parse_args()
 
     timeout_parts = args.timeoutmerged.split(':')
     timeoutvalue = float(timeout_parts[0])

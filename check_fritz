@@ -92,7 +92,7 @@ def main():
     parser.add_argument('-w', '--warning', type=float, default=0, help="Warning threshold")
     parser.add_argument('-c', '--critical', type=float, default=0, help="Critical threshold")
     parser.add_argument('-d', '--debug', action='store_true', help="prints debug information")
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     # Argument overrides
     username = args.username
