@@ -57,7 +57,7 @@ async def fetch_data(url, timeout):
     except Exception:
         exitnagios("UNKNOWN", "Stats collection failed")
 
-# -------------------------------------------------------------------------------\
+# -------------------------------------------------------------------------------
 
 
 async def main(forcedargs=None):
