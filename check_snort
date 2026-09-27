@@ -78,20 +78,16 @@ MODUS = ""
 
 async def print_log(msg):
     log_insert = NOW_DATE + "  -  [ " + str(MODUS) + " ] - " + str(msg) + "\n"
-
-    def _write_log():
-        try:
-            with open(LOG_FILE, "a") as f:
-                f.write(log_insert)
-        except IOError:
-            pass
-
-    await asyncio.to_thread(_write_log)
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(log_insert)
+    except IOError:
+        pass
 
 
 async def print_debug(msg):
     if DEBUG:
-        await print_log(msg)
+        print_log(msg)
 
 
 def stamp2date(ts):
@@ -115,12 +111,12 @@ async def run_mysql_query(query):
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-            await print_debug("MySQL Error: " + stderr.decode().strip())
+            print_debug("MySQL Error: " + stderr.decode().strip())
             return 1
         result = stdout.decode().strip()
         return int(result) if result and result != "0" else 1
     except Exception as e:
-        await print_debug("MySQL Exception: " + str(e))
+        print_debug("MySQL Exception: " + str(e))
         return 1
 
 
@@ -128,50 +124,48 @@ async def get_alert_count(time_diff_seconds, priority_level):
     now = int(time.time())
     time_diff = stamp2date(now - time_diff_seconds)
     query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '" + str(priority_level - 1) + "' and timestamp(event.timestamp) > '" + time_diff + "';"
-    await print_debug("get_alert_count -> " + query)
+    print_debug("get_alert_count -> " + query)
     
     count = await run_mysql_query(query)
-    await print_debug("time_diff -> " + time_diff + " / count: -> " + str(count))
+    print_debug("time_diff -> " + time_diff + " / count: -> " + str(count))
     return count
 
 
-async def get_latest_values(values_log_file):
-    def _read_file():
-        if not os.path.isfile(values_log_file):
-            try:
-                open(values_log_file, "a").close()
-            except IOError:
-                pass
-            return "WARNING", "check_file not found -> " + values_log_file + " (trying to create)", 2
+def get_latest_values(values_log_file):
+    if not os.path.isfile(values_log_file):
         try:
-            with open(values_log_file, "r") as f:
-                line = f.readline().strip()
-                if line:
-                    parts = [p.strip() for p in line.split(":")]
-                    last_status = parts[0] if len(parts) > 0 else ""
-                    if last_status == "SUPERCRITICAL":
-                        return "CRITICAL", "critical status found > " + values_log_file + " -> " + line, 2
-        except Exception as e:
-            return "UNKNOWN", "file read exception -> " + str(e), 3
-            
-        return "OK", "", 0
-
-    status, msg, exit_val = await asyncio.to_thread(_read_file)
-    if msg:
-        await print_debug(msg)
-    return status, msg, exit_val
-
-
-async def write_latest_values(values_log_file, status, count_last, avg_avg):
-    def _write_file():
-        try:
-            with open(values_log_file, "w") as f:
-                f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
+            open(values_log_file, "a").close()
         except IOError:
             pass
+        msg = "check_file not found -> " + values_log_file + " (trying to create)"
+        print_debug(msg)
+        return "WARNING", msg
+        
+    try:
+        with open(values_log_file, "r") as f:
+            line = f.readline().strip()
+            if line:
+                parts = [p.strip() for p in line.split(":")]
+                last_status = parts[0] if len(parts) > 0 else ""
+                if last_status == "SUPERCRITICAL":
+                    msg = "critical status found > " + values_log_file + " -> " + line
+                    print_debug(msg)
+                    return "CRITICAL", msg
+    except Exception as e:
+        msg = "file read exception -> " + str(e)
+        print_debug(msg)
+        return "UNKNOWN", msg
+        
+    return "OK", ""
 
-    await asyncio.to_thread(_write_file)
-    await print_debug(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)
+
+def write_latest_values(values_log_file, status, count_last, avg_avg):
+    try:
+        with open(values_log_file, "w") as f:
+            f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
+    except IOError:
+        pass
+    print_debug(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)
 
 
 async def check_host():
@@ -183,12 +177,12 @@ async def check_host():
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-             return "UNKNOWN", "no pid for snort found _pidof snort_ (sorry)", "", 3, None
+             return "UNKNOWN", "no pid for snort found _pidof snort_ (sorry)", "", None
              
         pid_out = stdout.decode().strip()
         snort_pid = int(pid_out.split()[0])
     except Exception as e:
-        return "UNKNOWN", "failed to find snort pid: " + str(e), "", 3, None
+        return "UNKNOWN", "failed to find snort pid: " + str(e), "", None
 
     try:
         os.kill(snort_pid, signal.SIGUSR1)
@@ -200,11 +194,11 @@ async def check_host():
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-            return "UNKNOWN", "failed to read syslog: " + stderr.decode().strip(), "", 3, None
+            return "UNKNOWN", "failed to read syslog: " + stderr.decode().strip(), "", None
             
         syslog_lines = stdout.decode().splitlines()
     except Exception as e:
-        return "UNKNOWN", "failed to signal snort or read syslog: " + str(e), "", 3, None
+        return "UNKNOWN", "failed to signal snort or read syslog: " + str(e), "", None
 
     start_stats = False
     received_pckt = 0
@@ -226,20 +220,17 @@ async def check_host():
                 break
 
     if received_pckt == 0:
-        return "UNKNOWN", "division by zero in packet stats", "", 3, None
+        return "UNKNOWN", "division by zero in packet stats", "", None
 
     dropped_perc = int(100 / received_pckt * dropped_pckt)
     perf_data = "dropped_perc=" + str(dropped_perc) + ";" + str(DROPPED_WARNING) + ";" + str(DROPPED_CRITICAL) + "; dropped_total=" + str(dropped_pckt)
 
     if dropped_perc > DROPPED_CRITICAL:
         status = "CRITICAL"
-        exit_val = 2
     elif dropped_perc > DROPPED_WARNING:
         status = "WARNING"
-        exit_val = 1
     else:
         status = "OK"
-        exit_val = 0
 
     exit_text = "snort-stats total received: " + str(received_pckt) + ", dropped: " + str(dropped_pckt) + " / " + str(dropped_perc) + " % :: warning: " + str(DROPPED_WARNING) + ", :: critical: " + str(DROPPED_CRITICAL)
     
@@ -249,7 +240,7 @@ async def check_host():
         "avg": 1
     }
     
-    return status, exit_text, perf_data, exit_val, state_to_save
+    return status, exit_text, perf_data, state_to_save
 
 
 async def check_alerts():
@@ -263,14 +254,14 @@ async def check_alerts():
 
     average_alerts, actual_alerts, divider, count_interval = intervals.get(INTERVAL, (86400, 3600, 24, "1hr-24hr"))
 
-    await print_debug("\n----[ " + NOW_DATE + " ]-----------------------------------------------\n")
+    print_debug("\n----[ " + NOW_DATE + " ]-----------------------------------------------\n")
 
     last_tag, avg_tag = count_interval.split("-")
     values_log_file = SPOOL_DATA_DIR + "/" + str(PRIORITY_LEVEL) + "-" + count_interval + ".check"
 
-    read_status, read_msg, read_exit_val = await get_latest_values(values_log_file)
+    read_status, read_msg = get_latest_values(values_log_file)
     if read_status != "OK":
-        return read_status, read_msg, "", read_exit_val, None
+        return read_status, read_msg, "", None
 
     count_last, count_avg = await asyncio.gather(
         get_alert_count(actual_alerts, PRIORITY_LEVEL),
@@ -284,20 +275,17 @@ async def check_alerts():
     w_limit = avg_avg + int(avg_avg * WARNING_THRESH / 100)
     c_limit = avg_avg + int(avg_avg * CRITICAL_THRESH / 100)
 
-    await print_debug("check_options: AVG -> " + str(average_alerts) + " / ACT -> " + str(actual_alerts) + " / INT -> " + count_interval + " / DIV -> " + str(divider))
-    await print_debug("\nPRIORITY  -> " + str(PRIORITY_LEVEL) + "\nINTERVAL  -> " + count_interval + "\nLAST      -> " + str(count_last) + "\nAVG       -> " + str(count_avg) + "\nAVG_AVG   -> " + str(avg_avg) + "\nw_limit   -> " + str(w_limit) + "\nc_limit   -> " + str(c_limit) + "\n")
+    print_debug("check_options: AVG -> " + str(average_alerts) + " / ACT -> " + str(actual_alerts) + " / INT -> " + count_interval + " / DIV -> " + str(divider))
+    print_debug("\nPRIORITY  -> " + str(PRIORITY_LEVEL) + "\nINTERVAL  -> " + count_interval + "\nLAST      -> " + str(count_last) + "\nAVG       -> " + str(count_avg) + "\nAVG_AVG   -> " + str(avg_avg) + "\nw_limit   -> " + str(w_limit) + "\nc_limit   -> " + str(c_limit) + "\n")
 
     perf_data = last_tag + "=" + str(count_last) + ";" + str(w_limit) + ";" + str(c_limit) + "; " + avg_tag + "=" + str(count_avg) + "; " + avg_tag + "-avg=" + str(avg_avg)
 
     if count_last > c_limit:
         status = "CRITICAL"
-        exit_value = 2
     elif count_last > w_limit:
         status = "WARNING"
-        exit_value = 1
     else:
         status = "OK"
-        exit_value = 0
 
     exit_text = "p-" + str(PRIORITY_LEVEL) + " :: " + count_interval + " :: last: " + str(count_last) + " - avg: " + str(avg_avg) + " / thresh: " + str(w_limit) + "/" + str(c_limit) + " [" + str(WARNING_THRESH) + "%/" + str(CRITICAL_THRESH) + "%]"
 
@@ -307,11 +295,11 @@ async def check_alerts():
         "avg": avg_avg
     }
     
-    return status, exit_text, perf_data, exit_value, state_to_save
+    return status, exit_text, perf_data, state_to_save
 
 # -------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+async def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-m", dest="modus")
     parser.add_argument("-i", dest="interval", default="2")
@@ -344,25 +332,23 @@ async def main(forcedargs=None):
 
     if not os.path.isdir(SPOOL_DATA_DIR):
         print("\n> error no output_dir given/created; run\n> $ mkdir -p " + SPOOL_DATA_DIR + " && chown nagios:nagios " + SPOOL_DATA_DIR + "\n> to create that dir\n")
-        print("SNORT_CHECK UNKNOWN - [" + str(MODUS) + "] SPOOL_DATA_DIR not found -> " + SPOOL_DATA_DIR)
-        sys.exit(3)
+        exitnagios("UNKNOWN", "[" + str(MODUS) + "] SPOOL_DATA_DIR not found -> " + SPOOL_DATA_DIR)
 
     if MODUS == "host":
-        status, exit_text, perf_data, exit_value, state_to_save = await check_host()
+        status, exit_text, perf_data, state_to_save = await check_host()
     elif MODUS == "alerts":
-        status, exit_text, perf_data, exit_value, state_to_save = await check_alerts()
+        status, exit_text, perf_data, state_to_save = await check_alerts()
     else:
-        print("SNORT_CHECK UNKNOWN - no modus selected (use -m switch) -> help: check_snort -h ")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "no modus selected (use -m switch) -> help: check_snort -h")
 
     if state_to_save:
-        await write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
+        write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
 
-    await print_log(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
+    print_log(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
     
     perf_str = " | " + perf_data if perf_data else ""
-    print("SNORT_CHECK " + status + " - [" + str(MODUS) + "] " + exit_text + perf_str)
-    sys.exit(exit_value)
+    final_message = "[" + str(MODUS) + "] " + exit_text + perf_str
+    exitnagios(status, final_message)
 
 
 # -------------------------------------------------------------------------------
