@@ -2,7 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import argparse
-import subprocess
+import asyncio
 import sys
 
 # Standard Nagios/Icinga exit codes
@@ -43,20 +43,25 @@ def parse_arguments():
         sys.exit(e.code)
 
 
-def check_selinux_mode(expected_mode, warning_flag):
+async def check_selinux_mode(expected_mode, warning_flag):
     error_state = STATE_WARNING if warning_flag else STATE_CRITICAL
     error_state_label = "WARNING" if warning_flag else "ERROR"
 
     try:
-        # Fetch current mode using the system binary
-        result = subprocess.run(
-            ['/usr/sbin/getenforce'],
-            capture_output=True,
-            text=True,
-            check=True
+        # Fetch current mode using the system binary with async subprocess
+        process = await asyncio.create_subprocess_exec(
+            '/usr/sbin/getenforce',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        current_mode = result.stdout.strip().lower()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            print("ERROR: unable to retrieve SELinux mode")
+            sys.exit(STATE_CRITICAL)
+        
+        current_mode = stdout.decode().strip().lower()
+    except (FileNotFoundError, OSError):
         print("ERROR: unable to retrieve SELinux mode")
         sys.exit(STATE_CRITICAL)
 
@@ -70,7 +75,7 @@ def check_selinux_mode(expected_mode, warning_flag):
 
 def main():
     args = parse_arguments()
-    check_selinux_mode(args.selinux_mode, args.warning)
+    asyncio.run(check_selinux_mode(args.selinux_mode, args.warning))
 
 
 if __name__ == "__main__":

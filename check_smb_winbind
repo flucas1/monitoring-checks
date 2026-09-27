@@ -2,8 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import subprocess
-import os
+import asyncio
 
 # Define state constants based on the shell script
 STATE_OK = 0
@@ -24,7 +23,7 @@ def get_state_string(state):
         return "UNKNOWN"
 
 
-def main():
+async def main():
     # Define the command
     cmd = "/usr/bin/wbinfo"
 
@@ -33,14 +32,23 @@ def main():
         print("Cannot find wbinfo executable")
         sys.exit(STATE_UNKNOWN)
 
-    # Execute the command, combining stdout and stderr ('2>&1')
     try:
-        result = subprocess.run([cmd, "-t"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        ret = result.returncode
-        output = result.stdout
+        # Create async subprocess
+        process = await asyncio.create_subprocess_exec(
+            cmd, "-t",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT
+        )
+
+        # Wait for process to complete and capture output
+        stdout, _ = await process.communicate()
+        ret = process.returncode
+        output = stdout.decode().strip() if stdout else ""
+
     except FileNotFoundError:
         print("Cannot find wbinfo executable")
         sys.exit(STATE_UNKNOWN)
+        return
 
     # Replace newlines with semicolons and strip the trailing semicolon
     msg = output.replace('\n', ';').rstrip(';')
@@ -65,4 +73,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -6,7 +6,10 @@
 # 2 is host DOWN;         reacheable no
 # 3 is host UNREACHEABLE; reacheable no
 
-def main():
+import sys
+
+
+async def main():
     # Fetch arguments, defaulting to empty string and 0 to mimic shell behavior if omitted
     exit_code = int(sys.argv[1]) if len(sys.argv) > 1 else 0
     message = sys.argv[2] if len(sys.argv) > 2 else ""
@@ -19,4 +22,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

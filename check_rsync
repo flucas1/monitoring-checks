@@ -2,8 +2,43 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import socket
+import asyncio
 import argparse
+
+
+async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
+    try:
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(remote, rsync_port),
+            timeout=timeoutvalue
+        )
+        try:
+            writer.write(b"\r\n")
+            await writer.drain()
+            rsync_out = await asyncio.wait_for(
+                reader.read(1024),
+                timeout=timeoutvalue
+            )
+            rsync_out = rsync_out.decode('utf-8', errors='ignore').strip()
+
+            if rsync_out.startswith('@RSYNCD:'):
+                print(f"OK - {rsync_out}")
+                return 0
+            else:
+                print(f"WARNING - rsync out: {rsync_out}")
+                return 1
+        finally:
+            writer.close()
+            await writer.wait_closed()
+    except (asyncio.TimeoutError, OSError):
+        print(f"{timeoutstatus} - Could not connect to {remote}:{rsync_port}")
+        if timeoutstatus == "CRITICAL":
+            return 2
+        if timeoutstatus == "WARNING":
+            return 1
+        if timeoutstatus == "OK":
+            return 0
+        return 3
 
 
 def main():
@@ -17,30 +52,13 @@ def main():
     timeoutvalue = float(timeout_parts[0])
     timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else 'CRITICAL'
 
-    try:
-        with socket.create_connection((args.remote, args.rsync_port), timeout=timeoutvalue) as sock:
-            sock.sendall(b"\r\n")
-            rsync_out = sock.recv(1024).decode('utf-8', errors='ignore').strip()
+    exit_code = asyncio.run(check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus))
 
-            if rsync_out.startswith('@RSYNCD:'):
-                print(f"OK - {rsync_out}")
-                sys.exit(0)
-            else:
-                print(f"WARNING - rsync out: {rsync_out}")
-                sys.exit(1)
+    if exit_code is None:
+        print("UNKNOW - Plugin internal error")
+        exit_code = 3
 
-    except (socket.timeout, socket.error):
-        print(f"{timeoutstatus} - Could not connect to {args.remote}:{args.rsync_port}")
-        if timeoutstatus == "CRITICAL":
-            sys.exit(2)
-        if timeoutstatus == "WARNING":
-            sys.exit(1)
-        if timeoutstatus == "OK":
-            sys.exit(0)
-        sys.exit(3)
-
-    print("UNKNOW - Plugin internal error")
-    sys.exit(3)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -3,10 +3,17 @@
 
 import os
 import sys
+import asyncio
 
-if os.path.exists("/var/run/reboot-required"):
-    print("CRITICAL: a reboot is needed")
-    sys.exit(2)
-else:
-    print("OK: no pending reboot")
-    sys.exit(0)
+
+async def main():
+    if os.path.exists("/var/run/reboot-required"):
+        print("CRITICAL: a reboot is needed")
+        sys.exit(2)
+    else:
+        print("OK: no pending reboot")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
