@@ -4,7 +4,7 @@
 import argparse
 import sys
 import time
-from datetime import datetime
+import datetime
 
 # Nagios Return Codes
 RC_OK = 0
@@ -57,7 +57,7 @@ def main():
     # Convert Server Time to Epoch
     try:
         dt_format = format_map[args.server_time_format]
-        parsed_time = datetime.strptime(args.server_time, dt_format)
+        parsed_time = datetime.datetime.strptime(args.server_time, dt_format)
         server_epoch_time = int(time.mktime(parsed_time.timetuple()))
     except ValueError:
         parser.error(f"Invalid -t value {args.server_time} (does not match {args.server_time_format} format)")
