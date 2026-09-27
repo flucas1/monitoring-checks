@@ -5,11 +5,12 @@ import os
 import sys
 import time
 import argparse
-import subprocess
 import socket
 import tempfile
 import re
 import syslog
+import asyncio
+import aiofiles
 
 # Nagios Exit Codes
 STATE_OK = 0
@@ -18,60 +19,116 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 
-def log(message):
+async def log(message):
     """Log to syslog similar to the logger command in the bash script."""
     syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
     syslog.syslog(syslog.LOG_WARNING, message)
     syslog.closelog()
 
 
-def create_zfs_fstab(original_fstab):
+async def create_zfs_fstab(original_fstab):
     """Generate a temporary fstab for ZFS datasets."""
     tmp_fstab = tempfile.NamedTemporaryFile(mode='w+', delete=False)
 
     # Copy original
     if os.path.exists(original_fstab):
-        with open(original_fstab, 'r') as f:
-            tmp_fstab.write(f.read())
+        async with aiofiles.open(original_fstab, 'r') as f:
+            content = await f.read()
+            tmp_fstab.write(content)
 
     try:
-        zfs_list = subprocess.check_output(['zfs', 'list', '-H', '-o', 'name'], universal_newlines=True).splitlines()
+        proc = await asyncio.create_subprocess_exec(
+            'zfs', 'list', '-H', '-o', 'name',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        zfs_list = stdout.decode().strip().splitlines()
+
         for ds in zfs_list:
-            mp = subprocess.check_output(['zfs', 'get', '-H', 'mountpoint', ds], universal_newlines=True).split()[2]
+            proc = await asyncio.create_subprocess_exec(
+                'zfs', 'get', '-H', 'mountpoint', ds,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await proc.communicate()
+            parts = stdout.decode().strip().split()
+            if len(parts) < 3:
+                continue
+            mp = parts[2]
             if not os.path.isdir(mp):
                 continue
 
-            canmount = subprocess.check_output(['zfs', 'get', '-H', 'canmount', ds], universal_newlines=True).split()[2]
+            proc = await asyncio.create_subprocess_exec(
+                'zfs', 'get', '-H', 'canmount', ds,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await proc.communicate()
+            parts = stdout.decode().strip().split()
+            if len(parts) < 3:
+                continue
+            canmount = parts[2]
             if canmount == 'off':
                 continue
 
             # Handling SunOS and FreeBSD specific checks
             system = os.uname().sysname
             if system == 'SunOS':
-                zoned = subprocess.check_output(['zfs', 'get', '-H', 'zoned', ds], universal_newlines=True).split()[2]
+                proc = await asyncio.create_subprocess_exec(
+                    'zfs', 'get', '-H', 'zoned', ds,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, _ = await proc.communicate()
+                parts = stdout.decode().strip().split()
+                if len(parts) < 3:
+                    continue
+                zoned = parts[2]
                 if zoned == 'on':
                     continue
             elif system == 'FreeBSD':
-                jailed = subprocess.check_output(['zfs', 'get', '-H', 'jailed', ds], universal_newlines=True).split()[2]
+                proc = await asyncio.create_subprocess_exec(
+                    'zfs', 'get', '-H', 'jailed', ds,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, _ = await proc.communicate()
+                parts = stdout.decode().strip().split()
+                if len(parts) < 3:
+                    continue
+                jailed = parts[2]
                 if jailed == 'on':
                     continue
 
-            ro_output = subprocess.check_output(['zfs', 'get', '-H', 'readonly', ds], universal_newlines=True).split()
-            ro = "ro" if ro_output[2] == "on" else "rw"
+            proc = await asyncio.create_subprocess_exec(
+                'zfs', 'get', '-H', 'readonly', ds,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, _ = await proc.communicate()
+            parts = stdout.decode().strip().split()
+            ro = "ro" if len(parts) >= 3 and parts[2] == "on" else "rw"
 
             tmp_fstab.write(f"{ds}\t{mp}\tzfs\t{ro}\t0\t0\n")
-    except Exception as e:
+    except Exception:
         pass  # Fallback to ignore if zfs fails
 
     tmp_fstab.close()
     return tmp_fstab.name
 
 
-def make_mtab():
+async def make_mtab():
     """Create a temporary mtab for systems that lack one."""
     tmp_mtab = tempfile.NamedTemporaryFile(mode='w+', delete=False)
     try:
-        mount_output = subprocess.check_output(['mount'], universal_newlines=True).splitlines()
+        proc = await asyncio.create_subprocess_exec(
+            'mount',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, _ = await proc.communicate()
+        mount_output = stdout.decode().strip().splitlines()
         for line in mount_output:
             # Simple conversion to 'dev mountpoint filesystem' format
             parts = line.replace(' on ', ' ').replace(' (', ' ').replace(',', ' ').split()
@@ -83,7 +140,94 @@ def make_mtab():
     return tmp_mtab.name
 
 
-def main():
+async def run_df(mp, timeout):
+    """Run df command with timeout."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            'df', '-k', mp,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        raise subprocess.TimeoutExpired("df", timeout)
+
+
+async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
+    """Check a single mountpoint."""
+    err_mesg = []
+
+    # Fstab check
+    is_openvz = os.path.exists('/proc/vz/veinfo')
+    if not is_openvz and not args.auto and not args.ignorefstab:
+        found_in_fstab = any(
+            len(l.split()) > args.mf - 1 and l.split()[args.mf - 1] == mp
+            for l in fstab_lines
+        )
+        if not found_in_fstab:
+            await log(f"CRIT: {mp} doesn't exist in /etc/fstab")
+            err_mesg.append(f"{mp} doesn't exist in fstab {args.fstab}")
+
+    # Kernel mount check
+    found_in_mtab = any(
+        len(l.split()) > args.mf - 1 and l.split()[args.mf - 1] == mp
+        for l in mtab_lines
+    )
+    if not found_in_mtab:
+        if not (args.linkok and os.path.islink(mp)):
+            await log(f"CRIT: {mp} is not mounted")
+            err_mesg.append(f"{mp} is not mounted")
+
+    # Stale check via df
+    try:
+        await run_df(mp, args.timeout)
+    except asyncio.TimeoutError:
+        err_mesg.append(f"{mp} did not respond in {args.timeout} sec. Seems to be stale.")
+        return err_mesg
+
+    # Filesystem existence & Writable check
+    is_rw = 0
+    if not os.path.isdir(mp):
+        await log(f"CRIT: {mp} doesn't exist on filesystem")
+        err_mesg.append(f"{mp} doesn't exist on filesystem")
+    elif args.writetest:
+        is_rw = 1
+        if args.auto:
+            for line in fstab_lines:
+                fields = line.split()
+                if len(fields) > max(args.mf - 1, args.of - 1) and fields[args.mf - 1] == mp:
+                    if 'ro' in fields[args.of - 1].split(','):
+                        is_rw = 0
+                        await log(f"CRIT: {mp} is not mounted as writable.")
+                        err_mesg.append(f"Could not write in {mp} filesystem was mounted RO.")
+
+    if is_rw == 1:
+        timestamp = time.strftime("%Y-%m-%d--%H-%M-%S")
+        touchfile = os.path.join(mp, f".mount_test_from_{socket.gethostname()}_{timestamp}.{os.getpid()}")
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                'touch', touchfile,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=args.timeout)
+            if not os.path.isfile(touchfile):
+                await log(f"CRIT: {touchfile} is not writable.")
+                err_mesg.append(f"Could not write in {mp}.")
+            else:
+                os.remove(touchfile)
+        except asyncio.TimeoutError:
+            await log(f"CRIT: {touchfile} is not writable.")
+            err_mesg.append(f"Could not write in {mp} in {args.timeout} sec. Seems to be stale.")
+        except Exception:
+            await log(f"CRIT: {touchfile} is not writable.")
+            err_mesg.append(f"Could not write in {mp}.")
+
+    return err_mesg
+
+
+async def main():
     parser = argparse.ArgumentParser(description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.")
     parser.add_argument('-m', dest='mtab', default='/proc/mounts', help="Use this mtab instead")
     parser.add_argument('-f', dest='fstab', default='/etc/fstab', help="Use this fstab instead")
@@ -117,7 +261,7 @@ def main():
 
     # ZFS Check
     if os.path.exists('/sbin/zfs') and os.access('/sbin/zfs', os.X_OK):
-        fstab_file = create_zfs_fstab(fstab_file)
+        fstab_file = await create_zfs_fstab(fstab_file)
 
     mps = args.mountpoints
 
@@ -127,8 +271,8 @@ def main():
         valid_fs = {'ext2', 'ext3', 'xfs', 'auto', 'ext4', 'nfs', 'nfs4', 'davfs', 'cifs',
                     'fuse', 'glusterfs', 'ocfs2', 'lustre', 'ufs', 'zfs', 'ceph', 'btrfs', 'yas3fs'}
         try:
-            with open(fstab_file, 'r') as f:
-                for line in f:
+            async with aiofiles.open(fstab_file, 'r') as f:
+                async for line in f:
                     if line.strip().startswith('#'):
                         continue
                     if args.exclude != 'none' and re.search(args.exclude, line):
@@ -149,97 +293,47 @@ def main():
         sys.exit(STATE_OK)
     elif not mps:
         msg = "ERROR: no mountpoints given!"
-        log(msg)
+        await log(msg)
         print(msg)
         parser.print_help()
         sys.exit(STATE_UNKNOWN)
 
     if not os.path.exists('/proc/mounts') and mtab_file == '/proc/mounts':
-        log("CRIT: /proc wasn't mounted!")
-        ret = subprocess.call(['mount', '-t', 'proc', 'proc', '/proc'])
+        await log("CRIT: /proc wasn't mounted!")
+        ret = await asyncio.create_subprocess_exec('mount', '-t', 'proc', 'proc', '/proc')
+        await ret.wait()
         err_mesg.append(f"CRIT: mounted /proc {ret}")
 
     if mtab_file == 'none':
-        mtab_file = make_mtab()
+        mtab_file = await make_mtab()
 
     if not os.path.exists(mtab_file):
         msg = f"CRIT: {mtab_file} doesn't exist!"
-        log(msg)
+        await log(msg)
         print(msg)
         sys.exit(STATE_CRITICAL)
 
     # Read fstab and mtab into memory for checks
     fstab_lines = []
     if os.path.exists(fstab_file):
-        with open(fstab_file, 'r') as f:
-            fstab_lines = [l.strip() for l in f if not l.strip().startswith('#')]
+        async with aiofiles.open(fstab_file, 'r') as f:
+            async for line in f:
+                stripped = line.strip()
+                if not stripped.startswith('#'):
+                    fstab_lines.append(stripped)
 
     mtab_lines = []
-    with open(mtab_file, 'r') as f:
-        mtab_lines = f.readlines()
+    async with aiofiles.open(mtab_file, 'r') as f:
+        mtab_lines = await f.readlines()
 
     # Main check loop
+    tasks = []
     for mp in mps:
-        # Fstab check
-        is_openvz = os.path.exists('/proc/vz/veinfo')
-        if not is_openvz and not args.auto and not args.ignorefstab:
-            found_in_fstab = any(len(l.split()) > mf_idx and l.split()[mf_idx] == mp for l in fstab_lines)
-            if not found_in_fstab:
-                log(f"CRIT: {mp} doesn't exist in /etc/fstab")
-                err_mesg.append(f"{mp} doesn't exist in fstab {fstab_file}")
+        tasks.append(check_mountpoint(mp, args, fstab_lines, mtab_lines))
 
-        # Kernel mount check
-        found_in_mtab = any(len(l.split()) > mf_idx and l.split()[mf_idx] == mp for l in mtab_lines)
-        if not found_in_mtab:
-            if not (args.linkok and os.path.islink(mp)):
-                log(f"CRIT: {mp} is not mounted")
-                err_mesg.append(f"{mp} is not mounted")
-
-        # Stale check via df
-        df_cmd = ['df', '-k']
-        if args.dfargs:
-            df_cmd.extend(args.dfargs.split())
-        df_cmd.append(mp)
-
-        try:
-            subprocess.run(df_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=args.timeout)
-        except subprocess.TimeoutExpired:
-            err_mesg.append(f"{mp} did not respond in {args.timeout} sec. Seems to be stale.")
-            continue
-
-        # Filesystem existence & Writable check
-        is_rw = 0
-        if not os.path.isdir(mp):
-            log(f"CRIT: {mp} doesn't exist on filesystem")
-            err_mesg.append(f"{mp} doesn't exist on filesystem")
-        elif args.writetest:
-            is_rw = 1
-            if args.auto:
-                for line in fstab_lines:
-                    fields = line.split()
-                    if len(fields) > max(mf_idx, of_idx) and fields[mf_idx] == mp:
-                        if 'ro' in fields[of_idx].split(','):
-                            is_rw = 0
-                            log(f"CRIT: {mp} is not mounted as writable.")
-                            err_mesg.append(f"Could not write in {mp} filesystem was mounted RO.")
-
-        if is_rw == 1:
-            timestamp = time.strftime("%Y-%m-%d--%H-%M-%S")
-            touchfile = os.path.join(mp, f".mount_test_from_{socket.gethostname()}_{timestamp}.{os.getpid()}")
-
-            try:
-                subprocess.run(['touch', touchfile], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=args.timeout)
-                if not os.path.isfile(touchfile):
-                    log(f"CRIT: {touchfile} is not writable.")
-                    err_mesg.append(f"Could not write in {mp}.")
-                else:
-                    os.remove(touchfile)
-            except subprocess.TimeoutExpired:
-                log(f"CRIT: {touchfile} is not writable.")
-                err_mesg.append(f"Could not write in {mp} in {args.timeout} sec. Seems to be stale.")
-            except Exception:
-                log(f"CRIT: {touchfile} is not writable.")
-                err_mesg.append(f"Could not write in {mp}.")
+    results = await asyncio.gather(*tasks)
+    for res in results:
+        err_mesg.extend(res)
 
     # Cleanup temporary files
     if '/tmp' in mtab_file and os.path.exists(mtab_file):
@@ -257,4 +351,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

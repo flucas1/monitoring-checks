@@ -95,9 +95,10 @@ async def get_memory_info(opt_C, opt_v):
     used_memory_kb = total_memory_kb - free_memory_kb
 
     sysfs_dir = "/sys/kernel/mm/hugepages"
-    if os.path.isdir(sysfs_dir):
+    if await aiofiles.os.path.isdir(sysfs_dir):
         hugepages_kb = 0
-        for entry in os.listdir(sysfs_dir):
+        entries = await aiofiles.os.listdir(sysfs_dir)
+        for entry in entries:
             m = re.match(r"^hugepages-(\d+)kB", entry)
             if m:
                 h_size = int(m.group(1))
