@@ -192,7 +192,7 @@ async def main(forcedargs=None):
             for comparison in cmp_dict["c"]:
                 infomsg(str(key) + " " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]))
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = "CRITICAL: " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
+                    msg = str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
                     infomsg(msg)
                     critmesg.append(msg)
                     if mapstatustoexitcode(alarmlevel) < mapstatustoexitcode("CRITICAL"):
@@ -205,7 +205,7 @@ async def main(forcedargs=None):
             cnthits = 0
             for comparison in cmp_dict["w"]:
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = "WARNING: " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
+                    msg = str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
                     infomsg(msg)
                     warnmesg.append(msg)
                     if mapstatustoexitcode(alarmlevel) < mapstatustoexitcode("WARNING"):
@@ -214,8 +214,7 @@ async def main(forcedargs=None):
             if cnthits:
                 continue
 
-        infomsg("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
-        okmesg.append("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
+        okmesg.append(str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
 
     combined_messages = " - ".join(critmesg + warnmesg + okmesg)
     exitnagios(alarmlevel, combined_messages)
