@@ -48,20 +48,8 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
-
-
-EXIT_CODES = {
-    "OK": 0,
-    "WARNING": 1,
-    "CRITICAL": 2,
-    "UNKNOWN": 3
-}
-
-
-def finish(msg, state):
-    print(msg)
-    sys.exit(state)
 
 
 async def get_memory_info(opt_C, opt_v):
@@ -188,19 +176,19 @@ async def main(forcedargs=None):
     if args.f:
         percent = float(free_kb) / total * 100 if total else 0
         if percent <= args.c:
-            finish(f"CRITICAL - {percent:.1f}% ({free_kb} kB) free!{perfdata}", EXIT_CODES["CRITICAL"])
+            exitnagios("CRITICAL", f"{percent:.1f}% ({free_kb} kB) free!{perfdata}")
         elif percent <= args.w:
-            finish(f"WARNING - {percent:.1f}% ({free_kb} kB) free!{perfdata}", EXIT_CODES["WARNING"])
+            exitnagios("WARNING", f"{percent:.1f}% ({free_kb} kB) free!{perfdata}")
         else:
-            finish(f"OK - {percent:.1f}% ({free_kb} kB) free.{perfdata}", EXIT_CODES["OK"])
+            exitnagios("OK", f"{percent:.1f}% ({free_kb} kB) free.{perfdata}")
     elif args.u:
         percent = float(used_kb) / total * 100 if total else 0
         if percent >= args.c:
-            finish(f"CRITICAL - {percent:.1f}% ({used_kb} kB) used!{perfdata}", EXIT_CODES["CRITICAL"])
+            exitnagios("CRITICAL", f"{percent:.1f}% ({used_kb} kB) used!{perfdata}")
         elif percent >= args.w:
-            finish(f"WARNING - {percent:.1f}% ({used_kb} kB) used!{perfdata}", EXIT_CODES["WARNING"])
+            exitnagios("WARNING", f"{percent:.1f}% ({used_kb} kB) used!{perfdata}")
         else:
-            finish(f"OK - {percent:.1f}% ({used_kb} kB) used.{perfdata}", EXIT_CODES["OK"])
+            exitnagios("OK", f"{percent:.1f}% ({used_kb} kB) used.{perfdata}")
 
 
 # -------------------------------------------------------------------------------
