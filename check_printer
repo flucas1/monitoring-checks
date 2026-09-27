@@ -329,8 +329,8 @@ def main():
     parser.add_argument("-A", "--authpassword", default="")
     parser.add_argument("-t", "--timeout", default="10:UNKNOWN")
     parser.add_argument("-T", "--type", required=True, nargs="+", help="Check type and parameter")
-    parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold %")
-    parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold %")
+    parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
+    parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
     parser.add_argument("-S", "--separator", default=",", help="Separator string")
 
     args = parser.parse_args()

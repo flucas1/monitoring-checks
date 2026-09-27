@@ -154,8 +154,8 @@ async def main(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
     parser.add_argument("-m", "--mode", dest="mode", default="", help="value to check")
-    parser.add_argument("-w", "--warning", dest="warning", default="", help="warning level %")
-    parser.add_argument("-c", "--critical", dest="critical", default="", help="critical level %")
+    parser.add_argument("-w", "--warning", dest="warning", default="", help="warning level percent")
+    parser.add_argument("-c", "--critical", dest="critical", default="", help="critical level percent")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
 
