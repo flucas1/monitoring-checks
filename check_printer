@@ -89,11 +89,11 @@ def check_pagecount(args):
     return STATE_OK, f"Pagecount is {formatted_count}.", perfdata
 
 
-def check_display(args, separator):
+def check_display(args):
     """Report contents of printer display"""
     display = walk_snmp(args, OIDS['prtConsoleDisplayBufferText'], True)
     if display:
-        return STATE_OK, display.replace("\n", separator), ""
+        return STATE_OK, display.replace("\n", " - "), ""
     else:
         return STATE_UNK, "UNKNOWN - printer does not appear to support using this OID.", ""
 
@@ -110,18 +110,23 @@ def check_printer_status(args):
         return STATE_WARN, f"WARNING: Printer status = {prt_status}.", ""
 
 
-def _check_one_consumable(args, marker_id, separator, state_string, perfdata):
+def _check_one_consumable(args, marker_id, state_string, perfdata):
     """Determines capacity and status code for a single consumable"""
     consum_state = STATE_OK
     marker_name = walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
-    marker_name = marker_name.replace(".", "")
+    #marker_name = marker_name.replace(".", "")
+    #print(marker_name)
 
     marker_color = walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
-    if marker_color and marker_color.lower() not in marker_name.lower():
+    #print(marker_color)
+    if marker_color and marker_color.lower() not in marker_name.lower() and marker_color != "No Such Instance currently exists at this OID":
         marker_name = f"{marker_color} {marker_name}"
+    #print(marker_name)
 
     if not marker_name:
         return STATE_UNK, "UNKNOWN - OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+    #if marker_name.startswith("No Such Instance currently exists at this"):
+    #    return consum_state, state_string, perfdata
 
     current_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
     max_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
@@ -130,33 +135,38 @@ def _check_one_consumable(args, marker_id, separator, state_string, perfdata):
         current_cap = int(current_cap)
         max_cap = max(0, int(max_cap))
     except ValueError:
+        #print("EXCEPTION")
         return STATE_UNK, state_string, perfdata
 
     if current_cap == -3:  # Some supply remains
-        state_string += f"{marker_name} is OK {separator}"
+        state_string += f"OK: {marker_name} valid - "
     elif current_cap == -2:  # Unknown
-        state_string = f"{marker_name} is at WARNING level {separator}{state_string}"
+        state_string = f"WARNING: {marker_name} is at level - {state_string}"
         consum_state = max(consum_state, STATE_WARN)
     elif current_cap == 0:  # Empty
-        state_string = f"{marker_name} is at CRITICAL level {separator}{state_string}"
+        state_string = f"CRITICAL: {marker_name} is at level - {state_string}"
         consum_state = STATE_CRIT
     elif max_cap > 0:  # Measurable component
         pct = int((current_cap * 100) / max_cap)
         if pct > args.warning:
-            state_string += f"{marker_name} is at {pct}% - OK {separator}"
+            #print("OK")
+            state_string += f"OK: {marker_name} is at {pct}% - "
         elif args.critical < pct <= args.warning:
-            state_string = f"{marker_name} is at {pct}% - WARNING {separator}{state_string}"
+            #print("WARNING")
+            state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
             consum_state = max(consum_state, STATE_WARN)
         elif pct <= args.critical:
-            state_string = f"{marker_name} is at {pct}% - CRITICAL {separator}{state_string}"
+            #print("CRITICAL")
+            state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
             consum_state = STATE_CRIT
 
         perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
 
+    #print(consum_state)
     return consum_state, state_string, perfdata
 
 
-def check_consumables(args, param, separator):
+def check_consumables(args, param):
     """Determines which consumables to check"""
     consums_state = STATE_OK
     state_string = ""
@@ -165,11 +175,15 @@ def check_consumables(args, param, separator):
     if param.upper() == "TEST":
         all_markers = walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True)
         return STATE_UNK, f"Consumables you may monitor:\n{all_markers}", ""
-
     elif param.upper() == "ALL":
         all_markers = walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True).splitlines()
         for i in range(1, len(all_markers) + 1):
-            status, state_string, perfdata = _check_one_consumable(args, str(i), separator, state_string, perfdata)
+            #print("----------")
+            #print(all_markers)
+            status, state_string, perfdata = _check_one_consumable(args, str(i), state_string, perfdata)
+            #print(status)
+            #print(state_string)
+            #print("----------")
             consums_state = max(consums_state, status)
     else:
         # Match specific string
@@ -183,13 +197,13 @@ def check_consumables(args, param, separator):
             # Extract marker ID like awk -F. '{print $8}' | awk -F= '{print $1}'
             match = re.search(r'\.(\d+)\s*=', line)
             if match:
-                status, state_string, perfdata = _check_one_consumable(args, match.group(1), separator, state_string, perfdata)
+                status, state_string, perfdata = _check_one_consumable(args, match.group(1), state_string, perfdata)
                 consums_state = max(consums_state, status)
 
     return consums_state, state_string, perfdata
 
 
-def check_exact_consumable(args, param, separator):
+def check_exact_consumable(args, param):
     """Loops through all consumables and compares exact string"""
     all_markers = walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True).replace(".", "").splitlines()
     found_idx = -1
@@ -200,7 +214,7 @@ def check_exact_consumable(args, param, separator):
             break
 
     if found_idx != -1:
-        return _check_one_consumable(args, str(found_idx), separator, "", "")
+        return _check_one_consumable(args, str(found_idx), "", "")
     else:
         return STATE_UNK, f"UNKNOWN - No match found for '{param}' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
@@ -224,7 +238,7 @@ def _get_tray_dimensions(args, tray_id):
     return f"{xfeed} x {feed} paper."
 
 
-def _check_one_tray(args, tray_id, separator, state_string, perfdata):
+def _check_one_tray(args, tray_id, state_string, perfdata):
     """Checks the tray #, returns status and capacity"""
     tray_state = STATE_OK
     tray_cap_str = walk_snmp(args, f"{OIDS['prtInputCurrentLevel']}.{tray_id}", True)
@@ -243,27 +257,27 @@ def _check_one_tray(args, tray_id, separator, state_string, perfdata):
         return STATE_UNK, state_string, perfdata
 
     if tray_cap == -3:
-        state_string += f"{tray_name} is OK - {separator}"
+        state_string += f"{tray_name} is OK - "
     elif tray_cap == -2:
-        state_string += f"{tray_name} status is UNKNOWN - {separator}"
+        state_string += f"{tray_name} status is UNKNOWN - "
         tray_state = STATE_UNK
     elif tray_cap == 0:
         dim_str = _get_tray_dimensions(args, tray_id)
-        state_string += f"{tray_name} is at CRITICAL level - please refill with more {dim_str}{separator}"
+        state_string += f"{tray_name} is at CRITICAL level - please refill with more {dim_str} - "
         tray_state = STATE_CRIT
     else:
         tray_max = int(walk_snmp(args, f"{OIDS['prtInputMaxCapacity']}.{tray_id}", True) or 1)
         pct = int((tray_cap * 100) / tray_max)
 
         if pct > args.critical and pct > args.warning:
-            state_string += f"{tray_name} is at {pct}% - OK - {separator}"
+            state_string += f"{tray_name} is at {pct}% - OK - "
         elif pct <= args.warning:
             dim_str = _get_tray_dimensions(args, tray_id)
             if pct <= args.critical:
-                state_string += f"{tray_name} is at {pct}% - CRITICAL - Please refill with more {dim_str}{separator}"
+                state_string += f"{tray_name} is at {pct}% - CRITICAL - Please refill with more {dim_str} - "
                 tray_state = STATE_CRIT
             else:
-                state_string += f"{tray_name} is at {pct}% - WARNING - Please refill with more {dim_str}{separator}"
+                state_string += f"{tray_name} is at {pct}% - WARNING - Please refill with more {dim_str} - "
                 tray_state = max(tray_state, STATE_WARN)
 
         perfdata += f" '{tray_name}'={pct};{args.warning};{args.critical}"
@@ -271,7 +285,7 @@ def _check_one_tray(args, tray_id, separator, state_string, perfdata):
     return tray_state, state_string, perfdata
 
 
-def check_paper_trays(args, param, separator, arg_token):
+def check_paper_trays(args, param, arg_token):
     """Determines which trays to check"""
     trays_state = STATE_OK
     state_string = ""
@@ -279,7 +293,6 @@ def check_paper_trays(args, param, separator, arg_token):
 
     all_trays_raw = walk_snmp(args, OIDS['prtInputName'], True).splitlines()
 
-    # equivalent to awk -F" " '{print $2}'
     all_trays = []
     for t in all_trays_raw:
         parts = t.split(maxsplit=1)
@@ -292,11 +305,11 @@ def check_paper_trays(args, param, separator, arg_token):
         return STATE_UNK, f"Trays you may monitor:\n" + "\n".join(all_trays), ""
     elif param.upper() == "ALL":
         for i in range(1, len(all_trays_raw) + 1):
-            status, state_string, perfdata = _check_one_tray(args, str(i), separator, state_string, perfdata)
+            status, state_string, perfdata = _check_one_tray(args, str(i), state_string, perfdata)
             trays_state = max(trays_state, status)
     else:
         for tray_id in param.split(arg_token):
-            status, state_string, perfdata = _check_one_tray(args, tray_id.strip(), separator, state_string, perfdata)
+            status, state_string, perfdata = _check_one_tray(args, tray_id.strip(), state_string, perfdata)
             trays_state = max(trays_state, status)
 
     return trays_state, state_string, perfdata
@@ -318,14 +331,11 @@ def main():
     parser.add_argument("-P", "--parameter", required=False, help="Check type parameter")
     parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
     parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
-    parser.add_argument("-S", "--separator", default=",", help="Separator string")
-
     args = parser.parse_args()
 
     check_type = args.type.upper()
     parameter = args.parameter.upper() if args.parameter else ""
 
-    separator = args.separator.replace("\\n", "\n") if args.separator else ","
     arg_token = ","
 
     state = STATE_UNK
@@ -339,15 +349,15 @@ def main():
     elif check_type in ("PAGES", "COUNT", "PAGECOUNT"):
         state, state_string, perfdata = check_pagecount(args)
     elif check_type == "DISPLAY":
-        state, state_string, perfdata = check_display(args, separator)
+        state, state_string, perfdata = check_display(args)
     elif check_type == "STATUS":
         state, state_string, perfdata = check_printer_status(args)
     elif check_type == "CONSUM":
-        state, state_string, perfdata = check_consumables(args, parameter, separator)
+        state, state_string, perfdata = check_consumables(args, parameter)
     elif check_type == "CONSUMX":
-        state, state_string, perfdata = check_exact_consumable(args, parameter, separator)
+        state, state_string, perfdata = check_exact_consumable(args, parameter)
     elif check_type in ("TRAY", "TRAYS"):
-        state, state_string, perfdata = check_paper_trays(args, parameter, separator, arg_token)
+        state, state_string, perfdata = check_paper_trays(args, parameter, arg_token)
 
     if not perfdata:
         print(state_string)
