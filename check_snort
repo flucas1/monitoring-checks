@@ -112,7 +112,7 @@ async def get_alert_count(time_diff_seconds, priority_level):
     time_diff = stamp2date(now - time_diff_seconds)
     query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '" + str(priority_level - 1) + "' and timestamp(event.timestamp) > '" + time_diff + "';"
     infomsg("get_alert_count -> " + query)
-    
+
     count = await run_mysql_query(query)
     infomsg("time_diff -> " + time_diff + " / count: -> " + str(count))
     return count
@@ -128,7 +128,7 @@ async def get_latest_values(values_log_file):
         msg = "check_file not found -> " + values_log_file + " (trying to create)"
         infomsg(msg)
         return "WARNING", msg
-        
+
     try:
         async with aiofiles.open(values_log_file, "r") as f:
             line = (await f.readline()).strip()
@@ -143,7 +143,7 @@ async def get_latest_values(values_log_file):
         msg = "file read exception -> " + str(e)
         infomsg(msg)
         return "UNKNOWN", msg
-        
+
     return "OK", ""
 
 
@@ -165,8 +165,8 @@ async def check_host():
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-             return "UNKNOWN", "no pid for snort found _pidof snort_ (sorry)", "", None
-             
+            return "UNKNOWN", "no pid for snort found _pidof snort_ (sorry)", "", None
+
         pid_out = stdout.decode().strip()
         snort_pid = int(pid_out.split()[0])
     except Exception as e:
@@ -183,7 +183,7 @@ async def check_host():
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
             return "UNKNOWN", "failed to read syslog: " + stderr.decode().strip(), "", None
-            
+
         syslog_lines = stdout.decode().splitlines()
     except Exception as e:
         return "UNKNOWN", "failed to signal snort or read syslog: " + str(e), "", None
@@ -221,13 +221,13 @@ async def check_host():
         status = "OK"
 
     exit_text = "snort-stats total received: " + str(received_pckt) + ", dropped: " + str(dropped_pckt) + " / " + str(dropped_perc) + " % :: warning: " + str(DROPPED_WARNING) + ", :: critical: " + str(DROPPED_CRITICAL)
-    
+
     state_to_save = {
         "file": SPOOL_DATA_DIR + "/host_stats.check",
         "last": 1,
         "avg": 1
     }
-    
+
     return status, exit_text, perf_data, state_to_save
 
 
@@ -282,10 +282,11 @@ async def check_alerts():
         "last": count_last,
         "avg": avg_avg
     }
-    
+
     return status, exit_text, perf_data, state_to_save
 
 # -------------------------------------------------------------------------------
+
 
 async def main():
     parser = argparse.ArgumentParser(add_help=False)
@@ -333,7 +334,7 @@ async def main():
         await write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
 
     print_log(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
-    
+
     perf_str = " | " + perf_data if perf_data else ""
     final_message = "[" + str(MODUS) + "] " + exit_text + perf_str
     exitnagios(status, final_message)

@@ -80,6 +80,7 @@ def compare(val, op, limit):
         return not bool(re.search(str(limit), str(val)))
     return False
 
+
 async def run_command(cmd):
     proc = await asyncio.create_subprocess_exec(
         *cmd,
