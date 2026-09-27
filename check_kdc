@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import os
+import argparse
+import tempfile
+import subprocess
+
+# Standard Nagios exit codes
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+
+
+class NagiosParser(argparse.ArgumentParser):
+    """Custom parser to exit with STATE_UNKNOWN on argument errors."""
+
+    def error(self, message):
+        print(f"UNKNOWN: {message}")
+        self.print_help()
+        sys.exit(STATE_UNKNOWN)
+
+
+def cleanup(cc_path, conf_path):
+    """Destroy credentials and remove temporary configuration."""
+    if cc_path and os.path.exists(cc_path):
+        try:
+            subprocess.run(['kdestroy', '-c', cc_path],
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        except OSError:
+            pass
+
+    if conf_path and os.path.exists(conf_path):
+        try:
+            os.remove(conf_path)
+        except OSError:
+            pass
+
+
+def main():
+    parser = NagiosParser(description="Kerberos 5 KDC plugin for Nagios")
+    parser.add_argument('-H', '--hostname', required=True, help="Name of KDC to check")
+    parser.add_argument('-P', '--port', default='88', help="Port on which KDC runs (default 88)")
+    parser.add_argument('-p', '--principal', required=True, help="Principal name to authenticate as (including realm)")
+    parser.add_argument('-k', '--keytab', required=True, help="Keytab file containing principal key")
+
+    args = parser.parse_args()
+
+    # Validate principal format
+    if '@' not in args.principal:
+        print("UNKNOWN: Principal must include realm (e.g., user@REALM)")
+        sys.exit(STATE_UNKNOWN)
+
+    # Extract realm (equivalent to: sed -e s/.*@//)
+    realm = args.principal.split('@', 1)[-1]
+    kdc_address = f"{args.hostname}:{args.port}"
+
+    # Generate Kerberos config content
+    krb5_conf_content = f"""[libdefaults]
+default_realm = {realm}
+[realms]
+{realm} = {{ 
+kdc = {kdc_address}
+}}
+[appdefaults]
+krb4_get_tickets = false
+"""
+
+    # Securely create temp files for config and credential cache
+    conf_fd, conf_path = tempfile.mkstemp(prefix="nagios_krb5_conf_")
+    cc_fd, cc_path = tempfile.mkstemp(prefix="nagios_krb5_cc_")
+
+    # We only need the paths, close the file descriptors opened by mkstemp
+    os.close(conf_fd)
+    os.close(cc_fd)
+
+    # Write the config file
+    with open(conf_path, 'w') as f:
+        f.write(krb5_conf_content)
+
+    state = STATE_CRITICAL
+
+    try:
+        # Prepare environment with our temporary config
+        env = os.environ.copy()
+        env['KRB5_CONFIG'] = conf_path
+
+        # Construct and run the kinit command
+        cmd = ['/usr/bin/kinit', '-c', cc_path, '-k', '-t', args.keytab, args.principal]
+
+        result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        # Check success
+        if result.returncode == 0:
+            print("OK")
+            state = STATE_OK
+        else:
+            # Grab the first line of stderr/stdout (equivalent to head -n 1)
+            error_msg = result.stdout.strip().split('\n')[0] if result.stdout else "Unknown error"
+            print(f"CRITICAL Getting Kerberos ticket: {error_msg}")
+            state = STATE_CRITICAL
+
+    except FileNotFoundError:
+        print("CRITICAL: /usr/bin/kinit not found")
+        state = STATE_CRITICAL
+    except Exception as e:
+        print(f"CRITICAL: {str(e)}")
+        state = STATE_CRITICAL
+    finally:
+        # Cleanup mechanism via finally (equivalent to bash trap)
+        cleanup(cc_path, conf_path)
+        sys.exit(state)
+
+
+if __name__ == '__main__':
+    main()

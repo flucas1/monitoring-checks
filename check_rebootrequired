@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+
+if os.path.exists("/var/run/reboot-required"):
+    print("CRITICAL: a reboot is needed")
+    sys.exit(2)
+else:
+    print("OK: no pending reboot")
+    sys.exit(0)

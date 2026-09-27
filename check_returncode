@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+# 0 is host UP;           reacheable yes
+# 1 is host UP;           reacheable yes
+# 2 is host DOWN;         reacheable no
+# 3 is host UNREACHEABLE; reacheable no
+
+def main():
+    # Fetch arguments, defaulting to empty string and 0 to mimic shell behavior if omitted
+    exit_code = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+    message = sys.argv[2] if len(sys.argv) > 2 else ""
+
+    # echo "$2"
+    print(message)
+
+    # exit "$1"
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import subprocess
+import os
+
+# Define state constants based on the shell script
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+
+
+def get_state_string(state):
+    """Maps the integer state to its corresponding string representation."""
+    if state == STATE_OK:
+        return "OK"
+    elif state == STATE_WARNING:
+        return "WARNING"
+    elif state == STATE_CRITICAL:
+        return "CRITICAL"
+    else:
+        return "UNKNOWN"
+
+
+def main():
+    # Define the command
+    cmd = "/usr/bin/wbinfo"
+
+    # Check if the command string is empty (replicating 'if [ -z "$CMD" ]')
+    if not cmd:
+        print("Cannot find wbinfo executable")
+        sys.exit(STATE_UNKNOWN)
+
+    # Execute the command, combining stdout and stderr ('2>&1')
+    try:
+        result = subprocess.run([cmd, "-t"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        ret = result.returncode
+        output = result.stdout
+    except FileNotFoundError:
+        print("Cannot find wbinfo executable")
+        sys.exit(STATE_UNKNOWN)
+
+    # Replace newlines with semicolons and strip the trailing semicolon
+    msg = output.replace('\n', ';').rstrip(';')
+
+    # Evaluate the return code and exit with the appropriate state
+    if ret != 0:
+        state = STATE_CRITICAL
+        state_string = get_state_string(state)
+        print(f"{state_string}: wbinfo failed: {msg}")
+        sys.exit(state)
+    else:
+        state = STATE_OK
+        state_string = get_state_string(state)
+        print(f"{state_string}: {msg}")
+        sys.exit(state)
+
+    # Fallback failure state (kept for structural parity with the original script)
+    state = STATE_CRITICAL
+    state_string = get_state_string(state)
+    print(f"{state_string}: PLUGIN FAILED")
+    sys.exit(state)
+
+
+if __name__ == "__main__":
+    main()

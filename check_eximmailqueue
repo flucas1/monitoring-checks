@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import argparse
+import subprocess
+
+# Nagios exit codes
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+
+EXIM_PATH = '/usr/sbin/exim'
+
+
+def main():
+    # Process command line options
+    parser = argparse.ArgumentParser(
+        description="check_eximailqueue - Nagios Exim mail queue check script",
+        add_help=False
+    )
+    parser.add_argument('-w', dest='warning', type=int, required=True,
+                        help="Queue size at which a warning is triggered")
+    parser.add_argument('-c', dest='critical', type=int, required=True,
+                        help="Queue size at which a critical is triggered")
+    parser.add_argument('-v', dest='verbose', action='store_true',
+                        help="Verbose output (ignored for now)")
+    parser.add_argument('-h', '--help', action='help',
+                        help="Show this page")
+
+    args = parser.parse_args()
+
+    # Do the do
+    try:
+        # Run the exim command to count the queue size
+        output = subprocess.check_output([EXIM_PATH, '-bpc'], stderr=subprocess.STDOUT, text=True).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        output = ""
+
+    # Check if the output is empty or invalid
+    if not output or not output.isdigit():
+        print("Mailqueue WARNING - query returned no output!")
+        sys.exit(STATE_WARNING)
+
+    queue_size = int(output)
+
+    # Evaluate thresholds and return information and exit status
+    if queue_size >= args.critical:
+        print(f"CRITICAL:- {queue_size} messages on queue | queue={queue_size}")
+        sys.exit(STATE_CRITICAL)
+    elif queue_size >= args.warning:
+        print(f"WARNING: {queue_size} messages on queue | queue={queue_size}")
+        sys.exit(STATE_WARNING)
+    else:
+        print(f"OK: {queue_size} messages on queue | queue={queue_size}")
+        sys.exit(STATE_OK)
+
+
+if __name__ == "__main__":
+    main()
