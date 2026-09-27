@@ -64,11 +64,11 @@ async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
     parser.add_argument("-H", "--hostaddress", required=True, help="Host address of the Bind9 server")
     parser.add_argument("-p", "--port", required=True, help="Port of the Bind9 statistics channel")
-    parser.add_argument("-w", "--warning", type=int, default=100000, help="Warning threshold for total queries (default: 100000)")
-    parser.add_argument("-c", "--critical", type=int, default=250000, help="Critical threshold for total queries (default: 250000)")
+    parser.add_argument("-w", "--warning", type=float, default=5.0, help="Warning threshold for slow RTT percentage (default: 5.0%)")
+    parser.add_argument("-c", "--critical", type=float, default=10.0, help="Critical threshold for slow RTT percentage (default: 10.0%)")
     args = parser.parse_args()
 
-    url = f"http://{args.hostaddress}:{args.port}/xml/v3/server"
+    url = "http://" + str(args.hostaddress) + ":" + str(args.port) + "/xml/v3/server"
 
     TIMEOUT = 20
     xml_data = await fetch_data(url, TIMEOUT)
@@ -86,26 +86,15 @@ async def main(forcedargs=None):
         total_queries = elem.text
         break
 
-    status = "OK"
-    if total_queries:
-        try:
-            tq_int = int(total_queries)
-            if args.critical is not None and tq_int >= args.critical:
-                status = "CRITICAL"
-            elif args.warning is not None and tq_int >= args.warning:
-                status = "WARNING"
-        except ValueError:
-            pass
-
     queries = []
     for elem in root.findall(".//*[@type='qtype']"):
         if "name" in elem.attrib and elem.text is not None:
-            queries.append(f"query_{elem.attrib['name']}={elem.text}c")
+            queries.append("query_" + str(elem.attrib['name']) + "=" + str(elem.text) + "c")
 
     out_queries = []
     for elem in root.findall(".//*[@type='resqtype']"):
         if "name" in elem.attrib and elem.text is not None:
-            out_queries.append(f"query-out_{elem.attrib['name']}={elem.text}c")
+            out_queries.append("query-out_" + str(elem.attrib['name']) + "=" + str(elem.text) + "c")
 
     rtt = {"10": "", "100": "", "500": "", "800": "", "1600": "", "1600+": ""}
     for elem in root.findall(".//*[@name]"):
@@ -115,13 +104,37 @@ async def main(forcedargs=None):
 
     rtt_out = []
     mapping = [("10", "10"), ("100", "100"), ("500", "500"), ("800", "800"), ("1600", "1600"), ("1600+", "Over1600")]
+    
+    total_rtt_count = 0
+    slow_rtt_count = 0
+    
     for key, label in mapping:
         if rtt[key]:
-            rtt_out.append(f"QryRTT_{label}={rtt[key]}c")
+            val = rtt[key]
+            rtt_out.append("QryRTT_" + str(label) + "=" + str(val) + "c")
+            try:
+                count = int(val)
+                total_rtt_count += count
+                # Define "slow" RTT as anything taking 500ms or longer
+                if key in ["500", "800", "1600", "1600+"]:
+                    slow_rtt_count += count
+            except ValueError:
+                pass
 
-    output = ["Bind 9 Stats Collected |"]
+    status = "OK"
+    slow_rate = 0.0
+    
+    if total_rtt_count > 0:
+        slow_rate = (float(slow_rtt_count) / float(total_rtt_count)) * 100.0
+        
+        if args.critical is not None and slow_rate >= args.critical:
+            status = "CRITICAL"
+        elif args.warning is not None and slow_rate >= args.warning:
+            status = "WARNING"
+
+    output = ["Bind 9 Stats - Slow RTT Rate: " + str(round(slow_rate, 2)) + "% |"]
     if total_queries:
-        output.append(f"total_queries={total_queries}c")
+        output.append("total_queries=" + str(total_queries) + "c")
     output.extend(queries)
     output.extend(out_queries)
     output.extend(rtt_out)
