@@ -76,20 +76,6 @@ DROPPED_CRITICAL = 10
 MODUS = ""
 
 
-async def print_log(msg):
-    log_insert = NOW_DATE + "  -  [ " + str(MODUS) + " ] - " + str(msg) + "\n"
-    try:
-        with open(LOG_FILE, "a") as f:
-            f.write(log_insert)
-    except IOError:
-        pass
-
-
-async def print_debug(msg):
-    if DEBUG:
-        print_log(msg)
-
-
 def stamp2date(ts):
     return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -111,12 +97,12 @@ async def run_mysql_query(query):
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-            print_debug("MySQL Error: " + stderr.decode().strip())
+            infomsg("MySQL Error: " + stderr.decode().strip())
             return 1
         result = stdout.decode().strip()
         return int(result) if result and result != "0" else 1
     except Exception as e:
-        print_debug("MySQL Exception: " + str(e))
+        infomsg("MySQL Exception: " + str(e))
         return 1
 
 
@@ -124,10 +110,10 @@ async def get_alert_count(time_diff_seconds, priority_level):
     now = int(time.time())
     time_diff = stamp2date(now - time_diff_seconds)
     query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '" + str(priority_level - 1) + "' and timestamp(event.timestamp) > '" + time_diff + "';"
-    print_debug("get_alert_count -> " + query)
+    infomsg("get_alert_count -> " + query)
     
     count = await run_mysql_query(query)
-    print_debug("time_diff -> " + time_diff + " / count: -> " + str(count))
+    infomsg("time_diff -> " + time_diff + " / count: -> " + str(count))
     return count
 
 
@@ -138,7 +124,7 @@ def get_latest_values(values_log_file):
         except IOError:
             pass
         msg = "check_file not found -> " + values_log_file + " (trying to create)"
-        print_debug(msg)
+        infomsg(msg)
         return "WARNING", msg
         
     try:
@@ -149,11 +135,11 @@ def get_latest_values(values_log_file):
                 last_status = parts[0] if len(parts) > 0 else ""
                 if last_status == "SUPERCRITICAL":
                     msg = "critical status found > " + values_log_file + " -> " + line
-                    print_debug(msg)
+                    infomsg(msg)
                     return "CRITICAL", msg
     except Exception as e:
         msg = "file read exception -> " + str(e)
-        print_debug(msg)
+        infomsg(msg)
         return "UNKNOWN", msg
         
     return "OK", ""
@@ -165,7 +151,7 @@ def write_latest_values(values_log_file, status, count_last, avg_avg):
             f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
     except IOError:
         pass
-    print_debug(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)
+    infomsg(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)
 
 
 async def check_host():
@@ -254,7 +240,7 @@ async def check_alerts():
 
     average_alerts, actual_alerts, divider, count_interval = intervals.get(INTERVAL, (86400, 3600, 24, "1hr-24hr"))
 
-    print_debug("\n----[ " + NOW_DATE + " ]-----------------------------------------------\n")
+    infomsg("\n----[ " + NOW_DATE + " ]-----------------------------------------------\n")
 
     last_tag, avg_tag = count_interval.split("-")
     values_log_file = SPOOL_DATA_DIR + "/" + str(PRIORITY_LEVEL) + "-" + count_interval + ".check"
@@ -275,8 +261,8 @@ async def check_alerts():
     w_limit = avg_avg + int(avg_avg * WARNING_THRESH / 100)
     c_limit = avg_avg + int(avg_avg * CRITICAL_THRESH / 100)
 
-    print_debug("check_options: AVG -> " + str(average_alerts) + " / ACT -> " + str(actual_alerts) + " / INT -> " + count_interval + " / DIV -> " + str(divider))
-    print_debug("\nPRIORITY  -> " + str(PRIORITY_LEVEL) + "\nINTERVAL  -> " + count_interval + "\nLAST      -> " + str(count_last) + "\nAVG       -> " + str(count_avg) + "\nAVG_AVG   -> " + str(avg_avg) + "\nw_limit   -> " + str(w_limit) + "\nc_limit   -> " + str(c_limit) + "\n")
+    infomsg("check_options: AVG -> " + str(average_alerts) + " / ACT -> " + str(actual_alerts) + " / INT -> " + count_interval + " / DIV -> " + str(divider))
+    infomsg("\nPRIORITY  -> " + str(PRIORITY_LEVEL) + "\nINTERVAL  -> " + count_interval + "\nLAST      -> " + str(count_last) + "\nAVG       -> " + str(count_avg) + "\nAVG_AVG   -> " + str(avg_avg) + "\nw_limit   -> " + str(w_limit) + "\nc_limit   -> " + str(c_limit) + "\n")
 
     perf_data = last_tag + "=" + str(count_last) + ";" + str(w_limit) + ";" + str(c_limit) + "; " + avg_tag + "=" + str(count_avg) + "; " + avg_tag + "-avg=" + str(avg_avg)
 
@@ -331,7 +317,7 @@ async def main():
         LOG_FILE = SPOOL_DATA_DIR + "/check_snort." + datetime.datetime.now().strftime("%a") + ".log"
 
     if not os.path.isdir(SPOOL_DATA_DIR):
-        print("\n> error no output_dir given/created; run\n> $ mkdir -p " + SPOOL_DATA_DIR + " && chown nagios:nagios " + SPOOL_DATA_DIR + "\n> to create that dir\n")
+        infomsg("\n> error no output_dir given/created; run\n> $ mkdir -p " + SPOOL_DATA_DIR + " && chown nagios:nagios " + SPOOL_DATA_DIR + "\n> to create that dir\n")
         exitnagios("UNKNOWN", "[" + str(MODUS) + "] SPOOL_DATA_DIR not found -> " + SPOOL_DATA_DIR)
 
     if MODUS == "host":
