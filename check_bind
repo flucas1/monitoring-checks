@@ -104,10 +104,10 @@ async def main(forcedargs=None):
 
     rtt_out = []
     mapping = [("10", "10"), ("100", "100"), ("500", "500"), ("800", "800"), ("1600", "1600"), ("1600+", "Over1600")]
-    
+
     total_rtt_count = 0
     slow_rtt_count = 0
-    
+
     for key, label in mapping:
         if rtt[key]:
             val = rtt[key]
@@ -123,10 +123,10 @@ async def main(forcedargs=None):
 
     status = "OK"
     slow_rate = 0.0
-    
+
     if total_rtt_count > 0:
         slow_rate = (float(slow_rtt_count) / float(total_rtt_count)) * 100.0
-        
+
         if args.critical is not None and slow_rate >= args.critical:
             status = "CRITICAL"
         elif args.warning is not None and slow_rate >= args.warning:

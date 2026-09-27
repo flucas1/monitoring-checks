@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import subprocess
+import sys
+import os
+import shutil
+
+
+def check_dependencies():
+    """Ensure iostat is installed."""
+    if not shutil.which("iostat"):
+        print("ERROR: You must have iostat installed in order to run this plugin")
+        print("\tuse: apt-get install sysstat")
+        sys.exit(-1)
+
+
+def parse_thresholds(thresh_str, default_val=99999):
+    """Parses comma-separated thresholds and pads them to 5 values."""
+    if not thresh_str:
+        return [default_val] * 5
+
+    parts = thresh_str.split(',')
+    # Pad the list to ensure it has 5 elements for the comparisons
+    while len(parts) < 5:
+        parts.append(default_val)
+
+    return [float(p) for p in parts[:5]]
+
+
+def run_iostat(disk, extended, samples):
+    """Executes iostat and returns the last line matching the disk."""
+    # Base command: iostat <disk> -k -d 10 2 <samples>
+    cmd = ["iostat", disk, "-k", "-d", "10", "2", str(samples)]
+    if extended:
+        cmd.insert(2, "-x")
+
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf-8')
+        # grep $disk | tail -1
+        matching_lines = [line.strip() for line in output.splitlines() if disk in line]
+        if not matching_lines:
+            return []
+
+        last_line = matching_lines[-1]
+        # Replace commas with dots for float parsing, then split by whitespace
+        return last_line.replace(',', '.').split()
+    except subprocess.CalledProcessError:
+        print("ERROR: Failed to run iostat command")
+        sys.exit(-1)
+
+
+def main():
+    check_dependencies()
+
+    parser = argparse.ArgumentParser(add_help=False, usage=argparse.SUPPRESS)
+    parser.add_argument("-d", dest="disk", default="sda", help="Device to be checked")
+    parser.add_argument("-w", dest="warning", default="", help="Warning levels")
+    parser.add_argument("-c", dest="critical", default="", help="Critical levels")
+    parser.add_argument("-i", dest="io", action="store_true", help="IO Check Mode")
+    parser.add_argument("-q", dest="queue", action="store_true", help="Queue Mode")
+    parser.add_argument("-W", dest="waittime", action="store_true", help="Wait Time Mode")
+    parser.add_argument("-p", dest="printperfdata", action="store_true", help="Provide performance data")
+    parser.add_argument("-g", dest="samples", action="store_const", const="1", default="2", help="Since last reboot")
+    parser.add_argument("-h", dest="help", action="store_true", help="Help")
+
+    args, unknown = parser.parse_known_args()
+
+    if args.help:
+        print("Usage:")
+        print("-d = Device to be checked. Example: \"-d sda\"")
+        print("Run only one of i, q, W:")
+        print("-i = IO Check Mode")
+        print("-q = Queue Mode")
+        print("-W = Wait Time Mode")
+        print("-w,-c = pass warning and critical levels respectively.")
+        print("-p = Provide performance data for later graphing")
+        print("-g = Since last reboot for system")
+        print("-h = This help")
+        sys.exit(0)
+
+    if unknown:
+        print(f"Invalid option: {unknown[0]}")
+        sys.exit(-1)
+
+    # Checks that only one query type is run
+    if sum([args.io, args.queue, args.waittime]) != 1:
+        print("ERROR: select one and only one run mode")
+        sys.exit(-1)
+
+    # Checks for sane Disk name
+    if not os.path.exists(f"/dev/{args.disk}"):
+        print("ERROR: Device incorrectly specified")
+        sys.exit(-1)
+
+    warn = parse_thresholds(args.warning, 99999)
+    crit = parse_thresholds(args.critical, 99999)
+
+    # Checks for sane warning/critical levels
+    if args.warning or args.critical:
+        if warn[0] > crit[0] or warn[1] > crit[1]:
+            print("ERROR: critical levels must be higher than warning levels")
+            sys.exit(-1)
+        if args.io or args.waittime:
+            if warn[2] > crit[2] or warn[3] > crit[3] or warn[4] > crit[4]:
+                print("ERROR: critical levels must be higher than warning levels")
+                sys.exit(-1)
+
+    tmpx = run_iostat(args.disk, extended=True, samples=args.samples)
+    if not tmpx:
+        print(f"ERROR: No data returned for disk {args.disk}")
+        sys.exit(-1)
+
+    state = "OK"
+    status = 0
+    msg = ""
+    perfdata = ""
+
+    # ------------IO Test-------------
+    if args.io:
+        tmpd = run_iostat(args.disk, extended=False, samples=args.samples)
+        tps = float(tmpd[1])  # awk '{print $2}'
+        read_sec = float(tmpx[3])  # awk '{print $4}'
+        written_sec = float(tmpx[4])  # awk '{print $5}'
+        kbytes_read_sec = float(tmpx[5])  # awk '{print $6}'
+        kbytes_written_sec = float(tmpx[6])  # awk '{print $7}'
+
+        if args.warning:
+            if tps >= warn[0] or read_sec >= warn[1] or written_sec >= warn[2] or kbytes_read_sec >= warn[3] or kbytes_written_sec >= warn[4]:
+                state = "WARNING"
+                status = 1
+        if args.critical:
+            if tps >= crit[0] or read_sec >= crit[1] or written_sec >= crit[2] or kbytes_read_sec >= crit[3] or kbytes_written_sec >= crit[4]:
+                state = "CRITICAL"
+                status = 2
+
+        msg = f"{state} - I/O stats: Transfers/Sec={tps} Read Requests/Sec={read_sec} Write Requests/Sec={written_sec} KBytes Read/Sec={kbytes_read_sec} KBytes_Written/Sec={kbytes_written_sec}"
+        perfdata = f" | total_io_sec={tps};{warn[0]};{crit[0]}; read_io_sec={read_sec};{warn[1]};{crit[1]}; write_io_sec={written_sec};{warn[2]};{crit[2]}; kbytes_read_sec={kbytes_read_sec};{warn[3]};{crit[3]}; kbytes_written_sec={kbytes_written_sec};{warn[4]};{crit[4]};"
+
+    # ------------Queue Test-------------
+    elif args.queue:
+        qsize = float(tmpx[7])  # awk '{print $8}'
+        qlength = float(tmpx[8])  # awk '{print $9}'
+
+        if args.warning:
+            if qsize >= warn[0] or qlength >= warn[1]:
+                state = "WARNING"
+                status = 1
+        if args.critical:
+            if qsize >= crit[0] or qlength >= crit[1]:
+                state = "CRITICAL"
+                status = 2
+
+        msg = f"{state} - Disk Queue Stats: Average Request Size={qsize} Average Queue Length={qlength}"
+        perfdata = f" | qsize={qsize};{warn[0]};{crit[0]}; queue_length={qlength};{warn[1]};{crit[1]};"
+
+    # ------------Wait Time Test-------------
+    elif args.waittime:
+        avgwait = float(tmpx[9])  # awk '{print $10}'
+        avgrwait = float(tmpx[10])  # awk '{print $11}'
+        avgwwait = float(tmpx[11])  # awk '{print $12}'
+        avgsvctime = float(tmpx[12])  # awk '{print $13}'
+        avgcpuutil = float(tmpx[13])  # awk '{print $14}'
+
+        if args.warning:
+            if avgwait >= warn[0] or avgrwait >= warn[1] or avgwwait >= warn[2] or avgsvctime >= warn[3] or avgcpuutil >= warn[4]:
+                state = "WARNING"
+                status = 1
+        if args.critical:
+            if avgwait >= crit[0] or avgrwait >= crit[1] or avgwwait >= crit[2] or avgsvctime >= crit[3] or avgcpuutil >= crit[4]:
+                state = "CRITICAL"
+                status = 2
+
+        msg = f"{state} - Wait Time Stats: Avg I/O Wait Time (ms)={avgwait} Avg Read Wait Time (ms)={avgrwait} Avg Write Wait Time (ms)={avgwwait} Avg Service Wait Time (ms)={avgsvctime} Avg CPU Utilization={avgcpuutil}"
+        perfdata = f" | avg_io_waittime_ms={avgwait};{warn[0]};{crit[0]}; avg_r_waittime_ms={avgrwait};{warn[1]};{crit[1]}; avg_w_waittime_ms={avgwwait};{warn[2]};{crit[2]}; avg_service_waittime_ms={avgsvctime};{warn[3]};{crit[3]}; avg_cpu_utilization={avgcpuutil};{warn[4]};{crit[4]};"
+
+    # now output the official result
+    final_output = msg
+    if args.printperfdata:
+        final_output += perfdata
+
+    print(final_output)
+    sys.exit(status)
+
+
+if __name__ == "__main__":
+    main()

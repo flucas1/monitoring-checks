@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import subprocess
+import sys
+
+# Standard Nagios/Icinga exit codes
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+
+SELINUX_MODES = ["enforcing", "permissive", "disabled"]
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Check expected SELinux mode."
+    )
+
+    parser.add_argument(
+        '-w', '--warning',
+        action='store_true',
+        help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one"
+    )
+
+    parser.add_argument(
+        'selinux_mode',
+        type=str.lower,  # Automatically cast input to lowercase to match expected values
+        choices=SELINUX_MODES,
+        metavar='SELINUX_MODE',
+        help=f"Expected SELinux mode (allowed values: {' '.join(SELINUX_MODES)})"
+    )
+
+    try:
+        args = parser.parse_args()
+        return args
+    except SystemExit as e:
+        # argparse uses 2 for errors, but Nagios plugins standard for parameter issues is UNKNOWN (3)
+        if e.code != 0:
+            sys.exit(STATE_UNKNOWN)
+        sys.exit(e.code)
+
+
+def check_selinux_mode(expected_mode, warning_flag):
+    error_state = STATE_WARNING if warning_flag else STATE_CRITICAL
+    error_state_label = "WARNING" if warning_flag else "ERROR"
+
+    try:
+        # Fetch current mode using the system binary
+        result = subprocess.run(
+            ['/usr/sbin/getenforce'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        current_mode = result.stdout.strip().lower()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("ERROR: unable to retrieve SELinux mode")
+        sys.exit(STATE_CRITICAL)
+
+    if current_mode != expected_mode:
+        print(f"{error_state_label}: SELinux is not {expected_mode} (currently {current_mode})")
+        sys.exit(error_state)
+
+    print(f"OK: SELinux is {expected_mode}")
+    sys.exit(STATE_OK)
+
+
+def main():
+    args = parse_arguments()
+    check_selinux_mode(args.selinux_mode, args.warning)
+
+
+if __name__ == "__main__":
+    main()
