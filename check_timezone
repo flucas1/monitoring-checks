@@ -83,45 +83,45 @@ def validate_filename(filename, name="filename", noquit=False):
 # -------------------------------------------------------------------------------
 
 
-async def check_timezone_logic(args):
+async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
     LOCALTIME_FILE = "/etc/localtime"
     ZONEINFO_DIR = "/usr/share/zoneinfo"
 
-    if not args.timezone:
+    if not timezone:
         exitnagios("UNKNOWN", "timezone not specified")
 
-    if not re.match(r"^[\w\/\+-]+$", args.timezone):
+    if not re.match(r"^[\w\/\+-]+$", timezone):
         exitnagios("UNKNOWN", "invalid timezone specified")
 
-    zoneinfo_file = args.zoneinfo_file if args.zoneinfo_file else args.timezone
-    alternate_timezone = args.alternate if args.alternate else args.timezone
+    zoneinfo_file_path = zoneinfo_file if zoneinfo_file else timezone
+    alternate_timezone = alternate if alternate else timezone
 
-    if not is_path_qualified(zoneinfo_file):
-        zoneinfo_file = f"{ZONEINFO_DIR}/{zoneinfo_file}"
+    if not is_path_qualified(zoneinfo_file_path):
+        zoneinfo_file_path = f"{ZONEINFO_DIR}/{zoneinfo_file_path}"
 
-    zoneinfo_file = validate_filename(zoneinfo_file)
+    zoneinfo_file_path = validate_filename(zoneinfo_file_path)
 
     server_timezone = time.tzname[0]
 
-    if not is_path_qualified(zoneinfo_file):
+    if not is_path_qualified(zoneinfo_file_path):
         exitnagios("CRITICAL", "failed to get timezone")
 
     msg = f"timezone is '{server_timezone}'"
 
-    if server_timezone != args.timezone and server_timezone != alternate_timezone:
-        if args.timezone != alternate_timezone:
-            msg += f" (expected: '{args.timezone}' or '{alternate_timezone}')"
+    if server_timezone != timezone and server_timezone != alternate_timezone:
+        if timezone != alternate_timezone:
+            msg += f" (expected: '{timezone}' or '{alternate_timezone}')"
         else:
-            msg += f" (expected: '{args.timezone}')"
+            msg += f" (expected: '{timezone}')"
         exitnagios("CRITICAL", msg)
 
     try:
-        if filecmp.cmp(LOCALTIME_FILE, zoneinfo_file, shallow=False):
+        if filecmp.cmp(LOCALTIME_FILE, zoneinfo_file_path, shallow=False):
             exitnagios("OK", msg)
         else:
-            exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
+            exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file_path}'!")
     except FileNotFoundError:
-        exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
+        exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file_path}'!")
 
     exitnagios("UNKNOWN", msg)
 
@@ -130,9 +130,6 @@ async def check_timezone_logic(args):
 
 
 async def main(forcedargs=None):
-    LOCALTIME_FILE = "/etc/localtime"
-    ZONEINFO_DIR = "/usr/share/zoneinfo"
-
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-T", "--timezone", type=str)
     parser.add_argument("-A", "--alternate", type=str)
@@ -141,7 +138,7 @@ async def main(forcedargs=None):
 
     args = parser.parse_args()
 
-    check_timezone_logic(args)
+    await check_timezone_logic(args.timezone, args.alternate, args.zoneinfo_file)
 
 
 # -------------------------------------------------------------------------------
