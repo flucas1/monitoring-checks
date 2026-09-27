@@ -117,9 +117,9 @@ async def main(forcedargs=None):
     auth = (args.username, args.password) if args.username and args.password else None
 
     proto = "https://" if args.ssl else "http://"
-    port_str = f":{args.port}" if args.port else ""
+    port_str = ":" + str(args.port) if args.port else ""
 
-    url = f"{proto}{args.hostname}{port_str}{args.uri}"
+    url = proto + args.hostname + port_str + args.uri[cite: 1]
     if "?" not in url:
         url += "?auto"
     elif not url.endswith("auto"):
@@ -132,23 +132,25 @@ async def main(forcedargs=None):
     try:
         response = await fetch_status(url, auth, verify, args.timeout)
         if response.status_code >= 500:
-            print(f"{"CRITICAL" if args.unreachable else "UNKNOWN"} - {response.reason}")
+            status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
+            print(status_prefix + " - " + str(response.reason))
             sys.exit(unreachable_status)
         elif response.status_code != 200:
-            print(f"CRITICAL - {response.reason}")
+            print("CRITICAL - " + str(response.reason))
             sys.exit(CRITICAL)
     except asyncio.TimeoutError:
-        print(f"{"CRITICAL" if args.unreachable else "UNKNOWN"} - plugin timed out")
+        status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
+        print(status_prefix + " - plugin timed out")
         sys.exit(unreachable_status)
     except Exception as e:
-        print(f"CRITICAL - {str(e)}")
+        print("CRITICAL - " + str(e))
         sys.exit(CRITICAL)
 
     content = response.text
 
     match = re.search(r"ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)", content, re.DOTALL)
     if not match:
-        print(f"UNKNOWN - No status information found at {url}")
+        print("UNKNOWN - No status information found at " + url)
         sys.exit(UNKNOWN)
 
     req_per_sec = match.group(1)
@@ -179,9 +181,9 @@ async def main(forcedargs=None):
         overall_status = max(overall_status, st)
         w_str = w if w else ""
         c_str = c if c else ""
-        perfdata.append(f"{name}={val}{uom};{w_str};{c_str};;")
+        perfdata.append(name + "=" + str(val) + uom + ";" + str(w_str) + ";" + str(c_str) + ";;")
 
-    output = f"OpenSlots:{open_slots} BusyWorkers:{busy_workers} IdleWorkers:{idle_workers} ReqPerSec:{req_per_sec} BytesPerSec:{bytes_per_sec} BytesPerReq:{bytes_per_req}"
+    output = "OpenSlots:" + str(open_slots) + " BusyWorkers:" + str(busy_workers) + " IdleWorkers:" + str(idle_workers) + " ReqPerSec:" + str(req_per_sec) + " BytesPerSec:" + str(bytes_per_sec) + " BytesPerReq:" + str(bytes_per_req)
     perf_string = " ".join(perfdata)
 
     if overall_status == OK:
@@ -193,7 +195,7 @@ async def main(forcedargs=None):
     else:
         status_str = "UNKNOWN"
 
-    print(f"{status_str} - {output} | {perf_string}")
+    print(status_str + " - " + output + " | " + perf_string)
     sys.exit(overall_status)
 
 
