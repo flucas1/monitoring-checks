@@ -14,15 +14,6 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 
-class NagiosParser(argparse.ArgumentParser):
-    """Custom parser to exit with STATE_UNKNOWN on argument errors."""
-
-    def error(self, message):
-        print(f"UNKNOWN: {message}")
-        self.print_help()
-        sys.exit(STATE_UNKNOWN)
-
-
 def cleanup(cc_path, conf_path):
     """Destroy credentials and remove temporary configuration."""
     if cc_path and os.path.exists(cc_path):
@@ -41,7 +32,7 @@ def cleanup(cc_path, conf_path):
 
 
 def main():
-    parser = NagiosParser(description="Kerberos 5 KDC plugin for Nagios")
+    parser = argparse.ArgumentParser(description="Kerberos 5 KDC plugin for Nagios")
     parser.add_argument('-H', '--hostname', required=True, help="Name of KDC to check")
     parser.add_argument('-P', '--port', default='88', help="Port on which KDC runs (default 88)")
     parser.add_argument('-p', '--principal', required=True, help="Principal name to authenticate as (including realm)")
