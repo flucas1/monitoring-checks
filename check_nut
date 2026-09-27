@@ -48,12 +48,10 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-
 ERRORS_OK = 0
 ERRORS_WARNING = 1
 ERRORS_CRITICAL = 2
 ERRORS_UNKNOWN = 3
-
 
 def compare(val, op, limit):
     try:
@@ -85,7 +83,6 @@ def compare(val, op, limit):
         return not bool(re.search(str(limit), str(val)))
     return False
 
-
 async def run_command(cmd):
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -94,7 +91,7 @@ async def run_command(cmd):
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
-        raise RuntimeError(f"Command {" ".join(cmd)} failed with code {proc.returncode}")
+        raise RuntimeError("Command " + " ".join(cmd) + " failed with code " + str(proc.returncode))
     return stdout.decode().strip()
 
 
@@ -149,7 +146,7 @@ async def main(forcedargs=None):
 
     if not args.device:
         print("Device not specified")
-        sys.exit(ERRORS_UNKNOWN)
+        return ERRORS_UNKNOWN
 
     limits = {}
     for v in args.value:
@@ -159,19 +156,19 @@ async def main(forcedargs=None):
 
     if not limits:
         print("you have to specify some value to check")
-        sys.exit(ERRORS_UNKNOWN)
+        return ERRORS_UNKNOWN
 
     try:
         await run_command(["/bin/ps", "h", "-C", "upsd"])
     except RuntimeError:
         print("NUT Daemon maybe DOWN")
-        sys.exit(ERRORS_UNKNOWN)
+        return ERRORS_UNKNOWN
 
     try:
         res = await run_command(["/bin/upsc", args.device])
     except RuntimeError as e:
-        print(f"can't run '/bin/upsc {args.device}': {e}")
-        sys.exit(ERRORS_UNKNOWN)
+        print("can't run '/bin/upsc " + str(args.device) + "': " + str(e))
+        return ERRORS_UNKNOWN
 
     ups_data = {}
     for line in res.splitlines():
@@ -186,8 +183,8 @@ async def main(forcedargs=None):
 
     for key, limstring in limits.items():
         if key not in ups_data:
-            print(f"key '{key}' is not defined in output from /bin/upsc")
-            sys.exit(ERRORS_UNKNOWN)
+            print("key '" + str(key) + "' is not defined in output from /bin/upsc")
+            return ERRORS_UNKNOWN
 
         kvtriples = limstring.split(":")
         cmp_dict = {"c": [], "w": []}
@@ -198,18 +195,18 @@ async def main(forcedargs=None):
                 severity, op, value = match.groups()
                 cmp_dict[severity].append({"op": op, "value": value})
                 if args.debug:
-                    print(f"KV3: ({severity},{op},{value})")
+                    print("KV3: (" + str(severity) + "," + str(op) + "," + str(value) + ")")
             else:
-                print(f"ERROR: '{kvtriple}' is invalid")
-                sys.exit(ERRORS_UNKNOWN)
+                print("ERROR: '" + str(kvtriple) + "' is invalid")
+                return ERRORS_UNKNOWN
 
         if cmp_dict["c"]:
             cnthits = 0
             for comparison in cmp_dict["c"]:
                 if args.debug:
-                    print(f"{key} {ups_data[key]} {comparison["op"]} {comparison["value"]}")
+                    print(str(key) + " " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]))
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = f"CRITICAL: {ups_data[key]} {comparison["op"]} {comparison["value"]} | {key}={ups_data[key]}"
+                    msg = "CRITICAL: " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
                     if args.debug:
                         print(msg)
                     critmesg.append(msg)
@@ -223,7 +220,7 @@ async def main(forcedargs=None):
             cnthits = 0
             for comparison in cmp_dict["w"]:
                 if compare(ups_data[key], comparison["op"], comparison["value"]):
-                    msg = f"WARNING: {ups_data[key]} {comparison["op"]} {comparison["value"]} | {key}={ups_data[key]}"
+                    msg = "WARNING: " + str(ups_data[key]) + " " + str(comparison["op"]) + " " + str(comparison["value"]) + " | " + str(key) + "=" + str(ups_data[key])
                     if args.debug:
                         print(msg)
                     warnmesg.append(msg)
@@ -234,13 +231,13 @@ async def main(forcedargs=None):
                 continue
 
         if args.debug:
-            print(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
-        okmesg.append(f"OK: {key}={ups_data[key]} | {key}={ups_data[key]}")
+            print("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
+        okmesg.append("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
 
     for m in critmesg + warnmesg + okmesg:
         print(m)
 
-    sys.exit(alarmlevel)
+    return alarmlevel
 
 
 # -------------------------------------------------------------------------------
