@@ -49,12 +49,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STATUS_OK = 0
-STATUS_WARNING = 1
-STATUS_CRITICAL = 2
-STATUS_UNKNOWN = 3
-
-
 def parse_threshold(thresh_str):
     if not thresh_str:
         return None, None, False
@@ -98,15 +92,6 @@ def check_threshold(value, warning, critical):
                 return STATUS_WARNING
 
     return STATUS_OK
-
-
-def exit_plugin(status, message, perfdata=""):
-    status_text = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}.get(status, "UNKNOWN")
-    if perfdata:
-        print(str(status_text) + " - " + str(message) + " | " + str(perfdata))
-    else:
-        print(str(status_text) + " - " + str(message))
-    sys.exit(status)
 
 
 async def run_squidclient(squidclient, host, port, user, password):
@@ -158,12 +143,12 @@ async def main(forcedargs=None):
                 if len(lines) > 1:
                     password = lines[1]
         except Exception as e:
-            exit_plugin(STATUS_CRITICAL, "Could not open " + str(args.filecreds) + " for reading: " + str(e))
+            exitnagios("CRITICAL", "Could not open " + str(args.filecreds) + " for reading: " + str(e))
 
     try:
         output = await run_squidclient(squidclient, host, port, user, password)
     except Exception as e:
-        exit_plugin(STATUS_CRITICAL, "error executing " + str(squidclient) + ": " + str(e))
+        exitnagios("CRITICAL", "error executing " + str(squidclient) + ": " + str(e))
 
     parsed_data = {}
 
@@ -238,31 +223,31 @@ async def main(forcedargs=None):
 
     if re.search(r"Connections", data_type, re.IGNORECASE):
         if "connection_nbclient" not in parsed_data:
-            exit_plugin(STATUS_CRITICAL, "cannot parse connections data")
+            exitnagios("CRITICAL", "cannot parse connections data")
         else:
             msg = "Squid have " + str(parsed_data["connection_nbclient"]) + " clients and " + str(parsed_data.get("connection_nbicpqueued", 0)) + " ICP requests queued"
             perf = "'HTTP requests'=" + str(parsed_data.get("connection_nbhttpreceived", 0)) + "c 'sent ICP requests'=" + str(parsed_data.get("connection_nbicpsent", 0)) + "c 'received ICP requests'=" + str(parsed_data.get("connection_nbicpreceived", 0)) + "c"
-            exit_plugin(STATUS_OK, msg, perf)
+            exitnagios("OK", msg + " | " + perf)
 
     elif re.search(r"Cache", data_type, re.IGNORECASE):
         if "cache_requesthitratio5" not in parsed_data:
-            exit_plugin(STATUS_CRITICAL, "cannot parse cache data")
+            exitnagios("CRITICAL", "cannot parse cache data")
         else:
             msg = "Requests Hit Ratio 5min: " + str(parsed_data["cache_requesthitratio5"]) + ", Requests Hit Ratio 60min: " + str(parsed_data["cache_requesthitratio60"]) + ", Byte Hit Ratio 5min: " + str(parsed_data["cache_bytehitratio5"]) + ", Byte Hit Ratio 60min: " + str(parsed_data["cache_bytehitratio60"])
             perf = "'Requests Hit Ratio 5min'=" + str(parsed_data["cache_requesthitratio5"]) + "% 'Requests Hit Ratio 60min'=" + str(parsed_data["cache_requesthitratio60"]) + "% 'Byte Hit Ratio 5min'=" + str(parsed_data["cache_bytehitratio5"]) + "% 'Byte Hit Ratio 60min'=" + str(parsed_data["cache_bytehitratio60"]) + "%"
-            exit_plugin(STATUS_OK, msg, perf)
+            exitnagios("OK", msg + " | " + perf)
 
     elif re.search(r"Resources", data_type, re.IGNORECASE):
         if "resource_cpu5s" not in parsed_data:
-            exit_plugin(STATUS_CRITICAL, "cannot parse resources data")
+            exitnagios("CRITICAL", "cannot parse resources data")
         else:
             msg = "CPU used 5s: " + str(parsed_data["resource_cpu5s"]) + ", CPU used 5m: " + str(parsed_data.get("resource_cpu5m", 0)) + ", CPU used 60m: " + str(parsed_data.get("resource_cpu60m", 0))
             perf = "'CPU used 5s'=" + str(parsed_data["resource_cpu5s"]) + "% 'CPU used 5m'=" + str(parsed_data.get("resource_cpu5m", 0)) + "% 'CPU used 60m'=" + str(parsed_data.get("resource_cpu60m", 0)) + "%"
-            exit_plugin(STATUS_OK, msg, perf)
+            exitnagios("OK", msg + " | " + perf)
 
     elif re.search(r"Memory", data_type, re.IGNORECASE):
         if "memory_used" not in parsed_data:
-            exit_plugin(STATUS_CRITICAL, "cannot parse memory data")
+            exitnagios("CRITICAL", "cannot parse memory data")
         else:
             val = parsed_data["memory_used"]
             status = check_threshold(val, warning, critical)
@@ -270,11 +255,11 @@ async def main(forcedargs=None):
             warn_str = str(warning) if warning else ""
             crit_str = str(critical) if critical else ""
             perf = "'Memory used'=" + str(val) + "KB;" + warn_str + ";" + crit_str + " 'Memory available'=" + str(parsed_data.get("memory_available", 0)) + "KB"
-            exit_plugin(status, msg, perf)
+            exitnagios(status_map.get(status, "UNKNOWN"), msg + " | " + perf)
 
     elif re.search(r"FileDescriptors", data_type, re.IGNORECASE):
         if "fd_used" not in parsed_data:
-            exit_plugin(STATUS_CRITICAL, "cannot parse filedescriptors data")
+            exitnagios("CRITICAL", "cannot parse filedescriptors data")
         else:
             val = parsed_data["fd_used"]
             status = check_threshold(val, warning, critical)
@@ -282,7 +267,7 @@ async def main(forcedargs=None):
             warn_str = str(warning) if warning else ""
             crit_str = str(critical) if critical else ""
             perf = "'Max FD'=" + str(parsed_data.get("fd_available", 0)) + " 'Cur FD'=" + str(val) + ";" + warn_str + ";" + crit_str
-            exit_plugin(status, msg, perf)
+            exitnagios(status_map.get(status, "UNKNOWN"), msg + " | " + perf)
 
 
 # -------------------------------------------------------------------------------
