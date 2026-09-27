@@ -5,8 +5,8 @@ import argparse
 import asyncio
 import re
 import sys
-import signal
-import urllib3
+import warnings
+import httpx
 
 
 # -------------------------------------------------------------------------------
@@ -78,7 +78,6 @@ def timeout_handler(signum, frame):
 
 
 async def fetch_status(url, auth, verify, timeout):
-    import httpx
     async with httpx.AsyncClient(auth=auth, verify=verify, timeout=timeout) as client:
         response = await client.get(url)
         return response
@@ -104,10 +103,10 @@ async def main(forcedargs=None):
 
     unreachable_status = CRITICAL if args.unreachable else UNKNOWN
 
-    warnings = args.warning.split(",") if args.warning else []
+    warnings_list = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []
 
-    warnings += [""] * (6 - len(warnings))
+    warnings_list += [""] * (6 - len(warnings_list))
     criticals += [""] * (6 - len(criticals))
 
     if bool(args.username) != bool(args.password):
@@ -119,7 +118,7 @@ async def main(forcedargs=None):
     proto = "https://" if args.ssl else "http://"
     port_str = ":" + str(args.port) if args.port else ""
 
-    url = proto + args.hostname + port_str + args.uri[cite: 1]
+    url = proto + args.hostname + port_str + args.uri
     if "?" not in url:
         url += "?auto"
     elif not url.endswith("auto"):
@@ -127,7 +126,7 @@ async def main(forcedargs=None):
 
     verify = not args.no_validate
     if not verify:
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        warnings.filterwarnings("ignore")
 
     try:
         response = await fetch_status(url, auth, verify, args.timeout)
@@ -165,12 +164,12 @@ async def main(forcedargs=None):
     bytes_per_req = match_bpr.group(1) if match_bpr else "0"
 
     metrics = [
-        ("OpenSlots", str(open_slots), warnings[0], criticals[0], ""),
-        ("BusyWorkers", busy_workers, warnings[1], criticals[1], ""),
-        ("IdleWorkers", idle_workers, warnings[2], criticals[2], ""),
-        ("ReqPerSec", req_per_sec, warnings[3], criticals[3], ""),
-        ("BytesPerSec", bytes_per_sec, warnings[4], criticals[4], "B"),
-        ("BytesPerReq", bytes_per_req, warnings[5], criticals[5], "B")
+        ("OpenSlots", str(open_slots), warnings_list[0], criticals[0], ""),
+        ("BusyWorkers", busy_workers, warnings_list[1], criticals[1], ""),
+        ("IdleWorkers", idle_workers, warnings_list[2], criticals[2], ""),
+        ("ReqPerSec", req_per_sec, warnings_list[3], criticals[3], ""),
+        ("BytesPerSec", bytes_per_sec, warnings_list[4], criticals[4], "B"),
+        ("BytesPerReq", bytes_per_req, warnings_list[5], criticals[5], "B")
     ]
 
     overall_status = OK
