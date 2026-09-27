@@ -147,10 +147,10 @@ async def main(forcedargs=None):
             print(f"OK: {msg}")
             sys.exit(0)
         else:
-            print(f"CRITICAL: {msg}, localtime file "{LOCALTIME_FILE}" does not match timezone file "{zoneinfo_file}"!")
+            print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
             sys.exit(2)
     except FileNotFoundError:
-        print(f"CRITICAL: {msg}, localtime file "{LOCALTIME_FILE}" does not match timezone file "{zoneinfo_file}"!")
+        print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
         sys.exit(2)
 
     print(f"UNKNOWN {msg}")
