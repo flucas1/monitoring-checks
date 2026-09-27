@@ -53,10 +53,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-LOCALTIME_FILE = "/etc/localtime"
-ZONEINFO_DIR = "/usr/share/zoneinfo"
-
-
 def is_path_qualified(path):
     return path.startswith("./") or path.startswith("/")
 
@@ -93,6 +89,10 @@ def timeout_handler(signum, frame):
 
 
 async def main(forcedargs=None):
+
+    LOCALTIME_FILE = "/etc/localtime"
+    ZONEINFO_DIR = "/usr/share/zoneinfo"
+
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-T", "--timezone", type=str)
     parser.add_argument("-A", "--alternate", type=str)
@@ -132,7 +132,7 @@ async def main(forcedargs=None):
         print("CRITICAL: failed to get timezone")
         sys.exit(2)
 
-    msg = f"timezone is "{server_timezone}""
+    msg = f"timezone is '{server_timezone}'"
 
     if server_timezone != args.timezone and server_timezone != alternate_timezone:
         if args.timezone != alternate_timezone:
