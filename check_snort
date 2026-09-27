@@ -332,7 +332,7 @@ async def main():
     if state_to_save:
         await write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
 
-    print_log(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
+    infomsg(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
 
     perf_str = " | " + perf_data if perf_data else ""
     final_message = "[" + str(MODUS) + "] " + exit_text + perf_str

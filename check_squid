@@ -109,6 +109,18 @@ async def run_squidclient(squidclient, host, port, user, password):
     return stdout.decode("utf-8")
 
 
+async def read_credentials(file_path):
+    try:
+        with open(file_path, "r") as f:
+            content = await asyncio.get_event_loop().run_in_executor(None, f.read)
+            lines = content.split("\n")
+            user = lines[0] if len(lines) > 0 else ""
+            password = lines[1] if len(lines) > 1 else ""
+            return user, password
+    except Exception as e:
+        exitnagios("CRITICAL", "Could not open " + str(file_path) + " for reading: " + str(e))
+
+
 # -------------------------------------------------------------------------------
 
 
@@ -135,15 +147,7 @@ async def main(forcedargs=None):
     squidclient = "/usr/bin/squidclient"
 
     if args.filecreds:
-        try:
-            with open(args.filecreds, "r") as f:
-                lines = f.read().split("\n")
-                if len(lines) > 0:
-                    user = lines[0]
-                if len(lines) > 1:
-                    password = lines[1]
-        except Exception as e:
-            exitnagios("CRITICAL", "Could not open " + str(args.filecreds) + " for reading: " + str(e))
+        user, password = await read_credentials(args.filecreds)
 
     try:
         output = await run_squidclient(squidclient, host, port, user, password)

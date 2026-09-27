@@ -4,11 +4,12 @@
 import argparse
 import sys
 import time
-import subprocess
+import asyncio
+import aiohttp
+import aiohttp_socks
 
 
-def main():
-    # Setup argument parser to replicate getopt behavior
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest='ip', default='127.0.0.1')
     parser.add_argument('-p', dest='port', default='1080')
@@ -20,27 +21,24 @@ def main():
         print('UNKNOWN - Missing required parameter(s).')
         sys.exit(3)
 
-    # Construct the curl command
-    cmd = [
-        "curl",
-        "--max-time", str(args.max_time),
-        "-sf",
-        "--socks5-hostname", f"{args.ip}:{args.port}",
-        args.target
-    ]
+    connector = aiohttp_socks.SocksConnector.from_url(f'socks5://{args.ip}:{args.port}')
+    timeout = aiohttp.ClientTimeout(total=args.max_time)
 
-    # Record start time in nanoseconds
     ts = time.time_ns()
 
     try:
-        # Execute curl, suppressing stdout and stderr
-        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        ret = result.returncode
-    except FileNotFoundError:
-        print("UNKNOWN - curl command not found on the system.")
-        sys.exit(3)
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+            async with session.get(args.target) as response:
+                ret = 0 if response.status == 200 else 1
+    except aiohttp.ClientConnectorError:
+        ret = 1
+    except aiohttp.ClientError:
+        ret = 1
+    except asyncio.TimeoutError:
+        ret = 1
+    except Exception:
+        ret = 1
 
-    # Calculate latency in milliseconds
     tt = (time.time_ns() - ts) // 1_000_000
 
     if ret == 0:
@@ -52,4 +50,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
