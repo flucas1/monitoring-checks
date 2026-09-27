@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import re
 import sys
-import warnings
 import httpx
 
 
@@ -125,8 +124,6 @@ async def main(forcedargs=None):
         url += "?auto"
 
     verify = not args.no_validate
-    if not verify:
-        warnings.filterwarnings("ignore")
 
     try:
         response = await fetch_status(url, auth, verify, args.timeout)
