@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-import subprocess
+import asyncio
 import re
 
 # Standard Nagios/Icinga Exit-Codes
@@ -13,28 +13,22 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
-    # Setup arguments mirroring the original getopts: -c, -w, -C, -W, -v
-    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
-    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
-    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
-    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
-    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
-
+async def get_uptime():
     try:
-        args = parser.parse_args()
-    except SystemExit:
-        print("Error: missing or illegal option value")
-        sys.exit(STATE_UNKNOWN)
-
-    # Fetch uptime and remove commas
-    try:
-        uptime_report = subprocess.check_output(["uptime"], universal_newlines=True).replace(",", "")
+        process = await asyncio.create_subprocess_exec(
+            "uptime",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            raise Exception("uptime command failed")
+        return stdout.decode().replace(",", "")
     except Exception as e:
-        print(f"Error: Could not retrieve uptime - {e}")
-        sys.exit(STATE_UNKNOWN)
+        raise Exception(f"Could not retrieve uptime - {e}")
 
+
+def parse_uptime(uptime_report):
     days = 0
     hours = 0
     minutes = 0
@@ -83,6 +77,32 @@ def main():
     msg_parts.append(f"{minutes} Minutes")
     uptime_msg = ", ".join(msg_parts)  # Adjusting comma usage to be slightly cleaner than bash string concatenation
 
+    return uptime_minutes, uptime_days, uptime_msg
+
+
+async def main():
+    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
+    # Setup arguments mirroring the original getopts: -c, -w, -C, -W, -v
+    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
+    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
+    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
+    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
+    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
+
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        print("Error: missing or illegal option value")
+        sys.exit(STATE_UNKNOWN)
+
+    try:
+        uptime_report = await get_uptime()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(STATE_UNKNOWN)
+
+    uptime_minutes, uptime_days, uptime_msg = parse_uptime(uptime_report)
+
     # Format values for perfdata; empty strings if no thresholds were provided
     min_w = args.min_warning if args.min_warning is not None else ""
     max_w = args.max_warning if args.max_warning is not None else ""
@@ -114,4 +134,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

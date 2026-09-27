@@ -2,6 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import argparse
+import asyncio
 import sys
 import time
 import datetime
@@ -27,8 +28,7 @@ def msg(status_class, message_text):
         sys.exit(RC_UNKNOWN)
 
 
-def main():
-
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', type=int, default=3, dest='critical_seconds')
     parser.add_argument('-w', type=int, default=2, dest='warning_seconds')
@@ -77,4 +77,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
