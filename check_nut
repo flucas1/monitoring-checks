@@ -87,7 +87,7 @@ async def run_command(cmd):
     stdout, stderr = await proc.communicate()
     error_details = stderr.decode().strip()
     if proc.returncode != 0:
-        raise RuntimeError(f"Command {' '.join(cmd)} failed with code {proc.returncode}. {error_details}")
+        raise RuntimeError("Command " + " ".join(cmd) + " failed with code " + str(proc.returncode) + ". " + error_details)
     return stdout.decode().strip()
 
 
@@ -153,11 +153,10 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "you have to specify some value to check")
 
     upsc_path = "/usr/bin/upsc"
-
     try:
         res = await run_command([upsc_path, args.device])
     except RuntimeError as e:
-        exitnagios("UNKNOWN", "can't run '/bin/upsc " + str(args.device) + "': " + str(e))
+        exitnagios("UNKNOWN", "can't run '" + str(upsc_path) + " " + str(args.device) + "': " + str(e))
 
     ups_data = {}
     for line in res.splitlines():
@@ -165,14 +164,14 @@ async def main(forcedargs=None):
             key, val = line.split(": ", 1)
             ups_data[key] = val
 
-    alarmlevel = ERRORS_OK
+    alarmlevel = 0
     critmesg = []
     warnmesg = []
     okmesg = []
 
     for key, limstring in limits.items():
         if key not in ups_data:
-            exitnagios("UNKNOWN", "key '" + str(key) + "' is not defined in output from /bin/upsc")
+            exitnagios("UNKNOWN", "key '" + str(key) + "' is not defined in output from " + str(upsc_path))
 
         kvtriples = limstring.split(":")
         cmp_dict = {"c": [], "w": []}
@@ -197,8 +196,8 @@ async def main(forcedargs=None):
                     if args.debug:
                         print(msg)
                     critmesg.append(msg)
-                    if alarmlevel < ERRORS_CRITICAL:
-                        alarmlevel = ERRORS_CRITICAL
+                    if alarmlevel < 2:
+                        alarmlevel = 2
                     cnthits += 1
             if cnthits:
                 continue
@@ -211,8 +210,8 @@ async def main(forcedargs=None):
                     if args.debug:
                         print(msg)
                     warnmesg.append(msg)
-                    if alarmlevel < ERRORS_WARNING:
-                        alarmlevel = ERRORS_WARNING
+                    if alarmlevel < 1:
+                        alarmlevel = 1
                     cnthits += 1
             if cnthits:
                 continue
@@ -221,14 +220,9 @@ async def main(forcedargs=None):
             print("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
         okmesg.append("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
 
-    if alarmlevel == ERRORS_CRITICAL:
-        final_status = "CRITICAL"
-    elif alarmlevel == ERRORS_WARNING:
-        final_status = "WARNING"
-    elif alarmlevel == ERRORS_OK:
-        final_status = "OK"
-    else:
-        final_status = "UNKNOWN"
+    # Mapping alarmlevel back to status string directly based on exit code correlation
+    statuses = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
+    final_status = statuses[alarmlevel] if alarmlevel < len(statuses) else "UNKNOWN"
 
     combined_messages = " - ".join(critmesg + warnmesg + okmesg)
     exitnagios(final_status, combined_messages)
