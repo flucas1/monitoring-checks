@@ -71,11 +71,6 @@ def check_threshold(value, warn, crit):
     return status
 
 
-def timeout_handler(signum, frame):
-    print("UNKNOWN - plugin timed out")
-    sys.exit(UNKNOWN)
-
-
 async def fetch_status(url, auth, verify, timeout):
     async with httpx.AsyncClient(auth=auth, verify=verify, timeout=timeout) as client:
         response = await client.get(url)
@@ -109,8 +104,7 @@ async def main(forcedargs=None):
     criticals += [""] * (6 - len(criticals))
 
     if bool(args.username) != bool(args.password):
-        print("UNKNOWN - If you specify an username, you have to set a password too!")
-        sys.exit(UNKNOWN)
+        exitnagios("UNKNOWN", "If you specify an username, you have to set a password too!")
 
     auth = (args.username, args.password) if args.username and args.password else None
 
@@ -129,25 +123,20 @@ async def main(forcedargs=None):
         response = await fetch_status(url, auth, verify, args.timeout)
         if response.status_code >= 500:
             status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
-            print(status_prefix + " - " + str(response.reason))
-            sys.exit(unreachable_status)
+            exitnagios(status_prefix, str(response.reason))
         elif response.status_code != 200:
-            print("CRITICAL - " + str(response.reason))
-            sys.exit(CRITICAL)
+            exitnagios("CRITICAL", str(response.reason))
     except asyncio.TimeoutError:
         status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
-        print(status_prefix + " - plugin timed out")
-        sys.exit(unreachable_status)
+        exitnagios(status_prefix, "plugin timed out")
     except Exception as e:
-        print("CRITICAL - " + str(e))
-        sys.exit(CRITICAL)
+        exitnagios("CRITICAL", str(e))
 
     content = response.text
 
     match = re.search(r"ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)", content, re.DOTALL)
     if not match:
-        print("UNKNOWN - No status information found at " + url)
-        sys.exit(UNKNOWN)
+        exitnagios("UNKNOWN", "No status information found at " + url)
 
     req_per_sec = match.group(1)
     bytes_per_sec = match.group(2)
@@ -191,8 +180,7 @@ async def main(forcedargs=None):
     else:
         status_str = "UNKNOWN"
 
-    print(status_str + " - " + output + " | " + perf_string)
-    sys.exit(overall_status)
+    exitnagios(status_str, output + " | " + perf_string)
 
 
 # -------------------------------------------------------------------------------
