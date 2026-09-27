@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import socket
+import argparse
+
+
+def print_help(script_name):
+    help_text = f"""Usage: {script_name} [options]
+
+Options:
+  * -H --hostname IP/Hostname    - IP or hostname of the remote host
+    -p --port number             - Remote port where rsyncd is listening. Default to 873.
+    -t --timeout seconds:status  - Number of seconds before time out the connection. Default to 30:CRITICAL.
+    -h --help                    - This very nice and useful explanation =)
+
+Options marked with * are required"""
+    print(help_text, file=sys.stderr)
+    sys.exit(2)
+
+
+def main():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
+    parser.add_argument('-t', '--timeout', dest='timeoutmerged', type=str, default='30:CRITICAL')
+    parser.add_argument('-p', '--port', dest='rsync_port', type=int, default=873)
+    parser.add_argument('-h', '--help', dest='show_help', action='store_true')
+
+    args, unknown_args = parser.parse_known_args()
+
+    if args.show_help or not args.remote or unknown_args:
+        print_help(sys.argv[0])
+
+    timeout_parts = args.timeoutmerged.split(':')
+    timeoutvalue = float(timeout_parts[0])
+    timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else 'CRITICAL'
+
+    try:
+        with socket.create_connection((args.remote, args.rsync_port), timeout=timeoutvalue) as sock:
+            sock.sendall(b"\r\n")
+            rsync_out = sock.recv(1024).decode('utf-8', errors='ignore').strip()
+
+            if rsync_out.startswith('@RSYNCD:'):
+                print(f"OK - {rsync_out}")
+                sys.exit(0)
+            else:
+                print(f"WARNING - rsync out: {rsync_out}")
+                sys.exit(1)
+
+    except (socket.timeout, socket.error):
+        print(f"{timeoutstatus} - Could not connect to {args.remote}:{args.rsync_port}")
+        if timeoutstatus == "CRITICAL":
+            sys.exit(2)
+        if timeoutstatus == "WARNING":
+            sys.exit(1)
+        if timeoutstatus == "OK":
+            sys.exit(0)
+        sys.exit(3)
+
+    print("UNKNOW - Plugin internal error")
+    sys.exit(3)
+
+
+if __name__ == "__main__":
+    main()
