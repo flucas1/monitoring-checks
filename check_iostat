@@ -28,7 +28,7 @@ def run_iostat(disk, extended, samples):
     if extended:
         cmdline.insert(2, "-x")
 
-    #print(" ".join(cmdline))
+    # print(" ".join(cmdline))
     try:
         output = subprocess.check_output(cmdline, stderr=subprocess.STDOUT).decode('utf-8')
         # grep $disk | tail -1
