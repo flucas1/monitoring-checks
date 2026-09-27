@@ -13,14 +13,6 @@ RC_CRITICAL = 2
 RC_UNKNOWN = 3
 
 
-class NagiosArgumentParser(argparse.ArgumentParser):
-    """Custom argument parser to enforce Nagios UNKNOWN (3) exit code on errors."""
-
-    def error(self, message):
-        print(f"TIME_DIFF UNKNOWN - Command line error(s)\n    {message}\n(use -h option for help)")
-        sys.exit(RC_UNKNOWN)
-
-
 def msg(status_class, message_text):
     """Generalised messaging interface for Nagios output."""
     prefix = f"TIME_DIFF {status_class}"
@@ -37,10 +29,10 @@ def msg(status_class, message_text):
 
 
 def main():
-    # Setup custom parser
-    parser = NagiosArgumentParser(
+
+    parser = argparse.ArgumentParser(
         add_help=False,
-        usage=f"usage: check_timediff [-c seconds] -f format [-h]\n   -t time [-w seconds] [-v]"
+        usage="usage: check_timediff [-c seconds] -f format [-h]\n   -t time [-w seconds] [-v]"
     )
 
     parser.add_argument('-c', type=int, default=3, dest='critical_seconds')
@@ -53,8 +45,9 @@ def main():
 
     # Handle Help
     if args.help:
+        script_name = "check_timediff"
         help_text = (
-            f"usage: {SCRIPT_NAME} [-c seconds] -f format [-h]\n"
+            f"usage: {script_name} [-c seconds] -f format [-h]\n"
             f"   -t time [-w seconds] [-v]\n"
             f"  where:\n"
             f"    -c critical time difference limit in seconds (default 3)\n"
