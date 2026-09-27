@@ -6,31 +6,13 @@ import socket
 import argparse
 
 
-def print_help(script_name):
-    help_text = f"""Usage: {script_name} [options]
-
-Options:
-  * -H --hostname IP/Hostname    - IP or hostname of the remote host
-    -p --port number             - Remote port where rsyncd is listening. Default to 873.
-    -t --timeout seconds:status  - Number of seconds before time out the connection. Default to 30:CRITICAL.
-    -h --help                    - This very nice and useful explanation =)
-
-Options marked with * are required"""
-    print(help_text, file=sys.stderr)
-    sys.exit(2)
-
-
 def main():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
     parser.add_argument('-t', '--timeout', dest='timeoutmerged', type=str, default='30:CRITICAL')
     parser.add_argument('-p', '--port', dest='rsync_port', type=int, default=873)
-    parser.add_argument('-h', '--help', dest='show_help', action='store_true')
 
     args, unknown_args = parser.parse_known_args()
-
-    if args.show_help or not args.remote or unknown_args:
-        print_help(sys.argv[0])
 
     timeout_parts = args.timeoutmerged.split(':')
     timeoutvalue = float(timeout_parts[0])

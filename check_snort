@@ -289,7 +289,7 @@ async def check_alerts():
 
 
 async def main():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument("-m", dest="modus")
     parser.add_argument("-i", dest="interval", default="2")
     parser.add_argument("-c", dest="critical_thresh", type=int, default=1000)
@@ -299,7 +299,6 @@ async def main():
     parser.add_argument("-d", dest="debug", action="store_true")
     parser.add_argument("-l", dest="log_file")
     parser.add_argument("-o", dest="spool_data_dir")
-    parser.add_argument("-h", dest="help", action="store_true")
     args = parser.parse_args()
 
     global MODUS, INTERVAL, CRITICAL_THRESH, DROPPED_CRITICAL, WARNING_THRESH, DROPPED_WARNING, PRIORITY_LEVEL, DEBUG, LOG_FILE, SPOOL_DATA_DIR
@@ -328,7 +327,7 @@ async def main():
     elif MODUS == "alerts":
         status, exit_text, perf_data, state_to_save = await check_alerts()
     else:
-        exitnagios("UNKNOWN", "no modus selected (use -m switch) -> help: check_snort -h")
+        exitnagios("UNKNOWN", "no modus selected (use -m switch)")
 
     if state_to_save:
         await write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])

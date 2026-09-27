@@ -11,11 +11,10 @@ STB = "/usr/bin/speedtest"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Nagios speedtest-cli plugin", add_help=False)
+    parser = argparse.ArgumentParser(description="Nagios speedtest-cli plugin")
 
     # Retrieve the arguments (equivalent to getopts loop and empty argument checks)
     # Check for non-numeric arguments is automatically handled by type=float
-    parser.add_argument('-h', action='help', help="Show this message")
     parser.add_argument('-w', type=float, required=True, help="Download Warning Level - *Required*")
     parser.add_argument('-c', type=float, required=True, help="Download Critical Level - *Required*")
     parser.add_argument('-W', type=float, required=True, help="Upload Warning Level - *Required*")

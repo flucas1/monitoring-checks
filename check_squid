@@ -113,7 +113,7 @@ async def run_squidclient(squidclient, host, port, user, password):
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(usage="%(prog)s [ -H <host> ] [ -f <filename> ] [ -d <data> ] [ -p <port> ] [ -t <timeout>] [ -c <threshold> ] [ -w <threshold> ]")
+    parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", default="localhost")
     parser.add_argument("-f", "--filecreds")
     parser.add_argument("-d", "--data", default="Connections")

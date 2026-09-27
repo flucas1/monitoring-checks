@@ -9,12 +9,11 @@ import subprocess
 
 def main():
     # Setup argument parser to replicate getopt behavior
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument('-i', dest='ip', default='127.0.0.1')
     parser.add_argument('-p', dest='port', default='1080')
     parser.add_argument('--target', dest='target', default='https://www.google.com')
     parser.add_argument('--max-time', dest='max_time', default=10, type=int)
-    parser.add_argument('-h', '--help', dest='help', action='store_true')
 
     try:
         args, unknown = parser.parse_known_args()
@@ -25,16 +24,6 @@ def main():
     if unknown:
         print("UNKNOWN - Failed parsing options.")
         sys.exit(3)
-
-    if args.help:
-        print("""check_socks - Monitor a socks5 proxy.
-Usage:
-    --help     = Print this message
-    -i         = Proxy IP address (default 127.0.0.1)
-    -p         = Proxy port (default 1080)
-    --target   = Url to check socks proxy (default https://www.google.com)
-    --max-time = Maximum time in seconds that you allow the whole operation to take (default 10)""")
-        sys.exit(0)
 
     if not args.ip or not args.port or not args.target:
         print('UNKNOWN - Missing required parameter(s).')
