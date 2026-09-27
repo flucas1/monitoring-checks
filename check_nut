@@ -151,9 +151,6 @@ async def main(forcedargs=None):
         print("Device not specified")
         sys.exit(ERRORS_UNKNOWN)
 
-    if args.debug:
-        print("DEBUG")
-
     limits = {}
     for v in args.value:
         if "=" in v:

@@ -58,9 +58,6 @@ async def main(forcedargs=None):
 
     args = parser.parse_args()
 
-    if args.h:
-        usage()
-
     if args.warnlevel == 0:
         args.warnlevel = 150.0
     if args.critlevel == 0:

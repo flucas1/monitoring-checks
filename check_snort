@@ -322,12 +322,7 @@ async def main(forcedargs=None):
     parser.add_argument("-l", dest="log_file")
     parser.add_argument("-o", dest="spool_data_dir")
     parser.add_argument("-h", dest="help", action="store_true")
-
-    args, unknown = parser.parse_known_args()
-
-    if args.help or not args.modus:
-        print("USAGE: check_snort [options]\n-m [modus]\n-c [percent]\n-w [percent]\n-i [INTERVAL]\n-p [PRIORITY]\n-d\n-l [logfile]\n-o [out_dir]")
-        sys.exit(0)
+    args = parser.parse_args()
 
     global MODUS, INTERVAL, CRITICAL_THRESH, DROPPED_CRITICAL, WARNING_THRESH, DROPPED_WARNING, PRIORITY_LEVEL, DEBUG, LOG_FILE, SPOOL_DATA_DIR
 
