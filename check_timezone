@@ -81,8 +81,7 @@ def validate_filename(filename, name="filename", noquit=False):
 
 
 def timeout_handler(signum, frame):
-    print("UNKNOWN self timed out after 10 seconds")
-    sys.exit(3)
+    exitnagios("UNKNOWN", "self timed out after 10 seconds")
 
 
 # -------------------------------------------------------------------------------
@@ -108,12 +107,10 @@ async def main(forcedargs=None):
         sys.exit(0)
 
     if not args.timezone:
-        print("ERROR: timezone not specified")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "timezone not specified")
 
     if not re.match(r"^[\w\/\+-]+$", args.timezone):
-        print("ERROR: invalid timezone specified")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "invalid timezone specified")
 
     zoneinfo_file = args.zoneinfo_file if args.zoneinfo_file else args.timezone
     alternate_timezone = args.alternate if args.alternate else args.timezone
@@ -129,8 +126,7 @@ async def main(forcedargs=None):
     server_timezone = time.tzname[0]
 
     if not is_path_qualified(zoneinfo_file):
-        print("CRITICAL: failed to get timezone")
-        sys.exit(2)
+        exitnagios("CRITICAL", "failed to get timezone")
 
     msg = f"timezone is '{server_timezone}'"
 
@@ -139,22 +135,17 @@ async def main(forcedargs=None):
             msg += f" (expected: '{args.timezone}' or '{alternate_timezone}')"
         else:
             msg += f" (expected: '{args.timezone}')"
-        print(f"CRITICAL: {msg}")
-        sys.exit(2)
+        exitnagios("CRITICAL", msg)
 
     try:
         if filecmp.cmp(LOCALTIME_FILE, zoneinfo_file, shallow=False):
-            print(f"OK: {msg}")
-            sys.exit(0)
+            exitnagios("OK", msg)
         else:
-            print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
-            sys.exit(2)
+            exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
     except FileNotFoundError:
-        print(f"CRITICAL: {msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
-        sys.exit(2)
+        exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
 
-    print(f"UNKNOWN {msg}")
-    sys.exit(3)
+    exitnagios("UNKNOWN", msg)
 
 
 # -------------------------------------------------------------------------------
