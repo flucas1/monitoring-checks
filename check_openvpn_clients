@@ -56,53 +56,34 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+async def read_until(reader, expected, timeout=10):
+    buffer = ""
+    try:
+        while expected not in buffer:
+            chunk = await asyncio.wait_for(reader.read(1), timeout=timeout)
+            if not chunk:
+                break
+            buffer += chunk
+    except asyncio.TimeoutError:
+        infomsg(f"Timeout while waiting for: {expected}")
+    return buffer
 
-class telnetconnection:
-    def __init__(self, hostname, port, password, request):
-        self.hostname = hostname
-        self.port = port
-        self.password = password
-        self.request = request
 
-    async def read_until(self, reader, expected, timeout=10):
-        buffer = ""
-        try:
-            while expected not in buffer:
-                # infomsg("1")
-                chunk = await asyncio.wait_for(reader.read(1), timeout=timeout)
-                # infomsg("2")
-                if not chunk:
-                    break
-                # infomsg("3")
-                buffer += chunk
-                # infomsg("4")
-        except asyncio.TimeoutError:
-            infomsg(f"Timeout while waiting for: {expected}")
-        return buffer
-
-    async def interact(self):
-        timeout = 5
-        try:
-            tnreader, tnwriter = await telnetlib3.open_connection(self.hostname, self.port)
-            # infomsg("A")
-            await self.read_until(tnreader, "ENTER PASSWORD:")
-            # infomsg("B")
-            tnwriter.write(self.password + "\r\n")
-            # infomsg("C")
-            await self.read_until(tnreader, "SUCCESS:")
-            # infomsg("D")
-            await self.read_until(tnreader, "-- type 'help' for more info" + "\r\n")
-            # infomsg("E")
-            tnwriter.write(self.request + "\r\n")
-            # infomsg("F")
-            response = await self.read_until(tnreader, "\r\n" + "END" + "\r\n")
-            # infomsg("G")
-            return response
-        except Exception as e:
-            exitnagios("CRITICAL", str(e))
+async def interact(hostname, port, password, request):
+    timeout = 5
+    try:
+        tnreader, tnwriter = await telnetlib3.open_connection(hostname, port)
+        await read_until(tnreader, "ENTER PASSWORD:")
+        tnwriter.write(password + "\r\n")
+        await read_until(tnreader, "SUCCESS:")
+        await read_until(tnreader, "-- type 'help' for more info" + "\r\n")
+        tnwriter.write(request + "\r\n")
+        response = await read_until(tnreader, "\r\n" + "END" + "\r\n")
+        return response
+    except Exception as e:
+        exitnagios("CRITICAL", str(e))
 
 # -------------------------------------------------------------------------------
-
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
@@ -131,8 +112,7 @@ async def main(forcedargs=None):
     else:
         port = int(args.port)
 
-    telnetwrapper = telnetconnection(host, port, password, "status")
-    data = await telnetwrapper.interact()
+    data = await interact(host, port, password, "status")
     infomsg(data)
 
     tab1 = re.findall("(.+),(\\d+\\.\\d+\\.\\d+\\.\\d+\\:\\d+),(\\d+),(\\d+),(.+)", data)
