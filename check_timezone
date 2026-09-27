@@ -79,7 +79,7 @@ def validate_filename(filename, name="filename", noquit=False):
     filename2 = is_filename(filename)
     if not filename2:
         if not noquit:
-            print(f"invalid {name} (does not match regex critera): "{filename}"")
+            print(f"invalid {name} (does not match regex critera): '{filename}'")
         return None
     return filename2
 
@@ -136,9 +136,9 @@ async def main(forcedargs=None):
 
     if server_timezone != args.timezone and server_timezone != alternate_timezone:
         if args.timezone != alternate_timezone:
-            msg += f" (expected: "{args.timezone}" or "{alternate_timezone}")"
+            msg += f" (expected: '{args.timezone}' or '{alternate_timezone}')"
         else:
-            msg += f" (expected: "{args.timezone}")"
+            msg += f" (expected: '{args.timezone}')"
         print(f"CRITICAL: {msg}")
         sys.exit(2)
 

@@ -136,7 +136,7 @@ async def get_last_count(actual_alerts):
     global COUNT_LAST
     now = int(time.time())
     time_diff = stamp2date(now - actual_alerts)
-    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > "{PRIORITY_LEVEL - 1}" and timestamp(event.timestamp) > "{time_diff}";"
+    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '{PRIORITY_LEVEL - 1}' and timestamp(event.timestamp) > '{time_diff}';"
     print_debug(f"get_last -> {query}")
     COUNT_LAST = await run_mysql_query(query)
     print_debug(f"time_diff -> {time_diff} / COUNT_LAST: -> {COUNT_LAST}")
@@ -146,7 +146,7 @@ async def get_avg_count(average_alerts):
     global COUNT_AVG
     now = int(time.time())
     time_diff = stamp2date(now - average_alerts)
-    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > "{PRIORITY_LEVEL - 1}" and timestamp(event.timestamp) > "{time_diff}";"
+    query = f"select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '{PRIORITY_LEVEL - 1}' and timestamp(event.timestamp) > '{time_diff}';"
     COUNT_AVG = await run_mysql_query(query)
     print_debug(f"time_diff -> {time_diff} / COUNT_AVG: -> {COUNT_AVG}")
 
