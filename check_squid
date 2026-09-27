@@ -137,7 +137,6 @@ async def main(forcedargs=None):
     parser.add_argument("-W", "--password", default="")
     parser.add_argument("-w", "--warning")
     parser.add_argument("-c", "--critical")
-    parser.add_argument("-s", "--squidclient", default="/usr/bin/squidclient")
 
     args = parser.parse_args()
 
@@ -148,7 +147,7 @@ async def main(forcedargs=None):
     password = args.password
     warning = args.warning
     critical = args.critical
-    squidclient = args.squidclient
+    squidclient = "/usr/bin/squidclient"
 
     if args.filecreds:
         try:
