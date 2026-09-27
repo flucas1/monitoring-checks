@@ -241,24 +241,24 @@ async def main(forcedargs=None):
         if "connection_nbclient" not in parsed_data:
             exit_plugin(STATUS_CRITICAL, "cannot parse connections data")
         else:
-            msg = f"Squid have {parsed_data["connection_nbclient"]} clients and {parsed_data.get("connection_nbicpqueued", 0)} ICP requests queued"
-            perf = f""HTTP requests"={parsed_data.get("connection_nbhttpreceived", 0)}c "sent ICP requests"={parsed_data.get("connection_nbicpsent", 0)}c "received ICP requests"={parsed_data.get("connection_nbicpreceived", 0)}c"
+            msg = f"Squid have {parsed_data['connection_nbclient']} clients and {parsed_data.get('connection_nbicpqueued', 0)} ICP requests queued"
+            perf = f"'HTTP requests'={parsed_data.get('connection_nbhttpreceived', 0)}c 'sent ICP requests'={parsed_data.get('connection_nbicpsent', 0)}c 'received ICP requests'={parsed_data.get('connection_nbicpreceived', 0)}c"
             exit_plugin(STATUS_OK, msg, perf)
 
     elif re.search(r"Cache", data_type, re.IGNORECASE):
         if "cache_requesthitratio5" not in parsed_data:
             exit_plugin(STATUS_CRITICAL, "cannot parse cache data")
         else:
-            msg = f"Requests Hit Ratio 5min: {parsed_data["cache_requesthitratio5"]}, Requests Hit Ratio 60min: {parsed_data["cache_requesthitratio60"]}, Byte Hit Ratio 5min: {parsed_data["cache_bytehitratio5"]}, Byte Hit Ratio 60min: {parsed_data["cache_bytehitratio60"]}"
-            perf = f""Requests Hit Ratio 5min"={parsed_data["cache_requesthitratio5"]}% "Requests Hit Ratio 60min"={parsed_data["cache_requesthitratio60"]}% "Byte Hit Ratio 5min"={parsed_data["cache_bytehitratio5"]}% "Byte Hit Ratio 60min"={parsed_data["cache_bytehitratio60"]}%"
+            msg = f"Requests Hit Ratio 5min: {parsed_data['cache_requesthitratio5']}, Requests Hit Ratio 60min: {parsed_data['cache_requesthitratio60']}, Byte Hit Ratio 5min: {parsed_data['cache_bytehitratio5']}, Byte Hit Ratio 60min: {parsed_data['cache_bytehitratio60']}"
+            perf = f"'Requests Hit Ratio 5min'={parsed_data['cache_requesthitratio5']}% 'Requests Hit Ratio 60min'={parsed_data['cache_requesthitratio60']}% 'Byte Hit Ratio 5min'={parsed_data['cache_bytehitratio5']}% 'Byte Hit Ratio 60min'={parsed_data['cache_bytehitratio60']}%"
             exit_plugin(STATUS_OK, msg, perf)
 
     elif re.search(r"Resources", data_type, re.IGNORECASE):
         if "resource_cpu5s" not in parsed_data:
             exit_plugin(STATUS_CRITICAL, "cannot parse resources data")
         else:
-            msg = f"CPU used 5s: {parsed_data["resource_cpu5s"]}, CPU used 5m: {parsed_data.get("resource_cpu5m", 0)}, CPU used 60m: {parsed_data.get("resource_cpu60m", 0)}"
-            perf = f""CPU used 5s"={parsed_data["resource_cpu5s"]}% "CPU used 5m"={parsed_data.get("resource_cpu5m", 0)}% "CPU used 60m"={parsed_data.get("resource_cpu60m", 0)}%"
+            msg = f"CPU used 5s: {parsed_data['resource_cpu5s']}, CPU used 5m: {parsed_data.get('resource_cpu5m', 0)}, CPU used 60m: {parsed_data.get('resource_cpu60m', 0)}"
+            perf = f"'CPU used 5s'={parsed_data['resource_cpu5s']}% 'CPU used 5m'={parsed_data.get('resource_cpu5m', 0)}% 'CPU used 60m'={parsed_data.get('resource_cpu60m', 0)}%"
             exit_plugin(STATUS_OK, msg, perf)
 
     elif re.search(r"Memory", data_type, re.IGNORECASE):
@@ -268,7 +268,7 @@ async def main(forcedargs=None):
             val = parsed_data["memory_used"]
             status = check_threshold(val, warning, critical)
             msg = f"Squid use {val} KB of memory"
-            perf = f""Memory used"={val}KB;{warning or ""};{critical or ""} "Memory available"={parsed_data.get("memory_available", 0)}KB"
+            perf = f"'Memory used'={val}KB;{warning or ''};{critical or ''} 'Memory available'={parsed_data.get('memory_available', 0)}KB"
             exit_plugin(status, msg, perf)
 
     elif re.search(r"FileDescriptors", data_type, re.IGNORECASE):
@@ -278,7 +278,7 @@ async def main(forcedargs=None):
             val = parsed_data["fd_used"]
             status = check_threshold(val, warning, critical)
             msg = "Squid work fine."
-            perf = f""Max FD"={parsed_data.get("fd_available", 0)} "Cur FD"={val};{warning or ""};{critical or ""}"
+            perf = f"'Max FD'={parsed_data.get('fd_available', 0)} 'Cur FD'={val};{warning or ''};{critical or ''}"
             exit_plugin(status, msg, perf)
 
 
