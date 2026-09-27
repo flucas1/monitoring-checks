@@ -77,21 +77,21 @@ def check_threshold(value, warning, critical):
         c_start, c_end, c_inc = parse_threshold(critical)
         if c_inc:
             if c_start <= value <= c_end:
-                return STATUS_CRITICAL
+                return "CRITICAL"
         else:
             if value < c_start or value > c_end:
-                return STATUS_CRITICAL
+                return "CRITICAL"
 
     if warning:
         w_start, w_end, w_inc = parse_threshold(warning)
         if w_inc:
             if w_start <= value <= w_end:
-                return STATUS_WARNING
+                return "WARNING"
         else:
             if value < w_start or value > w_end:
-                return STATUS_WARNING
+                return "WARNING"
 
-    return STATUS_OK
+    return "OK"
 
 
 async def run_squidclient(squidclient, host, port, user, password):
@@ -255,7 +255,7 @@ async def main(forcedargs=None):
             warn_str = str(warning) if warning else ""
             crit_str = str(critical) if critical else ""
             perf = "'Memory used'=" + str(val) + "KB;" + warn_str + ";" + crit_str + " 'Memory available'=" + str(parsed_data.get("memory_available", 0)) + "KB"
-            exitnagios(status_map.get(status, "UNKNOWN"), msg + " | " + perf)
+            exitnagios(status, msg + " | " + perf)
 
     elif re.search(r"FileDescriptors", data_type, re.IGNORECASE):
         if "fd_used" not in parsed_data:
@@ -267,7 +267,7 @@ async def main(forcedargs=None):
             warn_str = str(warning) if warning else ""
             crit_str = str(critical) if critical else ""
             perf = "'Max FD'=" + str(parsed_data.get("fd_available", 0)) + " 'Cur FD'=" + str(val) + ";" + warn_str + ";" + crit_str
-            exitnagios(status_map.get(status, "UNKNOWN"), msg + " | " + perf)
+            exitnagios(status, msg + " | " + perf)
 
 
 # -------------------------------------------------------------------------------
