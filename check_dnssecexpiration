@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import re
-from datetime import datetime, timezone
+import datetime
 
 
 def run_cmd(cmd):
@@ -69,7 +69,7 @@ def main():
         sys.exit(1)
 
     # Check if there are multiple RRSIG responses and check them one after the other
-    now = datetime.now(timezone.utc).timestamp()
+    now = datetime.datetime.now(datetime.timezone.utc).timestamp()
     rrsig_out = run_cmd(["dig", f"@{args.resolver}", args.record_type, args.zone, "+dnssec"])
     rrsig_lines = [line for line in rrsig_out.split('\n') if 'RRSIG' in line and not line.startswith(';')]
 
@@ -98,8 +98,8 @@ def main():
             sys.exit(3)
 
         # Parse the YYYYMMDDHHMMSS strings into UTC datetimes
-        expiry_dt = datetime.strptime(expiry_str, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
-        inception_dt = datetime.strptime(inception_str, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+        expiry_dt = datetime.datetime.strptime(expiry_str, "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
+        inception_dt = datetime.datetime.strptime(inception_str, "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
 
         expiry_ts = expiry_dt.timestamp()
         inception_ts = inception_dt.timestamp()
