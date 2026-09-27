@@ -2,7 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import argparse
-import subprocess
+import asyncio
 import sys
 import os
 import shutil
@@ -21,16 +21,25 @@ def parse_thresholds(thresh_str, default_val=99999):
     return [float(p) for p in parts[:5]]
 
 
-def run_iostat(disk, extended, samples):
-    """Executes iostat and returns the last line matching the disk."""
-    # Base command: iostat <disk> -k -d 10 <samples>
+async def run_iostat(disk, extended, samples):
+    """Executes iostat asynchronously and returns the last line matching the disk."""
     cmdline = ["/usr/bin/iostat", disk, "-k", "-d", "10", str(samples)]
     if extended:
         cmdline.insert(2, "-x")
 
-    # print(" ".join(cmdline))
     try:
-        output = subprocess.check_output(cmdline, stderr=subprocess.STDOUT).decode('utf-8')
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0:
+            print("ERROR: Failed to run iostat command")
+            sys.exit(-1)
+
+        output = stdout.decode('utf-8')
         # grep $disk | tail -1
         matching_lines = [line.strip() for line in output.splitlines() if disk in line]
         if not matching_lines:
@@ -39,12 +48,12 @@ def run_iostat(disk, extended, samples):
         last_line = matching_lines[-1]
         # Replace commas with dots for float parsing, then split by whitespace
         return last_line.replace(',', '.').split()
-    except subprocess.CalledProcessError:
-        print("ERROR: Failed to run iostat command")
+    except Exception as e:
+        print(f"ERROR: Failed to run iostat command: {e}")
         sys.exit(-1)
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", dest="disk", default="sda", help="Device to be checked")
     parser.add_argument("-w", dest="warning", default="", help="Warning levels")
@@ -79,7 +88,7 @@ def main():
                 print("ERROR: critical levels must be higher than warning levels")
                 sys.exit(-1)
 
-    tmpx = run_iostat(args.disk, extended=True, samples=args.samples)
+    tmpx = await run_iostat(args.disk, extended=True, samples=args.samples)
     if not tmpx:
         print(f"ERROR: No data returned for disk {args.disk}")
         sys.exit(-1)
@@ -91,7 +100,7 @@ def main():
 
     # ------------IO Test-------------
     if args.io:
-        tmpd = run_iostat(args.disk, extended=False, samples=args.samples)
+        tmpd = await run_iostat(args.disk, extended=False, samples=args.samples)
         tps = float(tmpd[1])  # awk '{print $2}'
         read_sec = float(tmpx[3])  # awk '{print $4}'
         written_sec = float(tmpx[4])  # awk '{print $5}'
@@ -157,4 +166,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

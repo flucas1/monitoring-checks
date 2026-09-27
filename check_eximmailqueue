@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-import subprocess
+import asyncio
 
 # Nagios exit codes
 STATE_OK = 0
@@ -11,10 +11,8 @@ STATE_WARNING = 1
 STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
-EXIM_PATH = '/usr/sbin/exim'
 
-
-def main():
+async def main():
     parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
     parser.add_argument('-w', dest='warning', type=int, required=True, help="Queue size at which a warning is triggered")
     parser.add_argument('-c', dest='critical', type=int, required=True, help="Queue size at which a critical is triggered")
@@ -23,9 +21,15 @@ def main():
 
     # Do the do
     try:
-        # Run the exim command to count the queue size
-        output = subprocess.check_output([EXIM_PATH, '-bpc'], stderr=subprocess.STDOUT, text=True).strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+        EXIM_PATH = '/usr/sbin/exim'
+        process = await asyncio.create_subprocess_exec(
+            EXIM_PATH, '-bpc',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode().strip() if stdout else ""
+    except (FileNotFoundError, Exception):
         output = ""
 
     # Check if the output is empty or invalid
@@ -48,4 +52,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
