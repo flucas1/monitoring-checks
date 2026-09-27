@@ -64,8 +64,7 @@ async def main(forcedargs=None):
         args.critlevel = 300.0
 
     if args.warnlevel >= args.critlevel:
-        print("*** WARN level must be less than CRITICAL!\n")
-        usage()
+        exitnagios("UNKNOWN", "WARNING level must be less than CRITICAL!")
 
     warningpos = args.warnlevel
     warningneg = args.warnlevel * -1.0
@@ -76,32 +75,28 @@ async def main(forcedargs=None):
 
     client = ntplib.NTPClient()
     try:
-        response = client.request(ntpserver, version=3)
+        # Run the synchronous network call in a separate thread to avoid blocking the event loop
+        response = await asyncio.to_thread(client.request, ntpserver, version=3)
         offset = response.offset
     except Exception:
-        print(f"CRITICAL: NTP Server {ntpserver} is unreachable")
-        sys.exit(2)
+        exitnagios("CRITICAL", "NTP Server " + str(ntpserver) + " is unreachable")
 
     if offset >= 0:
+        msg = "Offset " + format(offset, ".6f") + " secs|offset=" + format(offset, ".6f") + "s;" + format(warningpos, ".6f") + ";" + format(criticalpos, ".6f") + ";"
         if offset >= criticalpos:
-            print(f"CRITICAL: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningpos:.6f};{criticalpos:.6f};")
-            sys.exit(2)
+            exitnagios("CRITICAL", msg)
         elif offset >= warningpos:
-            print(f"WARNING: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningpos:.6f};{criticalpos:.6f};")
-            sys.exit(1)
+            exitnagios("WARNING", msg)
         else:
-            print(f"OK: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningpos:.6f};{criticalpos:.6f};")
-            sys.exit(0)
-
-    if offset <= criticalneg:
-        print(f"CRITICAL: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningneg:.6f};{criticalneg:.6f};")
-        sys.exit(2)
-    elif offset <= warningneg:
-        print(f"WARNING: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningneg:.6f};{criticalneg:.6f};")
-        sys.exit(1)
+            exitnagios("OK", msg)
     else:
-        print(f"OK: Offset {offset:.6f} secs|offset={offset:.6f}s;{warningneg:.6f};{criticalneg:.6f};")
-        sys.exit(0)
+        msg = "Offset " + format(offset, ".6f") + " secs|offset=" + format(offset, ".6f") + "s;" + format(warningneg, ".6f") + ";" + format(criticalneg, ".6f") + ";"
+        if offset <= criticalneg:
+            exitnagios("CRITICAL", msg)
+        elif offset <= warningneg:
+            exitnagios("WARNING", msg)
+        else:
+            exitnagios("OK", msg)
 
 
 # -------------------------------------------------------------------------------
