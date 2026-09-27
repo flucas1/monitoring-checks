@@ -1,0 +1,371 @@
+#!/usr/bin/env python3
+"""Nagios-like plugin to check traffic per interface"""
+
+import argparse
+import asyncio
+import hashlib
+import json
+import logging
+import pathlib
+import pickle
+import re
+import sys
+import time
+
+logger = logging.getLogger("nagiosplugin")
+
+CHECK_NAME = pathlib.Path(__file__).name
+STATE_FILE_PATH = "/tmp"
+
+STATUS_OK = 0
+STATUS_WARNING = 1
+STATUS_CRITICAL = 2
+STATUS_UNKNOWN = 3
+
+
+def prettify_size(size, multiplier):
+    binary_str = "i" if multiplier == 1024 else ""
+    for unit in ("", f"K{binary_str}", f"M{binary_str}", f"G{binary_str}"):
+        if abs(size) < multiplier:
+            return f"{size:.1f}{unit}"
+        size /= multiplier
+    return f"{size:.1f}T{binary_str}"
+
+
+def human_size(string):
+    match = re.search(r"\A(\d+)([KMGT]?)\Z", string, flags=re.I)
+    if not match:
+        raise argparse.ArgumentTypeError(
+            f"invalid argument: {string}, must be an integer, "
+            "optionally followed by K, M, G or T (case-insensitive)"
+        )
+    value, unit = match.groups()
+    units = ("", "K", "M", "G", "T")
+    power = units.index(unit.upper())
+    return int(value), power
+
+
+async def run_command(command):
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            nagios_exit(
+                STATUS_UNKNOWN,
+                [f"command {command} exited with status {proc.returncode}: {stderr.decode()!r}"]
+            )
+        logger.debug("Output from %s: %s", " ".join(command), stdout.decode())
+        return stdout.decode()
+    except Exception as exc:
+        nagios_exit(STATUS_UNKNOWN, [f"command {command} failed: {exc}"])
+
+
+async def get_interfaces_async(args):
+    netns_info = []
+    if args.include_netns:
+        command_output = await run_command(["ip", "-json", "netns", "list"])
+        if command_output:
+            netns_info = json.loads(command_output)
+    interfaces = []
+    for netns in [None] + netns_info:
+        if netns is None:
+            command = ["ip"]
+            netns_name = None
+        else:
+            command = ["sudo", "-n", "ip"]
+            netns_name = netns["name"]
+            command += ["-netns", netns_name]
+        command += ["-details", "-statistics", "-json", "link", "show"]
+        interfaces_by_netns = json.loads(await run_command(command))
+        for interface in interfaces_by_netns:
+            interface["netns_name"] = netns_name
+            if netns_name is None:
+                interface["pretty_ifname"] = interface["ifname"]
+            else:
+                interface["pretty_ifname"] = f"{netns_name}/{interface['ifname']}"
+        interfaces.extend(interfaces_by_netns)
+    execution_time = time.time()
+    return execution_time, interfaces
+
+
+def get_interfaces(args):
+    return asyncio.run(get_interfaces_async(args))
+
+
+def include_interface(interface, args):
+    interface_name = interface["ifname"]
+    interface_pretty_name = interface["pretty_ifname"]
+    interface_type = interface["link_type"]
+    if "linkinfo" in interface and "info_kind" in interface["linkinfo"]:
+        interface_type = interface["linkinfo"]["info_kind"]
+    interface["computed_type"] = interface_type
+
+    if not args.down and interface["operstate"] == "DOWN":
+        logger.info("[-] Skipping interface %s (operstate DOWN)", interface_pretty_name)
+        return False
+
+    if interface_type in args.exclude_type:
+        logger.info(
+            "[-] Skipping interface %s (type %s matches %s)",
+            interface_pretty_name,
+            interface_type,
+            args.exclude_type,
+        )
+        return False
+    if args.exclude_name and re.search(args.exclude_name, interface_name):
+        logger.info(
+            "[-] Skipping interface %s (name matches %s)",
+            interface_pretty_name,
+            args.exclude_name,
+        )
+        return False
+
+    inclusion_tests = []
+    if args.type:
+        inclusion_tests.append(("type", args.type, interface_type in args.type))
+    if args.name:
+        inclusion_tests.append(
+            ("name", args.name, re.search(args.name, interface_name))
+        )
+    if inclusion_tests:
+        messages = []
+        tests_match = True
+        for test_type, test_str, test_result in inclusion_tests:
+            verb = "matches" if test_result else "does not match"
+            additional_info = f" {interface_type}" if test_type == "type" else ""
+            messages.append(f"{test_type}{additional_info} {verb} {test_str}")
+            tests_match = tests_match and test_result
+        logger.info(
+            "%s interface %s (%s)",
+            "[+] Including" if tests_match else "[-] Skipping",
+            interface_pretty_name,
+            ", ".join(messages),
+        )
+        return tests_match
+
+    logger.info(
+        "[+] Including interface %s of type %s (no inclusion filter specified)",
+        interface_pretty_name,
+        interface_type,
+    )
+    return True
+
+
+def load_state(state_file):
+    try:
+        with open(state_file, "r", encoding="utf-8") as f:
+            state = json.load(f)
+            logger.debug("Loaded old metrics from %s", state_file)
+            return state
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def save_state(state_file, state):
+    with open(state_file, "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+def check_thresholds(value, warn, crit):
+    if crit is not None and value >= crit:
+        return STATUS_CRITICAL
+    if warn is not None and value >= warn:
+        return STATUS_WARNING
+    return STATUS_OK
+
+
+def nagios_exit(status_code, messages, perf_data=None):
+    status_map = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
+    status_str = status_map.get(status_code, "UNKNOWN")
+    
+    output_line = f"Traffic {status_str}"
+    if messages:
+        output_line += " - " + ", ".join(messages)
+    if perf_data:
+        output_line += " | " + " ".join(perf_data)
+        
+    print(output_line)
+    sys.exit(status_code)
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter, description=__doc__
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="enable more verbose output, can be specified multiple times",
+        default=0,
+        action="count",
+    )
+    filter_group = parser.add_argument_group(
+        "filtering options, exclusions are applied before inclusions, "
+        "increase verbosity for details"
+    )
+    filter_group.add_argument(
+        "-t",
+        "--type",
+        help="only select interfaces of this type, can be specified multiple times",
+        action="append",
+        default=[],
+    )
+    filter_group.add_argument(
+        "-T",
+        "--exclude-type",
+        help="exclude interfaces of this type, can be specified multiple times",
+        action="append",
+        default=[],
+    )
+    filter_group.add_argument(
+        "-n", "--name", help="only select interfaces whose names match this regular expression"
+    )
+    filter_group.add_argument(
+        "-N", "--exclude-name", help="exclude interfaces whose names match this regular expression"
+    )
+    filter_group.add_argument(
+        "-d",
+        "--down",
+        help="include interfaces whose operstate is down",
+        action="store_true",
+        default=False,
+    )
+    filter_group.add_argument(
+        "--include-netns",
+        help='include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. "container/wg0"',
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "-b",
+        "--bytes",
+        help="use bytes as output unit instead of bits, does not affect thresholds",
+        action="store_true",
+        default=False,
+    )
+    threshold_group = parser.add_argument_group(
+        "threshold options, suffixes K, M, G and T (case-insensitive) are accepted, "
+        "multiples of 1000 are used for bits and 1024 for bytes"
+    )
+    threshold_group.add_argument(
+        "-w",
+        "--warning",
+        metavar=("RX", "TX"),
+        nargs=2,
+        help="warning threshold",
+        type=human_size,
+    )
+    threshold_group.add_argument(
+        "-c",
+        "--critical",
+        metavar=("RX", "TX"),
+        nargs=2,
+        help="critical threshold",
+        type=human_size,
+    )
+    args = parser.parse_args(forcedargs)
+    multiplier = 1024 if args.bytes else 1000
+    for threshold in ("warning", "critical"):
+        arg = getattr(args, threshold)
+        for i, direction in enumerate(("rx", "tx")):
+            setattr(args, f"{threshold}_{direction}", None)
+            if arg:
+                setattr(
+                    args,
+                    f"{threshold}_{direction}",
+                    arg[i][0] * multiplier ** arg[i][1],
+                )
+    return args
+
+
+def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file):
+    overall_status = STATUS_OK
+    messages = []
+    perf_data = []
+
+    if not old_state:
+        overall_status = STATUS_WARNING
+        messages.append(f"no data in state file {state_file}, first run?")
+        return overall_status, messages, perf_data
+
+    time_delta = current_state["execution_time"] - old_state["execution_time"]
+    multiplier = 1 if args.bytes else 8
+    unit = "B" if args.bytes else "b"
+
+    for interface in filtered_interfaces:
+        interface_name = interface["pretty_ifname"]
+        
+        if interface_name not in old_state["statistics"]:
+            overall_status = max(overall_status, STATUS_WARNING)
+            messages.append(f"no data in state file for {interface_name}, new interface?")
+            continue
+
+        for direction in ("rx", "tx"):
+            current_bytes = current_state["statistics"][interface_name][direction]
+            old_bytes = old_state["statistics"][interface_name][direction]
+            bandwidth = multiplier * (current_bytes - old_bytes) / time_delta
+
+            if bandwidth < 0:
+                overall_status = max(overall_status, STATUS_WARNING)
+                messages.append(f"Counter for {interface_name}/{direction} is decreasing, this could be caused by a reboot")
+                continue
+
+            warn_limit = getattr(args, f"warning_{direction}")
+            crit_limit = getattr(args, f"critical_{direction}")
+            
+            metric_status = check_thresholds(bandwidth, warn_limit, crit_limit)
+            overall_status = max(overall_status, metric_status)
+
+            human_readable = prettify_size(bandwidth, 1024 if args.bytes else 1000)
+            perf_str = f"'{interface_name}_{direction}'={bandwidth:.4f}{unit};{warn_limit if warn_limit else ''};{crit_limit if crit_limit else ''};;"
+            perf_data.append(perf_str)
+
+            if metric_status != STATUS_OK or args.verbose:
+                messages.append(f"{interface_name}_{direction} = {human_readable}{unit}/s")
+
+    return overall_status, messages, perf_data
+
+
+def main(args):
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    relevant_args = []
+    for arg, arg_val in sorted(vars(args).items()):
+        if arg not in ("verbose",):
+            relevant_args.append((arg, arg_val))
+    args_hash = hashlib.sha1(pickle.dumps(relevant_args)).hexdigest()
+    state_file = pathlib.Path(STATE_FILE_PATH) / f".{CHECK_NAME}_{args_hash}.json"
+
+    old_state = load_state(state_file)
+    execution_time, interfaces = get_interfaces(args)
+
+    if not interfaces:
+        nagios_exit(STATUS_UNKNOWN, ["No interfaces found"])
+
+    filtered_interfaces = [e for e in interfaces if include_interface(e, args)]
+    logger.info("Included interfaces: %s", ", ".join(e["pretty_ifname"] for e in filtered_interfaces))
+
+    if not filtered_interfaces:
+        nagios_exit(STATUS_UNKNOWN, ["No matching interfaces found after applying filters"])
+
+    current_state = {"execution_time": execution_time, "statistics": {}}
+    for interface in filtered_interfaces:
+        interface_name = interface["pretty_ifname"]
+        current_state["statistics"][interface_name] = {
+            "rx": interface["stats64"]["rx"]["bytes"],
+            "tx": interface["stats64"]["tx"]["bytes"]
+        }
+
+    status, messages, perf_data = evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file)
+    
+    save_state(state_file, current_state)
+    nagios_exit(status, messages, perf_data)
+
+
+if __name__ == "__main__":
+    main(parse_args())
