@@ -125,7 +125,7 @@ async def main(forcedargs=None):
     parser.add_argument("-w", type=float)
     parser.add_argument("-c", type=float)
 
-    args, _ = parser.parse_known_args()
+    args = parser.parse_args()
 
     if args.w is None or args.w == 0 or args.c is None or args.c == 0:
         exitnagios("UNKNOWN", "You must define WARN and CRITICAL levels!")
