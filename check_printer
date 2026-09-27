@@ -140,18 +140,18 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
         # Fallback to Brother's proprietary SNMP OID to extract precise percentages
         brother_hex = await walk_snmp(args, OIDS.get('brInfoMaintenance', '1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'), True)
         pct = None
-        
+
         if brother_hex and "No Such Object" not in brother_hex:
             # Brother Hex identifiers: 81=Black, 82=Cyan, 83=Magenta, 84=Yellow
             color_map = {"black": "81", "cyan": "82", "magenta": "83", "yellow": "84"}
             color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
-            
+
             if color_id:
                 clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
                 match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
                 if match:
-                    pct = int(match.group(1), 16) # Convert the final hex byte to a decimal integer
-                    
+                    pct = int(match.group(1), 16)  # Convert the final hex byte to a decimal integer
+
         if pct is not None:
             if pct > args.warning:
                 state_string += f"OK: {marker_name} is at {pct}% - "
@@ -161,7 +161,7 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
             elif pct <= args.critical:
                 state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
                 consum_state = STATE_CRIT
-                
+
             perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
         else:
             state_string += f"OK: {marker_name} valid - "
@@ -174,11 +174,11 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
         consum_state = STATE_CRIT
     elif max_cap > 0:  # Measurable component
         pct = int((current_cap * 100) / max_cap)
-        
+
         # Invert the percentage for Drum Units since they often report "used capacity" instead of "remaining"
         if "drum" in marker_name.lower():
             pct = 100 - pct
-            
+
         if pct > args.warning:
             state_string += f"OK: {marker_name} is at {pct}% - "
         elif args.critical < pct <= args.warning:
@@ -207,7 +207,7 @@ async def check_consumables(args, param):
         tasks = []
         for i in range(1, len(all_markers) + 1):
             tasks.append(_check_one_consumable(args, str(i), state_string, perfdata))
-        
+
         results = await asyncio.gather(*tasks)
         for status, s_string, p_data in results:
             state_string = s_string
@@ -261,7 +261,7 @@ async def check_toner_levels(args):
     # Fetch all supply descriptions
     temp_markers = await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], False)
     all_markers = temp_markers.splitlines()
-    
+
     # Filter for toners, specifically excluding "waste" to avoid the Waste Toner Box
     matched = []
     for line in all_markers:
@@ -277,13 +277,13 @@ async def check_toner_levels(args):
         match = re.search(r'\.(\d+)\s*=', line)
         if not match:
             continue
-            
+
         marker_id = match.group(1)
-        
+
         # Build the accurate marker name and color
         marker_name = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
         marker_color = await walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
-        
+
         if marker_color and marker_color.lower() not in marker_name.lower() and "No Such" not in marker_color:
             marker_name = f"{marker_color} {marker_name}"
 
@@ -306,21 +306,21 @@ async def check_toner_levels(args):
             if brother_hex and "No Such Object" not in brother_hex:
                 color_map = {"black": "81", "cyan": "82", "magenta": "83", "yellow": "84"}
                 color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
-                
+
                 if color_id:
                     clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
                     hex_match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
                     if hex_match:
                         pct = int(hex_match.group(1), 16)
-        
+
         elif current_cap == -2:
             state_string += f"WARNING: {marker_name} is UNKNOWN - "
             toner_state = max(toner_state, STATE_WARN)
             continue
-            
+
         elif current_cap == 0:
             pct = 0
-            
+
         elif max_cap > 0:
             # Standard calculation for standard OID responses
             pct = int((current_cap * 100) / max_cap)
@@ -335,12 +335,12 @@ async def check_toner_levels(args):
             elif pct <= args.critical:
                 state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
                 toner_state = STATE_CRIT
-                
+
             perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
         else:
             # Fallback if it's -3 but the Brother hex extraction failed
             if current_cap == -3:
-                 state_string += f"OK: {marker_name} valid - "
+                state_string += f"OK: {marker_name} valid - "
 
     return toner_state, state_string, perfdata
 
@@ -434,7 +434,7 @@ async def check_paper_trays(args, param, arg_token):
         tasks = []
         for i in range(1, len(all_trays_raw) + 1):
             tasks.append(_check_one_tray(args, str(i), state_string, perfdata))
-        
+
         results = await asyncio.gather(*tasks)
         for status, s_string, p_data in results:
             state_string = s_string
@@ -444,7 +444,7 @@ async def check_paper_trays(args, param, arg_token):
         tasks = []
         for tray_id in param.split(arg_token):
             tasks.append(_check_one_tray(args, tray_id.strip(), state_string, perfdata))
-        
+
         results = await asyncio.gather(*tasks)
         for status, s_string, p_data in results:
             state_string = s_string

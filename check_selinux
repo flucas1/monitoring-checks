@@ -55,11 +55,11 @@ async def check_selinux_mode(expected_mode, warning_flag):
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode != 0:
             print("ERROR: unable to retrieve SELinux mode")
             sys.exit(STATE_CRITICAL)
-        
+
         current_mode = stdout.decode().strip().lower()
     except (FileNotFoundError, OSError):
         print("ERROR: unable to retrieve SELinux mode")
