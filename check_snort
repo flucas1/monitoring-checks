@@ -339,7 +339,7 @@ async def main(forcedargs=None):
         LOG_FILE = args.log_file
     if args.spool_data_dir:
         SPOOL_DATA_DIR = args.spool_data_dir
-        LOG_FILE = f"{SPOOL_DATA_DIR}/check_snort.{datetime.datetime.now().strftime("%a")}.log"
+        LOG_FILE = f"{SPOOL_DATA_DIR}/check_snort.{datetime.datetime.now().strftime('%a')}.log"
 
     if not os.path.isdir(SPOOL_DATA_DIR):
         print(f"\n> error no output_dir given/created; run\n> $ mkdir -p {SPOOL_DATA_DIR} && chown nagios:nagios {SPOOL_DATA_DIR}\n> to create that dir\n")

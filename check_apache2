@@ -104,9 +104,6 @@ async def main(forcedargs=None):
 
     unreachable_status = CRITICAL if args.unreachable else UNKNOWN
 
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(args.timeout)
-
     warnings = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []
 
