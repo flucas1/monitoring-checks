@@ -50,22 +50,16 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-OK = 0
-WARNING = 1
-CRITICAL = 2
-UNKNOWN = 3
-
-
 def check_threshold(value, warn, crit):
-    status = OK
+    status = 0
     try:
         val = float(value)
         if crit:
             if val >= float(crit):
-                return CRITICAL
+                return 2
         if warn:
             if val >= float(warn):
-                status = WARNING
+                status = 1
     except ValueError:
         pass
     return status
@@ -94,8 +88,6 @@ async def main(forcedargs=None):
     parser.add_argument("-R", "--unreachable", action="store_true")
     parser.add_argument("-t", "--timeout", type=int, default=15)
     args = parser.parse_args()
-
-    unreachable_status = CRITICAL if args.unreachable else UNKNOWN
 
     warnings_list = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []
@@ -158,7 +150,7 @@ async def main(forcedargs=None):
         ("BytesPerReq", bytes_per_req, warnings_list[5], criticals[5], "B")
     ]
 
-    overall_status = OK
+    overall_status = 0
     perfdata = []
 
     for name, val, w, c, uom in metrics:
@@ -171,11 +163,11 @@ async def main(forcedargs=None):
     output = "OpenSlots:" + str(open_slots) + " BusyWorkers:" + str(busy_workers) + " IdleWorkers:" + str(idle_workers) + " ReqPerSec:" + str(req_per_sec) + " BytesPerSec:" + str(bytes_per_sec) + " BytesPerReq:" + str(bytes_per_req)
     perf_string = " ".join(perfdata)
 
-    if overall_status == OK:
+    if overall_status == 0:
         status_str = "OK"
-    elif overall_status == WARNING:
+    elif overall_status == 1:
         status_str = "WARNING"
-    elif overall_status == CRITICAL:
+    elif overall_status == 2:
         status_str = "CRITICAL"
     else:
         status_str = "UNKNOWN"
