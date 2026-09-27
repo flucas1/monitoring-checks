@@ -169,7 +169,7 @@ async def main(forcedargs=None):
         perf_warn = int(total * (100 - args.w) / 100)
         perf_crit = int(total * (100 - args.c) / 100)
 
-    perfdata = f"|TOTAL={total}KB;;;; USED={used_kb}KB;{perf_warn};{perf_crit};; FREE={free_kb}KB;;;; CACHES={caches_kb}KB;;;;"
+    perfdata = f" | TOTAL={total}KB;;;; USED={used_kb}KB;{perf_warn};{perf_crit};; FREE={free_kb}KB;;;; CACHES={caches_kb}KB;;;;"
     if args.opt_h:
         perfdata += f" HUGEPAGES={hugepages_kb}KB;;;;"
 
