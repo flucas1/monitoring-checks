@@ -164,7 +164,7 @@ async def main(forcedargs=None):
             key, val = line.split(": ", 1)
             ups_data[key] = val
 
-    alarmlevel = 0
+    alarmlevel = "OK"
     critmesg = []
     warnmesg = []
     okmesg = []
@@ -196,8 +196,8 @@ async def main(forcedargs=None):
                     if args.debug:
                         print(msg)
                     critmesg.append(msg)
-                    if alarmlevel < 2:
-                        alarmlevel = 2
+                    if mapstatustoexitcode(alarmlevel) < mapstatustoexitcode("CRITICAL"):
+                        alarmlevel = "CRITICAL"
                     cnthits += 1
             if cnthits:
                 continue
@@ -210,8 +210,8 @@ async def main(forcedargs=None):
                     if args.debug:
                         print(msg)
                     warnmesg.append(msg)
-                    if alarmlevel < 1:
-                        alarmlevel = 1
+                    if mapstatustoexitcode(alarmlevel) < mapstatustoexitcode("WARNING"):
+                        alarmlevel = "WARNING"
                     cnthits += 1
             if cnthits:
                 continue
@@ -220,12 +220,8 @@ async def main(forcedargs=None):
             print("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
         okmesg.append("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
 
-    # Mapping alarmlevel back to status string directly based on exit code correlation
-    statuses = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
-    final_status = statuses[alarmlevel] if alarmlevel < len(statuses) else "UNKNOWN"
-
     combined_messages = " - ".join(critmesg + warnmesg + okmesg)
-    exitnagios(final_status, combined_messages)
+    exitnagios(alarmlevel, combined_messages)
 
 
 # -------------------------------------------------------------------------------
