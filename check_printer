@@ -37,25 +37,22 @@ OIDS = {
 
 
 def walk_snmp(args, oid, raw=True):
-    """Wrapper for snmpwalk command line tool"""
     output_options = "-Oavq" if raw else "-Oa"
-    cmd = ["snmpwalk", "-v", args.snmpversion, output_options]
-
+    cmdline = ["snmpwalk", "-v", args.snmpversion, output_options]
     if args.snmpversion == '3':
-        cmd.extend(["-u", args.user, "-l", args.privlevel,
-                    "-x", args.privprotocol, "-X", args.privpassword,
-                    "-a", args.authprotocol, "-A", args.authpassword])
+        cmdline.extend(["-u", args.user, "-l", args.privlevel, "-x", args.privprotocol, "-X", args.privpassword, "-a", args.authprotocol, "-A", args.authpassword])
     else:
-        cmd.extend(["-c", args.community])
-
-    cmd.extend([args.host, oid])
+        cmdline.extend(["-c", args.community])
+    cmdline.extend([args.host, oid])
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        #print(cmdline)
+        result = subprocess.run(cmdline, capture_output=True, text=True, check=True)
         text = result.stdout.strip()
         if raw:
             # Remove leading whitespace and quotes like sed/tr in bash
             text = "\n".join([line.lstrip().replace('"', '') for line in text.splitlines()])
+        # print(text)
         return text
     except subprocess.CalledProcessError as e:
         print(f"snmpwalk command error.\n{e.stderr}")
@@ -65,17 +62,20 @@ def walk_snmp(args, oid, raw=True):
 def check_model(args):
     """Returns printer model and serial"""
     model = walk_snmp(args, f"{OIDS['hrDeviceDescr']}.1", True)
+    #print(model)
     serial = walk_snmp(args, OIDS['prtGeneralSerialNumber'], True)
+    #print(serial)
     return STATE_OK, f"{model}, Serial # {serial}", ""
 
 
 def check_messages(args):
     """Shows messages on the printer display"""
     messages = walk_snmp(args, OIDS['prtAlertDescription'], True)
+    #print(messages)
     if not messages:
         return STATE_UNK, "UNKNOWN: Can't determine messages. Device does not support this OID.", ""
     else:
-        return STATE_OK, messages.replace("\n", "!"), ""
+        return STATE_OK, messages.replace("\n", " - "), ""
 
 
 def check_pagecount(args):
@@ -121,7 +121,7 @@ def _check_one_consumable(args, marker_id, separator, state_string, perfdata):
         marker_name = f"{marker_color} {marker_name}"
 
     if not marker_name:
-        return STATE_UNK, "UNKNOWN - OID not found! Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+        return STATE_UNK, "UNKNOWN - OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
     current_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
     max_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
@@ -133,22 +133,22 @@ def _check_one_consumable(args, marker_id, separator, state_string, perfdata):
         return STATE_UNK, state_string, perfdata
 
     if current_cap == -3:  # Some supply remains
-        state_string += f"{marker_name} is OK!{separator}"
+        state_string += f"{marker_name} is OK {separator}"
     elif current_cap == -2:  # Unknown
-        state_string = f"{marker_name} is at WARNING level!{separator}{state_string}"
+        state_string = f"{marker_name} is at WARNING level {separator}{state_string}"
         consum_state = max(consum_state, STATE_WARN)
     elif current_cap == 0:  # Empty
-        state_string = f"{marker_name} is at CRITICAL level!{separator}{state_string}"
+        state_string = f"{marker_name} is at CRITICAL level {separator}{state_string}"
         consum_state = STATE_CRIT
     elif max_cap > 0:  # Measurable component
         pct = int((current_cap * 100) / max_cap)
         if pct > args.warning:
-            state_string += f"{marker_name} is at {pct}% - OK!{separator}"
+            state_string += f"{marker_name} is at {pct}% - OK {separator}"
         elif args.critical < pct <= args.warning:
-            state_string = f"{marker_name} is at {pct}% - WARNING!{separator}{state_string}"
+            state_string = f"{marker_name} is at {pct}% - WARNING {separator}{state_string}"
             consum_state = max(consum_state, STATE_WARN)
         elif pct <= args.critical:
-            state_string = f"{marker_name} is at {pct}% - CRITICAL!{separator}{state_string}"
+            state_string = f"{marker_name} is at {pct}% - CRITICAL {separator}{state_string}"
             consum_state = STATE_CRIT
 
         perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
@@ -177,7 +177,7 @@ def check_consumables(args, param, separator):
         matched = [line for line in all_markers if re.search(param, line, re.IGNORECASE)]
 
         if not matched:
-            return STATE_UNK, "UNKNOWN - OID not found! Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+            return STATE_UNK, "UNKNOWN - OID not found - Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
         for line in matched:
             # Extract marker ID like awk -F. '{print $8}' | awk -F= '{print $1}'
@@ -202,7 +202,7 @@ def check_exact_consumable(args, param, separator):
     if found_idx != -1:
         return _check_one_consumable(args, str(found_idx), separator, "", "")
     else:
-        return STATE_UNK, f"UNKNOWN - No match found for '{param}'! Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+        return STATE_UNK, f"UNKNOWN - No match found for '{param}' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
 
 def _get_tray_dimensions(args, tray_id):
@@ -243,9 +243,9 @@ def _check_one_tray(args, tray_id, separator, state_string, perfdata):
         return STATE_UNK, state_string, perfdata
 
     if tray_cap == -3:
-        state_string += f"{tray_name} is OK!{separator}"
+        state_string += f"{tray_name} is OK - {separator}"
     elif tray_cap == -2:
-        state_string += f"{tray_name} status is UNKNOWN!{separator}"
+        state_string += f"{tray_name} status is UNKNOWN - {separator}"
         tray_state = STATE_UNK
     elif tray_cap == 0:
         dim_str = _get_tray_dimensions(args, tray_id)
@@ -256,14 +256,14 @@ def _check_one_tray(args, tray_id, separator, state_string, perfdata):
         pct = int((tray_cap * 100) / tray_max)
 
         if pct > args.critical and pct > args.warning:
-            state_string += f"{tray_name} is at {pct}% - OK!{separator}"
+            state_string += f"{tray_name} is at {pct}% - OK - {separator}"
         elif pct <= args.warning:
             dim_str = _get_tray_dimensions(args, tray_id)
             if pct <= args.critical:
-                state_string += f"{tray_name} is at {pct}% - CRITICAL! Please refill with more {dim_str}{separator}"
+                state_string += f"{tray_name} is at {pct}% - CRITICAL - Please refill with more {dim_str}{separator}"
                 tray_state = STATE_CRIT
             else:
-                state_string += f"{tray_name} is at {pct}% - WARNING! Please refill with more {dim_str}{separator}"
+                state_string += f"{tray_name} is at {pct}% - WARNING - Please refill with more {dim_str}{separator}"
                 tray_state = max(tray_state, STATE_WARN)
 
         perfdata += f" '{tray_name}'={pct};{args.warning};{args.critical}"
@@ -303,10 +303,6 @@ def check_paper_trays(args, param, separator, arg_token):
 
 
 def main():
-    if not shutil.which("snmpwalk"):
-        print(f"UNKNOWN: No usable 'snmpwalk' binary in PATH")
-        sys.exit(STATE_UNK)
-
     parser = argparse.ArgumentParser(description="Nagios plugin to check the status of networked printers.")
     parser.add_argument("-H", "--host", default="localhost", help="Host name or IP address")
     parser.add_argument("-v", "--snmpversion", choices=["1", "2c", "3"], default="2c", help="SNMP version")
@@ -318,15 +314,16 @@ def main():
     parser.add_argument("-a", "--authprotocol", choices=["MD5", "SHA"], default="MD5")
     parser.add_argument("-A", "--authpassword", default="")
     parser.add_argument("-t", "--timeout", default="10:UNKNOWN")
-    parser.add_argument("-T", "--type", required=True, nargs="+", help="Check type and parameter")
+    parser.add_argument("-T", "--type", required=True, help="Check type")
+    parser.add_argument("-P", "--parameter", required=False, help="Check type parameter")
     parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
     parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
     parser.add_argument("-S", "--separator", default=",", help="Separator string")
 
     args = parser.parse_args()
 
-    check_type = args.type[0].upper()
-    parameter = " ".join(args.type[1:]) if len(args.type) > 1 else ""
+    check_type = args.type.upper()
+    parameter = args.parameter.upper() if args.parameter else ""
 
     separator = args.separator.replace("\\n", "\n") if args.separator else ","
     arg_token = ","
@@ -355,7 +352,7 @@ def main():
     if not perfdata:
         print(state_string)
     else:
-        print(f"{state_string}|{perfdata}")
+        print(f"{state_string} | {perfdata}")
 
     sys.exit(state)
 
