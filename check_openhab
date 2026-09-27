@@ -102,7 +102,7 @@ def check_limits(state, low, high, name, return_code):
 
 def build_thresholds(args):
     thresholds = {}
-    
+
     thresholds['numeric_limits'] = args.number_warn is not None or args.number_crit is not None or args.number_unkn is not None
     if thresholds['numeric_limits']:
         thresholds['number_warn_low'], thresholds['number_warn_high'] = split_threshold(args.number_warn, "number_warn", lambda i, f: float(i))
@@ -125,7 +125,7 @@ def build_thresholds(args):
                 exitnagios("CRITICAL", "Unable to compile string OK regex: " + args.string_ok)
         else:
             thresholds['compiled_regex_ok'] = None
-            
+
         if args.string_warn:
             try:
                 thresholds['compiled_regex_warn'] = re.compile(args.string_warn)
@@ -133,7 +133,7 @@ def build_thresholds(args):
                 exitnagios("CRITICAL", "Unable to compile string WARNING regex: " + args.string_warn)
         else:
             thresholds['compiled_regex_warn'] = None
-            
+
         if args.string_crit:
             try:
                 thresholds['compiled_regex_crit'] = re.compile(args.string_crit)
@@ -141,7 +141,7 @@ def build_thresholds(args):
                 exitnagios("CRITICAL", " Unable to compile string CRITICAL regex: " + args.string_crit)
         else:
             thresholds['compiled_regex_crit'] = None
-            
+
     return thresholds
 
 
@@ -179,7 +179,7 @@ def check_thresholds(thresholds, state, name):
         compiled_regex_crit = thresholds.get('compiled_regex_crit')
         compiled_regex_warn = thresholds.get('compiled_regex_warn')
         compiled_regex_ok = thresholds.get('compiled_regex_ok')
-        
+
         if compiled_regex_crit and compiled_regex_crit.search(state):
             return ("CRITICAL", "%s string regex critical matched state: %s | value=%s" % (name, state, state))
         elif compiled_regex_warn and compiled_regex_warn.search(state):
