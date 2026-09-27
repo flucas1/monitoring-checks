@@ -32,7 +32,8 @@ OIDS = {
     "prtMarkerLifeCount": "1.3.6.1.2.1.43.10.2.1.4.1.1",
     "prtMarkerSuppliesDescription": "1.3.6.1.2.1.43.11.1.1.6.1",
     "prtMarkerSuppliesLevel": "1.3.6.1.2.1.43.11.1.1.9.1",
-    "prtMarkerSuppliesMaxCapacity": "1.3.6.1.2.1.43.11.1.1.8.1"
+    "prtMarkerSuppliesMaxCapacity": "1.3.6.1.2.1.43.11.1.1.8.1",
+    "brInfoMaintenance": "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0"
 }
 
 
@@ -46,13 +47,11 @@ def walk_snmp(args, oid, raw=True):
     cmdline.extend([args.host, oid])
 
     try:
-        #print(cmdline)
         result = subprocess.run(cmdline, capture_output=True, text=True, check=True)
         text = result.stdout.strip()
         if raw:
             # Remove leading whitespace and quotes like sed/tr in bash
             text = "\n".join([line.lstrip().replace('"', '') for line in text.splitlines()])
-        # print(text)
         return text
     except subprocess.CalledProcessError as e:
         print(f"snmpwalk command error.\n{e.stderr}")
@@ -62,16 +61,13 @@ def walk_snmp(args, oid, raw=True):
 def check_model(args):
     """Returns printer model and serial"""
     model = walk_snmp(args, f"{OIDS['hrDeviceDescr']}.1", True)
-    #print(model)
     serial = walk_snmp(args, OIDS['prtGeneralSerialNumber'], True)
-    #print(serial)
     return STATE_OK, f"{model}, Serial # {serial}", ""
 
 
 def check_messages(args):
     """Shows messages on the printer display"""
     messages = walk_snmp(args, OIDS['prtAlertDescription'], True)
-    #print(messages)
     if not messages:
         return STATE_UNK, "UNKNOWN: Can't determine messages. Device does not support this OID.", ""
     else:
@@ -83,7 +79,7 @@ def check_pagecount(args):
     page_count = walk_snmp(args, OIDS['prtMarkerLifeCount'], True)
     perfdata = f"'Pages'={page_count}"
     try:
-        formatted_count = f"{int(page_count):,}"  # Replaces bash sed formatter
+        formatted_count = f"{int(page_count):,}"
     except ValueError:
         formatted_count = page_count
     return STATE_OK, f"Pagecount is {formatted_count}.", perfdata
@@ -114,19 +110,13 @@ def _check_one_consumable(args, marker_id, state_string, perfdata):
     """Determines capacity and status code for a single consumable"""
     consum_state = STATE_OK
     marker_name = walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
-    #marker_name = marker_name.replace(".", "")
-    #print(marker_name)
 
     marker_color = walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
-    #print(marker_color)
     if marker_color and marker_color.lower() not in marker_name.lower() and marker_color != "No Such Instance currently exists at this OID":
         marker_name = f"{marker_color} {marker_name}"
-    #print(marker_name)
 
     if not marker_name:
         return STATE_UNK, "UNKNOWN - OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
-    #if marker_name.startswith("No Such Instance currently exists at this"):
-    #    return consum_state, state_string, perfdata
 
     current_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
     max_cap = walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
@@ -135,11 +125,38 @@ def _check_one_consumable(args, marker_id, state_string, perfdata):
         current_cap = int(current_cap)
         max_cap = max(0, int(max_cap))
     except ValueError:
-        #print("EXCEPTION")
         return STATE_UNK, state_string, perfdata
 
     if current_cap == -3:  # Some supply remains
-        state_string += f"OK: {marker_name} valid - "
+        # Fallback to Brother's proprietary SNMP OID to extract precise percentages
+        brother_hex = walk_snmp(args, OIDS.get('brInfoMaintenance', '1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'), True)
+        pct = None
+        
+        if brother_hex and "No Such Object" not in brother_hex:
+            # Brother Hex identifiers: 81=Black, 82=Cyan, 83=Magenta, 84=Yellow
+            color_map = {"black": "81", "cyan": "82", "magenta": "83", "yellow": "84"}
+            color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
+            
+            if color_id:
+                clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
+                match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
+                if match:
+                    pct = int(match.group(1), 16) # Convert the final hex byte to a decimal integer
+                    
+        if pct is not None:
+            if pct > args.warning:
+                state_string += f"OK: {marker_name} is at {pct}% - "
+            elif args.critical < pct <= args.warning:
+                state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
+                consum_state = max(consum_state, STATE_WARN)
+            elif pct <= args.critical:
+                state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
+                consum_state = STATE_CRIT
+                
+            perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
+        else:
+            state_string += f"OK: {marker_name} valid - "
+
     elif current_cap == -2:  # Unknown
         state_string = f"WARNING: {marker_name} is at level - {state_string}"
         consum_state = max(consum_state, STATE_WARN)
@@ -148,21 +165,22 @@ def _check_one_consumable(args, marker_id, state_string, perfdata):
         consum_state = STATE_CRIT
     elif max_cap > 0:  # Measurable component
         pct = int((current_cap * 100) / max_cap)
+        
+        # Invert the percentage for Drum Units since they often report "used capacity" instead of "remaining"
+        if "drum" in marker_name.lower():
+            pct = 100 - pct
+            
         if pct > args.warning:
-            #print("OK")
             state_string += f"OK: {marker_name} is at {pct}% - "
         elif args.critical < pct <= args.warning:
-            #print("WARNING")
             state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
             consum_state = max(consum_state, STATE_WARN)
         elif pct <= args.critical:
-            #print("CRITICAL")
             state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
             consum_state = STATE_CRIT
 
         perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
 
-    #print(consum_state)
     return consum_state, state_string, perfdata
 
 
@@ -178,12 +196,7 @@ def check_consumables(args, param):
     elif param.upper() == "ALL":
         all_markers = walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True).splitlines()
         for i in range(1, len(all_markers) + 1):
-            #print("----------")
-            #print(all_markers)
             status, state_string, perfdata = _check_one_consumable(args, str(i), state_string, perfdata)
-            #print(status)
-            #print(state_string)
-            #print("----------")
             consums_state = max(consums_state, status)
     else:
         # Match specific string
@@ -194,7 +207,6 @@ def check_consumables(args, param):
             return STATE_UNK, "UNKNOWN - OID not found - Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
         for line in matched:
-            # Extract marker ID like awk -F. '{print $8}' | awk -F= '{print $1}'
             match = re.search(r'\.(\d+)\s*=', line)
             if match:
                 status, state_string, perfdata = _check_one_consumable(args, match.group(1), state_string, perfdata)
@@ -217,6 +229,97 @@ def check_exact_consumable(args, param):
         return _check_one_consumable(args, str(found_idx), "", "")
     else:
         return STATE_UNK, f"UNKNOWN - No match found for '{param}' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+
+
+def check_toner_levels(args):
+    """Dedicated check specifically for Toner Cartridges (ignores drums and waste boxes)"""
+    toner_state = STATE_OK
+    state_string = ""
+    perfdata = ""
+
+    # Fetch all supply descriptions
+    all_markers = walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], False).splitlines()
+    
+    # Filter for toners, specifically excluding "waste" to avoid the Waste Toner Box
+    matched = []
+    for line in all_markers:
+        if re.search(r'toner', line, re.IGNORECASE) and not re.search(r'waste', line, re.IGNORECASE):
+            matched.append(line)
+
+    if not matched:
+        return STATE_UNK, "UNKNOWN - No toner cartridges found on this device.", ""
+
+    for line in matched:
+        # Extract marker ID
+        match = re.search(r'\.(\d+)\s*=', line)
+        if not match:
+            continue
+            
+        marker_id = match.group(1)
+        
+        # Build the accurate marker name and color
+        marker_name = walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
+        marker_color = walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
+        
+        if marker_color and marker_color.lower() not in marker_name.lower() and "No Such" not in marker_color:
+            marker_name = f"{marker_color} {marker_name}"
+
+        # Fetch capacities
+        current_cap_str = walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
+        max_cap_str = walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
+
+        try:
+            current_cap = int(current_cap_str)
+            max_cap = max(0, int(max_cap_str))
+        except ValueError:
+            continue
+
+        pct = None
+
+        # Apply specific states and calculations
+        if current_cap == -3:
+            # Fallback to Brother's proprietary SNMP OID for exact percentages
+            brother_hex = walk_snmp(args, OIDS.get('brInfoMaintenance', '1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'), True)
+            if brother_hex and "No Such Object" not in brother_hex:
+                color_map = {"black": "81", "cyan": "82", "magenta": "83", "yellow": "84"}
+                color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
+                
+                if color_id:
+                    clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
+                    hex_match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
+                    if hex_match:
+                        pct = int(hex_match.group(1), 16)
+        
+        elif current_cap == -2:
+            state_string += f"WARNING: {marker_name} is UNKNOWN - "
+            toner_state = max(toner_state, STATE_WARN)
+            continue
+            
+        elif current_cap == 0:
+            pct = 0
+            
+        elif max_cap > 0:
+            # Standard calculation for standard OID responses
+            pct = int((current_cap * 100) / max_cap)
+
+        # Apply Nagios thresholds and build the output string
+        if pct is not None:
+            if pct > args.warning:
+                state_string += f"OK: {marker_name} is at {pct}% - "
+            elif args.critical < pct <= args.warning:
+                state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
+                toner_state = max(toner_state, STATE_WARN)
+            elif pct <= args.critical:
+                state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
+                toner_state = STATE_CRIT
+                
+            perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
+        else:
+            # Fallback if it's -3 but the Brother hex extraction failed
+            if current_cap == -3:
+                 state_string += f"OK: {marker_name} valid - "
+
+    return toner_state, state_string, perfdata
 
 
 def _get_tray_dimensions(args, tray_id):
@@ -356,6 +459,8 @@ def main():
         state, state_string, perfdata = check_consumables(args, parameter)
     elif check_type == "CONSUMX":
         state, state_string, perfdata = check_exact_consumable(args, parameter)
+    elif check_type == "TONER":
+        state, state_string, perfdata = check_toner_levels(args)
     elif check_type in ("TRAY", "TRAYS"):
         state, state_string, perfdata = check_paper_trays(args, parameter, arg_token)
 
