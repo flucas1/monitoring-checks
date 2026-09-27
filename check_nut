@@ -48,11 +48,6 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-ERRORS_OK = 0
-ERRORS_WARNING = 1
-ERRORS_CRITICAL = 2
-ERRORS_UNKNOWN = 3
-
 def compare(val, op, limit):
     try:
         fval = float(val)
@@ -145,8 +140,7 @@ async def main(forcedargs=None):
     args = parser.parse_args()
 
     if not args.device:
-        print("Device not specified")
-        return ERRORS_UNKNOWN
+        exitnagios("UNKNOWN", "Device not specified")
 
     limits = {}
     for v in args.value:
@@ -155,20 +149,17 @@ async def main(forcedargs=None):
             limits[key] = val
 
     if not limits:
-        print("you have to specify some value to check")
-        return ERRORS_UNKNOWN
+        exitnagios("UNKNOWN", "you have to specify some value to check")
 
     try:
         await run_command(["/bin/ps", "h", "-C", "upsd"])
     except RuntimeError:
-        print("NUT Daemon maybe DOWN")
-        return ERRORS_UNKNOWN
+        exitnagios("UNKNOWN", "NUT Daemon maybe DOWN")
 
     try:
         res = await run_command(["/bin/upsc", args.device])
     except RuntimeError as e:
-        print("can't run '/bin/upsc " + str(args.device) + "': " + str(e))
-        return ERRORS_UNKNOWN
+        exitnagios("UNKNOWN", "can't run '/bin/upsc " + str(args.device) + "': " + str(e))
 
     ups_data = {}
     for line in res.splitlines():
@@ -183,8 +174,7 @@ async def main(forcedargs=None):
 
     for key, limstring in limits.items():
         if key not in ups_data:
-            print("key '" + str(key) + "' is not defined in output from /bin/upsc")
-            return ERRORS_UNKNOWN
+            exitnagios("UNKNOWN", "key '" + str(key) + "' is not defined in output from /bin/upsc")
 
         kvtriples = limstring.split(":")
         cmp_dict = {"c": [], "w": []}
@@ -197,8 +187,7 @@ async def main(forcedargs=None):
                 if args.debug:
                     print("KV3: (" + str(severity) + "," + str(op) + "," + str(value) + ")")
             else:
-                print("ERROR: '" + str(kvtriple) + "' is invalid")
-                return ERRORS_UNKNOWN
+                exitnagios("UNKNOWN", "ERROR: '" + str(kvtriple) + "' is invalid")
 
         if cmp_dict["c"]:
             cnthits = 0
@@ -234,10 +223,17 @@ async def main(forcedargs=None):
             print("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
         okmesg.append("OK: " + str(key) + "=" + str(ups_data[key]) + " | " + str(key) + "=" + str(ups_data[key]))
 
-    for m in critmesg + warnmesg + okmesg:
-        print(m)
+    if alarmlevel == ERRORS_CRITICAL:
+        final_status = "CRITICAL"
+    elif alarmlevel == ERRORS_WARNING:
+        final_status = "WARNING"
+    elif alarmlevel == ERRORS_OK:
+        final_status = "OK"
+    else:
+        final_status = "UNKNOWN"
 
-    return alarmlevel
+    combined_messages = " - ".join(critmesg + warnmesg + okmesg)
+    exitnagios(final_status, combined_messages)
 
 
 # -------------------------------------------------------------------------------
