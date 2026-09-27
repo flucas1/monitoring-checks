@@ -45,7 +45,7 @@ def run_iostat(disk, extended, samples):
 
 
 def main():
-    parser = argparse.ArgumentParser(add_help=False, usage=argparse.SUPPRESS)
+    parser = argparse.ArgumentParser()
     parser.add_argument("-d", dest="disk", default="sda", help="Device to be checked")
     parser.add_argument("-w", dest="warning", default="", help="Warning levels")
     parser.add_argument("-c", dest="critical", default="", help="Critical levels")
@@ -54,26 +54,7 @@ def main():
     parser.add_argument("-W", dest="waittime", action="store_true", help="Wait Time Mode")
     parser.add_argument("-p", dest="printperfdata", action="store_true", help="Provide performance data")
     parser.add_argument("-g", dest="samples", action="store_const", const="1", default="2", help="Since last reboot")
-    parser.add_argument("-h", dest="help", action="store_true", help="Help")
-
     args, unknown = parser.parse_known_args()
-
-    if args.help:
-        print("Usage:")
-        print("-d = Device to be checked. Example: \"-d sda\"")
-        print("Run only one of i, q, W:")
-        print("-i = IO Check Mode")
-        print("-q = Queue Mode")
-        print("-W = Wait Time Mode")
-        print("-w,-c = pass warning and critical levels respectively.")
-        print("-p = Provide performance data for later graphing")
-        print("-g = Since last reboot for system")
-        print("-h = This help")
-        sys.exit(0)
-
-    if unknown:
-        print(f"Invalid option: {unknown[0]}")
-        sys.exit(-1)
 
     # Checks that only one query type is run
     if sum([args.io, args.queue, args.waittime]) != 1:

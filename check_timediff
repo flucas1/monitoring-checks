@@ -14,7 +14,6 @@ RC_UNKNOWN = 3
 
 
 def msg(status_class, message_text):
-    """Generalised messaging interface for Nagios output."""
     prefix = f"TIME_DIFF {status_class}"
     print(f"{prefix} - {message_text}")
 
@@ -30,40 +29,12 @@ def msg(status_class, message_text):
 
 def main():
 
-    parser = argparse.ArgumentParser(
-        add_help=False,
-        usage="usage: check_timediff [-c seconds] -f format [-h]\n   -t time [-w seconds] [-v]"
-    )
-
+    parser = argparse.ArgumentParser(usage="usage: check_timediff [-c seconds] -f format [-h]\n   -t time [-w seconds] [-v]")
     parser.add_argument('-c', type=int, default=3, dest='critical_seconds')
     parser.add_argument('-w', type=int, default=2, dest='warning_seconds')
     parser.add_argument('-f', dest='server_time_format', choices=['euro', 'iso8601', 'strict-iso8601', 'us'])
     parser.add_argument('-t', dest='server_time', type=str)
-    parser.add_argument('-h', action='store_true', dest='help')
-
     args, unknown = parser.parse_known_args()
-
-    # Handle Help
-    if args.help:
-        script_name = "check_timediff"
-        help_text = (
-            f"usage: {script_name} [-c seconds] -f format [-h]\n"
-            f"   -t time [-w seconds] [-v]\n"
-            f"  where:\n"
-            f"    -c critical time difference limit in seconds (default 3)\n"
-            f"    -f format of -t value; the Nagios server's date_format value\n"
-            f"       Possible values: euro, iso8601, strict-iso8601 or us\n"
-            f"    -h Prints this help and exits\n"
-            f"    -t time passed by the Nagios server by for example:\n"
-            f"           check_nrpe!check_time_diff!-f iso8601 -t $SHORTDATETIME$\n"
-            f"    -w warning time difference limit in seconds (default 2)\n"
-        )
-        print(help_text)
-        sys.exit(0)
-
-    # Validate extra arguments
-    if unknown:
-        parser.error(f"Invalid extra argument(s) ' {' '.join(unknown)}'")
 
     # Validate required arguments
     if not args.server_time_format:

@@ -82,7 +82,7 @@ def format_uptime(seconds):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin", add_help=False)
+    parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin")
     parser.add_argument('-H', '--host', default="fritz.box", help="IP-Adress or hostname from the Fritz!Box")
     parser.add_argument('-a', '--authfile', help="Authentication file")
     parser.add_argument('-p', '--port', default="49443", help="SSL-Port from the Fritz!Box")
@@ -92,18 +92,7 @@ def main():
     parser.add_argument('-w', '--warning', type=float, default=0, help="Warning threshold")
     parser.add_argument('-c', '--critical', type=float, default=0, help="Critical threshold")
     parser.add_argument('-d', '--debug', action='store_true', help="prints debug information")
-    parser.add_argument('-v', '--version', action='store_true', help="print version and usage page")
-
-    # Custom help to catch -h standard behavior if passed as a flag without argument
-    try:
-        args, unknown = parser.parse_known_args()
-    except argparse.ArgumentError:
-        parser.print_help()
-        sys.exit(PLUGIN_UNKNOWN)
-
-    if args.version:
-        print(f"check_fritz\n\tVersion {VERSION}\n")
-        sys.exit(PLUGIN_UNKNOWN)
+    args, unknown = parser.parse_known_args()
 
     # Argument overrides
     username = args.username

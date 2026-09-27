@@ -84,10 +84,7 @@ def make_mtab():
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.",
-        add_help=False
-    )
+    parser = argparse.ArgumentParser(description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.")
     parser.add_argument('-m', dest='mtab', default='/proc/mounts', help="Use this mtab instead")
     parser.add_argument('-f', dest='fstab', default='/etc/fstab', help="Use this fstab instead")
     parser.add_argument('-N', dest='fsf', type=int, default=3, help="FS Field number in fstab")
@@ -102,14 +99,9 @@ def main():
     parser.add_argument('-o', dest='noautoignore', action='store_true', help="Ignore mounts with noauto flag")
     parser.add_argument('-w', dest='writetest', action='store_true', help="Perform writetest on mountpoint")
     parser.add_argument('-e', dest='dfargs', default='', help="Extra arguments for df")
-    parser.add_argument('-h', '--help', action='store_true', help="Show help")
     parser.add_argument('mountpoints', nargs='*', help="List of mountpoints to check")
 
     args = parser.parse_args()
-
-    if args.help:
-        parser.print_help()
-        sys.exit(STATE_OK)
 
     if args.autoignore:
         args.auto = True

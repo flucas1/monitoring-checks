@@ -75,7 +75,7 @@ async def fetch_status(url, auth, verify, timeout):
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", required=True)
     parser.add_argument("-p", "--port", type=int)
     parser.add_argument("-u", "--uri", default="/server-status?auto")

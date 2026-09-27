@@ -21,10 +21,7 @@ def run_cmd(cmd):
 
 def main():
     # Parse the input options
-    parser = argparse.ArgumentParser(
-        description="Check DNSSEC validity and remaining expiration time.",
-        add_help=False
-    )
+    parser = argparse.ArgumentParser(description="Check DNSSEC validity and remaining expiration time.")
     parser.add_argument("-H", dest="zone", required=True, help="specify zone to check")
     parser.add_argument("-w", dest="warning", type=int, default=5, help="warning time left days")
     parser.add_argument("-c", dest="critical", type=int, default=2, help="critical time left days")
