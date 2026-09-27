@@ -80,31 +80,12 @@ def validate_filename(filename, name="filename", noquit=False):
     return filename2
 
 
-def timeout_handler(signum, frame):
-    exitnagios("UNKNOWN", "self timed out after 10 seconds")
-
-
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
-
+async def check_timezone_logic(args):
     LOCALTIME_FILE = "/etc/localtime"
     ZONEINFO_DIR = "/usr/share/zoneinfo"
-
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("-T", "--timezone", type=str)
-    parser.add_argument("-A", "--alternate", type=str)
-    parser.add_argument("-Z", "--zoneinfo-file", type=str)
-    parser.add_argument("-h", "--help", action="store_true")
-
-    args = parser.parse_args()
-
-    if args.help:
-        print("T|timezone=s Timezone to expect the server in as shown by the 'date' command (eg. GMT)")
-        print("A|alternate=s Alternative timezone to expect the server in. Optional (defaults to same as --timezone). Useful to allow daylight saving time shifts by specifying a second timezone to allow (eg. BST)")
-        print(f"Z|zoneinfo-file=s Timezone file to compare {LOCALTIME_FILE} to. Optional (defaults to --timezone suffixed to {ZONEINFO_DIR}). Useful when your localtime is set to say Europe/London which shows up as GMT/BST but you still want to validate that {LOCALTIME_FILE} is set to Europe/London for following daylight saving time changes back and forth. Can be any valid timezone file under {ZONEINFO_DIR}/ (eg. UTC or GMT) or a fully qualified path to a timezone file")
-        sys.exit(0)
 
     if not args.timezone:
         exitnagios("UNKNOWN", "timezone not specified")
@@ -119,9 +100,6 @@ async def main(forcedargs=None):
         zoneinfo_file = f"{ZONEINFO_DIR}/{zoneinfo_file}"
 
     zoneinfo_file = validate_filename(zoneinfo_file)
-
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(10)
 
     server_timezone = time.tzname[0]
 
@@ -146,6 +124,24 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file}'!")
 
     exitnagios("UNKNOWN", msg)
+
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    LOCALTIME_FILE = "/etc/localtime"
+    ZONEINFO_DIR = "/usr/share/zoneinfo"
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("-T", "--timezone", type=str)
+    parser.add_argument("-A", "--alternate", type=str)
+    parser.add_argument("-Z", "--zoneinfo-file", type=str)
+    parser.add_argument("-h", "--help", action="store_true")
+
+    args = parser.parse_args()
+
+    check_timezone_logic(args)
 
 
 # -------------------------------------------------------------------------------
