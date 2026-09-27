@@ -20,7 +20,6 @@ def run_cmd(cmd):
 
 
 def main():
-    # Parse the input options
     parser = argparse.ArgumentParser(description="Check DNSSEC validity and remaining expiration time.")
     parser.add_argument("-H", dest="zone", required=True, help="specify zone to check")
     parser.add_argument("-w", dest="warning", type=int, default=5, help="warning time left days")
@@ -28,17 +27,7 @@ def main():
     parser.add_argument("-r", dest="resolver", default="8.8.8.8", help="specify which resolver to use")
     parser.add_argument("-f", dest="always_failing_domain", default="dnssec-failed.org", help="specify a domain that will always fail DNSSEC")
     parser.add_argument("-t", dest="record_type", default="SOA", help="specify a DNS record type to check")
-    parser.add_argument("-h", "--help", action="help", help="show this help message and exit")
-
-    try:
-        args = parser.parse_args()
-    except SystemExit:
-        sys.exit(255)  # Replicating the bash exit code 255 on usage error
-
-    # Check if dig is available at all - fail hard if not
-    if not shutil.which("dig"):
-        print("No executable of dig found, cannot proceed without dig. Sorry!")
-        sys.exit(1)
+    args = parser.parse_args()
 
     # Check the resolver to properly validate DNSSEC at all
     resolver_cmd = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, f"@{args.resolver}"]
