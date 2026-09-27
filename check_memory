@@ -120,7 +120,7 @@ async def main(forcedargs=None):
     parser.add_argument("-f", action="store_true")
     parser.add_argument("-u", action="store_true")
     parser.add_argument("-C", action="store_true")
-    parser.add_argument("-g", action="store_true", dest="opt_g")
+    parser.add_argument("-g", action="store_true", dest="huge")
     parser.add_argument("-v", action="store_true")
     parser.add_argument("-w", type=float)
     parser.add_argument("-c", type=float)
@@ -141,14 +141,14 @@ async def main(forcedargs=None):
 
     if args.v:
         infomsg(f"{free_kb} Free\n{used_kb} Used\n{caches_kb} Cache")
-        if args.opt_g:
+        if args.huge:
             infomsg(f"{hugepages_kb} Hugepages")
 
     if args.C:
         used_kb -= caches_kb
         free_kb += caches_kb
 
-    if args.opt_g:
+    if args.huge:
         used_kb -= hugepages_kb
 
     if args.v:
@@ -170,7 +170,7 @@ async def main(forcedargs=None):
         perf_crit = int(total * (100 - args.c) / 100)
 
     perfdata = f" | TOTAL={total}KB;;;; USED={used_kb}KB;{perf_warn};{perf_crit};; FREE={free_kb}KB;;;; CACHES={caches_kb}KB;;;;"
-    if args.opt_h:
+    if args.huge:
         perfdata += f" HUGEPAGES={hugepages_kb}KB;;;;"
 
     if args.f:
