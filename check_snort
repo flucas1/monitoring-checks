@@ -9,6 +9,7 @@ import argparse
 import socket
 import signal
 import asyncio
+import aiofiles
 
 
 # -------------------------------------------------------------------------------
@@ -117,10 +118,11 @@ async def get_alert_count(time_diff_seconds, priority_level):
     return count
 
 
-def get_latest_values(values_log_file):
+async def get_latest_values(values_log_file):
     if not os.path.isfile(values_log_file):
         try:
-            open(values_log_file, "a").close()
+            async with aiofiles.open(values_log_file, "a") as f:
+                pass
         except IOError:
             pass
         msg = "check_file not found -> " + values_log_file + " (trying to create)"
@@ -128,8 +130,8 @@ def get_latest_values(values_log_file):
         return "WARNING", msg
         
     try:
-        with open(values_log_file, "r") as f:
-            line = f.readline().strip()
+        async with aiofiles.open(values_log_file, "r") as f:
+            line = (await f.readline()).strip()
             if line:
                 parts = [p.strip() for p in line.split(":")]
                 last_status = parts[0] if len(parts) > 0 else ""
@@ -145,10 +147,10 @@ def get_latest_values(values_log_file):
     return "OK", ""
 
 
-def write_latest_values(values_log_file, status, count_last, avg_avg):
+async def write_latest_values(values_log_file, status, count_last, avg_avg):
     try:
-        with open(values_log_file, "w") as f:
-            f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
+        async with aiofiles.open(values_log_file, "w") as f:
+            await f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
     except IOError:
         pass
     infomsg(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)
@@ -245,7 +247,7 @@ async def check_alerts():
     last_tag, avg_tag = count_interval.split("-")
     values_log_file = SPOOL_DATA_DIR + "/" + str(PRIORITY_LEVEL) + "-" + count_interval + ".check"
 
-    read_status, read_msg = get_latest_values(values_log_file)
+    read_status, read_msg = await get_latest_values(values_log_file)
     if read_status != "OK":
         return read_status, read_msg, "", None
 
@@ -328,7 +330,7 @@ async def main():
         exitnagios("UNKNOWN", "no modus selected (use -m switch) -> help: check_snort -h")
 
     if state_to_save:
-        write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
+        await write_latest_values(state_to_save["file"], status, state_to_save["last"], state_to_save["avg"])
 
     print_log(NOW_DATE + " :: " + status + "  :: " + exit_text + "  :perfdata: " + perf_data)
     
