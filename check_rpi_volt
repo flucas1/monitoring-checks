@@ -50,7 +50,7 @@ async def main(forcedargs=None):
     # https://retropie.org.uk/forum/topic/2295/runcommand-warning-if-voltage-temperature-throttling
 
     try:
-        cmdline = ['/usr/bin/vcgencmd', 'get_throttled']
+        cmdline = ["/usr/bin/vcgencmd", "get_throttled"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -60,7 +60,7 @@ async def main(forcedargs=None):
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
-        value = output.split('=')[1]
+        value = output.split("=")[1]
         status = int(value, 16)
     except (IndexError, ValueError):
         exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status")

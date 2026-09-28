@@ -57,9 +57,9 @@ def parse_arguments():
     return args
 
 
-def main():
+async def main():
     args = parse_arguments()
-    check_selinux_mode(args.selinux_mode, args.warning)
+    await check_selinux_mode(args.selinux_mode, args.warning)
 
 # -------------------------------------------------------------------------------
 

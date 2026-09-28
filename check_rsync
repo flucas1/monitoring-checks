@@ -44,7 +44,7 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
 # -------------------------------------------------------------------------------
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
     parser.add_argument('-t', '--timeout', dest='timeoutmerged', type=str, default='30:CRITICAL')
@@ -55,7 +55,7 @@ def main():
     timeoutvalue = float(timeout_parts[0])
     timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else 'CRITICAL'
 
-    exit_code = asyncio.run(check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus))
+    exit_code = await check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus)
 
     if exit_code is None:
         print("UNKNOW - Plugin internal error")

@@ -7,9 +7,9 @@ import sys
 
 async def main(forcedargs=None):
     try:
-        # Run vcgencmd and capture the output as text
+        cmdline = ["/opt/vc/bin/vcgencmd", "version"]
         process = await asyncio.create_subprocess_exec(
-            "/opt/vc/bin/vcgencmd", "version",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
