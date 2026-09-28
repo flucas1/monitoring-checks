@@ -50,7 +50,7 @@ def exitnagios(status, message):
 
 
 def check_device_permissions(path):
-    infomsg("Check if %s does exist and can be read" % path)
+    infomsg("Check if " + path + " does exist and can be read")
     if not os.access(path, os.F_OK):
         return (2, "no such device found")
     elif not os.access(path, os.R_OK):
@@ -60,7 +60,7 @@ def check_device_permissions(path):
 
 
 async def call_smartmontools(device):
-    infomsg("Get device health status: %s" % device)
+    infomsg("Get device health status: " + device)
     result = ""
     message = ""
     code_to_return = "OK"
@@ -114,7 +114,7 @@ async def call_smartmontools(device):
             result = output
 
     except Exception as error:
-        message = "call exits unexpectedly (%s)" % error
+        message = "call exits unexpectedly (" + str(error) + ")"
         code_to_return = "UNKNOWN"
 
     return (code_to_return, result, message)
@@ -136,36 +136,36 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
             status_line = line
             parts = status_line.strip().split()
             health_status = parts[-1:][0]
-            infomsg("Health status: %s" % health_status)
+            infomsg("Health status: " + health_status)
         if "Health Status" in line:
             status_line = line
             parts = status_line.strip().split()
             health_status = parts[-1:][0]
-            infomsg("Health status: %s" % health_status)
+            infomsg("Health status: " + health_status)
 
         parts = line.split()
         if len(parts) > 0:
             if parts[0] == "5" and parts[1] == "Reallocated_Sector_Ct" and reallocated_sector_ct == 0:
                 reallocated_sector_ct = int(parts[9])
-                infomsg("Reallocated_Sector_Ct: %d" % reallocated_sector_ct)
+                infomsg("Reallocated_Sector_Ct: " + str(reallocated_sector_ct))
             elif parts[0] == "190" and temperature == 0:
                 temperature = int(parts[9])
-                infomsg("Temperature: %d" % temperature)
+                infomsg("Temperature: " + str(temperature))
             elif parts[0] == "194" and temperature == 0:
                 temperature = int(parts[9])
-                infomsg("Temperature: %d" % temperature)
+                infomsg("Temperature: " + str(temperature))
             elif parts[0] == "196" and reallocated_event_count == 0:
                 reallocated_event_count = int(parts[9])
-                infomsg("Reallocated_Event_Count: %d" % reallocated_event_count)
+                infomsg("Reallocated_Event_Count: " + str(reallocated_event_count))
             elif parts[0] == "197" and current_pending_sector == 0:
                 current_pending_sector = int(parts[9])
-                infomsg("Current_Pending_Sector: %d" % current_pending_sector)
+                infomsg("Current_Pending_Sector: " + str(current_pending_sector))
             elif parts[0] == "198" and offline_uncorrectable == 0:
                 offline_uncorrectable = int(parts[9])
-                infomsg("Offline_Uncorrectable: %d" % offline_uncorrectable)
+                infomsg("Offline_Uncorrectable: " + str(offline_uncorrectable))
             elif "ATA Error Count" in line:
                 error_count = int(parts[3])
-                infomsg("ATA error count: %d" % error_count)
+                infomsg("ATA error count: " + str(error_count))
             elif "No Errors Logged" in line:
                 error_count = 0
                 infomsg("ATA error count: 0")
@@ -184,26 +184,26 @@ def parse_output(output, identifier, warning_temp, critical_temp, tolerated_real
     if reallocated_sector_ct > tolerated_reallocated_sector_ct or reallocated_event_count > tolerated_reallocated_event_count or current_pending_sector > tolerated_current_pending_sector or offline_uncorrectable > tolerated_offline_uncorrectable:
         return_status = 2
         device_status += "There is a problem with bad sectors on the drive, "
-        device_status += "Reallocated_Sector_Ct:%d, " % reallocated_sector_ct
-        device_status += "Reallocated_Event_Count:%d, " % reallocated_event_count
-        device_status += "Current_Pending_Sector:%d, " % current_pending_sector
-        device_status += "Offline_Uncorrectable:%d " % offline_uncorrectable
+        device_status += "Reallocated_Sector_Ct:" + str(reallocated_sector_ct) + ", "
+        device_status += "Reallocated_Event_Count:" + str(reallocated_event_count) + ", "
+        device_status += "Current_Pending_Sector:" + str(current_pending_sector) + ", "
+        device_status += "Offline_Uncorrectable:" + str(offline_uncorrectable)
 
     if temperature > critical_temp:
         return_status = 2
-        device_status += "device temperature (%d) exceeds critical temperature threshold (%s) " % (temperature, critical_temp)
+        device_status += "device temperature (" + str(temperature) + ") exceeds critical temperature threshold (" + str(critical_temp) + ") "
     elif temperature > warning_temp:
         if return_status < 2:
             return_status = 1
-        device_status += "device temperature (%d) exceeds warning temperature threshold (%s) " % (temperature, warning_temp)
+        device_status += "device temperature (" + str(temperature) + ") exceeds warning temperature threshold (" + str(warning_temp) + ") "
 
     if error_count > 0:
         if return_status < 2:
             return_status = 1
-        device_status += "error count %d " % error_count
+        device_status += "error count " + str(error_count)
 
     if return_status == 0:
-        device_status += "device is functional and stable (temperature: %ddeg) " % temperature
+        device_status += "device is functional and stable (temperature: " + str(temperature) + "deg) "
 
     performance_status += " temp_" + identifier + "=" + str(temperature)
 
@@ -231,8 +231,8 @@ async def calculatedevicelist():
 
 async def process_device(device, args):
 
-    infomsg("Device: %s" % device)
-    dev_return_text = "%s: " % device
+    infomsg("Device: " + device)
+    dev_return_text = device + ": "
     dev_return_performance = ""
     dev_exit_status = 0
 
@@ -300,7 +300,7 @@ async def main(forcedargs=None):
         devices = [args.device]
     else:
         devices = await calculatedevicelist()
-        infomsg("Devices: %s" % devices)
+        infomsg("Devices: " + str(devices))
 
     tasks = [process_device(dev, args) for dev in devices]
     results = await asyncio.gather(*tasks)
@@ -335,7 +335,7 @@ async def main(forcedargs=None):
         nagios_state = "CRITICAL"
         nagios_msg = "undefined error"
 
-    full_message = f"{nagios_msg.strip()} - {return_text.strip()} | {return_performance.strip()}"
+    full_message = nagios_msg.strip() + " - " + return_text.strip() + " | " + return_performance.strip()
     exitnagios(nagios_state, full_message)
 
 # -------------------------------------------------------------------------------
