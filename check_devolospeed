@@ -50,8 +50,9 @@ def exitnagios(status, message):
 
 
 async def getmacfromip(remoteIP):
+    cmdline = ["/usr/sbin/arp", "-n", str(remoteIP)]
     process = await asyncio.create_subprocess_exec(
-        "/usr/sbin/arp", "-n", str(remoteIP),
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )

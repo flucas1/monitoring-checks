@@ -19,11 +19,9 @@ async def main(forcedargs=None):
     parser.add_argument('-v', dest='verbose', action='store_true', help="Verbose output (ignored for now)")
     args = parser.parse_args()
 
-    # Do the do
     try:
-        EXIM_PATH = '/usr/sbin/exim'
         process = await asyncio.create_subprocess_exec(
-            EXIM_PATH, '-bpc',
+            "/usr/sbin/exim", "-bpc",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -41,13 +39,13 @@ async def main(forcedargs=None):
 
     # Evaluate thresholds and return information and exit status
     if queue_size >= args.critical:
-        print(f"CRITICAL:- {queue_size} messages on queue | queue={queue_size}")
+        print("CRITICAL:- " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
         sys.exit(STATE_CRITICAL)
     elif queue_size >= args.warning:
-        print(f"WARNING: {queue_size} messages on queue | queue={queue_size}")
+        print("WARNING: " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
         sys.exit(STATE_WARNING)
     else:
-        print(f"OK: {queue_size} messages on queue | queue={queue_size}")
+        print("OK: " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
         sys.exit(STATE_OK)
 
 
