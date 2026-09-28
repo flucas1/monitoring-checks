@@ -12,7 +12,7 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
     parser.add_argument('-w', dest='warning', type=int, required=True, help="Queue size at which a warning is triggered")
     parser.add_argument('-c', dest='critical', type=int, required=True, help="Queue size at which a critical is triggered")

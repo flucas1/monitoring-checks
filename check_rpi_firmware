@@ -5,7 +5,7 @@ import asyncio
 import sys
 
 
-async def main():
+async def main(forcedargs=None):
     try:
         # Run vcgencmd and capture the output as text
         process = await asyncio.create_subprocess_exec(

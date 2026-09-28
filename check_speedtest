@@ -70,7 +70,7 @@ def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM
     return nagout
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Nagios speedtest-cli plugin")
 
     parser.add_argument('-w', type=float, required=True, help="Download Warning Level - *Required*")

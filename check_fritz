@@ -78,7 +78,7 @@ def format_uptime(seconds):
 # -------------------------------------------------------------------------------
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin")
     parser.add_argument('-H', '--host', default="fritz.box", help="IP-Adress or hostname from the Fritz!Box")
     parser.add_argument('-a', '--authfile', help="Authentication file")

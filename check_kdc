@@ -34,7 +34,7 @@ async def cleanup(cc_path, conf_path):
             pass
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Kerberos 5 KDC plugin for Nagios")
     parser.add_argument('-H', '--hostname', required=True, help="Name of KDC to check")
     parser.add_argument('-P', '--port', default='88', help="Port on which KDC runs (default 88)")

@@ -25,7 +25,7 @@ async def run_cmd(cmd):
         sys.exit(3)
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check DNSSEC validity and remaining expiration time.")
     parser.add_argument("-H", dest="zone", required=True, help="specify zone to check")
     parser.add_argument("-w", dest="warning", type=int, default=5, help="warning time left days")

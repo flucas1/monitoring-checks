@@ -84,7 +84,7 @@ async def check_stratum(hostname):
     sys.exit(stateid)
 
 
-async def main():
+async def main(forcedargs=None):
     target_host = sys.argv[1] if len(sys.argv) > 1 else ""
     await check_prerequisites()
     await check_stratum(target_host)

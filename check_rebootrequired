@@ -6,7 +6,7 @@ import sys
 import asyncio
 
 
-async def main():
+async def main(forcedargs=None):
     if os.path.exists("/var/run/reboot-required"):
         print("CRITICAL: a reboot is needed")
         sys.exit(2)

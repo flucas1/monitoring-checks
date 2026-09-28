@@ -122,7 +122,7 @@ def parse_uptime(uptime_report):
     return uptime_minutes, uptime_days, uptime_msg
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
     # Setup arguments mirroring the original getopts: -c, -w, -C, -W, -v
     parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')

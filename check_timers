@@ -5,7 +5,7 @@ import asyncio
 import sys
 
 
-async def main():
+async def main(forcedargs=None):
     # Reload the systemd manager configuration
     try:
         proc = await asyncio.create_subprocess_exec(

@@ -23,7 +23,7 @@ def get_state_string(state):
         return "UNKNOWN"
 
 
-async def main():
+async def main(forcedargs=None):
     # Define the command
     cmd = "/usr/bin/wbinfo"
 

@@ -288,7 +288,7 @@ async def check_alerts():
 # -------------------------------------------------------------------------------
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", dest="modus")
     parser.add_argument("-i", dest="interval", default="2")

@@ -227,7 +227,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
     return err_mesg
 
 
-async def main():
+async def main(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.")
     parser.add_argument('-m', dest='mtab', default='/proc/mounts', help="Use this mtab instead")
     parser.add_argument('-f', dest='fstab', default='/etc/fstab', help="Use this fstab instead")

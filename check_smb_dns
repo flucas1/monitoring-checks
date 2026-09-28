@@ -44,7 +44,7 @@ async def get_current_ip(ahosts_type, fqdn):
     return "\n".join(unique_ips)
 
 
-async def main():
+async def main(forcedargs=None):
     errors = ""
     fqdn = await get_cmd_output(["hostname", "-f"])
 

@@ -13,7 +13,7 @@ CRITICAL_DEFAULT = 4
 CHECKRESTART_BIN = "/usr/sbin/checkrestart"
 
 
-async def main():
+async def main(forcedargs=None):
     # Parse parameters
     parser = argparse.ArgumentParser(
         description="check_checkrestart - Check obsolete libraries still in use\n\nNeeds debian-goodies!",
