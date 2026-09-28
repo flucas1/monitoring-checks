@@ -7,6 +7,7 @@ import argparse
 import pycurl
 import io
 import asyncio
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -85,8 +86,8 @@ async def get_url_content(protocol, interface, timeout, url, accesstoken):
         infomsg("issue during curl " + str(e))
 
     infomsg("got remote answer")
-    bytes = buffer.getvalue()
-    content = bytes.decode()
+    bytes_data = buffer.getvalue()
+    content = bytes_data.decode()
     infomsg("the remote answer is '" + content + "'")
 
     return content
