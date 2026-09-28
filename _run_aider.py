@@ -54,7 +54,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 async def main():
     DIRECTORY = "."
     MODEL = "ollama/qwen3-coder-next:latest"
-    PROMPT = "Transform the attached python file to be async. Avoid to_thread, get_event_loop and get_running_loop. For python imports do not use 'from'. Remove legacy subprocess, urllib and concurrent.futures"
+    PROMPT = "Transform the attached python file to be async. Avoid to_thread, get_event_loop and get_running_loop. For python imports do not use 'from'. Remove legacy subprocess, urllib and concurrent.futures. Prefer \" rather than ' for string delimitator. Avoid f\" and .format syntax, use concatenation instead."
 
     await run_aider(DIRECTORY, MODEL, PROMPT)
 
