@@ -191,9 +191,10 @@ async def load_state(state_file):
         return {}
 
 
-def save_state(state_file, state):
-    with open(state_file, "w", encoding="utf-8") as f:
-        json.dump(state, f)
+async def save_state(state_file, state):
+    async with aiofiles.open(state_file, "w", encoding="utf-8") as f:
+        content = json.dumps(state)
+        await f.write(content)
 
 
 def check_thresholds(value, warn, crit):

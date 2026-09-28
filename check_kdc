@@ -72,9 +72,8 @@ async def main(forcedargs=None):
     os.close(conf_fd)
     os.close(cc_fd)
 
-    # Write the config file
-    with open(conf_path, "w") as f:
-        f.write(krb5_conf_content)
+    async with aiofiles.open(conf_path, "w") as f:
+        await f.write(krb5_conf_content)
 
     state = STATE_CRITICAL
 
