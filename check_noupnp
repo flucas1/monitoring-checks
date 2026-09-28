@@ -15,7 +15,7 @@ async def check_upnp_gateway():
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
-        #print("OK")
+        # print("OK")
         output = stdout.decode("utf-8").strip()
         errors = stderr.decode("utf-8").strip()
     except FileNotFoundError as e:
@@ -24,8 +24,8 @@ async def check_upnp_gateway():
         output = None
         errors = None
 
-    #print(output)
-    #print(errors)
+    # print(output)
+    # print(errors)
 
     # Evaluate the output and exit with corresponding messages and codes
     if errors == "No IGD UPnP Device found on the network !":

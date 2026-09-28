@@ -176,13 +176,13 @@ def check_thresholds(value, warn, crit):
 def nagios_exit(status_code, messages, perf_data=None):
     status_map = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
     status_str = status_map.get(status_code, "UNKNOWN")
-    
+
     output_line = f"Traffic {status_str}"
     if messages:
         output_line += " - " + ", ".join(messages)
     if perf_data:
         output_line += " | " + " ".join(perf_data)
-        
+
     print(output_line)
     sys.exit(status_code)
 
@@ -293,7 +293,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
 
     for interface in filtered_interfaces:
         interface_name = interface["pretty_ifname"]
-        
+
         if interface_name not in old_state["statistics"]:
             overall_status = max(overall_status, STATUS_WARNING)
             messages.append(f"no data in state file for {interface_name}, new interface?")
@@ -311,7 +311,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
 
             warn_limit = getattr(args, f"warning_{direction}")
             crit_limit = getattr(args, f"critical_{direction}")
-            
+
             metric_status = check_thresholds(bandwidth, warn_limit, crit_limit)
             overall_status = max(overall_status, metric_status)
 
@@ -357,7 +357,7 @@ async def main(args):
         }
 
     status, messages, perf_data = evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file)
-    
+
     save_state(state_file, current_state)
     nagios_exit(status, messages, perf_data)
 
