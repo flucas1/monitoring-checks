@@ -7,6 +7,7 @@ import re
 import math
 import asyncio
 import aiohttp
+import aiofiles
 
 
 # Nagios exit codes
@@ -100,7 +101,7 @@ async def main(forcedargs=None):
 
     if args.authfile:
         try:
-            async with aiofiles.open("/etc/nagios/scripts/" + args.authfile, 'r') as f:
+            async with aiofiles.open("/etc/nagios/scripts/" + args.authfile, "r") as f:
                 content = await f.read()
                 lines = content.splitlines()
                 if len(lines) >= 2:
