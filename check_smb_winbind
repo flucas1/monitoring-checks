@@ -27,11 +27,6 @@ async def main(forcedargs=None):
     # Define the command
     cmd = "/usr/bin/wbinfo"
 
-    # Check if the command string is empty (replicating 'if [ -z "$CMD" ]')
-    if not cmd:
-        print("Cannot find wbinfo executable")
-        sys.exit(STATE_UNKNOWN)
-
     try:
         # Create async subprocess
         process = await asyncio.create_subprocess_exec(

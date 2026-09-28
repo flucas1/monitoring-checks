@@ -86,7 +86,7 @@ async def findswitchesininterface(interface, model):
                     if marker in ["model", "name", "MAC", "dhcp", "ip"]:
                         infos[marker] = parts[1].strip()
                 if ("model" in infos.keys()) and ("MAC" in infos.keys()):
-                    if (infos["model"] == model) or (model == ""):
+                    if infos["model"] == model:
                         mac = infos["MAC"]
                         if mac not in result:
                             result.append(mac)

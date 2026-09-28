@@ -10,6 +10,7 @@ import argparse
 import ovh
 import json
 import asyncio
+import aiofiles
 
 # -------------------------------------------------------------------------------
 

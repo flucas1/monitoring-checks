@@ -108,7 +108,7 @@ def parse_uptime(uptime_report):
     # Calculate total minutes and days
     uptime_minutes = (days * 1440) + (hours * 60) + minutes
     raw_days = uptime_minutes / 1440.0
-    uptime_days = f"{raw_days:.4f}"
+    uptime_days = str(format(raw_days, ".4f"))
 
     # Construct the uptime message string based on available data
     msg_parts = []
@@ -117,7 +117,7 @@ def parse_uptime(uptime_report):
     if hours:
         msg_parts.append(str(hours) + " Hours")
     msg_parts.append(str(minutes) + " Minutes")
-    uptime_msg = ", ".join(msg_parts)  # Adjusting comma usage to be slightly cleaner than bash string concatenation
+    uptime_msg = ", ".join(msg_parts)
 
     return uptime_minutes, uptime_days, uptime_msg
 

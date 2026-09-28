@@ -368,7 +368,7 @@ async def main(args):
     args_hash = hashlib.sha1(pickle.dumps(relevant_args)).hexdigest()
     state_file = pathlib.Path(STATE_FILE_PATH) / ("." + "check_traffic" + "_" + args_hash + ".json")
 
-    old_state = load_state(state_file)
+    old_state = await load_state(state_file)
     execution_time, interfaces = get_interfaces(args)
 
     if not interfaces:
@@ -390,7 +390,7 @@ async def main(args):
 
     status, messages, perf_data = evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file)
 
-    save_state(state_file, current_state)
+    await save_state(state_file, current_state)
     nagios_exit(status, messages, perf_data)
 
 # -------------------------------------------------------------------------------

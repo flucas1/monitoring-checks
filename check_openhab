@@ -93,9 +93,9 @@ def split_threshold(value, level, convert):
 
 def check_limits(state, low, high, name, return_code):
     if low is not None and state < low:
-        return (return_code, "%s state (%s) is less than %s | value=%s" % (name, state, low, state))
+        return (return_code, name + " state (" + str(state) + ") is less than " + str(low) + " | value=" + str(state))
     elif high is not None and state > high:
-        return (return_code, "%s state (%s) is greater than %s | value=%s" % (name, state, high, state))
+        return (return_code, name + " state (" + str(state) + ") is greater than " + str(high) + " | value=" + str(state))
     else:
         return (None, None)
 
@@ -108,13 +108,13 @@ def build_thresholds(args):
         thresholds['number_warn_low'], thresholds['number_warn_high'] = split_threshold(args.number_warn, "number_warn", lambda i, f: float(i))
         thresholds['number_crit_low'], thresholds['number_crit_high'] = split_threshold(args.number_crit, "number_crit", lambda i, f: float(i))
         thresholds['number_unkn_low'], thresholds['number_unkn_high'] = split_threshold(args.number_unkn, "number_unkn", lambda i, f: float(i))
-        infomsg("# numeric thresholds: %s <<< %s << %s < x > %s >> %s >>> %s" % (thresholds['number_unkn_low'], thresholds['number_crit_low'], thresholds['number_warn_low'], thresholds['number_warn_high'], thresholds['number_crit_high'], thresholds['number_unkn_high']))
+        infomsg("# numeric thresholds: " + str(thresholds['number_unkn_low']) + " <<< " + str(thresholds['number_crit_low']) + " << " + str(thresholds['number_warn_low']) + " < x > " + str(thresholds['number_warn_high']) + " >> " + str(thresholds['number_crit_high']) + " >>> " + str(thresholds['number_unkn_high']))
 
     thresholds['datetime_limits'] = args.datetime_warn is not None or args.datetime_crit is not None
     if thresholds['datetime_limits']:
         thresholds['datetime_warn_low'], thresholds['datetime_warn_high'] = split_threshold(args.datetime_warn, "datetime_warn", lambda i, f: parse_iso8601(i, f))
         thresholds['datetime_crit_low'], thresholds['datetime_crit_high'] = split_threshold(args.datetime_crit, "datetime_crit", lambda i, f: parse_iso8601(i, f))
-        infomsg("# time thresholds: %s << %s < x > %s >> %s" % (thresholds['datetime_crit_low'], thresholds['datetime_warn_low'], thresholds['datetime_warn_high'], thresholds['datetime_crit_high']))
+        infomsg("# time thresholds: " + str(thresholds['datetime_crit_low']) + " << " + str(thresholds['datetime_warn_low']) + " < x > " + str(thresholds['datetime_warn_high']) + " >> " + str(thresholds['datetime_crit_high']))
 
     thresholds['string_limits'] = args.string_ok is not None or args.string_warn is not None or args.string_crit is not None
     if thresholds['string_limits']:
@@ -166,14 +166,14 @@ def check_thresholds(thresholds, state, name):
         try:
             state_time = dateutil.parser.parse(state)
         except ValueError as e:
-            return ("CRITICAL", "Time thresholds given for non-time state: %s | value=%s" % (state, state))
+            return ("CRITICAL", "Time thresholds given for non-time state: " + str(state) + " | value=" + str(state))
         rc, message = check_limits(state_time, thresholds.get('datetime_crit_low'), thresholds.get('datetime_crit_high'), name, "CRITICAL")
         if rc is not None:
             return (rc, message)
         rc, message = check_limits(state_time, thresholds.get('datetime_warn_low'), thresholds.get('datetime_warn_high'), name, "WARNING")
         if rc is not None:
             return (rc, message)
-        return ("OK", "%s state within valid datetime range: %s" % (name, state, state))
+        return ("OK", name + " state within valid datetime range: " + str(state))
 
     if thresholds.get('string_limits'):
         compiled_regex_crit = thresholds.get('compiled_regex_crit')
@@ -181,20 +181,20 @@ def check_thresholds(thresholds, state, name):
         compiled_regex_ok = thresholds.get('compiled_regex_ok')
 
         if compiled_regex_crit and compiled_regex_crit.search(state):
-            return ("CRITICAL", "%s string regex critical matched state: %s | value=%s" % (name, state, state))
+            return ("CRITICAL", name + " string regex critical matched state: " + str(state) + " | value=" + str(state))
         elif compiled_regex_warn and compiled_regex_warn.search(state):
-            return ("WARNING", "%s string regex warning matched state: %s | value=%s" % (name, state, state))
+            return ("WARNING", name + " string regex warning matched state: " + str(state) + " | value=" + str(state))
         elif compiled_regex_ok and compiled_regex_ok.search(state):
-            return ("OK", "%s string regex ok matched state: %s | value=%s" % (name, state, state))
+            return ("OK", name + " string regex ok matched state: " + str(state) + " | value=" + str(state))
         else:
-            return ("UNKNOWN", "%s any regex is matching %s | value=%s" % (name, state, state))
+            return ("UNKNOWN", name + " any regex is matching " + str(state) + " | value=" + str(state))
 
-    return ("OK", "%s state within fallback sittuation: %s | value=%s" % (name, state, state))
+    return ("OK", name + " state within fallback sittuation: " + str(state) + " | value=" + str(state))
 
 
 async def check_item(object_json, thresholds, timeoutstatus):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
-        return (timeoutstatus, "%s is uninitialized." % object_json["name"])
+        return (timeoutstatus, object_json["name"] + " is uninitialized.")
     else:
         return check_thresholds(thresholds, object_json["state"], object_json["name"])
 
@@ -207,7 +207,7 @@ async def check_thing(object_json, args):
         rc = "UNKNOWN"
     else:
         rc = "CRITICAL"
-    return (rc, "%s is %s." % (object_json["UID"], status))
+    return (rc, object_json["UID"] + " is " + status + ".")
 
 
 async def check_group(group_json, thresholds, args, timeoutstatus):
@@ -223,7 +223,7 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
             rc, message = await check_item(i, thresholds, timeoutstatus)
             try:
                 state_float = float(i["state"])
-                perfdata += ("%s=%s " % (i["name"], i["state"]))
+                perfdata += (i["name"] + "=" + i["state"] + " ")
             except:
                 pass
 
@@ -270,9 +270,9 @@ async def fetch_object(item_url, args, timeoutstatus):
         async with aiohttp.ClientSession() as session:
             async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
                 if response.status == 404:
-                    exitnagios(timeoutstatus, "item %s does not exist." % item_url)
+                    exitnagios(timeoutstatus, "item " + str(item_url) + " does not exist.")
                 elif response.status != 200:
-                    exitnagios(timeoutstatus, "exception fetching item data - HTTP %d" % response.status)
+                    exitnagios(timeoutstatus, "exception fetching item data - HTTP " + str(response.status))
                 object_json = await response.json()
                 infomsg("# " + str(json.dumps(object_json)))
                 return object_json
@@ -330,7 +330,7 @@ async def main(forcedargs=None):
     object_name = temp[0].split(".")[0]
     object_name = object_name.replace("-", "_") + "_" + temp[1]
 
-    object_url = "%s://%s:%d%s/%s/%s" % ("https" if args.ssl else "http", args.hostname, args.port, args.base_url, object_type, object_name)
+    object_url = ("https" if args.ssl else "http") + "://" + args.hostname + ":" + str(args.port) + args.base_url + "/" + object_type + "/" + object_name
     object_json = await fetch_object(object_url, args, timeoutstatus)
 
     if args.group:
@@ -340,7 +340,7 @@ async def main(forcedargs=None):
         elif len(messages) == 1:
             final_message = messages[0]
         else:
-            final_message = "%d problems in group %s.\n%s" % (len(messages), object_json["name"], "\n".join(messages))
+            final_message = str(len(messages)) + " problems in group " + object_json["name"] + ".\n" + "\n".join(messages)
         exitnagios(rc, final_message + " | " + perfdata)
     elif args.item:
         rc, message = await check_item(object_json, thresholds, timeoutstatus)
