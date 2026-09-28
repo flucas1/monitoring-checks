@@ -119,7 +119,7 @@ async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warn
     cmdline = cmdline + ["-c", str(packets)]
     cmdline = cmdline + ["-W", str(2)]
     cmdline = cmdline + [hostname]
-    infomsg(cmdline)
+    infomsg(str(cmdline))
 
     try:
         process = await asyncio.create_subprocess_exec(
@@ -224,7 +224,7 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
             else:
                 if reason not in critreasons:
                     critreasons.append(reason)
-        infomsg(result)
+        infomsg(str(result))
 
     average = float(average) / len(hosts)
     percentloss = float(percentloss) / len(hosts)

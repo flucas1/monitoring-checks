@@ -52,7 +52,7 @@ async def main(forcedargs=None):
     try:
         cmdline = ['/usr/bin/vcgencmd', 'get_throttled']
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -62,7 +62,7 @@ async def main(forcedargs=None):
         exitcode = process.returncode
         value = output.split('=')[1]
         status = int(value, 16)
-    except (subprocess.CalledProcessError, IndexError, ValueError):
+    except (IndexError, ValueError):
         exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status")
 
     if (status & 0x1) != 0:
