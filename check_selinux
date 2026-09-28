@@ -49,16 +49,16 @@ async def check_selinux_mode(expected_mode, warning_flag):
 # -------------------------------------------------------------------------------
 
 
-def parse_arguments():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check expected SELinux mode.")
     parser.add_argument('-w', '--warning', action='store_true', help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one")
     parser.add_argument('selinux_mode', type=str.lower, choices=SELINUX_MODES, metavar='SELINUX_MODE', help="Expected SELinux mode (allowed values: " + " ".join(SELINUX_MODES) + ")")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
     return args
 
 
-async def main():
-    args = parse_arguments()
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
     await check_selinux_mode(args.selinux_mode, args.warning)
 
 # -------------------------------------------------------------------------------

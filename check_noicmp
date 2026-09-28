@@ -130,10 +130,10 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "Error executing ping: " + str(e))
 
     # and then check the exitcode...
-    if exitcode != 0:
-        exitnagios("OK", args.hostname + " is not reacheable!")
+    if exitcode == 0:
+        exitnagios("CRITICAL", args.hostname + " is reachable!")
     else:
-        exitnagios("CRITICAL", args.hostname + " is reacheable!")
+        exitnagios("OK", args.hostname + " is not reachable!")
 
 # -------------------------------------------------------------------------------
 

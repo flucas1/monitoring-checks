@@ -45,13 +45,6 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Detect files with Windows line endings.")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="Enable debug output")
-    return parser.parse_args()
 
 # -------------------------------------------------------------------------------
 
@@ -97,8 +90,15 @@ async def scan_directory(path, debug):
 # -------------------------------------------------------------------------------
 
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Detect files with Windows line endings.")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="Enable debug output")
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
-    args = parse_args()
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
     all_found_files = []
 
     paths_to_check = ["/etc"]

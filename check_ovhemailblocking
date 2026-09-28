@@ -81,8 +81,10 @@ async def generateOvhClient(credentialsfile):
 
         # https://github.com/ovh/python-ovh
         # Instantiate. Visit https://api.ovh.com/createToken/?GET=/me to get your credentials
-        infomsg("Logged in OVH as " + client.get("/me")["email"])
-        infomsg("List of applications in OVH as " + str(client.get("/me/api/application")))
+        me_info = client.get("/me")
+        infomsg("Logged in OVH as " + me_info["email"])
+        api_info = client.get("/me/api/application")
+        infomsg("List of applications in OVH as " + str(api_info))
     except:
         client = None
 

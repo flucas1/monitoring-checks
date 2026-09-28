@@ -10,6 +10,7 @@ import ipaddress
 import dns.asyncresolver
 import dns.exception
 import aiofiles
+import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -96,8 +97,8 @@ async def testvalue(ipo, dnsquery, recordtype, customresolver):
         if len(queryrr.rrset) > 0:
             for rr in queryrr.rrset:
                 foundip = ipaddress.ip_address(rr)
-                # infomsg("--> "+str(foundip))
-                # infomsg("--> "+str(ipo))
+                # infomsg("--> " + str(foundip))
+                # infomsg("--> " + str(ipo))
                 if str(foundip) == str(ipo):
                     result = True
                     break
@@ -182,7 +183,6 @@ async def main(forcedargs=None):
 # -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
 
 # -------------------------------------------------------------------------------
