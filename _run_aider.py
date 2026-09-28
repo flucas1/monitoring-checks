@@ -56,12 +56,13 @@ async def main():
     MODEL = "ollama/qwen3-coder-next:latest"
     PROMPT = []
     PROMPT.append("Transform the attached python file to be async.")
-    PROMPT.append("The main function is always async.")
+    PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     PROMPT.append("Avoid to_thread, get_event_loop and get_running_loop.")
     PROMPT.append("For python imports do not use 'from'.")
     PROMPT.append("Remove legacy subprocess, urllib and concurrent.futures.")
     PROMPT.append("Prefer \" rather than ' for string delimitator.")
     PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
+    PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
