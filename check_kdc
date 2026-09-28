@@ -19,7 +19,7 @@ async def cleanup(cc_path, conf_path):
     if cc_path and os.path.exists(cc_path):
         try:
             proc = await asyncio.create_subprocess_exec(
-                'kdestroy', '-c', cc_path,
+                "kdestroy", "-c", cc_path,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL
             )
@@ -35,33 +35,34 @@ async def cleanup(cc_path, conf_path):
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(description="Kerberos 5 KDC plugin for Nagios")
-    parser.add_argument('-H', '--hostname', required=True, help="Name of KDC to check")
-    parser.add_argument('-P', '--port', default='88', help="Port on which KDC runs (default 88)")
-    parser.add_argument('-p', '--principal', required=True, help="Principal name to authenticate as (including realm)")
-    parser.add_argument('-k', '--keytab', required=True, help="Keytab file containing principal key")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname", required=True, help="Name of KDC to check")
+    parser.add_argument("-P", "--port", default="88", help="Port on which KDC runs (default 88)")
+    parser.add_argument("-p", "--principal", required=True, help="Principal name to authenticate as (including realm)")
+    parser.add_argument("-k", "--keytab", required=True, help="Keytab file containing principal key")
 
     args = parser.parse_args()
 
     # Validate principal format
-    if '@' not in args.principal:
+    if "@" not in args.principal:
         print("UNKNOWN: Principal must include realm (e.g., user@REALM)")
         sys.exit(STATE_UNKNOWN)
 
     # Extract realm (equivalent to: sed -e s/.*@//)
-    realm = args.principal.split('@', 1)[-1]
-    kdc_address = f"{args.hostname}:{args.port}"
+    realm = args.principal.split("@", 1)[-1]
+    kdc_address = args.hostname + ":" + args.port
 
     # Generate Kerberos config content
-    krb5_conf_content = f"""[libdefaults]
-default_realm = {realm}
-[realms]
-{realm} = {{ 
-kdc = {kdc_address}
-}}
-[appdefaults]
-krb4_get_tickets = false
-"""
+    krb5_conf_content = (
+        "[libdefaults]\n"
+        "default_realm = " + realm + "\n"
+        "[realms]\n"
+        + realm + " = { \n"
+        "kdc = " + kdc_address + "\n"
+        "}\n"
+        "[appdefaults]\n"
+        "krb4_get_tickets = false\n"
+    )
 
     # Securely create temp files for config and credential cache
     conf_fd, conf_path = tempfile.mkstemp(prefix="nagios_krb5_conf_")
@@ -72,7 +73,7 @@ krb4_get_tickets = false
     os.close(cc_fd)
 
     # Write the config file
-    with open(conf_path, 'w') as f:
+    with open(conf_path, "w") as f:
         f.write(krb5_conf_content)
 
     state = STATE_CRITICAL
@@ -80,10 +81,10 @@ krb4_get_tickets = false
     try:
         # Prepare environment with our temporary config
         env = os.environ.copy()
-        env['KRB5_CONFIG'] = conf_path
+        env["KRB5_CONFIG"] = conf_path
 
         # Construct and run the kinit command
-        cmd = ['/usr/bin/kinit', '-c', cc_path, '-k', '-t', args.keytab, args.principal]
+        cmd = ["/usr/bin/kinit", "-c", cc_path, "-k", "-t", args.keytab, args.principal]
 
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -100,15 +101,18 @@ krb4_get_tickets = false
             state = STATE_OK
         else:
             # Grab the first line of stdout (equivalent to head -n 1)
-            error_msg = stdout.decode().strip().split('\n')[0] if stdout else "Unknown error"
-            print(f"CRITICAL Getting Kerberos ticket: {error_msg}")
+            error_msg = ""
+            if stdout:
+                decoded = stdout.decode().strip()
+                error_msg = decoded.replace("\n", " ")
+            print("CRITICAL Getting Kerberos ticket: " + error_msg)
             state = STATE_CRITICAL
 
     except FileNotFoundError:
         print("CRITICAL: /usr/bin/kinit not found")
         state = STATE_CRITICAL
     except Exception as e:
-        print(f"CRITICAL: {str(e)}")
+        print("CRITICAL: " + str(e))
         state = STATE_CRITICAL
     finally:
         # Cleanup mechanism via finally (equivalent to bash trap)
@@ -116,5 +120,5 @@ krb4_get_tickets = false
         sys.exit(state)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
