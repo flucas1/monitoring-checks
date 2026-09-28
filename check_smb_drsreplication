@@ -76,7 +76,7 @@ def dosmbreplicationcall():
                     consecutive_sync_failures[server] = 0
                 consecutive_sync_failures[server] += n.consecutive_sync_failures
         for server in consecutive_sync_failures:
-            text = "%s failures on %s" % (consecutive_sync_failures[server], server)
+            text = str(consecutive_sync_failures[server]) + " failures on " + server
             msg = msg + ", " + text if msg else text
     except RuntimeError as error:
         exitnagios("CRITICAL", str(error))

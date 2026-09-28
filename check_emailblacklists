@@ -492,7 +492,7 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
                 status = cells[0].text.strip()
                 listname = cells[1].text.strip()
                 if status != "" and listname != "":
-                    print(f"Row {index}: {status} {listname}")
+                    infomsg("Row " + str(index) + ": " + status + " " + listname)
                     if status.upper() not in ["OK", "TIMEOUT"]:
                         if listname in ignorelist:
                             infomsg("ignoring " + listname)

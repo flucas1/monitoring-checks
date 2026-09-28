@@ -32,7 +32,7 @@ async def check_upnp_gateway():
         print("OK: no UPnP gateway found")
         sys.exit(0)
     else:
-        print(f"CRITICAL: an UPnP gateway was found!!!! {errors}")
+        print("CRITICAL: an UPnP gateway was found - " + errors)
         sys.exit(2)
 
 

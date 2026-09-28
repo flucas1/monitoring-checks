@@ -92,7 +92,7 @@ def build_final_message(host, output, errors):
     status_text = parts[0].strip()
     perfdata = parts[1].strip() if len(parts) > 1 else ""
 
-    finalmsg = f"{host} -> {status_text}"
+    finalmsg = host + " -> " + status_text
     if errors != "":
         finalmsg = finalmsg + "\n\n" + errors.replace("|", "#")
     if perfdata != "":
