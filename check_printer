@@ -39,7 +39,7 @@ OIDS = {
 async def walk_snmp(args, oid, raw=True):
     output_options = "-Oavq" if raw else "-Oa"
     cmdline = ["snmpwalk", "-v", args.snmpversion, output_options]
-    if args.snmpversion == '3':
+    if args.snmpversion == "3":
         cmdline.extend(["-u", args.user, "-l", args.privlevel, "-x", args.privprotocol, "-X", args.privpassword, "-a", args.authprotocol, "-A", args.authpassword])
     else:
         cmdline.extend(["-c", args.community])
@@ -54,29 +54,29 @@ async def walk_snmp(args, oid, raw=True):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print(f"snmpwalk command error.\n{stderr.decode().strip()}")
+            print("snmpwalk command error.\n" + stderr.decode().strip())
             sys.exit(STATE_UNK)
 
         text = stdout.decode().strip()
         if raw:
             # Remove leading whitespace and quotes like sed/tr in bash
-            text = "\n".join([line.lstrip().replace('"', '') for line in text.splitlines()])
+            text = "\n".join([line.lstrip().replace('"', "") for line in text.splitlines()])
         return text
     except Exception as e:
-        print(f"snmpwalk command error.\n{str(e)}")
+        print("snmpwalk command error.\n" + str(e))
         sys.exit(STATE_UNK)
 
 
 async def check_model(args):
     """Returns printer model and serial"""
-    model = await walk_snmp(args, f"{OIDS['hrDeviceDescr']}.1", True)
-    serial = await walk_snmp(args, OIDS['prtGeneralSerialNumber'], True)
-    return STATE_OK, f"{model}, Serial # {serial}", ""
+    model = await walk_snmp(args, OIDS["hrDeviceDescr"] + ".1", True)
+    serial = await walk_snmp(args, OIDS["prtGeneralSerialNumber"], True)
+    return STATE_OK, model + ", Serial # " + serial, ""
 
 
 async def check_messages(args):
     """Shows messages on the printer display"""
-    messages = await walk_snmp(args, OIDS['prtAlertDescription'], True)
+    messages = await walk_snmp(args, OIDS["prtAlertDescription"], True)
     if not messages:
         return STATE_UNK, "UNKNOWN: Can't determine messages. Device does not support this OID.", ""
     else:
@@ -85,18 +85,18 @@ async def check_messages(args):
 
 async def check_pagecount(args):
     """Returns formatted page count"""
-    page_count = await walk_snmp(args, OIDS['prtMarkerLifeCount'], True)
-    perfdata = f"'Pages'={page_count}"
+    page_count = await walk_snmp(args, OIDS["prtMarkerLifeCount"], True)
+    perfdata = "'Pages'=" + page_count
     try:
-        formatted_count = f"{int(page_count):,}"
+        formatted_count = "{:,}".format(int(page_count))
     except ValueError:
         formatted_count = page_count
-    return STATE_OK, f"Pagecount is {formatted_count}.", perfdata
+    return STATE_OK, "Pagecount is " + formatted_count + ".", perfdata
 
 
 async def check_display(args):
     """Report contents of printer display"""
-    display = await walk_snmp(args, OIDS['prtConsoleDisplayBufferText'], True)
+    display = await walk_snmp(args, OIDS["prtConsoleDisplayBufferText"], True)
     if display:
         return STATE_OK, display.replace("\n", " - "), ""
     else:
@@ -105,30 +105,30 @@ async def check_display(args):
 
 async def check_printer_status(args):
     """Check overall status of the printer"""
-    prt_status = await walk_snmp(args, OIDS['hrPrinterStatus'], True)
+    prt_status = await walk_snmp(args, OIDS["hrPrinterStatus"], True)
 
     if prt_status in ("1", "other", "other(1)"):
-        return STATE_CRIT, f"CRITICAL: Printer status = {prt_status}.", ""
+        return STATE_CRIT, "CRITICAL: Printer status = " + prt_status + ".", ""
     elif prt_status in ("3", "idle", "idle(3)", "4", "printing", "printing(4)", "5", "warmup", "warmup(5)"):
-        return STATE_OK, f"OK: Printer status = {prt_status}.", ""
+        return STATE_OK, "OK: Printer status = " + prt_status + ".", ""
     else:
-        return STATE_WARN, f"WARNING: Printer status = {prt_status}.", ""
+        return STATE_WARN, "WARNING: Printer status = " + prt_status + ".", ""
 
 
 async def _check_one_consumable(args, marker_id, state_string, perfdata):
     """Determines capacity and status code for a single consumable"""
     consum_state = STATE_OK
-    marker_name = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
+    marker_name = await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"] + "." + marker_id, True)
 
-    marker_color = await walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
+    marker_color = await walk_snmp(args, OIDS["prtMarkerColorantValue"] + "." + marker_id, True)
     if marker_color and marker_color.lower() not in marker_name.lower() and marker_color != "No Such Instance currently exists at this OID":
-        marker_name = f"{marker_color} {marker_name}"
+        marker_name = marker_color + " " + marker_name
 
     if not marker_name:
         return STATE_UNK, "UNKNOWN - OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
-    current_cap = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
-    max_cap = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
+    current_cap = await walk_snmp(args, OIDS["prtMarkerSuppliesLevel"] + "." + marker_id, True)
+    max_cap = await walk_snmp(args, OIDS["prtMarkerSuppliesMaxCapacity"] + "." + marker_id, True)
 
     try:
         current_cap = int(current_cap)
@@ -138,7 +138,7 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
 
     if current_cap == -3:  # Some supply remains
         # Fallback to Brother's proprietary SNMP OID to extract precise percentages
-        brother_hex = await walk_snmp(args, OIDS.get('brInfoMaintenance', '1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'), True)
+        brother_hex = await walk_snmp(args, OIDS.get("brInfoMaintenance", "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0"), True)
         pct = None
 
         if brother_hex and "No Such Object" not in brother_hex:
@@ -147,30 +147,30 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
             color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
 
             if color_id:
-                clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
+                clean_hex = brother_hex.replace("\n", " ").replace("Hex-STRING:", "")
                 match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
                 if match:
                     pct = int(match.group(1), 16)  # Convert the final hex byte to a decimal integer
 
         if pct is not None:
             if pct > args.warning:
-                state_string += f"OK: {marker_name} is at {pct}% - "
+                state_string += "OK: " + marker_name + " is at " + str(pct) + "% - "
             elif args.critical < pct <= args.warning:
-                state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
+                state_string = "WARNING: " + marker_name + " is at " + str(pct) + "% - " + state_string
                 consum_state = max(consum_state, STATE_WARN)
             elif pct <= args.critical:
-                state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
+                state_string = "CRITICAL: " + marker_name + " is at " + str(pct) + "% - " + state_string
                 consum_state = STATE_CRIT
 
-            perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
+            perfdata += " '" + marker_name + "'=" + str(pct) + ";" + str(args.warning) + ";" + str(args.critical)
         else:
-            state_string += f"OK: {marker_name} valid - "
+            state_string += "OK: " + marker_name + " valid - "
 
     elif current_cap == -2:  # Unknown
-        state_string = f"WARNING: {marker_name} is at level - {state_string}"
+        state_string = "WARNING: " + marker_name + " is at level - " + state_string
         consum_state = max(consum_state, STATE_WARN)
     elif current_cap == 0:  # Empty
-        state_string = f"CRITICAL: {marker_name} is at level - {state_string}"
+        state_string = "CRITICAL: " + marker_name + " is at level - " + state_string
         consum_state = STATE_CRIT
     elif max_cap > 0:  # Measurable component
         pct = int((current_cap * 100) / max_cap)
@@ -180,15 +180,15 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
             pct = 100 - pct
 
         if pct > args.warning:
-            state_string += f"OK: {marker_name} is at {pct}% - "
+            state_string += "OK: " + marker_name + " is at " + str(pct) + "% - "
         elif args.critical < pct <= args.warning:
-            state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
+            state_string = "WARNING: " + marker_name + " is at " + str(pct) + "% - " + state_string
             consum_state = max(consum_state, STATE_WARN)
         elif pct <= args.critical:
-            state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
+            state_string = "CRITICAL: " + marker_name + " is at " + str(pct) + "% - " + state_string
             consum_state = STATE_CRIT
 
-        perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
+        perfdata += " '" + marker_name + "'=" + str(pct) + ";" + str(args.warning) + ";" + str(args.critical)
 
     return consum_state, state_string, perfdata
 
@@ -200,10 +200,10 @@ async def check_consumables(args, param):
     perfdata = ""
 
     if param.upper() == "TEST":
-        all_markers = await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True)
-        return STATE_UNK, f"Consumables you may monitor:\n{all_markers}", ""
+        all_markers = await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"], True)
+        return STATE_UNK, "Consumables you may monitor:\n" + all_markers, ""
     elif param.upper() == "ALL":
-        all_markers = (await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True)).splitlines()
+        all_markers = (await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"], True)).splitlines()
         tasks = []
         for i in range(1, len(all_markers) + 1):
             tasks.append(_check_one_consumable(args, str(i), state_string, perfdata))
@@ -215,7 +215,7 @@ async def check_consumables(args, param):
             consums_state = max(consums_state, status)
     else:
         # Match specific string
-        all_markers = (await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], False)).splitlines()
+        all_markers = (await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"], False)).splitlines()
         matched = [line for line in all_markers if re.search(param, line, re.IGNORECASE)]
 
         if not matched:
@@ -223,7 +223,7 @@ async def check_consumables(args, param):
 
         tasks = []
         for line in matched:
-            match = re.search(r'\.(\d+)\s*=', line)
+            match = re.search(r"\.(\d+)\s*=", line)
             if match:
                 tasks.append(_check_one_consumable(args, match.group(1), state_string, perfdata))
 
@@ -238,7 +238,7 @@ async def check_consumables(args, param):
 
 async def check_exact_consumable(args, param):
     """Loops through all consumables and compares exact string"""
-    all_markers = (await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], True)).replace(".", "").splitlines()
+    all_markers = (await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"], True)).replace(".", "").splitlines()
     found_idx = -1
 
     for i, marker in enumerate(all_markers, start=1):
@@ -249,7 +249,7 @@ async def check_exact_consumable(args, param):
     if found_idx != -1:
         return await _check_one_consumable(args, str(found_idx), "", "")
     else:
-        return STATE_UNK, f"UNKNOWN - No match found for '{param}' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+        return STATE_UNK, "UNKNOWN - No match found for '" + param + "' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
 
 async def check_toner_levels(args):
@@ -259,13 +259,13 @@ async def check_toner_levels(args):
     perfdata = ""
 
     # Fetch all supply descriptions
-    temp_markers = await walk_snmp(args, OIDS['prtMarkerSuppliesDescription'], False)
+    temp_markers = await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"], False)
     all_markers = temp_markers.splitlines()
 
     # Filter for toners, specifically excluding "waste" to avoid the Waste Toner Box
     matched = []
     for line in all_markers:
-        if re.search(r'toner', line, re.IGNORECASE) and not re.search(r'waste', line, re.IGNORECASE):
+        if re.search(r"toner", line, re.IGNORECASE) and not re.search(r"waste", line, re.IGNORECASE):
             matched.append(line)
 
     if not matched:
@@ -274,22 +274,22 @@ async def check_toner_levels(args):
     tasks = []
     for line in matched:
         # Extract marker ID
-        match = re.search(r'\.(\d+)\s*=', line)
+        match = re.search(r"\.(\d+)\s*=", line)
         if not match:
             continue
 
         marker_id = match.group(1)
 
         # Build the accurate marker name and color
-        marker_name = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesDescription']}.{marker_id}", True)
-        marker_color = await walk_snmp(args, f"{OIDS['prtMarkerColorantValue']}.{marker_id}", True)
+        marker_name = await walk_snmp(args, OIDS["prtMarkerSuppliesDescription"] + "." + marker_id, True)
+        marker_color = await walk_snmp(args, OIDS["prtMarkerColorantValue"] + "." + marker_id, True)
 
         if marker_color and marker_color.lower() not in marker_name.lower() and "No Such" not in marker_color:
-            marker_name = f"{marker_color} {marker_name}"
+            marker_name = marker_color + " " + marker_name
 
         # Fetch capacities
-        current_cap_str = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesLevel']}.{marker_id}", True)
-        max_cap_str = await walk_snmp(args, f"{OIDS['prtMarkerSuppliesMaxCapacity']}.{marker_id}", True)
+        current_cap_str = await walk_snmp(args, OIDS["prtMarkerSuppliesLevel"] + "." + marker_id, True)
+        max_cap_str = await walk_snmp(args, OIDS["prtMarkerSuppliesMaxCapacity"] + "." + marker_id, True)
 
         try:
             current_cap = int(current_cap_str)
@@ -302,19 +302,19 @@ async def check_toner_levels(args):
         # Apply specific states and calculations
         if current_cap == -3:
             # Fallback to Brother's proprietary SNMP OID for exact percentages
-            brother_hex = await walk_snmp(args, OIDS.get('brInfoMaintenance', '1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'), True)
+            brother_hex = await walk_snmp(args, OIDS.get("brInfoMaintenance", "1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0"), True)
             if brother_hex and "No Such Object" not in brother_hex:
                 color_map = {"black": "81", "cyan": "82", "magenta": "83", "yellow": "84"}
                 color_id = next((cid for c, cid in color_map.items() if c in marker_name.lower()), None)
 
                 if color_id:
-                    clean_hex = brother_hex.replace('\n', ' ').replace('Hex-STRING:', '')
+                    clean_hex = brother_hex.replace("\n", " ").replace("Hex-STRING:", "")
                     hex_match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
                     if hex_match:
                         pct = int(hex_match.group(1), 16)
 
         elif current_cap == -2:
-            state_string += f"WARNING: {marker_name} is UNKNOWN - "
+            state_string += "WARNING: " + marker_name + " is UNKNOWN - "
             toner_state = max(toner_state, STATE_WARN)
             continue
 
@@ -328,28 +328,28 @@ async def check_toner_levels(args):
         # Apply Nagios thresholds and build the output string
         if pct is not None:
             if pct > args.warning:
-                state_string += f"OK: {marker_name} is at {pct}% - "
+                state_string += "OK: " + marker_name + " is at " + str(pct) + "% - "
             elif args.critical < pct <= args.warning:
-                state_string = f"WARNING: {marker_name} is at {pct}% - {state_string}"
+                state_string = "WARNING: " + marker_name + " is at " + str(pct) + "% - " + state_string
                 toner_state = max(toner_state, STATE_WARN)
             elif pct <= args.critical:
-                state_string = f"CRITICAL: {marker_name} is at {pct}% - {state_string}"
+                state_string = "CRITICAL: " + marker_name + " is at " + str(pct) + "% - " + state_string
                 toner_state = STATE_CRIT
 
-            perfdata += f" '{marker_name}'={pct};{args.warning};{args.critical}"
+            perfdata += " '" + marker_name + "'=" + str(pct) + ";" + str(args.warning) + ";" + str(args.critical)
         else:
             # Fallback if it's -3 but the Brother hex extraction failed
             if current_cap == -3:
-                state_string += f"OK: {marker_name} valid - "
+                state_string += "OK: " + marker_name + " valid - "
 
     return toner_state, state_string, perfdata
 
 
 def _get_tray_dimensions(args, tray_id):
     """Helper to calculate tray dimension strings"""
-    feed = int(walk_snmp(args, f"{OIDS['prtInputMediaDimFeedDirDeclared']}.{tray_id}", True) or -1)
-    xfeed = int(walk_snmp(args, f"{OIDS['prtInputMediaDimXFeedDirDeclared']}.{tray_id}", True) or -1)
-    units = walk_snmp(args, f"{OIDS['prtInputDimUnit']}.{tray_id}", True)
+    feed = int(walk_snmp(args, OIDS["prtInputMediaDimFeedDirDeclared"] + "." + tray_id, True) or -1)
+    xfeed = int(walk_snmp(args, OIDS["prtInputMediaDimXFeedDirDeclared"] + "." + tray_id, True) or -1)
+    units = walk_snmp(args, OIDS["prtInputDimUnit"] + "." + tray_id, True)
 
     if feed < 0 and xfeed < 0:
         return "paper."
@@ -361,21 +361,21 @@ def _get_tray_dimensions(args, tray_id):
         feed = round((feed * 0.0000393700787) + 0.5, 1)
         xfeed = round((xfeed * 0.0000393700787) + 0.5, 1)
 
-    return f"{xfeed} x {feed} paper."
+    return str(xfeed) + " x " + str(feed) + " paper."
 
 
 async def _check_one_tray(args, tray_id, state_string, perfdata):
     """Checks the tray #, returns status and capacity"""
     tray_state = STATE_OK
-    tray_cap_str = await walk_snmp(args, f"{OIDS['prtInputCurrentLevel']}.{tray_id}", True)
+    tray_cap_str = await walk_snmp(args, OIDS["prtInputCurrentLevel"] + "." + tray_id, True)
 
     if not tray_cap_str:
-        state_string += f" UNKNOWN - Tray {tray_id} not found. Use the TRAY TEST option to determine which trays may be monitored."
+        state_string += " UNKNOWN - Tray " + tray_id + " not found. Use the TRAY TEST option to determine which trays may be monitored."
         return STATE_UNK, state_string, perfdata
 
-    tray_name = await walk_snmp(args, f"{OIDS['prtInputName']}.{tray_id}", True)
+    tray_name = await walk_snmp(args, OIDS["prtInputName"] + "." + tray_id, True)
     if not tray_name:
-        tray_name = f"Tray {tray_id}"
+        tray_name = "Tray " + tray_id
 
     try:
         tray_cap = int(tray_cap_str)
@@ -383,30 +383,30 @@ async def _check_one_tray(args, tray_id, state_string, perfdata):
         return STATE_UNK, state_string, perfdata
 
     if tray_cap == -3:
-        state_string += f"{tray_name} is OK - "
+        state_string += tray_name + " is OK - "
     elif tray_cap == -2:
-        state_string += f"{tray_name} status is UNKNOWN - "
+        state_string += tray_name + " status is UNKNOWN - "
         tray_state = STATE_UNK
     elif tray_cap == 0:
         dim_str = _get_tray_dimensions(args, tray_id)
-        state_string += f"{tray_name} is at CRITICAL level - please refill with more {dim_str} - "
+        state_string += tray_name + " is at CRITICAL level - please refill with more " + dim_str + " - "
         tray_state = STATE_CRIT
     else:
-        tray_max = int(await walk_snmp(args, f"{OIDS['prtInputMaxCapacity']}.{tray_id}", True) or 1)
+        tray_max = int(await walk_snmp(args, OIDS["prtInputMaxCapacity"] + "." + tray_id, True) or 1)
         pct = int((tray_cap * 100) / tray_max)
 
         if pct > args.critical and pct > args.warning:
-            state_string += f"{tray_name} is at {pct}% - OK - "
+            state_string += tray_name + " is at " + str(pct) + "% - OK - "
         elif pct <= args.warning:
             dim_str = _get_tray_dimensions(args, tray_id)
             if pct <= args.critical:
-                state_string += f"{tray_name} is at {pct}% - CRITICAL - Please refill with more {dim_str} - "
+                state_string += tray_name + " is at " + str(pct) + "% - CRITICAL - Please refill with more " + dim_str + " - "
                 tray_state = STATE_CRIT
             else:
-                state_string += f"{tray_name} is at {pct}% - WARNING - Please refill with more {dim_str} - "
+                state_string += tray_name + " is at " + str(pct) + "% - WARNING - Please refill with more " + dim_str + " - "
                 tray_state = max(tray_state, STATE_WARN)
 
-        perfdata += f" '{tray_name}'={pct};{args.warning};{args.critical}"
+        perfdata += " '" + tray_name + "'=" + str(pct) + ";" + str(args.warning) + ";" + str(args.critical)
 
     return tray_state, state_string, perfdata
 
@@ -417,7 +417,7 @@ async def check_paper_trays(args, param, arg_token):
     state_string = ""
     perfdata = ""
 
-    temp_trays = await walk_snmp(args, OIDS['prtInputName'], True)
+    temp_trays = await walk_snmp(args, OIDS["prtInputName"], True)
     all_trays_raw = temp_trays.splitlines()
 
     all_trays = []
@@ -429,7 +429,7 @@ async def check_paper_trays(args, param, arg_token):
             all_trays.append(t)
 
     if param.upper() == "TEST":
-        return STATE_UNK, f"Trays you may monitor:\n" + "\n".join(all_trays), ""
+        return STATE_UNK, "Trays you may monitor:\n" + "\n".join(all_trays), ""
     elif param.upper() == "ALL":
         tasks = []
         for i in range(1, len(all_trays_raw) + 1):
@@ -506,7 +506,7 @@ async def main(forcedargs=None):
     if not perfdata:
         print(state_string)
     else:
-        print(f"{state_string} | {perfdata}")
+        print(state_string + " | " + perfdata)
 
     sys.exit(state)
 
