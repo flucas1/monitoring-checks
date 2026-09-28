@@ -68,7 +68,7 @@ async def doconnectionscall(warning, critical):
             if len(parts) > 1:
                 try:
                     totalconnections = int(parts[1])
-                    infomsg(totalconnections)
+                    infomsg(str(totalconnections))
                     if critical and totalconnections > int(critical):
                         exitnagios("CRITICAL", "there are too many connections - " + str(totalconnections) + " connections | connections=" + str(totalconnections))
                     elif warning and totalconnections > int(warning):

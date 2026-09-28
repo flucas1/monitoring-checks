@@ -28,13 +28,13 @@ def msg(status_class, message_text):
         sys.exit(RC_UNKNOWN)
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", type=int, default=3, dest="critical_seconds")
     parser.add_argument("-w", type=int, default=2, dest="warning_seconds")
     parser.add_argument("-f", dest="server_time_format", choices=["euro", "iso8601", "strict-iso8601", "us"])
     parser.add_argument("-t", dest="server_time", type=str)
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
 
     # Validate required arguments
     if not args.server_time_format:
@@ -45,6 +45,12 @@ async def main(forcedargs=None):
     # Validate logical thresholds
     if args.warning_seconds >= args.critical_seconds:
         parser.error("warning seconds (" + str(args.warning_seconds) + ") cannot be >= critical seconds (" + str(args.critical_seconds) + ")")
+
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     # Time format mapping
     format_map = {

@@ -104,7 +104,7 @@ async def domailaliasescall(customlines):
                                     errors.append(line)
                             else:
                                 errors.append(line)
-                                # infomsg("->"+line+"<-")
+                                # infomsg("->" + line + "<-")
             finally:
                 handle.close()
             if len(errors) == 0:

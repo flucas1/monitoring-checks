@@ -55,6 +55,14 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
 # -------------------------------------------------------------------------------
 
 
@@ -168,10 +176,7 @@ async def dotestipv6call(proxy):
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
