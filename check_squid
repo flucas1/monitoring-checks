@@ -85,7 +85,7 @@ def check_threshold(value, warning, critical):
     if warning:
         w_start, w_end, w_inc = parse_threshold(warning)
         if w_inc:
-            if w_start <= value <= w_end:
+            if w_start <= value <= c_end:
                 return "WARNING"
         else:
             if value < w_start or value > w_end:
@@ -111,8 +111,8 @@ async def run_squidclient(squidclient, host, port, user, password):
 
 async def read_credentials(file_path):
     try:
-        with open(file_path, "r") as f:
-            content = await asyncio.get_event_loop().run_in_executor(None, f.read)
+        async with aiofiles.open(file_path, "r") as f:
+            content = await f.read()
             lines = content.split("\n")
             user = lines[0] if len(lines) > 0 else ""
             password = lines[1] if len(lines) > 1 else ""
