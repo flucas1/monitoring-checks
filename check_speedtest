@@ -18,7 +18,7 @@ async def run_speedtest_command(cmd):
     )
     stdout, stderr = await process.communicate()
     if process.returncode != 0:
-        raise RuntimeError(f"Speedtest command failed: {stderr.decode().strip()}")
+        raise RuntimeError("Speedtest command failed: " + stderr.decode().strip())
     return stdout.decode().strip()
 
 
@@ -59,12 +59,12 @@ def check_thresholds(download, upload, args):
 
 
 def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args):
-    nagout = f"{status} - Ping = {ping} {pingUOM} Download = {download} {downloadUOM} Upload = {upload} {uploadUOM}"
+    nagout = status + " - Ping = " + str(ping) + " " + pingUOM + " Download = " + str(download) + " " + downloadUOM + " Upload = " + str(upload) + " " + uploadUOM
 
     if args.p:
         max_dl_calc = args.m * 1.05
         max_ul_calc = args.M * 1.05
-        perfout = f"|'download'={download};{args.w};{args.c};0;{max_dl_calc:.2f} 'upload'={upload};{args.W};{args.C};0;{max_ul_calc:.2f}"
+        perfout = "|'download'=" + str(download) + ";" + str(args.w) + ";" + str(args.c) + ";0;" + str(max_dl_calc) + " 'upload'=" + str(upload) + ";" + str(args.W) + ";" + str(args.C) + ";0;" + str(max_ul_calc)
         nagout += perfout
 
     return nagout
@@ -106,12 +106,12 @@ async def main(forcedargs=None):
         sys.exit(3)
 
     if args.debug:
-        print(f"Download Warning Level = {args.w}")
-        print(f"Download Critical Level = {args.c}")
-        print(f"Upload Warning Level = {args.W}")
-        print(f"Upload Critical Level = {args.C}")
-        print(f"Server Location = {args.l}")
-        print(f"Server URL or Integer = {args.s}")
+        print("Download Warning Level = " + str(args.w))
+        print("Download Critical Level = " + str(args.c))
+        print("Upload Warning Level = " + str(args.W))
+        print("Upload Critical Level = " + str(args.C))
+        print("Server Location = " + str(args.l))
+        print("Server URL or Integer = " + str(args.s))
 
     cmd = [STB, "--simple"]
 
@@ -119,12 +119,12 @@ async def main(forcedargs=None):
         if args.debug:
             print("External Server defined")
         if args.s:
-            cmd = [STB, f"--server={args.s}", "--simple"]
+            cmd = [STB, "--server=" + str(args.s), "--simple"]
     elif args.l == 'i':
         if args.debug:
             print("Internal Server defined")
         if args.s:
-            cmd = [STB, f"--mini={args.s}", "--simple"]
+            cmd = [STB, "--mini=" + str(args.s), "--simple"]
         else:
             print("Error: URL required for Internal Mini Server")
             sys.exit(3)
@@ -137,7 +137,7 @@ async def main(forcedargs=None):
         if "Cannot parse" in str(e):
             print("ERROR: Cannot parse speedtest output")
             sys.exit(2)
-        print(f"You have not defined the location of the speedtest binary in the script!")
+        print("You have not defined the location of the speedtest binary in the script!")
         sys.exit(3)
 
     try:
@@ -147,9 +147,9 @@ async def main(forcedargs=None):
         sys.exit(2)
 
     if args.debug:
-        print(f"Ping = {ping}")
-        print(f"Download = {download}")
-        print(f"Upload = {upload}")
+        print("Ping = " + str(ping))
+        print("Download = " + str(download))
+        print("Upload = " + str(upload))
 
     status, nagcode = check_thresholds(download, upload, args)
 
