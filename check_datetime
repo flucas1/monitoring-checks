@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-import ntplib
+import aiontp
 import asyncio
 
 
@@ -71,16 +71,15 @@ async def main(forcedargs=None):
 
     ntpserver = args.ntpserver
 
-    client = ntplib.NTPClient()
+    client = aiontp.NTPClient()
     try:
-        # Run the synchronous network call in a separate thread to avoid blocking the event loop
-        response = await asyncio.to_thread(client.request, ntpserver, version=3)
+        response = await client.request(ntpserver, version=3)
         offset = response.offset
     except Exception:
         exitnagios("CRITICAL", "NTP Server " + str(ntpserver) + " is unreachable")
 
     if offset >= 0:
-        msg = "Offset " + format(offset, ".6f") + " secs|offset=" + format(offset, ".6f") + "s;" + format(warningpos, ".6f") + ";" + format(criticalpos, ".6f") + ";"
+        msg = "Offset " + str(round(offset, 6)) + " secs|offset=" + str(round(offset, 6)) + "s;" + str(round(warningpos, 6)) + ";" + str(round(criticalpos, 6)) + ";"
         if offset >= criticalpos:
             exitnagios("CRITICAL", msg)
         elif offset >= warningpos:
@@ -88,7 +87,7 @@ async def main(forcedargs=None):
         else:
             exitnagios("OK", msg)
     else:
-        msg = "Offset " + format(offset, ".6f") + " secs|offset=" + format(offset, ".6f") + "s;" + format(warningneg, ".6f") + ";" + format(criticalneg, ".6f") + ";"
+        msg = "Offset " + str(round(offset, 6)) + " secs|offset=" + str(round(offset, 6)) + "s;" + str(round(warningneg, 6)) + ";" + str(round(criticalneg, 6)) + ";"
         if offset <= criticalneg:
             exitnagios("CRITICAL", msg)
         elif offset <= warningneg:

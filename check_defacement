@@ -55,7 +55,7 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
             text = await resp.text()
     except Exception:
-        exitnagios("UNKNOWN", "Error accessing url: %s" % url)
+        exitnagios("UNKNOWN", "Error accessing url: " + url)
 
     if ignore:
         keywords = []
@@ -94,7 +94,7 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
             word_match.append(word)
 
     if len(word_match) > 0:
-        exitnagios("CRITICAL", "Dangerous words were found, verify that the following %s words '%s', are legitimate in the following web page: %s" % (len(word_match), (", ".join(word_match)), url))
+        exitnagios("CRITICAL", "Dangerous words were found, verify that the following " + str(len(word_match)) + " words '" + (", ".join(word_match)) + "', are legitimate in the following web page: " + url)
     else:
         exitnagios("OK", "No dangerous words are found")
 
