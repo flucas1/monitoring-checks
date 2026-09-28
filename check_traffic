@@ -63,7 +63,7 @@ async def run_command(command):
         nagios_exit(STATUS_UNKNOWN, [f"command {command} failed: {exc}"])
 
 
-async def get_interfaces_async(args):
+async def get_interfaces(args):
     netns_info = []
     if args.include_netns:
         command_output = await run_command(["ip", "-json", "netns", "list"])
@@ -89,10 +89,6 @@ async def get_interfaces_async(args):
         interfaces.extend(interfaces_by_netns)
     execution_time = time.time()
     return execution_time, interfaces
-
-
-def get_interfaces(args):
-    return asyncio.run(get_interfaces_async(args))
 
 
 def include_interface(interface, args):
@@ -329,7 +325,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
     return overall_status, messages, perf_data
 
 
-def main(args):
+async def main(args):
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
