@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nagios-like plugin to check traffic per interface"""
+# -------------------------------------------------------------------------------
 
 import argparse
 import asyncio
@@ -12,9 +12,8 @@ import re
 import sys
 import time
 
-logger = logging.getLogger("nagiosplugin")
+# -------------------------------------------------------------------------------
 
-CHECK_NAME = pathlib.Path(__file__).name
 STATE_FILE_PATH = "/tmp"
 
 STATUS_OK = 0
@@ -58,7 +57,7 @@ async def run_command(command):
                 STATUS_UNKNOWN,
                 [f"command {command} exited with status {proc.returncode}: {stderr.decode()!r}"]
             )
-        logger.debug("Output from %s: %s", " ".join(command), stdout.decode())
+        infomsg("Output from %s: %s", " ".join(command), stdout.decode())
         return stdout.decode()
     except Exception as exc:
         nagios_exit(STATUS_UNKNOWN, [f"command {command} failed: {exc}"])
@@ -105,11 +104,11 @@ def include_interface(interface, args):
     interface["computed_type"] = interface_type
 
     if not args.down and interface["operstate"] == "DOWN":
-        logger.info("[-] Skipping interface %s (operstate DOWN)", interface_pretty_name)
+        infomsg("[-] Skipping interface %s (operstate DOWN)", interface_pretty_name)
         return False
 
     if interface_type in args.exclude_type:
-        logger.info(
+        infomsg(
             "[-] Skipping interface %s (type %s matches %s)",
             interface_pretty_name,
             interface_type,
@@ -117,7 +116,7 @@ def include_interface(interface, args):
         )
         return False
     if args.exclude_name and re.search(args.exclude_name, interface_name):
-        logger.info(
+        infomsg(
             "[-] Skipping interface %s (name matches %s)",
             interface_pretty_name,
             args.exclude_name,
@@ -139,7 +138,7 @@ def include_interface(interface, args):
             additional_info = f" {interface_type}" if test_type == "type" else ""
             messages.append(f"{test_type}{additional_info} {verb} {test_str}")
             tests_match = tests_match and test_result
-        logger.info(
+        infomsg(
             "%s interface %s (%s)",
             "[+] Including" if tests_match else "[-] Skipping",
             interface_pretty_name,
@@ -147,7 +146,7 @@ def include_interface(interface, args):
         )
         return tests_match
 
-    logger.info(
+    infomsg(
         "[+] Including interface %s of type %s (no inclusion filter specified)",
         interface_pretty_name,
         interface_type,
@@ -159,7 +158,7 @@ def load_state(state_file):
     try:
         with open(state_file, "r", encoding="utf-8") as f:
             state = json.load(f)
-            logger.debug("Loaded old metrics from %s", state_file)
+            infomsg("Loaded old metrics from %s", state_file)
             return state
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
@@ -348,7 +347,7 @@ def main(args):
         nagios_exit(STATUS_UNKNOWN, ["No interfaces found"])
 
     filtered_interfaces = [e for e in interfaces if include_interface(e, args)]
-    logger.info("Included interfaces: %s", ", ".join(e["pretty_ifname"] for e in filtered_interfaces))
+    infomsg("Included interfaces: %s", ", ".join(e["pretty_ifname"] for e in filtered_interfaces))
 
     if not filtered_interfaces:
         nagios_exit(STATUS_UNKNOWN, ["No matching interfaces found after applying filters"])
