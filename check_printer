@@ -454,7 +454,10 @@ async def check_paper_trays(args, param, arg_token):
     return trays_state, state_string, perfdata
 
 
-async def main_async():
+# -------------------------------------------------------------------------------
+
+
+async def main():
     parser = argparse.ArgumentParser(description="Nagios plugin to check the status of networked printers.")
     parser.add_argument("-H", "--host", default="localhost", help="Host name or IP address")
     parser.add_argument("-v", "--snmpversion", choices=["1", "2c", "3"], default="2c", help="SNMP version")
@@ -508,9 +511,9 @@ async def main_async():
     sys.exit(state)
 
 
-def main():
-    asyncio.run(main_async())
-
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

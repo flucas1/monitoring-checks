@@ -41,6 +41,9 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
         return 3
 
 
+# -------------------------------------------------------------------------------
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
@@ -61,5 +64,9 @@ def main():
     sys.exit(exit_code)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

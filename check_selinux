@@ -5,6 +5,8 @@ import argparse
 import asyncio
 import sys
 
+# -------------------------------------------------------------------------------
+
 # Standard Nagios/Icinga exit codes
 STATE_OK = 0
 STATE_WARNING = 1
@@ -12,35 +14,6 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 SELINUX_MODES = ["enforcing", "permissive", "disabled"]
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Check expected SELinux mode."
-    )
-
-    parser.add_argument(
-        '-w', '--warning',
-        action='store_true',
-        help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one"
-    )
-
-    parser.add_argument(
-        'selinux_mode',
-        type=str.lower,  # Automatically cast input to lowercase to match expected values
-        choices=SELINUX_MODES,
-        metavar='SELINUX_MODE',
-        help=f"Expected SELinux mode (allowed values: {' '.join(SELINUX_MODES)})"
-    )
-
-    try:
-        args = parser.parse_args()
-        return args
-    except SystemExit as e:
-        # argparse uses 2 for errors, but Nagios plugins standard for parameter issues is UNKNOWN (3)
-        if e.code != 0:
-            sys.exit(STATE_UNKNOWN)
-        sys.exit(e.code)
 
 
 async def check_selinux_mode(expected_mode, warning_flag):
@@ -73,10 +46,23 @@ async def check_selinux_mode(expected_mode, warning_flag):
     sys.exit(STATE_OK)
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Check expected SELinux mode.")
+    parser.add_argument('-w', '--warning', action='store_true', help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one")
+    parser.add_argument('selinux_mode', type=str.lower, choices=SELINUX_MODES, metavar='SELINUX_MODE', help=f"Expected SELinux mode (allowed values: {' '.join(SELINUX_MODES)})")
+    args = parser.parse_args()
+    return args
+
 def main():
     args = parse_arguments()
-    asyncio.run(check_selinux_mode(args.selinux_mode, args.warning))
+    check_selinux_mode(args.selinux_mode, args.warning)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
