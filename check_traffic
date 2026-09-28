@@ -180,10 +180,11 @@ def include_interface(interface, args):
     return True
 
 
-def load_state(state_file):
+async def load_state(state_file):
     try:
-        with open(state_file, "r", encoding="utf-8") as f:
-            state = json.load(f)
+        async with aiofiles.open(state_file, "r", encoding="utf-8") as f:
+            content = await f.read()
+            state = json.loads(content)
             infomsg("Loaded old metrics from " + state_file)
             return state
     except (FileNotFoundError, json.JSONDecodeError):
