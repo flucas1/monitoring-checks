@@ -82,7 +82,7 @@ async def main(forcedargs=None):
 
     # Status Reporting
     if errors:
-        print(f"CRITICAL: the samba dns resolver has issues{errors}")
+        print("CRITICAL: the samba dns resolver has issues" + errors)
         sys.exit(2)
     else:
         print("OK: the samba dns resolver is behaving as expected")

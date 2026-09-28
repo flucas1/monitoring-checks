@@ -39,10 +39,10 @@ async def check_selinux_mode(expected_mode, warning_flag):
         sys.exit(STATE_CRITICAL)
 
     if current_mode != expected_mode:
-        print(f"{error_state_label}: SELinux is not {expected_mode} (currently {current_mode})")
+        print(error_state_label + ": SELinux is not " + expected_mode + " (currently " + current_mode + ")")
         sys.exit(error_state)
 
-    print(f"OK: SELinux is {expected_mode}")
+    print("OK: SELinux is " + expected_mode)
     sys.exit(STATE_OK)
 
 
@@ -52,15 +52,17 @@ async def check_selinux_mode(expected_mode, warning_flag):
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Check expected SELinux mode.")
     parser.add_argument('-w', '--warning', action='store_true', help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one")
-    parser.add_argument('selinux_mode', type=str.lower, choices=SELINUX_MODES, metavar='SELINUX_MODE', help=f"Expected SELinux mode (allowed values: {' '.join(SELINUX_MODES)})")
+    parser.add_argument('selinux_mode', type=str.lower, choices=SELINUX_MODES, metavar='SELINUX_MODE', help="Expected SELinux mode (allowed values: " + " ".join(SELINUX_MODES) + ")")
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parse_arguments()
     check_selinux_mode(args.selinux_mode, args.warning)
 
 # -------------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     asyncio.run(main())

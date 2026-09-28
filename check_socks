@@ -11,17 +11,17 @@ import aiohttp_socks
 
 async def main(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', dest='ip', default='127.0.0.1')
-    parser.add_argument('-p', dest='port', default='1080')
-    parser.add_argument('--target', dest='target', default='https://www.google.com')
-    parser.add_argument('--max-time', dest='max_time', default=10, type=int)
+    parser.add_argument("-i", dest="ip", default="127.0.0.1")
+    parser.add_argument("-p", dest="port", default="1080")
+    parser.add_argument("--target", dest="target", default="https://www.google.com")
+    parser.add_argument("--max-time", dest="max_time", default=10, type=int)
     args = parser.parse_args()
 
     if not args.ip or not args.port or not args.target:
-        print('UNKNOWN - Missing required parameter(s).')
+        print("UNKNOWN - Missing required parameter(s).")
         sys.exit(3)
 
-    connector = aiohttp_socks.SocksConnector.from_url(f'socks5://{args.ip}:{args.port}')
+    connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
     timeout = aiohttp.ClientTimeout(total=args.max_time)
 
     ts = time.time_ns()
@@ -42,12 +42,12 @@ async def main(forcedargs=None):
     tt = (time.time_ns() - ts) // 1_000_000
 
     if ret == 0:
-        print(f"OK - Latency {tt}ms.")
+        print("OK - Latency " + str(tt) + "ms.")
         sys.exit(0)
     else:
-        print(f"CRITICAL - Proxy is down, curl returns {ret} after {tt}ms")
+        print("CRITICAL - Proxy is down, curl returns " + str(ret) + " after " + str(tt) + "ms")
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

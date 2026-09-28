@@ -48,7 +48,6 @@ async def main(forcedargs=None):
     except FileNotFoundError:
         print("Cannot find wbinfo executable")
         sys.exit(STATE_UNKNOWN)
-        return
 
     # Replace newlines with semicolons and strip the trailing semicolon
     msg = output.replace('\n', ';').rstrip(';')
@@ -57,18 +56,18 @@ async def main(forcedargs=None):
     if ret != 0:
         state = STATE_CRITICAL
         state_string = get_state_string(state)
-        print(f"{state_string}: wbinfo failed: {msg}")
+        print(state_string + ": wbinfo failed: " + msg)
         sys.exit(state)
     else:
         state = STATE_OK
         state_string = get_state_string(state)
-        print(f"{state_string}: {msg}")
+        print(state_string + ": " + msg)
         sys.exit(state)
 
     # Fallback failure state (kept for structural parity with the original script)
     state = STATE_CRITICAL
     state_string = get_state_string(state)
-    print(f"{state_string}: PLUGIN FAILED")
+    print(state_string + ": PLUGIN FAILED")
     sys.exit(state)
 
 

@@ -60,10 +60,10 @@ async def snmp_get(oid, host, community):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode != 0:
-            raise Exception(f"Unable to retrieve SNMP data: {errors}")
+            raise Exception("Unable to retrieve SNMP data: " + errors)
         return output.split("=", 1)[1].strip().split(":", 1)[-1].strip()
     except Exception as e:
-        raise Exception(f"Unable to retrieve SNMP data: {e}")
+        raise Exception("Unable to retrieve SNMP data: " + str(e))
 
 
 async def check_input_voltage(oids, host, community, inlow, inhigh):
@@ -71,11 +71,11 @@ async def check_input_voltage(oids, host, community, inlow, inhigh):
     rawvalue = await snmp_get(oids["MIBinVolts"], host, community)
     input_voltage = int(rawvalue) / 10
     if input_voltage < inlow:
-        return 1, f"Input voltage {input_voltage}V is below {inlow}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 1, "Input voltage " + str(input_voltage) + "V is below " + str(inlow) + "V.", "input_voltage=" + str(input_voltage) + "V;" + str(inlow) + ";" + str(inhigh) + ";0;"
     elif input_voltage > inhigh:
-        return 1, f"Input voltage {input_voltage}V is above {inhigh}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 1, "Input voltage " + str(input_voltage) + "V is above " + str(inhigh) + "V.", "input_voltage=" + str(input_voltage) + "V;" + str(inlow) + ";" + str(inhigh) + ";0;"
     else:
-        return 0, f"Input voltage is {input_voltage}V.", f"input_voltage={input_voltage}V;{inlow};{inhigh};0;"
+        return 0, "Input voltage is " + str(input_voltage) + "V.", "input_voltage=" + str(input_voltage) + "V;" + str(inlow) + ";" + str(inhigh) + ";0;"
 
 
 async def check_load_percentage(oids, host, community, warnload, critload):
@@ -83,11 +83,11 @@ async def check_load_percentage(oids, host, community, warnload, critload):
     rawvalue = await snmp_get(oids["MIBoutLoad"], host, community)
     load = int(rawvalue)
     if load > critload:
-        return 2, f"Load is {load}% which exceeds {critload}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 2, "Load is " + str(load) + "% which exceeds " + str(critload) + "%.", "load=" + str(load) + "%;" + str(warnload) + ";" + str(critload) + ";0;100"
     elif load > warnload:
-        return 1, f"Load is {load}% which exceeds {warnload}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 1, "Load is " + str(load) + "% which exceeds " + str(warnload) + "%.", "load=" + str(load) + "%;" + str(warnload) + ";" + str(critload) + ";0;100"
     else:
-        return 0, f"Load is {load}%.", f"load={load}%;{warnload};{critload};0;100"
+        return 0, "Load is " + str(load) + "%.", "load=" + str(load) + "%;" + str(warnload) + ";" + str(critload) + ";0;100"
 
 
 async def check_runtime(oids, host, community, warnrun, critrun):
@@ -96,11 +96,11 @@ async def check_runtime(oids, host, community, warnrun, critrun):
     rawticks = rawvalue.split()[0].replace("(", "").replace(")", "")
     runtime = int(rawticks) // 6000
     if runtime < critrun:
-        return 2, f"Runtime is {runtime} minutes which is below {critrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 2, "Runtime is " + str(runtime) + " minutes which is below " + str(critrun) + " minutes.", "runtime=" + str(runtime) + "m;" + str(warnrun) + ";" + str(critrun) + ";0;"
     elif runtime < warnrun:
-        return 1, f"Runtime is {runtime} minutes which is below {warnrun} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 1, "Runtime is " + str(runtime) + " minutes which is below " + str(warnrun) + " minutes.", "runtime=" + str(runtime) + "m;" + str(warnrun) + ";" + str(critrun) + ";0;"
     else:
-        return 0, f"Runtime is {runtime} minutes.", f"runtime={runtime}m;{warnrun};{critrun};0;"
+        return 0, "Runtime is " + str(runtime) + " minutes.", "runtime=" + str(runtime) + "m;" + str(warnrun) + ";" + str(critrun) + ";0;"
 
 # -------------------------------------------------------------------------------
 
