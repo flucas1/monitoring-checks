@@ -83,15 +83,15 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "Unable to read output of '/sys/class/thermal/thermal_zone0/temp'")
 
     # Prep performance data
-    perfdata = " | rpi_temp=%.2f;%.2f;%.2f;%.2f;%.2f" % (temp, warn, crit, min_temp, max_temp)
+    perfdata = " | rpi_temp=" + "{:.2f}".format(temp) + ";" + "{:.2f}".format(warn) + ";" + "{:.2f}".format(crit) + ";" + "{:.2f}".format(min_temp) + ";" + "{:.2f}".format(max_temp)
 
     # Check against thresholds
     if crit > 0 and temp >= crit:
-        exitnagios("CRITICAL", "Temperature %.2f is higher than critical threshold (%.2f) %s" % (temp, crit, perfdata))
+        exitnagios("CRITICAL", "Temperature " + "{:.2f}".format(temp) + " is higher than critical threshold (" + "{:.2f}".format(crit) + ")" + perfdata)
     elif warn > 0 and temp >= warn:
-        exitnagios("WARNING", "Temperature %.2f is higher than warning threshold (%.2f) %s" % (temp, warn, perfdata))
+        exitnagios("WARNING", "Temperature " + "{:.2f}".format(temp) + " is higher than warning threshold (" + "{:.2f}".format(warn) + ")" + perfdata)
     else:
-        exitnagios("OK", "Temperature %.2f %s" % (temp, perfdata))
+        exitnagios("OK", "Temperature " + "{:.2f}".format(temp) + perfdata)
 
 # -------------------------------------------------------------------------------
 

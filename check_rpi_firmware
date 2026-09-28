@@ -9,8 +9,7 @@ async def main(forcedargs=None):
     try:
         # Run vcgencmd and capture the output as text
         process = await asyncio.create_subprocess_exec(
-            '/opt/vc/bin/vcgencmd',
-            'version',
+            "/opt/vc/bin/vcgencmd", "version",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -18,7 +17,7 @@ async def main(forcedargs=None):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print(f"Command failed with exit status {process.returncode}")
+            print("Command failed with exit status " + str(process.returncode))
             sys.exit(1)
 
         # Splitting by whitespace automatically mimics shell's unquoted variable
@@ -31,14 +30,14 @@ async def main(forcedargs=None):
         # awk '{print $10}' corresponds to Python index 9
         git_version = words[9] if len(words) >= 10 else "Unknown Version"
 
-        print(f"{date_version} - ({git_version})")
+        print(date_version + " - (" + git_version + ")")
         sys.exit(0)
 
     except FileNotFoundError:
         print("Error: Command '/opt/vc/bin/vcgencmd' not found.")
         sys.exit(1)
     except Exception as e:
-        print(f"Command failed with exit status {e.returncode}")
+        print("Command failed with exit status " + str(e.returncode))
         sys.exit(1)
 
 

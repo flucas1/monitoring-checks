@@ -23,13 +23,13 @@ async def main(forcedargs=None):
         "-w", "--warning",
         type=int,
         default=WARNING_DEFAULT,
-        help=f"Warning number of processes using old libraries. Default: {WARNING_DEFAULT}"
+        help="Warning number of processes using old libraries. Default: " + str(WARNING_DEFAULT)
     )
     parser.add_argument(
         "-c", "--critical",
         type=int,
         default=CRITICAL_DEFAULT,
-        help=f"Critical number of processes using old libraries. Default: {CRITICAL_DEFAULT}"
+        help="Critical number of processes using old libraries. Default: " + str(CRITICAL_DEFAULT)
     )
 
     args = parser.parse_args()
@@ -48,7 +48,7 @@ async def main(forcedargs=None):
         if "vhpa" in help_output:
             cmd.append("-p")
     except FileNotFoundError:
-        print(f"CRITICAL - No data, maybe {CHECKRESTART_BIN} missing?")
+        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
         sys.exit(2)
     except Exception:
         # If help command fails, assume -p is not supported
@@ -67,7 +67,7 @@ async def main(forcedargs=None):
             # Even on non-zero exit, checkrestart may output useful data
             output = output + stderr.decode("utf-8")
     except FileNotFoundError:
-        print(f"CRITICAL - No data, maybe {CHECKRESTART_BIN} missing?")
+        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
         sys.exit(2)
 
     # Parse result: equivalent to grep Found | awk '{print $2}'
@@ -81,18 +81,18 @@ async def main(forcedargs=None):
 
     # Make sure we have a result. Fail if connection or execution failed
     if result is None:
-        print(f"CRITICAL - No data, maybe {CHECKRESTART_BIN} missing?")
+        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
         sys.exit(2)
 
     # Threshold comparison and Nagios standard exit codes
     if result >= args.critical:
-        print(f"CRITICAL: {result} services or processes to restart | to_restart={result}")
+        print("CRITICAL: " + str(result) + " services or processes to restart | to_restart=" + str(result))
         sys.exit(2)
     elif result >= args.warning:
-        print(f"WARNING: {result} services or processes to restart | to_restart={result}")
+        print("WARNING: " + str(result) + " services or processes to restart | to_restart=" + str(result))
         sys.exit(1)
     else:
-        print(f"OK: no service or process to restart | to_restart={result}")
+        print("OK: no service or process to restart | to_restart=" + str(result))
         sys.exit(0)
 
 

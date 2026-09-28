@@ -21,17 +21,17 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
             )
             rsync_out = rsync_out.decode('utf-8', errors='ignore').strip()
 
-            if rsync_out.startswith('@RSYNCD:'):
-                print(f"OK - {rsync_out}")
+            if rsync_out.startswith("@RSYNCD:"):
+                print("OK - " + rsync_out)
                 return 0
             else:
-                print(f"WARNING - rsync out: {rsync_out}")
+                print("WARNING - rsync out: " + rsync_out)
                 return 1
         finally:
             writer.close()
             await writer.wait_closed()
     except (asyncio.TimeoutError, OSError):
-        print(f"{timeoutstatus} - Could not connect to {remote}:{rsync_port}")
+        print(timeoutstatus + " - Could not connect to " + remote + ":" + str(rsync_port))
         if timeoutstatus == "CRITICAL":
             return 2
         if timeoutstatus == "WARNING":

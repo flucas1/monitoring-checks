@@ -6,6 +6,7 @@ import sys
 import os
 import netifaces
 import asyncio
+import datetime
 
 import selenium
 import selenium.webdriver
@@ -226,8 +227,8 @@ async def getexpected(proxy, model):
     try:
         driver = await generatedriver(proxy)
 
-        wait = WebDriverWait(driver, 20)
-        action = ActionChains(driver)
+        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
+        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser initialized")
 
@@ -236,7 +237,7 @@ async def getexpected(proxy, model):
         await asyncio.sleep(1)
         await wait_page_loaded(driver)
 
-        wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((By.ID, "topicsdownload")))
+        wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "topicsdownload")))
         titles = driver.find_elements(by=selenium.webdriver.common.by.By.CLASS_NAME, value="accordion-title")
         candidates = []
         for title in titles:
