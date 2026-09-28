@@ -47,6 +47,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 # Standard Nagios/Icinga Exit-Codes
 STATE_OK = 0
 STATE_WARNING = 1

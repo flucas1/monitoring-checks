@@ -53,6 +53,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 STATE_FILE_PATH = "/tmp"
 
 STATUS_OK = 0

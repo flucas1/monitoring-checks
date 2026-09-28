@@ -49,6 +49,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def get_url_content(protocol, interface, timeout, url, accesstoken):
     infomsg("querying " + str(url))
     buffer = io.BytesIO()
