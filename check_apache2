@@ -74,7 +74,7 @@ async def fetch_status(url, auth, verify, timeout):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", required=True)
     parser.add_argument("-p", "--port", type=int)
@@ -87,7 +87,12 @@ async def main(forcedargs=None):
     parser.add_argument("-c", "--critical", default="")
     parser.add_argument("-R", "--unreachable", action="store_true")
     parser.add_argument("-t", "--timeout", type=int, default=15)
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     warnings_list = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []
