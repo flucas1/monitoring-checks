@@ -7,6 +7,7 @@
 
 import aiohttp
 import aiohttp_socks
+import aiofiles
 import argparse
 import sys
 import json
@@ -60,15 +61,14 @@ def exitnagios(status, message):
 
 async def ipv6_default_route_exists() -> bool:
     try:
-        with open("/proc/net/ipv6_route") as f:
-            for line in f:
+        async with aiofiles.open("/proc/net/ipv6_route", "r") as f:
+            async for line in f:
                 parts = line.split()
                 # parts[0] = destination (32 hex chars), parts[1] = prefix length
                 if parts[0] == "00000000000000000000000000000000" and parts[1] == "00" and parts[9] != "lo":
                     return True
         return False
     except FileNotFoundError:
-        # /proc not available (non-Linux system)
         return False
 
 
