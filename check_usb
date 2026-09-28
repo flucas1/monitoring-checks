@@ -77,6 +77,16 @@ def check_the_line(lineid, linemsg, device_identifiers, device_messages):
     return matching
 
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--devices", dest="devices", default="", help="devices")
+    parser.add_argument("-m", "--messages", dest="messages", default="", help="messages")
+    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def is_usb_connected(device_identifiers, device_messages, device_expected):
     found = False
     try:
@@ -138,12 +148,7 @@ async def is_usb_connected(device_identifiers, device_messages, device_expected)
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--devices", dest="devices", default="", help="devices")
-    parser.add_argument("-m", "--messages", dest="messages", default="", help="messages")
-    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 

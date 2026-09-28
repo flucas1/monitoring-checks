@@ -45,14 +45,28 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
 
 # Standard Nagios/Icinga Exit-Codes
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
+    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
+    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
+    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
+    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
+    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
+
+    if forcedargs is not None:
+        args = parser.parse_args(forcedargs)
+    else:
+        args = parser.parse_args()
+
+    return args
 
 
 async def get_uptime():
@@ -78,7 +92,6 @@ def parse_uptime(uptime_report):
     uptime_lower = uptime_report.lower()
     words = uptime_report.split()
 
-    # Replicate the script's specific awk parsing logic based on output formatting
     try:
         if "day" in uptime_lower:
             if "min" in uptime_lower:
@@ -90,7 +103,6 @@ def parse_uptime(uptime_report):
                 hours = int(time_parts[0])
                 if len(time_parts) > 1:
                     minutes = int(time_parts[1])
-        # Handle specific AIX and Solaris formatting
         elif re.search(r"hour|hr\(s\)", uptime_lower):
             hours = int(words[2])
         else:
@@ -100,17 +112,14 @@ def parse_uptime(uptime_report):
                 if len(time_parts) > 1:
                     minutes = int(time_parts[1])
             else:
-                # Mirroring the script's fallback behavior where cut -f2 fetches the minutes
                 minutes = int(words[2])
     except (IndexError, ValueError):
-        pass  # Failsafe if uptime output doesn't match standard OS patterns
+        pass
 
-    # Calculate total minutes and days
     uptime_minutes = (days * 1440) + (hours * 60) + minutes
     raw_days = uptime_minutes / 1440.0
     uptime_days = str(format(raw_days, ".4f"))
 
-    # Construct the uptime message string based on available data
     msg_parts = []
     if days:
         msg_parts.append(str(days) + " Days")
@@ -123,19 +132,7 @@ def parse_uptime(uptime_report):
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
-    # Setup arguments mirroring the original getopts: -c, -w, -C, -W, -v
-    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
-    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
-    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
-    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
-    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
-
-    try:
-        args = parser.parse_args()
-    except SystemExit:
-        print("Error: missing or illegal option value")
-        sys.exit(STATE_UNKNOWN)
+    args = parse_args(forcedargs)
 
     try:
         uptime_report = await get_uptime()
@@ -145,7 +142,6 @@ async def main(forcedargs=None):
 
     uptime_minutes, uptime_days, uptime_msg = parse_uptime(uptime_report)
 
-    # Format values for perfdata; empty strings if no thresholds were provided
     min_w = str(args.min_warning) if args.min_warning is not None else ""
     max_w = str(args.max_warning) if args.max_warning is not None else ""
     min_c = str(args.min_critical) if args.min_critical is not None else ""
@@ -153,7 +149,6 @@ async def main(forcedargs=None):
 
     perfdata = "|Uptime=" + uptime_days + ";" + min_w + ":" + max_w + ";" + min_c + ":" + max_c + ";0;"
 
-    # Threshold evaluation in identical sequence
     if args.min_critical is not None and uptime_minutes < args.min_critical:
         print("CRITICAL: minimum - system booted " + uptime_msg + " ago" + perfdata)
         sys.exit(STATE_CRITICAL)
@@ -174,9 +169,6 @@ async def main(forcedargs=None):
         print("OK: uptime is " + uptime_msg + perfdata)
         sys.exit(STATE_OK)
 
-# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-# -------------------------------------------------------------------------------

@@ -64,6 +64,13 @@ def speedfromversion(version):
         return 0
 
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def getmaxspeed(device):
     deviceroute = os.path.basename(device).replace("-", ":")
     cmdline = ["/usr/bin/lsusb", "-v", "-s", deviceroute]
@@ -154,9 +161,7 @@ async def is_usb_speedmax():
 
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 

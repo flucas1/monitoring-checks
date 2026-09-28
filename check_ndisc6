@@ -66,7 +66,7 @@ async def dondisc6call(hostname):
         if len(routeparts) > 4:
             interface = routeparts[4]
     if interface is None:
-        exitnagios("CRITICAL", "Cannot identify iterface for discovery")
+        exitnagios("CRITICAL", "Cannot identify interface for discovery")
     infomsg("interface -> " + interface)
 
     cmdline = ["/usr/bin/ndisc6", hostname, interface]
@@ -92,7 +92,7 @@ async def dondisc6call(hostname):
                 infomsg(macfound)
 
     if macfound is not None:
-        exitnagios("OK", hostname + " is respoding to NDD with mac " + macfound)
+        exitnagios("OK", hostname + " is responding to NDD with mac " + macfound)
     else:
         exitnagios("CRITICAL", hostname + " is not responding to NDD")
 
