@@ -100,8 +100,9 @@ async def main(forcedargs=None):
 
     if args.authfile:
         try:
-            with open("/etc/nagios/scripts/" + args.authfile, 'r') as f:
-                lines = f.read().splitlines()
+            async with aiofiles.open("/etc/nagios/scripts/" + args.authfile, 'r') as f:
+                content = await f.read()
+                lines = content.splitlines()
                 if len(lines) >= 2:
                     username = lines[0]
                     password = lines[1]
