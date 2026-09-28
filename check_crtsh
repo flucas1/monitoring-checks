@@ -58,7 +58,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def ipv6_default_route_exists() -> bool:
+async def ipv6_default_route_exists() -> bool:
     try:
         with open("/proc/net/ipv6_route") as f:
             for line in f:
@@ -72,11 +72,11 @@ def ipv6_default_route_exists() -> bool:
         return False
 
 
-def ipv4_default_route_exists() -> bool:
+async def ipv4_default_route_exists() -> bool:
     try:
-        with open("/proc/net/route") as f:
-            next(f)  # skip header
-            for line in f:
+        async with aiofiles.open("/proc/net/route", "r") as f:
+            await f.readline()  # skip header
+            async for line in f:
                 parts = line.split()
                 if parts[1] == "00000000" and parts[7] == "00000000":
                     return True
@@ -249,10 +249,10 @@ async def main(forcedargs=None):
 
     start = datetime.datetime.now(datetime.timezone.utc)
     await asyncio.sleep(random.uniform(1, 5))
-    if ipv6_default_route_exists():
+    if await ipv6_default_route_exists():
         infomsg("call ipv6")
         await docrtshcall("ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
-    if ipv4_default_route_exists():
+    if await ipv4_default_route_exists():
         infomsg("call ipv4")
         await docrtshcall("ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     for proxy in proxies:
