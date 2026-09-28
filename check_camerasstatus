@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import argparse
+import sys
+import os
+import asyncio
+import datetime
+import io
+import tesserocr
+import PIL.Image
+import PIL.ImageOps
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+def extract_text(cameraspath, entry):
+    fullpath = os.path.join(cameraspath, entry)
+
+    text = ""
+    api = None
+    try:
+        infomsg(fullpath)
+        im = PIL.Image.open(fullpath)
+        w, h = im.size
+        im_crop = im.crop((0, 0, w, int(h / 3)))
+        im_invert = PIL.ImageOps.invert(im)
+
+        api = tesserocr.PyTessBaseAPI()
+        validchars = " :-0123456789"
+        api.SetVariable('tessedit_char_whitelist', validchars)
+        api.SetImage(im_invert)
+        infomsg("before OCR")
+        ocr_stream = io.StringIO()
+        sys.stderr = ocr_stream
+        sys.stdout = ocr_stream
+        text = api.GetUTF8Text()
+        sys.stderr = sys.__stderr__
+        sys.stdout = sys.__stdout__
+        infomsg("OCR stderr -> " + ocr_stream.getvalue())
+        ocr_stream.close()
+        infomsg("after OCR")
+        text = text.replace("\n", "   ")
+        # confidences = api.AllWordConfidences()
+        infomsg("OCR text -> " + text)
+    except Exception as e:
+        print("Exception - " + str(e))
+    finally:
+        if api != None:
+            api.End()
+
+    return text.strip()
+
+
+def get_list_cameras(cameraspath):
+    listcameras = []
+    for entry in os.listdir(cameraspath):
+        infomsg(entry)
+        if entry.endswith(".jpg") and os.path.isfile(os.path.join(cameraspath, entry)):
+            listcameras.append(entry)
+    listcameras.sort()
+    return listcameras
+
+
+def checkcolorframegreen(parts):
+    red = int(parts[0])
+    green = int(parts[1])
+    blue = int(parts[2])
+    return (green > red) and (green > blue)
+
+
+async def checkcameravalid(camerapath, entry):
+    result = False
+    fullpath = os.path.join(camerapath, entry)
+
+    now = datetime.datetime.now()
+    filetime = datetime.datetime.fromtimestamp(os.path.getmtime(fullpath))
+    span = now - filetime
+    if span.total_seconds() < 3600:
+        cmdline = ["/usr/bin/convert", fullpath, "-format", "%[pixel:p{2,2}]", "info:-"]
+        process = await asyncio.create_subprocess_exec(
+            *cmdline,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+        output = stdout.decode("utf-8").strip() if stdout else ""
+        errors = stderr.decode("utf-8").strip() if stderr else ""
+        exitcode = process.returncode
+        if exitcode == 0:
+            infomsg("output " + output)
+            if output.startswith("srgb(") and output.endswith(")"):
+                parts = output[len("srgb("):-1].split(",")
+                infomsg("parts " + str(parts))
+                result = checkcolorframegreen(parts)
+
+    return result
+
+
+def absolutelimit(parameter, total):
+    value = 0
+    parameter = parameter.replace(" ", "")
+    if parameter.endswith("%"):
+        temp = parameter[0:-1]
+        value = int(round(int(temp) / 100 * total, 0))
+    else:
+        value = int(parameter)
+    return value
+
+
+def absolutecritical(parameter, total):
+    value = 0
+    if parameter.endswith("%"):
+        temp = parameter[0:-1]
+        value = int(round(int(temp) / 100 * total, 0))
+    else:
+        value = int(parameter)
+    return value
+
+
+async def docamerasstatuscall(cameraspath, warning, critical):
+    if (cameraspath == None) or (cameraspath == "") or (os.path.isdir(cameraspath) == False):
+        exitnagios("CRITICAL", "the path " + str(cameraspath) + " is invalid")
+
+    listcameras = get_list_cameras(cameraspath)
+    totallistcameras = len(listcameras)
+
+    if totallistcameras == 0:
+        exitnagios("WARNING", "there are no cameras to monitor in path " + cameraspath)
+
+    allinvalid = {}
+    tasks = []
+    for entry in listcameras:
+        tasks.append(checkcameravalid(cameraspath, entry))
+    results = await asyncio.gather(*tasks)
+    for idx, entry in enumerate(listcameras):
+        iscameravalid = results[idx]
+        if not iscameravalid:
+            text = extract_text(cameraspath, entry)
+            allinvalid[entry] = text
+
+    limitwarning = absolutelimit(warning, totallistcameras)
+    infomsg("limitwarning is " + str(limitwarning))
+    limitcritical = absolutelimit(critical, totallistcameras)
+    infomsg("limitcritical is " + str(limitcritical))
+
+    totalallinvalid = len(allinvalid)
+    infomsg("totalallinvalid is " + str(totalallinvalid))
+
+    if totalallinvalid > limitcritical:
+        exitnagios("CRITICAL", "too many cameras have issues " + str(allinvalid) + " | invalid=" + str(totalallinvalid))
+    elif totalallinvalid > limitwarning:
+        exitnagios("WARNING", "some cameras have issues " + str(allinvalid) + " | invalid=" + str(totalallinvalid))
+    else:
+        exitnagios("OK", "all cameras are in valid status | invalid=" + str(totalallinvalid))
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", dest="path", help="path that contains the images")
+    parser.add_argument("-w", "--warning", dest="warning", default="0%", help="severity to raise, warning or critical")
+    parser.add_argument("-c", "--critical", dest="critical", default="50%", help="severity to raise, warning or critical")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    if args.path == None or args.path == "":
+        cameraspath = os.getcwd()
+    else:
+        cameraspath = args.path
+
+    infomsg(tesserocr.tesseract_version())
+    infomsg(tesserocr.get_languages())
+
+    await docamerasstatuscall(cameraspath, args.warning.replace(" ", ""), args.critical.replace(" ", ""))
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
