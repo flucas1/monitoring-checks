@@ -114,7 +114,7 @@ async def getpublishedkey(dnsentry):
     infomsg("the TXT record is <" + str(txtfullrecord) + ">")
 
     publishedkey = None
-    if txtfullrecord != None:
+    if txtfullrecord is not None:
         parts = txtfullrecord.split(";")
         for part in parts:
             part = part.strip()
@@ -128,7 +128,7 @@ async def getpublishedkey(dnsentry):
 async def testdkimpublishing(candidate, dnsentry):
     publickey = await buildpublickey(candidate)
     publishedkey = await getpublishedkey(dnsentry)
-    equals = (publickey == publishedkey) and (publickey != None) and (publishedkey != None) and (publickey != "") and (publishedkey != "")
+    equals = (publickey == publishedkey) and (publickey is not None) and (publishedkey is not None) and (publickey != "") and (publishedkey != "")
     infomsg("The result for " + candidate + " is " + str(equals))
     return equals
 
@@ -180,7 +180,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "dkimpath not specified | failures=0 count=0")
 
     if not os.path.isdir(dkimpath):
-        exitnagios("UNKNOWN", f"dkimpath '{dkimpath}' does not exist or is not a directory | failures=0 count=0")
+        exitnagios("UNKNOWN", "dkimpath '" + dkimpath + "' does not exist or is not a directory | failures=0 count=0")
 
     failurelist, validlist = await check_dkimpublishing(dkimpath)
     infomsg("-----")
