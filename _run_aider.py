@@ -56,6 +56,7 @@ async def main():
     MODEL = "ollama/qwen3-coder-next:latest"
     PROMPT = []
     PROMPT.append("Transform the attached python file to be async.")
+    PROMPT.append("The main function is always async.")
     PROMPT.append("Avoid to_thread, get_event_loop and get_running_loop.")
     PROMPT.append("For python imports do not use 'from'.")
     PROMPT.append("Remove legacy subprocess, urllib and concurrent.futures.")
