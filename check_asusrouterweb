@@ -82,24 +82,25 @@ async def authenticate(ipaddress, username, password):
         password : Password required to login
     :returns: Tuple of (url, headers) or (url, None) if authentication fails
     """
-    url = 'http://{}/appGet.cgi'.format(ipaddress)
-    auth = "{}:{}".format(username, password).encode('ascii')
-    logintoken = base64.b64encode(auth).decode('ascii')
-    payload = "login_authorization={}".format(logintoken)
+    url = "http://" + ipaddress + "/appGet.cgi"
+    auth = username + ":" + password
+    auth_bytes = auth.encode("ascii")
+    logintoken = base64.b64encode(auth_bytes).decode("ascii")
+    payload = "login_authorization=" + logintoken
     headers = {
-        'user-agent': "asusrouter-Android-DUTUtil-1.0.0.245"
+        "user-agent": "asusrouter-Android-DUTUtil-1.0.0.245"
     }
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url='http://{}/login.cgi'.format(ipaddress), data=payload, headers=headers) as resp:
+            async with session.post(url="http://" + ipaddress + "/login.cgi", data=payload, headers=headers) as resp:
                 r = await resp.json()
     except Exception:
         return url, None
     if "asus_token" in r:
-        token = r['asus_token']
+        token = r["asus_token"]
         auth_headers = {
-            'user-agent': "asusrouter-Android-DUTUtil-1.0.0.245",
-            'cookie': 'asus_token={}'.format(token)
+            "user-agent": "asusrouter-Android-DUTUtil-1.0.0.245",
+            "cookie": "asus_token=" + token
         }
         return url, auth_headers
     else:
@@ -116,7 +117,7 @@ async def router_get(url, headers, command):
     :returns: string result from the router
     """
     if headers:
-        payload = "hook={}".format(command)
+        payload = "hook=" + command
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url=url, data=payload, headers=headers) as resp:
@@ -130,10 +131,10 @@ async def router_get(url, headers, command):
 async def get_uptime(url, headers):
     """
     Return uptime of the router
-    Format: {'since': 'Thu, 22 Jul 2021 14:32:38 +0200', 'uptime': '375001'}
+    Format: {"since": "Thu, 22 Jul 2021 14:32:38 +0200", "uptime": "375001"}
     :returns: JSON with last boot time and uptime in seconds
     """
-    r = await router_get(url, headers, 'uptime()')
+    r = await router_get(url, headers, "uptime()")
     if r is None:
         return None
     else:
@@ -141,7 +142,7 @@ async def get_uptime(url, headers):
         parts = temp.replace("(", "¶").replace(")", "¶").split("¶")
         since = parts[0]
         up = parts[1].split()[0]
-        return json.loads('{' + '"since":"{}", "uptime":"{}"'.format(since, up) + '}')
+        return json.loads('{"since":"' + since + '", "uptime":"' + up + '"}')
 
 
 async def get_uptime_secs(url, headers):
@@ -153,34 +154,34 @@ async def get_uptime_secs(url, headers):
     if r is None:
         return None
     else:
-        return int(r['uptime'])
+        return int(r["uptime"])
 
 
 async def get_memory_usage(url, headers):
     """
     Return memory usage of the router
-    Format: {'mem_total': '262144', 'mem_free': '107320', 'mem_used': '154824'}
+    Format: {"mem_total": "262144", "mem_free": "107320", "mem_used": "154824"}
     :returns: JSON with memory variables
     """
-    r = await router_get(url, headers, 'memory_usage()')
+    r = await router_get(url, headers, "memory_usage()")
     if r is None:
         return None
     else:
-        return json.loads('{' + r[17:])
+        return json.loads("{" + r[17:])
 
 
 async def get_cpu_usage(url, headers):
     """
     Return CPU usage of the router
-    Format: {'cpu1_total': '38106047', 'cpu1_usage': '3395512',
-             'cpu2_total': '38106008', 'cpu2_usage': '2384694'}
+    Format: {"cpu1_total": "38106047", "cpu1_usage": "3395512",
+             "cpu2_total": "38106008", "cpu2_usage": "2384694"}
     :returns: JSON with CPU load statistics
     """
-    r = await router_get(url, headers, 'cpu_usage()')
+    r = await router_get(url, headers, "cpu_usage()")
     if r is None:
         return None
     else:
-        return json.loads('{' + r[14:])
+        return json.loads("{" + r[14:])
 
 
 async def get_clients_fullinfo(url, headers):
@@ -188,7 +189,7 @@ async def get_clients_fullinfo(url, headers):
     Obtain a list of all clients
     :returns: JSON with list of clents and a list of mac addresses
     """
-    r = await router_get(url, headers, 'get_clientlist()')
+    r = await router_get(url, headers, "get_clientlist()")
     if r is None:
         return None
     else:
@@ -199,17 +200,17 @@ async def get_clients_fullinfo(url, headers):
 async def get_traffic_total(url, headers):
     """
     Get total amount of traffic since last restart (Megabit format)
-    Format: {'sent': '15901.92873764038', 'recv': '10926.945571899414'}
+    Format: {"sent": "15901.92873764038", "recv": "10926.945571899414"}
     :returns: JSON with sent and received Megabits since last boot
     """
-    r = await router_get(url, headers, 'netdev(appobj)')
+    r = await router_get(url, headers, "netdev(appobj)")
     if r is None:
         return None
     else:
         meas_2 = json.loads(r)
-        tx = int(meas_2['netdev']['INTERNET_tx'], base=16) * 8 / 1024 / 1024 / 2
-        rx = int(meas_2['netdev']['INTERNET_rx'], base=16) * 8 / 1024 / 1024 / 2
-        return json.loads('{' + '"sent":"{}", "recv":"{}"'.format(tx, rx) + '}')
+        tx = int(meas_2["netdev"]["INTERNET_tx"], base=16) * 8 / 1024 / 1024 / 2
+        rx = int(meas_2["netdev"]["INTERNET_rx"], base=16) * 8 / 1024 / 1024 / 2
+        return json.loads('{"sent":"' + str(tx) + '", "recv":"' + str(rx) + '"}')
 
 
 async def get_traffic(url, headers):
@@ -218,22 +219,22 @@ async def get_traffic(url, headers):
     Note there is a two second delay to determine current traffic
     :returns: JSON with current up and down stream in Mbit/s and totals since last reboot
     """
-    meas_1 = await router_get(url, headers, 'netdev(appobj)')
+    meas_1 = await router_get(url, headers, "netdev(appobj)")
     await asyncio.sleep(2)
-    meas_2 = await router_get(url, headers, 'netdev(appobj)')
+    meas_2 = await router_get(url, headers, "netdev(appobj)")
     meas_1 = json.loads(meas_1)
     meas_2 = json.loads(meas_2)
     persec = {}
     totaldata = {}
-    tx = int(meas_2['netdev']['INTERNET_tx'], base=16) * 8 / 1024 / 1024 / 2
-    totaldata['sent'] = tx
-    tx -= int(meas_1['netdev']['INTERNET_tx'], base=16) * 8 / 1024 / 1024 / 2
-    persec['tx'] = tx
-    rx = int(meas_2['netdev']['INTERNET_rx'], base=16) * 8 / 1024 / 1024 / 2
-    totaldata['recv'] = rx
-    rx -= int(meas_1['netdev']['INTERNET_rx'], base=16) * 8 / 1024 / 1024 / 2
-    persec['rx'] = rx
-    return json.dumps({'speed': persec, 'total': totaldata})
+    tx = int(meas_2["netdev"]["INTERNET_tx"], base=16) * 8 / 1024 / 1024 / 2
+    totaldata["sent"] = tx
+    tx -= int(meas_1["netdev"]["INTERNET_tx"], base=16) * 8 / 1024 / 1024 / 2
+    persec["tx"] = tx
+    rx = int(meas_2["netdev"]["INTERNET_rx"], base=16) * 8 / 1024 / 1024 / 2
+    totaldata["recv"] = rx
+    rx -= int(meas_1["netdev"]["INTERNET_rx"], base=16) * 8 / 1024 / 1024 / 2
+    persec["rx"] = rx
+    return json.dumps({"speed": persec, "total": totaldata})
 
 
 async def get_status_wan(url, headers):
@@ -241,16 +242,16 @@ async def get_status_wan(url, headers):
     Get the status of the WAN connection
     :returns: JSON with status information on the WAN connection
     """
-    r = await router_get(url, headers, 'wanlink()')
+    r = await router_get(url, headers, "wanlink()")
     if r is None:
         return None
     else:
         status = {}
-        for f in r.split('\n'):
-            if 'return' in f:
-                if 'wanlink_' in f:
-                    key = f.partition('(')[0].partition('_')[2]
-                    value = f.rpartition(' ')[-1][:-2]
+        for f in r.split("\n"):
+            if "return" in f:
+                if "wanlink_" in f:
+                    key = f.partition("(")[0].partition("_")[2]
+                    value = f.rpartition(" ")[-1][:-2]
                     status[key] = value
         return json.loads(json.dumps(status))
 
@@ -264,7 +265,7 @@ async def is_wan_online(url, headers):
     if r is None:
         return None
     else:
-        return r['status'] == '1'
+        return r["status"] == "1"
 
 
 async def get_settings(url, headers):
@@ -273,10 +274,10 @@ async def get_settings(url, headers):
     :returns: JSON with Router settings
     """
     settings = {}
-    for s in ['time_zone', 'time_zone_dst', 'time_zone_x', 'time_zone_dstoff', 'time_zone',
-              'ntp_server0', 'acs_dfs', 'productid', 'apps_sq', 'lan_hwaddr', 'lan_ipaddr',
-              'lan_proto', 'x_Setting', 'label_mac', 'lan_netmask', 'lan_gateway',
-              'http_enable', 'https_lanport', 'wl0_country_code', 'wl1_country_code']:
+    for s in ["time_zone", "time_zone_dst", "time_zone_x", "time_zone_dstoff", "time_zone",
+              "ntp_server0", "acs_dfs", "productid", "apps_sq", "lan_hwaddr", "lan_ipaddr",
+              "lan_proto", "x_Setting", "label_mac", "lan_netmask", "lan_gateway",
+              "http_enable", "https_lanport", "wl0_country_code", "wl1_country_code"]:
         r = await router_get(url, headers, "nvram_get(" + s + ")")
         if r is not None:
             settings[s] = json.loads(r)[s]
@@ -292,7 +293,7 @@ async def get_lan_ip_address(url, headers):
     if r is None:
         return None
     else:
-        return json.loads(r)['lan_ipaddr']
+        return json.loads(r)["lan_ipaddr"]
 
 
 async def get_lan_netmask(url, headers):
@@ -304,7 +305,7 @@ async def get_lan_netmask(url, headers):
     if r is None:
         return None
     else:
-        return json.loads(r)['lan_netmask']
+        return json.loads(r)["lan_netmask"]
 
 
 async def get_lan_gateway(url, headers):
@@ -316,7 +317,7 @@ async def get_lan_gateway(url, headers):
     if r is None:
         return None
     else:
-        return json.loads(r)['lan_gateway']
+        return json.loads(r)["lan_gateway"]
 
 
 async def get_dhcp_list(url, headers):
@@ -342,8 +343,8 @@ async def get_online_clients(url, headers):
     else:
         infomsg(clnts)
         lst = []
-        for c in clnts['get_clientlist']:
-            if (len(c) == 17) and ("isOnline" in clnts['get_clientlist'][c]) and (clnts['get_clientlist'][c]['isOnline'] == '1'):
+        for c in clnts["get_clientlist"]:
+            if (len(c) == 17) and ("isOnline" in clnts["get_clientlist"][c]) and (clnts["get_clientlist"][c]["isOnline"] == "1"):
                 lst.append({"mac": c})
         return json.dumps(lst)
 
@@ -358,19 +359,19 @@ async def get_clients_info(url, headers):
         return None
     else:
         lst = []
-        for c in clnts['get_clientlist']:
-            if (len(c) == 17) and ("isOnline" in clnts['get_clientlist'][c]) and (clnts['get_clientlist'][c]['isOnline'] == '1'):
+        for c in clnts["get_clientlist"]:
+            if (len(c) == 17) and ("isOnline" in clnts["get_clientlist"][c]) and (clnts["get_clientlist"][c]["isOnline"] == "1"):
                 lst.append(
                     {
-                        "name": clnts['get_clientlist'][c]['name'],
-                        "nickName": clnts['get_clientlist'][c]['nickName'],
-                        "ip": clnts['get_clientlist'][c]['ip'],
-                        "mac": clnts['get_clientlist'][c]['mac'],
-                        "isOnline": clnts['get_clientlist'][c]['isOnline'],
-                        "curTx": clnts['get_clientlist'][c]['curTx'],
-                        "curRx": clnts['get_clientlist'][c]['curRx'],
-                        "totalTx": clnts['get_clientlist'][c]['totalTx'],
-                        "totalRx": clnts['get_clientlist'][c]['totalRx'],
+                        "name": clnts["get_clientlist"][c]["name"],
+                        "nickName": clnts["get_clientlist"][c]["nickName"],
+                        "ip": clnts["get_clientlist"][c]["ip"],
+                        "mac": clnts["get_clientlist"][c]["mac"],
+                        "isOnline": clnts["get_clientlist"][c]["isOnline"],
+                        "curTx": clnts["get_clientlist"][c]["curTx"],
+                        "curRx": clnts["get_clientlist"][c]["curRx"],
+                        "totalTx": clnts["get_clientlist"][c]["totalTx"],
+                        "totalRx": clnts["get_clientlist"][c]["totalRx"],
                     }
                 )
         return json.loads(json.dumps(lst))
@@ -386,7 +387,7 @@ async def get_client_info(url, headers, clientid):
     if full_info is None:
         return None
 
-    clnts = full_info['get_clientlist']
+    clnts = full_info["get_clientlist"]
     if clientid in clnts:
         return clnts[clientid]
     else:
@@ -418,7 +419,7 @@ async def doasusroutercall(host, username, password, timeoutvalue):
         infomsg("DHCP      : " + str(await get_dhcp_list(url, headers)))
         infomsg("Bandwidth : " + str(await get_traffic(url, headers)))
         infomsg("WAN       : " + str(await get_status_wan(url, headers)))
-        infomsg("Client    : " + str(await get_client_info(url, headers, 'B8:2C:A0:5F:37:52')))
+        infomsg("Client    : " + str(await get_client_info(url, headers, "B8:2C:A0:5F:37:52")))
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")

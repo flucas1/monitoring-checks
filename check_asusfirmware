@@ -191,7 +191,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "current_version")))
     current = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="current_version")
     infomsg(current.get_attribute("outerHTML"))
-    actual = current.get_attribute('innerHTML').split(":")[1].strip()
+    actual = current.get_attribute("innerHTML").split(":")[1].strip()
     infomsg(actual)
     infomsg("current version found")
 
@@ -216,7 +216,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     elements = available.find_elements(by=selenium.webdriver.common.by.By.CSS_SELECTOR, value="*")
     if not elements:
         exitnagios("CRITICAL", "could not extract firmware update status text")
-    target = elements[0].get_attribute('innerHTML').strip()
+    target = elements[0].get_attribute("innerHTML").strip()
     infomsg(target)
 
     # end check upgrade
