@@ -80,7 +80,6 @@ def extract_text(cameraspath, entry):
         ocr_stream.close()
         infomsg("after OCR")
         text = text.replace("\n", "   ")
-        # confidences = api.AllWordConfidences()
         infomsg("OCR text -> " + text)
     except Exception as e:
         print("Exception - " + str(e))
