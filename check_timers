@@ -15,7 +15,7 @@ async def main(forcedargs=None):
         )
         await proc.wait()
     except Exception as e:
-        print(f"Error reloading daemon: {e}")
+        print("Error reloading daemon: " + str(e))
         sys.exit(1)
 
     # Get the list of enabled unit files, omitting pagers and legends
@@ -33,11 +33,11 @@ async def main(forcedargs=None):
         )
         stdout, stderr = await proc.communicate()
         if proc.returncode != 0:
-            print(f"Error listing unit files: {stderr.decode().strip()}")
+            print("Error listing unit files: " + stderr.decode().strip())
             sys.exit(1)
         list_result = stdout.decode()
     except Exception as e:
-        print(f"Error listing unit files: {e}")
+        print("Error listing unit files: " + str(e))
         sys.exit(1)
 
     # Filter for the first column and items ending in ".timer"
@@ -79,7 +79,7 @@ async def main(forcedargs=None):
     # Output the final results based on whether any problematic services were found
     if problematic_services:
         result_str = " ".join(problematic_services)
-        print(f"WARNING: There are issues with {result_str}")
+        print("WARNING: There are issues with " + result_str)
         sys.exit(1)
     else:
         print("OK")

@@ -70,12 +70,12 @@ def is_filename(filename):
 
 def validate_filename(filename, name="filename", noquit=False):
     if not filename or not filename.strip():
-        print(f"{name} not defined")
+        print(name + " not defined")
         return None
     filename2 = is_filename(filename)
     if not filename2:
         if not noquit:
-            print(f"invalid {name} (does not match regex critera): '{filename}'")
+            print("invalid " + name + " (does not match regex critera): '" + filename + "'")
         return None
     return filename2
 
@@ -97,7 +97,7 @@ async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
     alternate_timezone = alternate if alternate else timezone
 
     if not is_path_qualified(zoneinfo_file_path):
-        zoneinfo_file_path = f"{ZONEINFO_DIR}/{zoneinfo_file_path}"
+        zoneinfo_file_path = ZONEINFO_DIR + "/" + zoneinfo_file_path
 
     zoneinfo_file_path = validate_filename(zoneinfo_file_path)
 
@@ -106,22 +106,22 @@ async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
     if not is_path_qualified(zoneinfo_file_path):
         exitnagios("CRITICAL", "failed to get timezone")
 
-    msg = f"timezone is '{server_timezone}'"
+    msg = "timezone is '" + server_timezone + "'"
 
     if server_timezone != timezone and server_timezone != alternate_timezone:
         if timezone != alternate_timezone:
-            msg += f" (expected: '{timezone}' or '{alternate_timezone}')"
+            msg = msg + " (expected: '" + timezone + "' or '" + alternate_timezone + "')"
         else:
-            msg += f" (expected: '{timezone}')"
+            msg = msg + " (expected: '" + timezone + "')"
         exitnagios("CRITICAL", msg)
 
     try:
         if filecmp.cmp(LOCALTIME_FILE, zoneinfo_file_path, shallow=False):
             exitnagios("OK", msg)
         else:
-            exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file_path}'!")
+            exitnagios("CRITICAL", msg + ", localtime file '" + LOCALTIME_FILE + "' does not match timezone file '" + zoneinfo_file_path + "'!")
     except FileNotFoundError:
-        exitnagios("CRITICAL", f"{msg}, localtime file '{LOCALTIME_FILE}' does not match timezone file '{zoneinfo_file_path}'!")
+        exitnagios("CRITICAL", msg + ", localtime file '" + LOCALTIME_FILE + "' does not match timezone file '" + zoneinfo_file_path + "'!")
 
     exitnagios("UNKNOWN", msg)
 

@@ -57,28 +57,28 @@ async def check_stratum(hostname):
         sys.exit(3)
 
     if stratum < 3:
-        print(f"STRATUM OK. Level: {stratum} (Excellent) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM OK. Level: " + str(stratum) + " (Excellent) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 0
     elif stratum < 4:
-        print(f"STRATUM OK. Level: {stratum} (Good) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM OK. Level: " + str(stratum) + " (Good) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 0
     elif stratum < 5:
-        print(f"STRATUM OK. Level: {stratum} (Normal) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM OK. Level: " + str(stratum) + " (Normal) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 0
     elif stratum < 6:
-        print(f"STRATUM WARNING. Level: {stratum} (Warning) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM WARNING. Level: " + str(stratum) + " (Warning) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 1
     elif stratum < 7:
-        print(f"STRATUM CRITICAL. Level: {stratum} (Critical) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM CRITICAL. Level: " + str(stratum) + " (Critical) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 2
     elif stratum < 16:
-        print(f"STRATUM UNKNOWN. Level: {stratum} (Unknown Stratum Level reached) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM UNKNOWN. Level: " + str(stratum) + " (Unknown Stratum Level reached) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 3
     elif stratum == 16:
-        print(f"STRATUM CRITICAL. Level: {stratum} (NTP Service is Dead!) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM CRITICAL. Level: " + str(stratum) + " (NTP Service is Dead!) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 2
     else:
-        print(f"STRATUM UNKNOWN. Level: {stratum} (Out of bounds) System Peer: {peer} |stratum={stratum};")
+        print("STRATUM UNKNOWN. Level: " + str(stratum) + " (Out of bounds) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
         stateid = 3
 
     sys.exit(stateid)
