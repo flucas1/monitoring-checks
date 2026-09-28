@@ -49,7 +49,7 @@ async def run_iostat(disk, extended, samples):
         # Replace commas with dots for float parsing, then split by whitespace
         return last_line.replace(',', '.').split()
     except Exception as e:
-        print(f"ERROR: Failed to run iostat command: {e}")
+        print("ERROR: Failed to run iostat command: " + str(e))
         sys.exit(-1)
 
 
@@ -71,7 +71,7 @@ async def main(forcedargs=None):
         sys.exit(-1)
 
     # Checks for sane Disk name
-    if not os.path.exists(f"/dev/{args.disk}"):
+    if not os.path.exists("/dev/" + args.disk):
         print("ERROR: Device incorrectly specified")
         sys.exit(-1)
 
@@ -90,7 +90,7 @@ async def main(forcedargs=None):
 
     tmpx = await run_iostat(args.disk, extended=True, samples=args.samples)
     if not tmpx:
-        print(f"ERROR: No data returned for disk {args.disk}")
+        print("ERROR: No data returned for disk " + args.disk)
         sys.exit(-1)
 
     state = "OK"
@@ -116,8 +116,8 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = f"{state} - I/O stats: Transfers/Sec={tps} Read Requests/Sec={read_sec} Write Requests/Sec={written_sec} KBytes Read/Sec={kbytes_read_sec} KBytes_Written/Sec={kbytes_written_sec}"
-        perfdata = f" | total_io_sec={tps};{warn[0]};{crit[0]}; read_io_sec={read_sec};{warn[1]};{crit[1]}; write_io_sec={written_sec};{warn[2]};{crit[2]}; kbytes_read_sec={kbytes_read_sec};{warn[3]};{crit[3]}; kbytes_written_sec={kbytes_written_sec};{warn[4]};{crit[4]};"
+        msg = state + " - I/O stats: Transfers/Sec=" + str(tps) + " Read Requests/Sec=" + str(read_sec) + " Write Requests/Sec=" + str(written_sec) + " KBytes Read/Sec=" + str(kbytes_read_sec) + " KBytes_Written/Sec=" + str(kbytes_written_sec)
+        perfdata = " | total_io_sec=" + str(tps) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " read_io_sec=" + str(read_sec) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";" + " write_io_sec=" + str(written_sec) + ";" + str(warn[2]) + ";" + str(crit[2]) + ";" + " kbytes_read_sec=" + str(kbytes_read_sec) + ";" + str(warn[3]) + ";" + str(crit[3]) + ";" + " kbytes_written_sec=" + str(kbytes_written_sec) + ";" + str(warn[4]) + ";" + str(crit[4]) + ";"
 
     # ------------Queue Test-------------
     elif args.queue:
@@ -133,8 +133,8 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = f"{state} - Disk Queue Stats: Average Request Size={qsize} Average Queue Length={qlength}"
-        perfdata = f" | qsize={qsize};{warn[0]};{crit[0]}; queue_length={qlength};{warn[1]};{crit[1]};"
+        msg = state + " - Disk Queue Stats: Average Request Size=" + str(qsize) + " Average Queue Length=" + str(qlength)
+        perfdata = " | qsize=" + str(qsize) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " queue_length=" + str(qlength) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";"
 
     # ------------Wait Time Test-------------
     elif args.waittime:
@@ -153,8 +153,8 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = f"{state} - Wait Time Stats: Avg I/O Wait Time (ms)={avgwait} Avg Read Wait Time (ms)={avgrwait} Avg Write Wait Time (ms)={avgwwait} Avg Service Wait Time (ms)={avgsvctime} Avg CPU Utilization={avgcpuutil}"
-        perfdata = f" | avg_io_waittime_ms={avgwait};{warn[0]};{crit[0]}; avg_r_waittime_ms={avgrwait};{warn[1]};{crit[1]}; avg_w_waittime_ms={avgwwait};{warn[2]};{crit[2]}; avg_service_waittime_ms={avgsvctime};{warn[3]};{crit[3]}; avg_cpu_utilization={avgcpuutil};{warn[4]};{crit[4]};"
+        msg = state + " - Wait Time Stats: Avg I/O Wait Time (ms)=" + str(avgwait) + " Avg Read Wait Time (ms)=" + str(avgrwait) + " Avg Write Wait Time (ms)=" + str(avgwwait) + " Avg Service Wait Time (ms)=" + str(avgsvctime) + " Avg CPU Utilization=" + str(avgcpuutil)
+        perfdata = " | avg_io_waittime_ms=" + str(avgwait) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " avg_r_waittime_ms=" + str(avgrwait) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";" + " avg_w_waittime_ms=" + str(avgwwait) + ";" + str(warn[2]) + ";" + str(crit[2]) + ";" + " avg_service_waittime_ms=" + str(avgsvctime) + ";" + str(warn[3]) + ";" + str(crit[3]) + ";" + " avg_cpu_utilization=" + str(avgcpuutil) + ";" + str(warn[4]) + ";" + str(crit[4]) + ";"
 
     # now output the official result
     final_output = msg

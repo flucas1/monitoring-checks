@@ -73,16 +73,16 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 
 async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, timeoutstatus):
-    client = ntplib.NTPClient()
+    client = aiontp.NTPClient()
     counter = 0
     retries = 3
     while True:
         infomsg("executing retry " + str(counter))
         counter = counter + 1
         try:
-            response = client.request(hostname, version=4)
+            response = await client.request(hostname, version=4)
             offset = response.offset
-            infomsg(f"NTP offset: {offset:.3f} seconds")
+            infomsg("NTP offset: " + str(round(offset, 3)) + " seconds")
 
             if critical is not None and abs(offset) >= float(critical):
                 status = "CRITICAL"
@@ -92,10 +92,10 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
                 status = "OK"
 
             now = datetime.datetime.now(datetime.timezone.utc)
-            exitnagios(status, f"NTP offset {offset:.3f}s at {now.isoformat()} UTC")
+            exitnagios(status, "NTP offset " + str(round(offset, 3)) + "s at " + now.isoformat() + " UTC")
 
         except Exception as e:
-            infomsg(f"NTP request failed: {e}")
+            infomsg("NTP request failed: " + str(e))
             if counter > retries:
                 exitnagios(timeoutstatus, str(e))
             else:

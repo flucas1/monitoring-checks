@@ -72,9 +72,9 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
                 if gpsd.read() == 0:
                     report = gpsd.data
                     infomsg(report)
-                    if report['class'] == 'TPV':
-                        test_time = report.get('time', '')
-                        if (test_time != ''):
+                    if report["class"] == "TPV":
+                        test_time = report.get("time", "")
+                        if test_time != "":
                             gps_time = test_time
                             break
             if datetime.datetime.now(datetime.timezone.utc).timestamp() > start + timeoutvalue:
@@ -87,7 +87,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
     finally:
         if timeout:
             exitnagios(timeoutstatus, "GPS time not received")
-        elif (gps_time == None):
+        elif gps_time == None:
             exitnagios("WARNING", "GPS data cannot be parsed: " + str(gps_time))
         else:
             exitnagios("OK", "GPS time is: " + str(gps_time))

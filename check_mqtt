@@ -126,9 +126,9 @@ def on_message(mosq, userdata, msg):
     userdata["have_response"] = True
 
     if args.short_output:
-        message = "value=%s | response_time=%.2f value=%s" % (str(payload), elapsed, str(payload))
+        message = "value=" + str(payload) + " | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
     else:
-        message = "message from %s at %s in %.2fs | response_time=%.2f value=%s" % (args.check_subscription, args.mqtt_host, elapsed, elapsed, str(payload))
+        message = "message from " + args.check_subscription + " at " + args.mqtt_host + " in " + str("%.2f" % elapsed) + "s | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
 
     if args.critical is not None or args.warning is not None:
         infomsg("non-value checks")
@@ -139,14 +139,14 @@ def on_message(mosq, userdata, msg):
                     status = "CRITICAL"
             except Exception:
                 status = "CRITICAL"
-                message = "critical expression error '{}'".format(args.critical)
+                message = "critical expression error '" + args.critical + "'"
         if status == "OK" and args.warning is not None:
             try:
                 if eval(args.warning):
                     status = "WARNING"
             except Exception:
                 status = "CRITICAL"
-                message = "warning expression error '{}'".format(args.warning)
+                message = "warning expression error '" + args.warning + "'"
     else:
         infomsg("value checks")
         status = "CRITICAL"
@@ -229,7 +229,7 @@ async def main(forcedargs=None):
         "have_response": False,
         "start_time": datetime.datetime.now(datetime.timezone.utc).timestamp(),
     }
-    mqttc = paho.mqtt.client.Client(paho.mqtt.client.CallbackAPIVersion.VERSION2, "nagios-%d" % (os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+    mqttc = paho.mqtt.client.Client(paho.mqtt.client.CallbackAPIVersion.VERSION2, "nagios-" + str(os.getpid()), clean_session=True, userdata=userdata, protocol=4)
     mqttc.on_message = on_message
     mqttc.on_connect = on_connect
     mqttc.on_disconnect = on_disconnect
@@ -253,11 +253,11 @@ async def main(forcedargs=None):
         mqttc.connect(args.mqtt_host, args.mqtt_port, args.keepalive)
     except TimeoutError as e:
         status = timeoutstatus
-        message = "Connection to %s:%d timed out: %s" % (args.mqtt_host, args.mqtt_port, str(type(e)) + " " + str(e))
+        message = "Connection to " + args.mqtt_host + ":" + str(args.mqtt_port) + " timed out: " + str(type(e)) + " " + str(e)
         exitnagios(status, message)
     except Exception as e:
         status = "CRITICAL"
-        message = "Connection to %s:%d failed: %s" % (args.mqtt_host, args.mqtt_port, str(type(e)) + " " + str(e))
+        message = "Connection to " + args.mqtt_host + ":" + str(args.mqtt_port) + " failed: " + str(type(e)) + " " + str(e)
         exitnagios(status, message)
 
     infomsg("Starting loop")

@@ -143,9 +143,9 @@ async def check_rtc_utc():
 
 async def get_rtc_data(device):
     # Validate device
-    rtc_sys_path = f"/sys/class/rtc/{device}"
+    rtc_sys_path = "/sys/class/rtc/" + device
     if not os.path.exists(rtc_sys_path):
-        exitnagios("CRITICAL", f"{device} does not exist on this system")
+        exitnagios("CRITICAL", device + " does not exist on this system")
 
     try:
         # Read date
@@ -165,13 +165,13 @@ async def get_rtc_data(device):
                 content = await f.read()
                 batt_status = content.strip()
             if batt_status != "okay":
-                exitnagios("CRITICAL", f"RTC battery not valid for {device}")
+                exitnagios("CRITICAL", "RTC battery not valid for " + device)
 
         # Parse date and time
         date_parts = date_str.split("-")
         time_parts = time_str.split(":")
         if len(date_parts) != 3 or len(time_parts) != 3:
-            exitnagios("CRITICAL", f"Could not parse RTC data for {device}")
+            exitnagios("CRITICAL", "Could not parse RTC data for " + device)
 
         rtctime = datetime.datetime(
             int(date_parts[0]), int(date_parts[1]), int(date_parts[2]),
@@ -182,7 +182,7 @@ async def get_rtc_data(device):
         return int(rtctime.timestamp())
 
     except Exception as e:
-        exitnagios("CRITICAL", f"Error reading RTC data for {device}: {e}")
+        exitnagios("CRITICAL", "Error reading RTC data for " + device + ": " + str(e))
 
 
 # -------------------------------------------------------------------------------
