@@ -28,7 +28,7 @@ async def log(message):
 
 async def create_zfs_fstab(original_fstab):
     """Generate a temporary fstab for ZFS datasets."""
-    tmp_fstab = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    tmp_fstab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
 
     # Copy original
     if os.path.exists(original_fstab):
@@ -38,7 +38,7 @@ async def create_zfs_fstab(original_fstab):
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            'zfs', 'list', '-H', '-o', 'name',
+            "zfs", "list", "-H", "-o", "name",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -47,7 +47,7 @@ async def create_zfs_fstab(original_fstab):
 
         for ds in zfs_list:
             proc = await asyncio.create_subprocess_exec(
-                'zfs', 'get', '-H', 'mountpoint', ds,
+                "zfs", "get", "-H", "mountpoint", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -60,7 +60,7 @@ async def create_zfs_fstab(original_fstab):
                 continue
 
             proc = await asyncio.create_subprocess_exec(
-                'zfs', 'get', '-H', 'canmount', ds,
+                "zfs", "get", "-H", "canmount", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -69,40 +69,11 @@ async def create_zfs_fstab(original_fstab):
             if len(parts) < 3:
                 continue
             canmount = parts[2]
-            if canmount == 'off':
+            if canmount == "off":
                 continue
 
-            # Handling SunOS and FreeBSD specific checks
-            system = os.uname().sysname
-            if system == 'SunOS':
-                proc = await asyncio.create_subprocess_exec(
-                    'zfs', 'get', '-H', 'zoned', ds,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, _ = await proc.communicate()
-                parts = stdout.decode().strip().split()
-                if len(parts) < 3:
-                    continue
-                zoned = parts[2]
-                if zoned == 'on':
-                    continue
-            elif system == 'FreeBSD':
-                proc = await asyncio.create_subprocess_exec(
-                    'zfs', 'get', '-H', 'jailed', ds,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, _ = await proc.communicate()
-                parts = stdout.decode().strip().split()
-                if len(parts) < 3:
-                    continue
-                jailed = parts[2]
-                if jailed == 'on':
-                    continue
-
             proc = await asyncio.create_subprocess_exec(
-                'zfs', 'get', '-H', 'readonly', ds,
+                "zfs", "get", "-H", "readonly", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -120,10 +91,10 @@ async def create_zfs_fstab(original_fstab):
 
 async def make_mtab():
     """Create a temporary mtab for systems that lack one."""
-    tmp_mtab = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+    tmp_mtab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
     try:
         proc = await asyncio.create_subprocess_exec(
-            'mount',
+            "mount",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -131,7 +102,7 @@ async def make_mtab():
         mount_output = stdout.decode().strip().splitlines()
         for line in mount_output:
             # Simple conversion to 'dev mountpoint filesystem' format
-            parts = line.replace(' on ', ' ').replace(' (', ' ').replace(',', ' ').split()
+            parts = line.replace(" on ", " ").replace(" (", " ").replace(",", " ").split()
             if len(parts) >= 3:
                 tmp_mtab.write(parts[0] + " " + parts[1] + " " + parts[2] + "\n")
     except Exception:
@@ -144,7 +115,7 @@ async def run_df(mp, timeout):
     """Run df command with timeout."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            'df', '-k', mp,
+            "df", "-k", mp,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
@@ -158,7 +129,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
     err_mesg = []
 
     # Fstab check
-    is_openvz = os.path.exists('/proc/vz/veinfo')
+    is_openvz = os.path.exists("/proc/vz/veinfo")
     if not is_openvz and not args.auto and not args.ignorefstab:
         found_in_fstab = False
         for line in fstab_lines:
@@ -200,7 +171,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             for line in fstab_lines:
                 fields = line.split()
                 if len(fields) > max(args.mf - 1, args.of - 1) and fields[args.mf - 1] == mp:
-                    if 'ro' in fields[args.of - 1].split(','):
+                    if "ro" in fields[args.of - 1].split(","):
                         is_rw = 0
                         await log("CRIT: " + mp + " is not mounted as writable.")
                         err_mesg.append("Could not write in " + mp + " filesystem was mounted RO.")
@@ -211,7 +182,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                'touch', touchfile,
+                "touch", touchfile,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL
             )
@@ -231,28 +202,37 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
     return err_mesg
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.")
-    parser.add_argument('-m', dest='mtab', default='/proc/mounts', help="Use this mtab instead")
-    parser.add_argument('-f', dest='fstab', default='/etc/fstab', help="Use this fstab instead")
-    parser.add_argument('-N', dest='fsf', type=int, default=3, help="FS Field number in fstab")
-    parser.add_argument('-M', dest='mf', type=int, default=2, help="Mount Field number in fstab")
-    parser.add_argument('-O', dest='of', type=int, default=4, help="Option Field number in fstab")
-    parser.add_argument('-T', dest='timeout', type=int, default=3, help="Responsetime for stale NFS")
-    parser.add_argument('-L', dest='linkok', action='store_true', help="Allow softlinks instead of mount points")
-    parser.add_argument('-i', dest='ignorefstab', action='store_true', help="Ignore fstab")
-    parser.add_argument('-a', dest='auto', action='store_true', help="Autoselect mounts from fstab")
-    parser.add_argument('-A', dest='autoignore', action='store_true', help="Autoselect from fstab, OK if none found")
-    parser.add_argument('-E', dest='exclude', default='none', help="Exclude paths in auto mode")
-    parser.add_argument('-o', dest='noautoignore', action='store_true', help="Ignore mounts with noauto flag")
-    parser.add_argument('-w', dest='writetest', action='store_true', help="Perform writetest on mountpoint")
-    parser.add_argument('-e', dest='dfargs', default='', help="Extra arguments for df")
-    parser.add_argument('mountpoints', nargs='*', help="List of mountpoints to check")
+    parser.add_argument("-m", dest="mtab", default="/proc/mounts", help="Use this mtab instead")
+    parser.add_argument("-f", dest="fstab", default="/etc/fstab", help="Use this fstab instead")
+    parser.add_argument("-N", dest="fsf", type=int, default=3, help="FS Field number in fstab")
+    parser.add_argument("-M", dest="mf", type=int, default=2, help="Mount Field number in fstab")
+    parser.add_argument("-O", dest="of", type=int, default=4, help="Option Field number in fstab")
+    parser.add_argument("-T", dest="timeout", type=int, default=3, help="Responsetime for stale NFS")
+    parser.add_argument("-L", dest="linkok", action="store_true", help="Allow softlinks instead of mount points")
+    parser.add_argument("-i", dest="ignorefstab", action="store_true", help="Ignore fstab")
+    parser.add_argument("-a", dest="auto", action="store_true", help="Autoselect mounts from fstab")
+    parser.add_argument("-A", dest="autoignore", action="store_true", help="Autoselect from fstab, OK if none found")
+    parser.add_argument("-E", dest="exclude", default="none", help="Exclude paths in auto mode")
+    parser.add_argument("-o", dest="noautoignore", action="store_true", help="Ignore mounts with noauto flag")
+    parser.add_argument("-w", dest="writetest", action="store_true", help="Perform writetest on mountpoint")
+    parser.add_argument("-e", dest="dfargs", default="", help="Extra arguments for df")
+    parser.add_argument("mountpoints", nargs="*", help="List of mountpoints to check")
 
-    args = parser.parse_args()
+    if forcedargs is not None:
+        args = parser.parse_args(forcedargs)
+    else:
+        args = parser.parse_args()
 
     if args.autoignore:
         args.auto = True
+
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     err_mesg = []
 
@@ -264,7 +244,7 @@ async def main(forcedargs=None):
     mtab_file = args.mtab
 
     # ZFS Check
-    if os.path.exists('/sbin/zfs') and os.access('/sbin/zfs', os.X_OK):
+    if os.path.exists("/sbin/zfs") and os.access("/sbin/zfs", os.X_OK):
         fstab_file = await create_zfs_fstab(fstab_file)
 
     mps = args.mountpoints
@@ -272,21 +252,21 @@ async def main(forcedargs=None):
     # Auto select mounts
     if args.auto:
         mps = []
-        valid_fs = {'ext2', 'ext3', 'xfs', 'auto', 'ext4', 'nfs', 'nfs4', 'davfs', 'cifs',
-                    'fuse', 'glusterfs', 'ocfs2', 'lustre', 'ufs', 'zfs', 'ceph', 'btrfs', 'yas3fs'}
+        valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs",
+                    "fuse", "glusterfs", "ocfs2", "lustre", "ufs", "zfs", "ceph", "btrfs", "yas3fs"}
         try:
             async with aiofiles.open(fstab_file, "r") as f:
                 async for line in f:
-                    if line.strip().startswith('#'):
+                    if line.strip().startswith("#"):
                         continue
-                    if args.exclude != 'none' and re.search(args.exclude, line):
+                    if args.exclude != "none" and re.search(args.exclude, line):
                         continue
                     fields = line.split()
                     if len(fields) > max(fsf_idx, mf_idx, of_idx):
-                        if args.noautoignore and 'noauto' in fields[of_idx]:
+                        if args.noautoignore and "noauto" in fields[of_idx]:
                             continue
                         if fields[fsf_idx] in valid_fs:
-                            mp = fields[mf_idx].rstrip('/')
+                            mp = fields[mf_idx].rstrip("/")
                             if mp:
                                 mps.append(mp)
         except IOError:
@@ -299,16 +279,15 @@ async def main(forcedargs=None):
         msg = "ERROR: no mountpoints given!"
         await log(msg)
         print(msg)
-        parser.print_help()
         sys.exit(STATE_UNKNOWN)
 
-    if not os.path.exists('/proc/mounts') and mtab_file == '/proc/mounts':
+    if not os.path.exists("/proc/mounts") and mtab_file == "/proc/mounts":
         await log("CRIT: /proc wasn't mounted!")
-        ret = await asyncio.create_subprocess_exec('mount', '-t', 'proc', 'proc', '/proc')
+        ret = await asyncio.create_subprocess_exec("mount", "-t", "proc", "proc", "/proc")
         await ret.wait()
         err_mesg.append("CRIT: mounted /proc " + str(ret))
 
-    if mtab_file == 'none':
+    if mtab_file == "none":
         mtab_file = await make_mtab()
 
     if not os.path.exists(mtab_file):
@@ -323,7 +302,7 @@ async def main(forcedargs=None):
         async with aiofiles.open(fstab_file, "r") as f:
             async for line in f:
                 stripped = line.strip()
-                if not stripped.startswith('#'):
+                if not stripped.startswith("#"):
                     fstab_lines.append(stripped)
 
     mtab_lines = []
@@ -340,9 +319,9 @@ async def main(forcedargs=None):
         err_mesg.extend(res)
 
     # Cleanup temporary files
-    if '/tmp' in mtab_file and os.path.exists(mtab_file):
+    if "/tmp" in mtab_file and os.path.exists(mtab_file):
         os.remove(mtab_file)
-    if '/tmp' in fstab_file and os.path.exists(fstab_file):
+    if "/tmp" in fstab_file and os.path.exists(fstab_file):
         os.remove(fstab_file)
 
     # Output Nagios Status
@@ -354,5 +333,5 @@ async def main(forcedargs=None):
     sys.exit(STATE_OK)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
