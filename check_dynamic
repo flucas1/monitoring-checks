@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import argparse
+import pycurl
+import io
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+async def get_url_content(protocol, interface, timeout, url, accesstoken):
+    infomsg("querying " + str(url))
+    buffer = io.BytesIO()
+    try:
+        curl = pycurl.Curl()
+        curl.reset()
+        curl.setopt(pycurl.URL, url)
+        curl.setopt(pycurl.WRITEDATA, buffer)
+        # curl.setopt(pycurl.CAINFO, certifi.where())
+        if interface not in [None, ""]:
+            curl.setopt(pycurl.INTERFACE, interface)
+        # Force IPv4 or IPv6 if requested
+        if protocol in ["4", "-4", 4]:
+            infomsg("using ipv4 for curl")
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V4)
+        elif protocol in ["6", "-6", 6]:
+            infomsg("using ipv6 for curl")
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_V6)
+        else:
+            infomsg("using ipv4/ipv6 for curl")
+            curl.setopt(pycurl.IPRESOLVE, pycurl.IPRESOLVE_WHATEVER)
+        curl.setopt(pycurl.TIMEOUT, timeout)
+        headers = [
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+            "Authorization: Bearer " + accesstoken
+        ]
+        curl.setopt(pycurl.HTTPHEADER, headers)
+        curl.perform()
+        responsecode = curl.getinfo(pycurl.RESPONSE_CODE)
+        infomsg("the response code is " + str(responsecode))
+        curl.close()
+    except Exception as e:
+        infomsg("issue during curl " + str(e))
+
+    infomsg("got remote answer")
+    bytes = buffer.getvalue()
+    content = bytes.decode()
+    infomsg("the remote answer is '" + content + "'")
+
+    return content
+
+
+async def resolve_entry(protocol, interface, timeout, accesstoken, record):
+    try:
+        clearedprotocol = protocol.replace("-", "")
+        url = "https://www.bigbroeyes.com/external_checks/check_dns.php?record=" + record + "&ipv=" + clearedprotocol
+        content = await get_url_content(None, interface, timeout, url, accesstoken)
+        if content is None:
+            return None
+
+        parts = content.split(":", 1)
+        status = parts[0].strip().lower()
+        infomsg("status ->" + str(status))
+        if status == "timeout":
+            return None
+        elif status == "ok":
+            found = parts[1].strip().lower()
+            return found
+        else:
+            return None
+    except Exception as e:
+        infomsg(str(e))
+        return None
+
+
+async def query_external_ip(protocol, interface, timeout, accesstoken):
+    try:
+        url = "https://www.bigbroeyes.com/external_checks/check_ip.php"
+        content = await get_url_content(protocol, interface, timeout, url, accesstoken)
+        if content is None:
+            return None
+
+        parts = content.split(":", 1)
+        status = parts[0].strip().lower()
+        infomsg(status)
+        if status == "timeout":
+            return None
+        elif status == "ok":
+            found = parts[1].strip().lower()
+            return found
+        else:
+            return None
+    except Exception as e:
+        infomsg(str(e))
+        return None
+
+
+async def dodynamiccall(accesstoken, protocol, interface, record, timeoutvalue, timeoutstatus):
+    infomsg("protocol -> " + str(protocol))
+    infomsg("interface -> " + str(interface))
+
+    resolvedip = await resolve_entry(protocol, interface, timeoutvalue, accesstoken, record)
+    externalip = await query_external_ip(protocol, interface, timeoutvalue, accesstoken)
+    if (resolvedip == "") or (externalip == None):
+        exitnagios("WARNING", "could not resolve " + record)
+    elif resolvedip == externalip:
+        exitnagios("OK", "the resolved record '" + record + "' matches the external ip " + externalip)
+    else:
+        exitnagios("CRITICAL", "the resolved record '" + record + "' as " + str(resolvedip) + " does not match the external ip " + str(externalip))
+
+
+# -------------------------------------------------------------------------------
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
+    parser.add_argument("-i", "--interface", dest="interface", default="", help="interface to use")
+    parser.add_argument("-r", "--record", dest="record", default="", help="record to query")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout 'value:STATUS'")
+    parser.add_argument("-k", "--accesstokenfile", dest="accesstokenfile", default="", help="file containing the authentication token for the remote service")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 is True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 is True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 is True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts) > 1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        if not os.path.isfile(args.accesstokenfile):
+            exitnagios("CRITICAL", "access token file does not exist")
+        with open(args.accesstokenfile) as handle:
+            accesstoken = handle.read().splitlines()[0]
+        await dodynamiccall(accesstoken, protocol, args.interface, args.record, timeoutvalue, timeoutstatus)
+    else:
+        exitnagios("CRITICAL", "timeout status is not valid")
+
+
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

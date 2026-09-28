@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import argparse
+import asyncio
+import aiohttp
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+def normalizemultivalues(original):
+    parts = []
+    for item in original.strip().split("§"):
+        value = item.strip()
+        if value != "":
+            parts.append(value)
+    parts.sort()
+    return " § ".join(parts)
+
+
+async def doportexternalcall(accesstoken, protocol, hostname, record, querytype, expected, timeoutvalue, timeoutstatus):
+    try:
+        url = "https://www.bigbroeyes.com/external_checks/check_dns.php?hostname=" + hostname + "&record=" + record + "&type=" + querytype
+        infomsg("The target url is " + url)
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+                "Authorization": "Bearer " + accesstoken
+            }
+            async with session.get(url, headers=headers, timeout=timeoutvalue) as response:
+                content = await response.text()
+                if content is None:
+                    exitnagios("CRITICAL", "no result from page | count=0")
+
+                parts = content.split(":", 1)
+                status = parts[0].strip().lower()
+                if status == "timeout":
+                    exitnagios(timeoutstatus, "timeout issues")
+                elif status == "ok":
+                    found = normalizemultivalues(parts[1].strip())
+                    total = len(found.split("§"))
+                    if expected == "":
+                        exitnagios("OK", "the result is '" + found + "' | count=" + str(total))
+                    elif found == expected:
+                        exitnagios("OK", "the result '" + found + "' is as expected | count=" + str(total))
+                    else:
+                        exitnagios("CRITICAL", "the result '" + found + "' is not the expected '" + expected + "' | count=" + str(total))
+                else:
+                    exitnagios("CRITICAL", "remote error - '" + content + "' | count=0")
+    except asyncio.TimeoutError:
+        exitnagios(timeoutstatus, "timeout issues")
+    except Exception as e:
+        exitnagios("CRITICAL", "unexpected error during the check '" + str(e) + "' | count=0")
+
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
+    parser.add_argument("-r", "--record", dest="record", default="", help="record to query")
+    parser.add_argument("-p", "--querytype", dest="querytype", default="", help="type of record")
+    parser.add_argument("-e", "--expected", dest="expected", default="", help="expected result")
+    parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
+    parser.add_argument("-k", "--accesstokenfile", dest="accesstokenfile", default="", help="file containing the authentication token for the remote service")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+
+    setcandebug(args.debug)
+
+    if (args.ipv4 == True) and (args.ipv6 == True):
+        exitnagios("CRITICAL", "choose ipv4 or ipv6, not both")
+    if (args.ipv4 == False) and (args.ipv6 == False):
+        args.ipv4 = True
+    # infomsg(args.ipv4)
+    # infomsg(args.ipv6)
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL", "hostname not defined")
+
+    protocol = ""
+    if args.ipv4 == True:
+        protocol = "-4"
+    elif args.ipv6 == True:
+        protocol = "-6"
+
+    parts = args.timeout.split(":")
+    timeoutvalue = int(parts[0])
+    if len(parts) > 1:
+        timeoutstatus = parts[1]
+    else:
+        timeoutstatus = "CRITICAL"
+    if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+        with open(args.accesstokenfile) as handle:
+            accesstoken = handle.read().splitlines()[0]
+        await doportexternalcall(accesstoken, protocol, args.hostname, args.record, args.querytype, normalizemultivalues(args.expected), timeoutvalue, timeoutstatus)
+    else:
+        exitnagios("CRITICAL", "timeout status is not valid")
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------

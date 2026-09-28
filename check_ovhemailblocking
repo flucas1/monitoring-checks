@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import datetime
+import base64
+import argparse
+import ovh
+import json
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug() == True:
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+# -------------------------------------------------------------------------------
+
+
+async def generateOvhClient(credentialsfile):
+    infomsg("-----")
+    # validity unlimited
+    # GET /me
+    # GET /me/*
+    # GET /email/*
+    # POST /email/*
+
+    try:
+        lines = []
+        with open(credentialsfile) as f:
+            lines = f.readlines()
+        value_application_key = ""
+        value_application_secret = ""
+        value_consumer_key = ""
+        for line in lines:
+            parts = line.split("=", 1)
+            if parts[0].strip() == "application_key":
+                value_application_key = parts[1].strip()
+            if parts[0].strip() == "application_secret":
+                value_application_secret = parts[1].strip()
+            if parts[0].strip() == "consumer_key":
+                value_consumer_key = parts[1].strip()
+        client = ovh.Client(endpoint="ovh-eu", application_key=value_application_key, application_secret=value_application_secret, consumer_key=value_consumer_key)
+
+        # https://github.com/ovh/python-ovh
+        # Instantiate. Visit https://api.ovh.com/createToken/?GET=/me to get your credentials
+        infomsg("Logged in OVH as " + client.get("/me")["email"])
+        infomsg("List of applications in OVH as " + str(client.get("/me/api/application")))
+    except:
+        client = None
+
+    return client
+
+# -------------------------------------------------------------------------------
+
+
+async def checkblockedemails(domain, client):
+    checkMX = False
+    checkSPF = True
+    checkStatus = True
+    try:
+        result = []
+        infomsg("Retrieving accounts for " + domain)
+        domaininfo = client.get("/email/domain/" + domain)
+        if checkMX and (domaininfo["isMXValid"].strip().lower() != "valid"):
+            infomsg("MX invalid")
+            result = False
+        elif checkSPF and (domaininfo["isSPFValid"].strip().lower() != "valid"):
+            infomsg("SFP invalid")
+            result = False
+        elif checkStatus and (domaininfo["status"].strip().lower() != "ok"):
+            infomsg("status invalid")
+            result = False
+        else:
+            accountslist = client.get("/email/domain/" + domain + "/account")
+            for accountname in accountslist:
+                infomsg("Evaluating " + accountname + "@" + domain)
+                accountstatus = client.get("/email/domain/" + domain + "/account/" + accountname)
+                if accountstatus["isBlocked"] == True:
+                    infomsg(accountstatus["email"] + " is blocked")
+                    result.append(accountstatus["email"])
+    except Exception as e:
+        infomsg("exception - " + str(e))
+        result = None
+
+    infomsg("The result for domain " + domain + " is " + str(result))
+    return result
+
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname", dest="hostname", default="", help="target hostname")
+    parser.add_argument("-f", "--filetokens", dest="filetokens", default="", help="file with tokens")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+
+    args = parser.parse_args(forcedargs)
+
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+
+    hostname = args.hostname
+    if (hostname == ""):
+        exitnagios("CRITICAL", "hostname not specified")
+
+    filetokens = args.filetokens
+    if (filetokens == ""):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        filetokens = os.path.join(dir_path, "ovhmailtoken")
+
+    client = None
+    for counter in range(5):
+        if client == None:
+            client = await generateOvhClient(filetokens)
+        if (client == None) and (counter < 5 - 1):
+            await asyncio.sleep(10)
+        else:
+            break
+
+    listdomains = hostname.split(",")
+    finallist = []
+    if client == None:
+        infomsg("Unable to generate OVH client")
+        result = False
+        # raise exception only on failure, if cannot check status, let monitoring system handle notifications
+    else:
+        infomsg("Checking blocked emails")
+        result = True
+        for domain in listdomains:
+            gotresults = False
+            for index in range(3):
+                blocked = await checkblockedemails(domain.strip(), client)
+                if blocked == None:
+                    result = False
+                elif blocked == False:
+                    gotresults = True
+                    result = False
+                elif len(blocked) > 0:
+                    finallist = finallist + blocked
+                    gotresults = True
+                    result = False
+                else:
+                    gotresults = True
+                if gotresults == False:
+                    infomsg("waiting...")
+                    await asyncio.sleep(60)
+                else:
+                    break
+
+    if (result == True):
+        exitnagios("OK", "no accounts blocked")
+    else:
+        exitnagios("CRITICAL", "there are issues with the domain settings or blocked accounts - " + " ".join(finallist))
+
+# -------------------------------------------------------------------------------
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
