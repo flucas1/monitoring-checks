@@ -53,31 +53,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-DEFAULTS = {
-    "mqtt_host": "localhost",
-    "mqtt_port": 1883,
-    "mqtt_username": None,
-    "mqtt_password": None,
-    "max_wait": 4,
-    "keepalive": 60,
-    "sleep": 0.1,
-    "mqtt_cafile": None,
-    "mqtt_certfile": None,
-    "mqtt_keyfile": None,
-    "mqtt_insecure": False,
-    "check_topic": "nagios/test",
-    "check_subscription": None,
-    "mqtt_readonly": False,
-    "mqtt_payload": "PiNG",
-    "mqtt_jsonpath": None,
-    "mqtt_value": "PiNG",
-    "mqtt_operator": "equal",
-    "warning": None,
-    "critical": None,
-    "short_output": False,
-}
-
-operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
 status = "OK"
 message = "no issues"
@@ -173,13 +148,35 @@ def on_disconnect(mosq, userdata, disconnect_flags, reason_code, properties):
     if reason_code != 0:
         exitnagios("UNKNOWN", "Unexpected disconnection. Incorrect credentials?")
 
+
 # -------------------------------------------------------------------------------
 
+def parse_args(forcedargs=None):
+    DEFAULTS = {
+        "mqtt_host": "localhost",
+        "mqtt_port": 1883,
+        "mqtt_username": None,
+        "mqtt_password": None,
+        "max_wait": 4,
+        "keepalive": 60,
+        "sleep": 0.1,
+        "mqtt_cafile": None,
+        "mqtt_certfile": None,
+        "mqtt_keyfile": None,
+        "mqtt_insecure": False,
+        "check_topic": "nagios/test",
+        "check_subscription": None,
+        "mqtt_readonly": False,
+        "mqtt_payload": "PiNG",
+        "mqtt_jsonpath": None,
+        "mqtt_value": "PiNG",
+        "mqtt_operator": "equal",
+        "warning": None,
+        "critical": None,
+        "short_output": False,
+    }
 
-async def main(forcedargs=None):
-    global args
-    global message
-    global status
+    operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
     parser = argparse.ArgumentParser(description="Nagios/Icinga plugin for checking connectivity or status of MQTT clients on an MQTT broker.",
                                      epilog="There are no required arguments, defaults are displayed using --help. If --warning and/or --critical is used then possible given --operator and --value arguments are ignored.")
@@ -211,8 +208,15 @@ async def main(forcedargs=None):
     parser.add_argument("-S", "--short", help="use a shorter string on output{}".format(" (default)" if DEFAULTS["short_output"] else ""), dest="short_output", default=DEFAULTS["short_output"], action="store_true")
     parser.add_argument("-t", "--timeout", action="store", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    global message
+    global status
+
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
