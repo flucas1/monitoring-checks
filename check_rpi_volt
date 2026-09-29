@@ -2,6 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import asyncio
+import argparse
 import sys
 
 # -------------------------------------------------------------------------------
@@ -43,11 +44,22 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check Raspberry Pi voltage and throttling status")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def main(forcedargs=None):
-    # https://retropie.org.uk/forum/topic/2295/runcommand-warning-if-voltage-temperature-throttling
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+
+    infomsg("Starting voltage/throttling check")
 
     try:
         cmdline = ["/usr/bin/vcgencmd", "get_throttled"]
@@ -60,10 +72,21 @@ async def main(forcedargs=None):
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
+        infomsg("vcgencmd output: " + output)
+        infomsg("vcgencmd errors: " + errors)
+
+        if exitcode != 0:
+            exitnagios("UNKNOWN", "vcgencmd command failed with exit code " + str(exitcode))
+
+        if "=" not in output:
+            exitnagios("UNKNOWN", "Unexpected vcgencmd output format")
+
         value = output.split("=")[1]
         status = int(value, 16)
-    except (IndexError, ValueError):
-        exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status")
+        infomsg("Throttling status: " + hex(status))
+
+    except (IndexError, ValueError) as e:
+        exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status: " + str(e))
 
     if (status & 0x1) != 0:
         exitnagios("CRITICAL", "currently undervolted")

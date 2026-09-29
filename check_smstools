@@ -46,6 +46,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -102,18 +103,23 @@ async def dosmstoolscall(modem):
 
     exitnagios("CRITICAL", "modem ID " + modem + " could not be parsed or is not defined | signal=0")
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--modem", dest="modem", default="", help="modem ID")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
 
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
     setcandebug(args.debug)
-
     await dosmstoolscall(args.modem)
+
 
 # -------------------------------------------------------------------------------
 

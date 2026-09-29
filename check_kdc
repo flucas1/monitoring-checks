@@ -8,7 +8,9 @@ import tempfile
 import asyncio
 import aiofiles
 
-# Standard Nagios exit codes
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -35,14 +37,20 @@ async def cleanup(cc_path, conf_path):
             pass
 
 
-async def main(forcedargs=None):
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", required=True, help="Name of KDC to check")
     parser.add_argument("-P", "--port", default="88", help="Port on which KDC runs (default 88)")
     parser.add_argument("-p", "--principal", required=True, help="Principal name to authenticate as (including realm)")
     parser.add_argument("-k", "--keytab", required=True, help="Keytab file containing principal key")
+    args = parser.parse_args(forcedargs)
+    return args
 
-    args = parser.parse_args()
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     # Validate principal format
     if "@" not in args.principal:
@@ -120,5 +128,9 @@ async def main(forcedargs=None):
         sys.exit(state)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
