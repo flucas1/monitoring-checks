@@ -55,7 +55,8 @@ async def main():
     DIRECTORY = "."
     MODEL = "ollama/qwen3-coder-next:latest"
     PROMPT = []
-    PROMPT.append("Transform the attached python file to be async.")
+    PROMPT.append("Keep the comments.")
+    PROMPT.append("Review the attached python for issues and transform to async.")
     PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     PROMPT.append("Avoid to_thread, get_event_loop and get_running_loop.")
     PROMPT.append("For python imports do not use 'from'.")
@@ -64,6 +65,7 @@ async def main():
     PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
     PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
     PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
+    PROMPT.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
