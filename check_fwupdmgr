@@ -45,6 +45,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -73,6 +74,7 @@ async def dofwupdmgrcall():
     else:
         exitnagios("CRITICAL", "issue running fwupdmgr updates")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -87,6 +89,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     await dofwupdmgrcall()
+
 
 # -------------------------------------------------------------------------------
 
