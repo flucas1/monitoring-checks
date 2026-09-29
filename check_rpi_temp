@@ -59,6 +59,12 @@ async def read_temperature():
 
 # -------------------------------------------------------------------------------
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Monitor temperature of Raspberry Pi")
+    parser.add_argument("-w", "--warning", dest="warn", type=float, default=None, help="Set warning threshold")
+    parser.add_argument("-c", "--critical", dest="crit", type=float, default=None, help="Set critical threshold")
+    return parser.parse_args(forcedargs)
+
 
 async def main(forcedargs=None):
     temp = 0.0
@@ -67,10 +73,7 @@ async def main(forcedargs=None):
     max_temp = 85.0
     min_temp = 0.0
 
-    parser = argparse.ArgumentParser(description="Monitor temperature of Raspberry Pi")
-    parser.add_argument("-w", "--warning", dest="warn", type=float, default=None, help="Set warning threshold")
-    parser.add_argument("-c", "--critical", dest="crit", type=float, default=None, help="Set critical threshold")
-    args = parser.parse_args(forcedargs)
+    args = parse_args(forcedargs)
 
     if args.warn is not None:
         warn = args.warn

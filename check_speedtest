@@ -70,28 +70,24 @@ def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM
     return nagout
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Nagios speedtest-cli plugin")
-
     parser.add_argument('-w', type=float, required=True, help="Download Warning Level - *Required*")
     parser.add_argument('-c', type=float, required=True, help="Download Critical Level - *Required*")
     parser.add_argument('-W', type=float, required=True, help="Upload Warning Level - *Required*")
     parser.add_argument('-C', type=float, required=True, help="Upload Critical Level - *Required*")
-
     parser.add_argument('-l', choices=['i', 'e'], required=True, help="Location of speedtest server ('i' or 'e')")
-
     parser.add_argument('-s', type=str, default="", help="Server integer or URL for the speedtest server to test against")
     parser.add_argument('-p', action='store_true', help="Output Performance Data")
-
     parser.add_argument('-m', type=float, help="Download Maximum Level")
     parser.add_argument('-M', type=float, help="Upload Maximum Level")
-
     parser.add_argument('-d', dest='debug', action='store_true', help="Output debug info for testing")
+    args = parser.parse_args(forcedargs)
+    return args
 
-    try:
-        args = parser.parse_args()
-    except SystemExit:
-        sys.exit(3)
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     if args.p:
         if args.m is None or args.M is None:

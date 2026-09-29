@@ -219,20 +219,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", dest="writetest", action="store_true", help="Perform writetest on mountpoint")
     parser.add_argument("-e", dest="dfargs", default="", help="Extra arguments for df")
     parser.add_argument("mountpoints", nargs="*", help="List of mountpoints to check")
-
-    if forcedargs is not None:
-        args = parser.parse_args(forcedargs)
-    else:
-        args = parser.parse_args()
-
-    if args.autoignore:
-        args.auto = True
-
+    args = parser.parse_args(forcedargs)
     return args
-
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+
+    if args.autoignore:
+        args.auto = True
 
     err_mesg = []
 

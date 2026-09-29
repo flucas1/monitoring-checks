@@ -357,7 +357,9 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
     return overall_status, messages, perf_data
 
 
-async def main(args):
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 

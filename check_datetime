@@ -48,13 +48,17 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", dest="ntpserver", default="172.16.4.253")
     parser.add_argument("-w", dest="warnlevel", type=float, default=150.0)
     parser.add_argument("-c", dest="critlevel", type=float, default=300.0)
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     if args.warnlevel == 0:
         args.warnlevel = 150.0

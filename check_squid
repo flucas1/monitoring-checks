@@ -125,7 +125,7 @@ async def read_credentials(file_path):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", default="localhost")
     parser.add_argument("-f", "--filecreds")
@@ -135,8 +135,12 @@ async def main(forcedargs=None):
     parser.add_argument("-W", "--password", default="")
     parser.add_argument("-w", "--warning")
     parser.add_argument("-c", "--critical")
+    args = parser.parse_args(forcedargs)
+    return args
 
-    args = parser.parse_args()
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     host = args.host
     port = args.port
@@ -279,5 +283,3 @@ async def main(forcedargs=None):
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-# -------------------------------------------------------------------------------
