@@ -55,6 +55,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -100,6 +101,7 @@ async def wait_page_loaded(driver):
             break
         await asyncio.sleep(1)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -128,6 +130,7 @@ async def tryfindbyclassname(driver, classname):
     except:
         pass
     return result
+
 
 # -------------------------------------------------------------------------------
 
@@ -163,7 +166,7 @@ async def dodnssecverisigncall(domain, proxy):
         else:
             infomsg("finding valid message")
             valid = await tryfindbyclassname(driver, "tool_alert_success")
-            if len(valid):
+            if len(valid) > 0:
                 exitnagios("OK", valid[0].text.strip())
             else:
                 infomsg(element[0].text.strip())
@@ -172,14 +175,20 @@ async def dodnssecverisigncall(domain, proxy):
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-H', '--host', dest="host", help="domain")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
