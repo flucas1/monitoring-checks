@@ -272,6 +272,7 @@ async def process_device(device, args):
 
     return (dev_exit_status, dev_return_text, dev_return_performance)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -338,8 +339,8 @@ async def main(forcedargs=None):
     full_message = nagios_msg.strip() + " - " + return_text.strip() + " | " + return_performance.strip()
     exitnagios(nagios_state, full_message)
 
-# -------------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())

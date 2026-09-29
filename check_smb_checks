@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -87,6 +88,7 @@ async def check_sysvol():
         return False, output
     return True, output
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -119,6 +121,7 @@ async def main(forcedargs=None):
         exitnagios("OK", "no issues detected in kcc nor sysvol")
     else:
         exitnagios("CRITICAL", output)
+
 
 # -------------------------------------------------------------------------------
 
