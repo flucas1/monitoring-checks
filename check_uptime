@@ -120,15 +120,14 @@ def parse_uptime(uptime_report):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
     parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
     parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
     parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
     parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
     parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
-    args = parser.parse_args(forcedargs)
-    return args
+    return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):

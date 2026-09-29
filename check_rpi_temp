@@ -84,12 +84,10 @@ async def main(forcedargs=None):
 
     temp = await read_temperature()
     if temp is None:
-        exitnagios("UNKNOWN", "Unable to read output of '/sys/class/thermal/thermal_zone0/temp'")
+        exitnagios("UNKNOWN", "Unable to read the thermal zone")
 
-    # Prep performance data
     perfdata = " | rpi_temp=" + "{:.2f}".format(temp) + ";" + "{:.2f}".format(warn) + ";" + "{:.2f}".format(crit) + ";" + "{:.2f}".format(min_temp) + ";" + "{:.2f}".format(max_temp)
 
-    # Check against thresholds
     if crit > 0 and temp >= crit:
         exitnagios("CRITICAL", "Temperature " + "{:.2f}".format(temp) + " is higher than critical threshold (" + "{:.2f}".format(crit) + ")" + perfdata)
     elif warn > 0 and temp >= warn:

@@ -106,10 +106,12 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     await dofreeswapscall(args.warning, args.critical, args.minimum)
+
 
 # -------------------------------------------------------------------------------
 

@@ -177,6 +177,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
 
@@ -184,6 +185,7 @@ async def main(forcedargs=None):
 
     proxy = ""
     await dodnssecverisigncall(args.host, proxy)
+
 
 # -------------------------------------------------------------------------------
 
