@@ -45,6 +45,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -77,6 +78,7 @@ async def doresolveddnsseccall():
     else:
         exitnagios("CRITICAL", "issue retrieving DNSSEC status")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -91,6 +93,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     await doresolveddnsseccall()
+
 
 # -------------------------------------------------------------------------------
 
