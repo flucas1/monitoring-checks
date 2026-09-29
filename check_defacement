@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -98,10 +99,11 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
     else:
         exitnagios("OK", "No dangerous words are found")
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-U", "--url", dest="url", help="Specify the full url you want to check, i.e. -U https://www.google.com")
     parser.add_argument("-K", "--keyword", dest="keyword", help="Put the words you want to search, i.e. -K hacker,hacked,anonymous")
@@ -109,6 +111,10 @@ async def main(forcedargs=None):
     parser.add_argument("-x", "--exclude", dest="exclude", help="Use this option to ignore one or multiple pre-installed suspect words")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -128,6 +134,7 @@ async def main(forcedargs=None):
 
     async with aiohttp.ClientSession() as session:
         await dodefacementcheck(args.url, args.ignore, exclude_list, keyword_list, session)
+
 
 # -------------------------------------------------------------------------------
 
