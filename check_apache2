@@ -87,12 +87,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-c", "--critical", default="")
     parser.add_argument("-R", "--unreachable", action="store_true")
     parser.add_argument("-t", "--timeout", type=int, default=15)
+    parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     warnings_list = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []

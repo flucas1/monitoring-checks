@@ -66,6 +66,7 @@ async def main():
     PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
     PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
     PROMPT.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
+    PROMPT.append("There is always a command line argument '-d' '--debug'.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
