@@ -4,6 +4,7 @@
 # other alternative can be .... as root  check /var/lib/openvpn/XXXXX.status
 # there are different types, but only the ones allowing multiple clients (as server, and not 1-1 key)
 
+import asyncio
 import socket
 import os
 import pathlib
@@ -13,7 +14,6 @@ import traceback
 import warnings
 import argparse
 import telnetlib3
-import asyncio
 
 # -------------------------------------------------------------------------------
 
@@ -54,6 +54,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -84,10 +85,11 @@ async def interact(hostname, port, password, request):
     except Exception as e:
         exitnagios("CRITICAL", str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--target", dest="target", default="", help="target hostname")
     parser.add_argument("-p", "--port", dest="port", default="", help="port to use")
@@ -96,6 +98,11 @@ async def main(forcedargs=None):
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -130,6 +137,7 @@ async def main(forcedargs=None):
             exitnagios("WARNING", "there are " + str(num) + " clients connected | clients=" + str(num))
 
     exitnagios("OK", "there are " + str(num) + " clients connected | clients=" + str(num))
+
 
 # -------------------------------------------------------------------------------
 
