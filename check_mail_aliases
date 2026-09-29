@@ -46,8 +46,6 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
 
 def isfinal(parts):
     finals = ["localaccount@localhost"]
@@ -58,7 +56,6 @@ def isexclusion(parts, customlines):
     exceptions = [] + customlines
     exceptions.append(["mailer-daemon", "postmaster@localhost"])
     exceptions.append(["root", "localaccount@localhost"])
-    # infomsg(exceptions)
     for exception in exceptions:
         if (exception[0] == parts[0]) and (exception[1] == parts[1]):
             return True
@@ -69,7 +66,7 @@ def isexpected(parts):
     return parts[1] == "root@localhost"
 
 
-async def domailaliasescall(customlines):
+def domailaliasescall(customlines):
     try:
         aliasesfile = "/etc/aliases"
         if os.path.isfile(aliasesfile):
@@ -104,7 +101,6 @@ async def domailaliasescall(customlines):
                                     errors.append(line)
                             else:
                                 errors.append(line)
-                                # infomsg("->" + line + "<-")
             finally:
                 handle.close()
             if len(errors) == 0:
@@ -115,8 +111,6 @@ async def domailaliasescall(customlines):
             exitnagios("CRITICAL", "cannot find " + aliasesfile + " | errors=-1 exclusion=-1 expected=-1")
     except Exception as e:
         exitnagios("CRITICAL", "unexpected exception " + str(e) + " | errors=-1 exclusion=-1 expected=-1")
-
-# -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
@@ -129,18 +123,17 @@ def parse_args(forcedargs=None):
     return args
 
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     customlines = []
     for entry in args.customlines.split(","):
         customlines.append(entry.strip().split(":"))
     infomsg("The custom lines are " + str(customlines))
-    await domailaliasescall(customlines)
+    domailaliasescall(customlines)
 
-# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 
 # -------------------------------------------------------------------------------
