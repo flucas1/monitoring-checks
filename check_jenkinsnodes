@@ -49,8 +49,24 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+async def isvalidnode(nodespath, entry):
+    configfile = os.path.join(nodespath, entry, "config.xml")
+    if os.path.isfile(configfile) == False:
+        return False
+    else:
+        isOK = False
 
-async def docheckjenkinsnodes(directory, critical):
+        tree = ET.parse(configfile)
+        root = tree.getroot()
+
+        tempOffline = root.findall("temporaryOfflineCause")
+        if len(tempOffline) == 0:
+            isOK = True
+
+        return isOK
+
+
+def docheckjenkinsnodes(directory, critical):
     nodespath = os.path.join(directory, "nodes")
     if os.path.isdir(nodespath) == False:
         exitnagios("CRITICAL", "the nodes path " + nodespath + " does not exists")
@@ -80,22 +96,6 @@ async def docheckjenkinsnodes(directory, critical):
     else:
         exitnagios("OK", "all jenkins nodes are in valid state | alerts=0 issues=0")
 
-
-async def isvalidnode(nodespath, entry):
-    configfile = os.path.join(nodespath, entry, "config.xml")
-    if os.path.isfile(configfile) == False:
-        return False
-    else:
-        isOK = False
-
-        tree = ET.parse(configfile)
-        root = tree.getroot()
-
-        tempOffline = root.findall("temporaryOfflineCause")
-        if len(tempOffline) == 0:
-            isOK = True
-
-        return isOK
 
 # -------------------------------------------------------------------------------
 
