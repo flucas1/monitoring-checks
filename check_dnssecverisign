@@ -109,6 +109,7 @@ async def tryfindbyxpath(driver, xpath):
         pass
     return result
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -251,6 +252,7 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -272,6 +274,7 @@ async def main(forcedargs=None):
     ignoremessages = []
     # ignoremessages.append("DS=44251/SHA-1 uses a deprecated digest algorithm")
     await dodnssecverisigncall(args.host, proxy, args.tolerant, ignoremessages)
+
 
 # -------------------------------------------------------------------------------
 
