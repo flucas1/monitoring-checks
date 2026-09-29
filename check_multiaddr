@@ -4,6 +4,7 @@
 import sys
 import os
 import asyncio
+import argparse
 
 # -------------------------------------------------------------------------------
 
@@ -44,6 +45,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -75,16 +77,17 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
             output = "timeout"
             errors = ""
             exitcode = mapstatustoexitcode(multitimeoutstatus)
+        except Exception as e:
+            output = "unknown error"
+            errors = str(e)
+            exitcode = 2
+
+        infomsg(exitcode)
+        return (exitcode, output, errors)
 
     except Exception as e:
-        output = "unknown error"
-        errors = str(e)
-        exitcode = 2
-
-    infomsg(exitcode)
-    return (exitcode, output, errors)
-
-# -------------------------------------------------------------------------------
+        infomsg("Exception in dotest: " + str(e))
+        return (2, "unknown error", str(e))
 
 
 def build_final_message(host, output, errors):
@@ -142,43 +145,57 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
 
     exitnagios("CRITICAL", "unexpected multiaddr case")
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Multi-address checker")
+    parser.add_argument("timeout", help="Multi timeout in seconds[:status]")
+    parser.add_argument("--hostname", dest="hostname", help="Comma-separated hostnames")
+    parser.add_argument("-H", dest="host", help="Single hostname (alternative to --hostname)")
+    parser.add_argument("--timeout-child", dest="childtimeout", help="Child timeout in seconds[:status]")
+    parser.add_argument("-t", dest="childtimeoutarg", help="Child timeout (alternative to --timeout-child)")
+    parser.add_argument("args", nargs="*", help="Arguments for the underlying check command")
+
     if forcedargs is None:
         forcedargs = sys.argv[1:]
-    multitimeoutparts = forcedargs[0].split(":")
+
+    args = parser.parse_args(forcedargs)
+
+    # Handle legacy positional host argument if present
+    if args.hostname is None and args.host is None and len(args.args) > 0:
+        if args.args[0] == "-H":
+            if len(args.args) > 1:
+                args.hostname = args.args[1]
+                args.args = args.args[2:]
+        elif not args.args[0].startswith("-"):
+            args.hostname = args.args[0]
+            args.args = args.args[1:]
+
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
+    multitimeoutparts = args.timeout.split(":")
     multitimeoutvalue = int(multitimeoutparts[0])
     multitimeoutstatus = "CRITICAL"
     if len(multitimeoutparts) > 1:
         multitimeoutstatus = multitimeoutparts[1]
-    multihostnames = ""
-    multiargs = []
-    childtimeout = ""
-    lastarghostname = False
-    lastargtimeout = False
-    infomsg("size of forcedargs: " + str(len(forcedargs)))
-    for i in range(1, len(forcedargs)):
-        argument = forcedargs[i]
-        if argument.startswith("--hostname="):
-            multihostnames = argument[len("--hostname="):]
-        elif lastarghostname:
-            lastarghostname = False
-            multihostnames = argument
-        elif argument == "-H":
-            lastarghostname = True
-        elif argument.startswith("--timeout="):
-            childtimeout = argument[len("--timeout="):]
-        elif lastargtimeout:
-            lastargtimeout = False
-            childtimeout = argument
-        elif argument == "-t":
-            lastargtimeout = True
-        else:
-            multiargs.append(argument)
 
-    allhosts = multihostnames.split(",")
+    multihostnames = args.hostname if args.hostname else ""
+    if args.host:
+        multihostnames = args.host
+
+    multiargs = args.args
+
+    childtimeout = args.childtimeout if args.childtimeout else ""
+    if args.childtimeoutarg:
+        childtimeout = args.childtimeoutarg
+
+    allhosts = multihostnames.split(",") if multihostnames else []
 
     childtimeoutvalue = None
     childtimeoutstatus = None
@@ -201,6 +218,7 @@ async def main(forcedargs=None):
     infomsg("multiargs: " + str(multiargs))
 
     await domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, childtimeoutstatus, allhosts, multiargs)
+
 
 # -------------------------------------------------------------------------------
 
