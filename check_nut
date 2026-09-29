@@ -9,6 +9,7 @@ import re
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -96,6 +97,7 @@ async def run_command(cmd):
 
 # -------------------------------------------------------------------------------
 
+
 # CHECK_DESC := UPSCKEY "=" SEVERITY OPERATOR VALUE [ ":" SEVERITY OPERATOR VALUE ]
 # UPSCKEY : key string as listed by upsc, see "man upsc"
 # SEVERITY := { "w" | "c" } ( "w" for warning, "c" for critical errors )
@@ -137,18 +139,16 @@ async def run_command(cmd):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--device", type=str)
-    parser.add_argument("-D", "--debug", action="store_true")
+    parser.add_argument("-i", "--device", type=str)
     parser.add_argument("-v", "--value", action="append", default=[])
+    parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
-    if args.debug:
-        setcandebug(True)
+    setcandebug(args.debug)
 
     if not args.device:
         exitnagios("UNKNOWN", "Device not specified")
