@@ -7,6 +7,7 @@ import argparse
 import socket
 import asyncio
 import aiohttp
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -170,7 +172,7 @@ async def doportexternalcall(retries, baseurl, accesstoken, ipprotocol, tcporudp
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (default, exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
@@ -184,6 +186,11 @@ async def main(forcedargs=None):
     parser.add_argument("-s", "--retries", action="store", default="3", help="number of times to retry the logic")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
