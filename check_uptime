@@ -46,27 +46,13 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
-# Standard Nagios/Icinga Exit-Codes
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
-
-
-def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
-    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
-    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
-    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
-    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
-    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
-
-    if forcedargs is not None:
-        args = parser.parse_args(forcedargs)
-    else:
-        args = parser.parse_args()
-
-    return args
 
 
 async def get_uptime():
@@ -131,6 +117,20 @@ def parse_uptime(uptime_report):
     return uptime_minutes, uptime_days, uptime_msg
 
 
+# -------------------------------------------------------------------------------
+
+
+async def main(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
+    parser.add_argument('-c', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
+    parser.add_argument('-w', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
+    parser.add_argument('-C', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
+    parser.add_argument('-W', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
+    parser.add_argument('-v', action='store_true', dest='verbose', help='Verbose output')
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
 
@@ -169,6 +169,9 @@ async def main(forcedargs=None):
         print("OK: uptime is " + uptime_msg + perfdata)
         sys.exit(STATE_OK)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

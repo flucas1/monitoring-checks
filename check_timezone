@@ -83,20 +83,6 @@ def validate_filename(filename, name="filename", noquit=False):
 # -------------------------------------------------------------------------------
 
 
-def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-T", "--timezone", type=str)
-    parser.add_argument("-A", "--alternate", type=str)
-    parser.add_argument("-Z", "--zoneinfo-file", type=str)
-
-    if forcedargs is not None:
-        args = parser.parse_args(forcedargs)
-    else:
-        args = parser.parse_args()
-
-    return args
-
-
 async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
     LOCALTIME_FILE = "/etc/localtime"
     ZONEINFO_DIR = "/usr/share/zoneinfo"
@@ -141,6 +127,15 @@ async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
 
 
 # -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-T", "--timezone", type=str)
+    parser.add_argument("-A", "--alternate", type=str)
+    parser.add_argument("-Z", "--zoneinfo-file", type=str)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):
