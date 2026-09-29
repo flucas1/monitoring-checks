@@ -11,17 +11,6 @@ import shutil
 # -------------------------------------------------------------------------------
 
 
-def parse_thresholds(thresh_str, default_val=99999):
-    """Parses comma-separated thresholds and pads them to 5 values."""
-    if not thresh_str:
-        return [default_val] * 5
-
-    parts = thresh_str.split(',')
-    # Pad the list to ensure it has 5 elements for the comparisons
-    while len(parts) < 5:
-        parts.append(default_val)
-
-    return [float(p) for p in parts[:5]]
 
 
 async def run_iostat(disk, extended, samples):
@@ -54,6 +43,19 @@ async def run_iostat(disk, extended, samples):
     except Exception as e:
         print("ERROR: Failed to run iostat command: " + str(e))
         sys.exit(-1)
+
+
+def parse_thresholds(thresh_str, default_val=99999):
+    """Parses comma-separated thresholds and pads them to 5 values."""
+    if not thresh_str:
+        return [default_val] * 5
+
+    parts = thresh_str.split(',')
+    # Pad the list to ensure it has 5 elements for the comparisons
+    while len(parts) < 5:
+        parts.append(default_val)
+
+    return [float(p) for p in parts[:5]]
 
 
 # -------------------------------------------------------------------------------

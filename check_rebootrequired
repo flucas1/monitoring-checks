@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if a reboot is required")
     return parser.parse_args(forcedargs)
@@ -23,6 +24,7 @@ async def main(forcedargs=None):
     else:
         print("OK: no pending reboot")
         sys.exit(0)
+
 
 # -------------------------------------------------------------------------------
 

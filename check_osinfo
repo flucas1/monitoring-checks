@@ -49,7 +49,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def doexpectedcall(expectedarchitecture, expectedreleasename):
+async def doexpectedcall(expectedarchitecture, expectedreleasename):
     machine = platform.machine()
     linuxinfo = platform.freedesktop_os_release()
     release = linuxinfo["PRETTY_NAME"]
@@ -79,7 +79,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    doexpectedcall(args.architecture, args.releasename)
+    await doexpectedcall(args.architecture, args.releasename)
 
 # -------------------------------------------------------------------------------
 
