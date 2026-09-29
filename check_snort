@@ -51,6 +51,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -285,10 +286,11 @@ async def check_alerts():
 
     return status, exit_text, perf_data, state_to_save
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", dest="modus")
     parser.add_argument("-i", dest="interval", default="2")
@@ -299,7 +301,12 @@ async def main(forcedargs=None):
     parser.add_argument("-d", dest="debug", action="store_true")
     parser.add_argument("-l", dest="log_file")
     parser.add_argument("-o", dest="spool_data_dir")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     global MODUS, INTERVAL, CRITICAL_THRESH, DROPPED_CRITICAL, WARNING_THRESH, DROPPED_WARNING, PRIORITY_LEVEL, DEBUG, LOG_FILE, SPOOL_DATA_DIR
 
