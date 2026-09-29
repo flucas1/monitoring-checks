@@ -89,14 +89,18 @@ async def doospfroutescall(interface, expectedspeeds, warningspeeds, expecteddup
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interface", dest="interface", default="", help="wan,lan,eth0")
     parser.add_argument("-e", "--expected", dest="expected", default="1000Mb/s", help="1000Mb/s")
     parser.add_argument("-w", "--warning", dest="warning", default="100Mb/s", help="100Mb/s")
     parser.add_argument("-u", "--duplex", dest="duplex", default="full", help="full or half")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
