@@ -53,7 +53,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def extract_text(cameraspath, entry):
+async def extract_text(cameraspath, entry):
     fullpath = os.path.join(cameraspath, entry)
 
     text = ""
@@ -174,7 +174,7 @@ async def docamerasstatuscall(cameraspath, warning, critical):
     for idx, entry in enumerate(listcameras):
         iscameravalid = results[idx]
         if not iscameravalid:
-            text = extract_text(cameraspath, entry)
+            text = await extract_text(cameraspath, entry)
             allinvalid[entry] = text
 
     limitwarning = absolutelimit(warning, totallistcameras)
@@ -207,7 +207,6 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     if args.path == None or args.path == "":

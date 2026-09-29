@@ -54,12 +54,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-H", dest="ntpserver", default="172.16.4.253")
     parser.add_argument("-w", dest="warnlevel", type=float, default=150.0)
     parser.add_argument("-c", dest="critlevel", type=float, default=300.0)
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     if args.warnlevel == 0:
         args.warnlevel = 150.0
