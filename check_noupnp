@@ -38,7 +38,7 @@ async def check_upnp_gateway():
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if no UPnP gateway is present")
-    return parser.parse_args(forcedargs
+    return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
