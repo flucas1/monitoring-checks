@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -107,7 +108,7 @@ async def snmpget(hostname, port, version, community, oid):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-p", "--port", dest="port", default=161, help="port to use, usually 143 or 993")
@@ -119,6 +120,11 @@ async def main(forcedargs=None):
     parser.add_argument("-C", "--critical-max", dest="criticalmax", default="", help="maximum value for a critical (minutes)")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -135,6 +141,7 @@ async def main(forcedargs=None):
         await dosnmpuptimecall(args.warningmin, args.criticalmin, args.warningmax, args.criticalmax, args.hostname, int(args.port), args.community, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 
