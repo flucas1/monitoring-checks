@@ -59,6 +59,7 @@ async def read_temperature():
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Monitor temperature of Raspberry Pi")
     parser.add_argument("-w", "--warning", dest="warn", type=float, default=None, help="Set warning threshold")

@@ -194,6 +194,7 @@ async def docamerasstatuscall(cameraspath, warning, critical):
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--path", dest="path", help="path that contains the images")
