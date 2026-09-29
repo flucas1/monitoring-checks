@@ -75,6 +75,7 @@ async def dodnscaacall(domain):
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -85,6 +86,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
 
@@ -94,6 +96,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "specify a host/domain to check")
 
     await dodnscaacall(args.host)
+
 
 # -------------------------------------------------------------------------------
 

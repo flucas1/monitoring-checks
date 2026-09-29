@@ -95,7 +95,9 @@ async def doipv6racall(interface, expected, ignored):
             messages.append("There are unexpected RA - " + str(unexpected))
         exitnagios("CRITICAL", " --- ".join(messages) + " | missing=" + str(count_missing) + " unexpected=" + str(count_unexpected))
 
+
 # -------------------------------------------------------------------------------
+
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
@@ -126,6 +128,7 @@ async def main(forcedargs=None):
     if None in ignored:
         ignored.remove(None)
     await doipv6racall(args.interface, expected, ignored)
+
 
 # -------------------------------------------------------------------------------
 
