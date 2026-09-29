@@ -5,19 +5,26 @@ import sys
 import argparse
 import asyncio
 
+# -------------------------------------------------------------------------------
+
 # Nagios exit codes
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
+# -------------------------------------------------------------------------------
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
+    parser.add_argument('-w', dest="warning", type=int, required=True, help="Queue size at which a warning is triggered")
+    parser.add_argument('-c', dest="critical", type=int, required=True, help="Queue size at which a critical is triggered")
+    parser.add_argument('-v', dest="verbose", action="store_true", help="Verbose output (ignored for now)")
+    return parser.parse_args(forcedargs)
+
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
-    parser.add_argument('-w', dest='warning', type=int, required=True, help="Queue size at which a warning is triggered")
-    parser.add_argument('-c', dest='critical', type=int, required=True, help="Queue size at which a critical is triggered")
-    parser.add_argument('-v', dest='verbose', action='store_true', help="Verbose output (ignored for now)")
-    args = parser.parse_args()
+    args = parse_args(forcedargs)
 
     try:
         process = await asyncio.create_subprocess_exec(
@@ -48,6 +55,9 @@ async def main(forcedargs=None):
         print("OK: " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
         sys.exit(STATE_OK)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
