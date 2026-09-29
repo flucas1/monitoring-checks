@@ -5,6 +5,10 @@ import argparse
 import asyncio
 import sys
 
+
+# -------------------------------------------------------------------------------
+
+
 # Define default values for warning and critical thresholds
 WARNING_DEFAULT = 1
 CRITICAL_DEFAULT = 4
@@ -13,26 +17,19 @@ CRITICAL_DEFAULT = 4
 CHECKRESTART_BIN = "/usr/sbin/checkrestart"
 
 
-async def main(forcedargs=None):
-    # Parse parameters
-    parser = argparse.ArgumentParser(
-        description="check_checkrestart - Check obsolete libraries still in use\n\nNeeds debian-goodies!",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    parser.add_argument(
-        "-w", "--warning",
-        type=int,
-        default=WARNING_DEFAULT,
-        help="Warning number of processes using old libraries. Default: " + str(WARNING_DEFAULT)
-    )
-    parser.add_argument(
-        "-c", "--critical",
-        type=int,
-        default=CRITICAL_DEFAULT,
-        help="Critical number of processes using old libraries. Default: " + str(CRITICAL_DEFAULT)
-    )
+# -------------------------------------------------------------------------------
 
-    args = parser.parse_args()
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="check_checkrestart - Check obsolete libraries still in use\n\nNeeds debian-goodies!")
+    parser.add_argument("-w", "--warning", type=int, default=WARNING_DEFAULT, help="Warning number of processes using old libraries. Default: " + str(WARNING_DEFAULT))
+    parser.add_argument("-c", "--critical", type=int, default=CRITICAL_DEFAULT, help="Critical number of processes using old libraries. Default: " + str(CRITICAL_DEFAULT))
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     cmd = [CHECKRESTART_BIN]
 
@@ -96,5 +93,9 @@ async def main(forcedargs=None):
         sys.exit(0)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
