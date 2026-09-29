@@ -67,7 +67,7 @@ def extract_text(cameraspath, entry):
 
         api = tesserocr.PyTessBaseAPI()
         validchars = " :-0123456789"
-        api.SetVariable('tessedit_char_whitelist', validchars)
+        api.SetVariable("tessedit_char_whitelist", validchars)
         api.SetImage(im_invert)
         infomsg("before OCR")
         ocr_stream = io.StringIO()

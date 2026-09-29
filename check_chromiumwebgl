@@ -59,8 +59,6 @@ def exitnagios(status, message):
 
 async def generatedriver(proxy):
     chrome_options = selenium.webdriver.chrome.options.Options()
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -79,13 +77,11 @@ async def generatedriver(proxy):
     chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
     driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
-    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
 
 
 def check_page_loaded(driver):
-    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
