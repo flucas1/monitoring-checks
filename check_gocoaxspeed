@@ -102,6 +102,7 @@ async def wait_page_loaded(driver):
             break
         await asyncio.sleep(1)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -205,7 +206,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
 
 # -------------------------------------------------------------------------------
 
-async def main(forcedargs=None):
+
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
@@ -214,6 +216,11 @@ async def main(forcedargs=None):
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
