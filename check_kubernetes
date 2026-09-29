@@ -54,6 +54,9 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
+# -------------------------------------------------------------------------------
+
+
 def mostseverestatus(current, candidate):
     if current == "":
         return candidate
@@ -68,8 +71,6 @@ def mostseverestatus(current, candidate):
     else:
         return "UNKNOWN"
 
-# -------------------------------------------------------------------------------
-
 
 async def run_command(cmdline):
     process = await asyncio.create_subprocess_exec(
@@ -82,8 +83,6 @@ async def run_command(cmdline):
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
     return exitcode, output, errors
-
-# -------------------------------------------------------------------------------
 
 
 async def generic_compare_columns(kubeconfig, namespace, resource, columns):
@@ -155,8 +154,6 @@ async def generic_compare_columns(kubeconfig, namespace, resource, columns):
         perf = resource + "_total=-1 " + resource + "_err=-1"
 
     return status, message, perf
-
-# -------------------------------------------------------------------------------
 
 
 async def test_kubernetes_version(kubeconfig):
@@ -349,16 +346,21 @@ async def dokubernetescall(kubeconfig, namespace):
 
     exitnagios(status, message + " | " + perf)
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", action="store", dest="mode", default="pipeline", help="choose one of: monitoring,pipeline")
     parser.add_argument("-k", "--kubeconfig", action="store", dest="kubeconfig", default="/etc/kubernetes/admin.conf", help="path to kubeconfig admin file")
     parser.add_argument("-n", "--namespace", action="store", dest="namespace", default="", help="only check this namespace")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     if args.mode.strip().lower() == "pipeline":
         setcandebug(True)
@@ -371,6 +373,7 @@ async def main(forcedargs=None):
         await dokubernetescall(kubeconfig, namespace)
     else:
         exitnagios("CRITICAL", "cannot find kubeconfig file '" + kubeconfig + "'")
+
 
 # -------------------------------------------------------------------------------
 
