@@ -60,8 +60,6 @@ def exitnagios(status, message):
 
 async def generatedriver(proxy):
     chrome_options = selenium.webdriver.chrome.options.Options()
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
     chrome_options.add_argument("--disk-cache-size=0")
     chrome_options.add_argument("--media-cache-size=0")
     chrome_options.add_argument("--headless")
@@ -80,13 +78,11 @@ async def generatedriver(proxy):
     chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
 
     driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
-    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
     return driver
 
 
 def check_page_loaded(driver):
-    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
 
@@ -143,7 +139,6 @@ async def dodkimcall(domain, selector, proxy):
         infomsg("testing " + fullkey)
 
         infomsg("browser OK")
-        # url = "https://www.mailhardener.com/tools/dkim-validator?domain="+fullkey
         url = "https://www.mailhardener.com/tools/dkim-validator"
         driver.get(url)
         infomsg("asking for navigating " + url)
@@ -168,8 +163,6 @@ async def dodkimcall(domain, selector, proxy):
         counter = 0
         waittexts = ["Inspecting record, just a moment".lower()]
         while len(element) == 0:
-            # plain_text = driver.find_element(By.TAG_NAME, "body").text
-            # print(plain_text,flush=True)
             element = await tryfindbyid(driver, "success")
             if len(element) > 0:
                 statustext = element[0].text.strip()
@@ -208,13 +201,18 @@ async def dodkimcall(domain, selector, proxy):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host', dest="host", help="Hostname")
+    parser.add_argument("-H", "--host", dest="host", help="Hostname")
     parser.add_argument("-s", "--selector", dest="selector", default="", help="DKIM selector to test")
     parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
