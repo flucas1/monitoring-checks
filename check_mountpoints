@@ -12,7 +12,8 @@ import syslog
 import asyncio
 import aiofiles
 
-# Nagios Exit Codes
+# -------------------------------------------------------------------------------
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -20,17 +21,14 @@ STATE_UNKNOWN = 3
 
 
 async def log(message):
-    """Log to syslog similar to the logger command in the bash script."""
     syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
     syslog.syslog(syslog.LOG_WARNING, message)
     syslog.closelog()
 
 
 async def create_zfs_fstab(original_fstab):
-    """Generate a temporary fstab for ZFS datasets."""
     tmp_fstab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
 
-    # Copy original
     if os.path.exists(original_fstab):
         async with aiofiles.open(original_fstab, "r") as f:
             content = await f.read()
@@ -83,14 +81,13 @@ async def create_zfs_fstab(original_fstab):
 
             tmp_fstab.write(ds + "\t" + mp + "\tzfs\t" + ro + "\t0\t0\n")
     except Exception:
-        pass  # Fallback to ignore if zfs fails
+        pass
 
     tmp_fstab.close()
     return tmp_fstab.name
 
 
 async def make_mtab():
-    """Create a temporary mtab for systems that lack one."""
     tmp_mtab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -101,7 +98,6 @@ async def make_mtab():
         stdout, _ = await proc.communicate()
         mount_output = stdout.decode().strip().splitlines()
         for line in mount_output:
-            # Simple conversion to 'dev mountpoint filesystem' format
             parts = line.replace(" on ", " ").replace(" (", " ").replace(",", " ").split()
             if len(parts) >= 3:
                 tmp_mtab.write(parts[0] + " " + parts[1] + " " + parts[2] + "\n")
@@ -112,7 +108,6 @@ async def make_mtab():
 
 
 async def run_df(mp, timeout):
-    """Run df command with timeout."""
     try:
         proc = await asyncio.create_subprocess_exec(
             "df", "-k", mp,
@@ -125,10 +120,8 @@ async def run_df(mp, timeout):
 
 
 async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
-    """Check a single mountpoint."""
     err_mesg = []
 
-    # Fstab check
     is_openvz = os.path.exists("/proc/vz/veinfo")
     if not is_openvz and not args.auto and not args.ignorefstab:
         found_in_fstab = False
@@ -141,7 +134,6 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             await log("CRIT: " + mp + " doesn't exist in /etc/fstab")
             err_mesg.append(mp + " doesn't exist in fstab " + args.fstab)
 
-    # Kernel mount check
     found_in_mtab = False
     for line in mtab_lines:
         parts = line.split()
@@ -153,14 +145,12 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             await log("CRIT: " + mp + " is not mounted")
             err_mesg.append(mp + " is not mounted")
 
-    # Stale check via df
     try:
         await run_df(mp, args.timeout)
     except Exception:
         err_mesg.append(mp + " did not respond in " + str(args.timeout) + " sec. Seems to be stale.")
         return err_mesg
 
-    # Filesystem existence & Writable check
     is_rw = 0
     if not os.path.isdir(mp):
         await log("CRIT: " + mp + " doesn't exist on filesystem")
@@ -201,6 +191,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
 
     return err_mesg
 
+# -------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if nfs/cifs/davfs mountpoints are correctly implemented and mounted.")
@@ -238,13 +229,11 @@ async def main(forcedargs=None):
     fstab_file = args.fstab
     mtab_file = args.mtab
 
-    # ZFS Check
     if os.path.exists("/sbin/zfs") and os.access("/sbin/zfs", os.X_OK):
         fstab_file = await create_zfs_fstab(fstab_file)
 
     mps = args.mountpoints
 
-    # Auto select mounts
     if args.auto:
         mps = []
         valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs",
@@ -291,7 +280,6 @@ async def main(forcedargs=None):
         print(msg)
         sys.exit(STATE_CRITICAL)
 
-    # Read fstab and mtab into memory for checks
     fstab_lines = []
     if os.path.exists(fstab_file):
         async with aiofiles.open(fstab_file, "r") as f:
@@ -304,7 +292,6 @@ async def main(forcedargs=None):
     async with aiofiles.open(mtab_file, "r") as f:
         mtab_lines = await f.readlines()
 
-    # Main check loop
     tasks = []
     for mp in mps:
         tasks.append(check_mountpoint(mp, args, fstab_lines, mtab_lines))
@@ -313,13 +300,11 @@ async def main(forcedargs=None):
     for res in results:
         err_mesg.extend(res)
 
-    # Cleanup temporary files
     if "/tmp" in mtab_file and os.path.exists(mtab_file):
         os.remove(mtab_file)
     if "/tmp" in fstab_file and os.path.exists(fstab_file):
         os.remove(fstab_file)
 
-    # Output Nagios Status
     if err_mesg:
         print("CRITICAL: " + " ; ".join(err_mesg))
         sys.exit(STATE_CRITICAL)
@@ -327,6 +312,9 @@ async def main(forcedargs=None):
     print("OK: all mounts were found (" + " ".join(mps) + ")")
     sys.exit(STATE_OK)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

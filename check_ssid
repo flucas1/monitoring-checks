@@ -163,7 +163,7 @@ async def dossidcall(interface, passive, timeoutsecs, ignoredlist, alertlist, ex
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def main(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--alert", dest="alert", default="", help="alert if an ssid matching")
     parser.add_argument("-g", "--ignored", dest="ignored", default="", help="ssids to ignore")
@@ -173,6 +173,10 @@ async def main(forcedargs=None):
     parser.add_argument("-p", "--passive", action="store_true", dest="passive", default=False, help="skips sending probe requests and only listens to beacons - faster but may miss hidden SSIDs")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 

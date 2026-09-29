@@ -97,9 +97,6 @@ async def doipv6racall(interface, expected, ignored):
 
 # -------------------------------------------------------------------------------
 
-# collect arguments
-
-
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--interface", action="store", dest="interface", default="", help="interface to evaluate")
