@@ -47,6 +47,9 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
+# -------------------------------------------------------------------------------
+
+
 def isfinal(parts):
     finals = ["localaccount@localhost"]
     return parts[0] in finals
@@ -66,7 +69,7 @@ def isexpected(parts):
     return parts[1] == "root@localhost"
 
 
-def domailaliasescall(customlines):
+async def domailaliasescall(customlines):
     try:
         aliasesfile = "/etc/aliases"
         if os.path.isfile(aliasesfile):
@@ -113,6 +116,9 @@ def domailaliasescall(customlines):
         exitnagios("CRITICAL", "unexpected exception " + str(e) + " | errors=-1 exclusion=-1 expected=-1")
 
 
+# -------------------------------------------------------------------------------
+
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
@@ -123,17 +129,21 @@ def parse_args(forcedargs=None):
     return args
 
 
-def main(forcedargs=None):
+async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     customlines = []
     for entry in args.customlines.split(","):
         customlines.append(entry.strip().split(":"))
     infomsg("The custom lines are " + str(customlines))
-    domailaliasescall(customlines)
+    await domailaliasescall(customlines)
+
+
+# -------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
 
 # -------------------------------------------------------------------------------
