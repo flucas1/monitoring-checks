@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -77,14 +78,20 @@ async def dointerfacenetworkcheck(interface):
         else:
             exitnagios("CRITICAL", "there are global IPv6 addresses for interface " + interface + " - " + str(invalid_addrs) + " | total=" + str(len(invalid_addrs)))
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--interface", dest="interface", default="", help="interface to check")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -92,6 +99,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "interface not defined")
 
     await dointerfacenetworkcheck(args.interface)
+
 
 # -------------------------------------------------------------------------------
 
