@@ -52,12 +52,22 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+def allinterfaces():
+    interfaces = []
+    for card in socket.if_nameindex():
+        if (card[1] != "lo"):
+            interfaces.append(card[1])
+    infomsg(interfaces)
+    return interfaces
+
+
 async def get_ip_address(ifname):
     try:
         class DummyProtocol(asyncio.DatagramProtocol):
             pass
 
-        transport, protocol = await asyncio.get_running_loop().create_datagram_endpoint(DummyProtocol, family=socket.AF_INET)
+        loop = asyncio.get_event_loop()
+        transport, protocol = await loop.create_datagram_endpoint(DummyProtocol, family=socket.AF_INET)
 
         sock = transport.get_extra_info("socket")
         infomsg(sock)
@@ -73,17 +83,7 @@ async def get_ip_address(ifname):
         return []
 
 
-def allinterfaces():
-    interfaces = []
-    for card in socket.if_nameindex():
-        if (card[1] != "lo"):
-            interfaces.append(card[1])
-    infomsg(interfaces)
-    return interfaces
-
-
 async def findservers(interface, requestmac, timeout):
-
     command = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
     infomsg(" ".join(command))
 
