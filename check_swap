@@ -93,19 +93,22 @@ async def dofreeswapscall(warning, critical, minimum):
     else:
         exitnagios("CRITICAL", "issue retrieving free swap")
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--warning", dest="warning", default="", help="warning level percentage")
     parser.add_argument("-c", "--critical", dest="critical", default="", help="critical level percentage")
     parser.add_argument("-m", "--minimum", dest="minimum", default="", help="minimum size MB")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
 
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
     setcandebug(args.debug)
-
     await dofreeswapscall(args.warning, args.critical, args.minimum)
 
 # -------------------------------------------------------------------------------
