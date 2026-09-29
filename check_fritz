@@ -9,6 +9,7 @@ import asyncio
 import aiohttp
 import aiofiles
 
+# -------------------------------------------------------------------------------
 
 # Nagios exit codes
 PLUGIN_OK = 0
@@ -20,7 +21,7 @@ PLUGIN_UNKNOWN = 3
 
 def find_xml_value(xml_str, value):
     """Mimics the sed XML value extraction."""
-    match = re.search(rf'<{value}>(.*?)</{value}>', xml_str)
+    match = re.search(rf"<{value}>(.*?)</{value}>", xml_str)
     return match.group(1).strip() if match else ""
 
 
@@ -79,19 +80,21 @@ def format_uptime(seconds):
 
 # -------------------------------------------------------------------------------
 
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin")
+    parser.add_argument("-H", "--host", default="fritz.box", help="IP-Adress or hostname from the Fritz!Box")
+    parser.add_argument("-a", "--authfile", help="Authentication file")
+    parser.add_argument("-p", "--port", default="49443", help="SSL-Port from the Fritz!Box")
+    parser.add_argument("-u", "--username", default="dslf-config", help="Login Username for the Fritz!Box")
+    parser.add_argument("-P", "--password", default="", help="Login Password for the Fritz!Box")
+    parser.add_argument("-f", "--function", default="status", help="Function to check")
+    parser.add_argument("-w", "--warning", type=float, default=0, help="Warning threshold")
+    parser.add_argument("-c", "--critical", type=float, default=0, help="Critical threshold")
+    parser.add_argument("-d", "--debug", action="store_true", help="prints debug information")
+    return parser.parse_args(forcedargs)
 
 async def main(forcedargs=None):
-    parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin")
-    parser.add_argument('-H', '--host', default="fritz.box", help="IP-Adress or hostname from the Fritz!Box")
-    parser.add_argument('-a', '--authfile', help="Authentication file")
-    parser.add_argument('-p', '--port', default="49443", help="SSL-Port from the Fritz!Box")
-    parser.add_argument('-u', '--username', default="dslf-config", help="Login Username for the Fritz!Box")
-    parser.add_argument('-P', '--password', default="", help="Login Password for the Fritz!Box")
-    parser.add_argument('-f', '--function', default="status", help="Function to check")
-    parser.add_argument('-w', '--warning', type=float, default=0, help="Warning threshold")
-    parser.add_argument('-c', '--critical', type=float, default=0, help="Critical threshold")
-    parser.add_argument('-d', '--debug', action='store_true', help="prints debug information")
-    args = parser.parse_args()
+    args = parse_args(forcedargs)
 
     # Argument overrides
     username = args.username
@@ -112,47 +115,47 @@ async def main(forcedargs=None):
             sys.exit(PLUGIN_UNKNOWN)
 
     # Function and Index extraction
-    func_parts = args.function.split(':', 1)
+    func_parts = args.function.split(":", 1)
     func_name = func_parts[0]
     index = func_parts[1] if len(func_parts) > 1 else "0"
 
-    url = ''
-    service = ''
-    action = ''
-    xml_var = ''
+    url = ""
+    service = ""
+    action = ""
+    xml_var = ""
 
     # Routing logic based on requested function
     if func_name in ("status", "linkuptime"):
-        url = 'wanpppconn1'
-        service = 'WANPPPConnection'
+        url = "wanpppconn1"
+        service = "WANPPPConnection"
         if index == "cable":
-            url = 'wanipconnection1'
-            service = 'WanIPConnection'
+            url = "wanipconnection1"
+            service = "WanIPConnection"
         elif index == "pppoe":
-            url = 'wanpppconn1'
-            service = 'WANPPPConnection'
-        action = 'GetInfo'
+            url = "wanpppconn1"
+            service = "WANPPPConnection"
+        action = "GetInfo"
 
     elif func_name in ("downstreamrate", "upstreamrate", "downstream", "upstream"):
-        url = 'wancommonifconfig1'
-        service = 'WANCommonInterfaceConfig'
-        action = 'X_AVM-DE_GetOnlineMonitor'
-        xml_var = '<NewSyncGroupIndex>0</NewSyncGroupIndex>'
+        url = "wancommonifconfig1"
+        service = "WANCommonInterfaceConfig"
+        action = "X_AVM-DE_GetOnlineMonitor"
+        xml_var = "<NewSyncGroupIndex>0</NewSyncGroupIndex>"
 
     elif func_name == "update":
-        url = 'userif'
-        service = 'UserInterface'
-        action = 'GetInfo'
+        url = "userif"
+        service = "UserInterface"
+        action = "GetInfo"
 
     elif func_name == "uptime":
-        url = 'deviceinfo'
-        service = 'DeviceInfo'
-        action = 'GetInfo'
+        url = "deviceinfo"
+        service = "DeviceInfo"
+        action = "GetInfo"
 
     elif func_name in ("thermometer", "socketpower", "socketenergy", "socketswitch"):
-        url = 'x_homeauto'
-        service = 'X_AVM-DE_Homeauto'
-        action = 'GetGenericDeviceInfos'
+        url = "x_homeauto"
+        service = "X_AVM-DE_Homeauto"
+        action = "GetGenericDeviceInfos"
         xml_var = "<NewIndex>" + index + "</NewIndex>"
 
     else:
@@ -221,7 +224,7 @@ async def main(forcedargs=None):
 
     elif func_name == "downstreamrate":
         list_ds_byte = find_xml_value(query_result, "Newds_current_bps")
-        curr_ds_byte = list_ds_byte.split(',')[0] if list_ds_byte else ""
+        curr_ds_byte = list_ds_byte.split(",")[0] if list_ds_byte else ""
         check_number(curr_ds_byte)
 
         ds_rate_mbit = round((float(curr_ds_byte) * 8) / 1000000.0, 2)
@@ -230,7 +233,7 @@ async def main(forcedargs=None):
 
     elif func_name == "upstreamrate":
         list_us_byte = find_xml_value(query_result, "Newus_current_bps")
-        curr_us_byte = list_us_byte.split(',')[0] if list_us_byte else ""
+        curr_us_byte = list_us_byte.split(",")[0] if list_us_byte else ""
         check_number(curr_us_byte)
 
         us_rate_mbit = round((float(curr_us_byte) * 8) / 1000000.0, 2)
