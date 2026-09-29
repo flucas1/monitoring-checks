@@ -6,7 +6,7 @@ import sys
 import os
 import pathlib
 import asyncio
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree
 
 # -------------------------------------------------------------------------------
 
@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -57,7 +58,7 @@ async def isvalidnode(nodespath, entry):
     else:
         isOK = False
 
-        tree = ET.parse(configfile)
+        tree = xml.etree.ElementTree.parse(configfile)
         root = tree.getroot()
 
         tempOffline = root.findall("temporaryOfflineCause")
@@ -67,7 +68,7 @@ async def isvalidnode(nodespath, entry):
         return isOK
 
 
-def docheckjenkinsnodes(directory, critical):
+async def docheckjenkinsnodes(directory, critical):
     nodespath = os.path.join(directory, "nodes")
     if os.path.isdir(nodespath) == False:
         exitnagios("CRITICAL", "the nodes path " + nodespath + " does not exists")
