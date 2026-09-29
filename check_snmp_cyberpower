@@ -103,6 +103,7 @@ async def check_runtime(oids, host, community, warnrun, critrun):
     else:
         return 0, "Runtime is " + str(runtime) + " minutes.", "runtime=" + str(runtime) + "m;" + str(warnrun) + ";" + str(critrun) + ";0;"
 
+
 # -------------------------------------------------------------------------------
 
 
