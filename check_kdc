@@ -11,6 +11,47 @@ import aiofiles
 # -------------------------------------------------------------------------------
 
 
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -46,12 +87,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-P", "--port", default="88", help="Port on which KDC runs (default 88)")
     parser.add_argument("-p", "--principal", required=True, help="Principal name to authenticate as (including realm)")
     parser.add_argument("-k", "--keytab", required=True, help="Keytab file containing principal key")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     # Validate principal format
     if "@" not in args.principal:
