@@ -3,10 +3,20 @@
 
 import os
 import sys
+import argparse
 import asyncio
 
 
+# -------------------------------------------------------------------------------
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check if a reboot is required")
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
     if os.path.exists("/var/run/reboot-required"):
         print("CRITICAL: a reboot is needed")
         sys.exit(2)
@@ -14,6 +24,9 @@ async def main(forcedargs=None):
         print("OK: no pending reboot")
         sys.exit(0)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------

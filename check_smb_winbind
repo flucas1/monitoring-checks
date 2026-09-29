@@ -3,6 +3,10 @@
 
 import sys
 import asyncio
+import argparse
+
+
+# -------------------------------------------------------------------------------
 
 # Define state constants based on the shell script
 STATE_OK = 0
@@ -23,7 +27,17 @@ def get_state_string(state):
         return "UNKNOWN"
 
 
+# -------------------------------------------------------------------------------
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check SMB winbind trust status")
+    parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
     # Define the command
     cmd = "/usr/bin/wbinfo"
 
@@ -65,6 +79,9 @@ async def main(forcedargs=None):
     print(state_string + ": PLUGIN FAILED")
     sys.exit(state)
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
