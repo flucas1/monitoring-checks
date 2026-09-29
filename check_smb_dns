@@ -2,7 +2,11 @@
 # -------------------------------------------------------------------------------
 
 import asyncio
+import argparse
 import sys
+
+
+# -------------------------------------------------------------------------------
 
 
 async def get_cmd_output(cmd):
@@ -44,7 +48,18 @@ async def get_current_ip(ahosts_type, fqdn):
     return "\n".join(unique_ips)
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check SMB DNS resolution")
+    parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
     errors = ""
     fqdn = await get_cmd_output(["hostname", "-f"])
 
@@ -89,5 +104,10 @@ async def main(forcedargs=None):
         sys.exit(0)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
+

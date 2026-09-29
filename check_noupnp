@@ -2,7 +2,11 @@
 # -------------------------------------------------------------------------------
 
 import asyncio
+import argparse
 import sys
+
+
+# -------------------------------------------------------------------------------
 
 
 async def check_upnp_gateway():
@@ -29,9 +33,24 @@ async def check_upnp_gateway():
         sys.exit(2)
 
 
-async def main():
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check if no UPnP gateway is present")
+    return parser.parse_args(forcedargs
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
     await check_upnp_gateway()
+
+
+# -------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+# -------------------------------------------------------------------------------
