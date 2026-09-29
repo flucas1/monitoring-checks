@@ -49,6 +49,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -73,6 +74,7 @@ async def dodockerregistrycheck(port):
         sys.exit(exitcode)
     else:
         exitnagios("UNKNOWN", output + "\n" + errors)
+
 
 # -------------------------------------------------------------------------------
 
