@@ -117,10 +117,11 @@ async def snmpget(hostname, port, version, community, oid):
 
     return (exitcode, output)
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-p", "--port", dest="port", default=161, help="port to use, usually 143 or 993")
@@ -130,6 +131,11 @@ async def main(forcedargs=None):
     parser.add_argument("-c", "--critical", dest="critical", default="-85", help="if signal less than this, it is a critical")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
