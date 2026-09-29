@@ -6,7 +6,10 @@ import argparse
 import re
 import asyncio
 
-# State Variables
+
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARN = 1
 STATE_CRIT = 2
@@ -457,7 +460,7 @@ async def check_paper_trays(args, param, arg_token):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Nagios plugin to check the status of networked printers.")
     parser.add_argument("-H", "--host", default="localhost", help="Host name or IP address")
     parser.add_argument("-v", "--snmpversion", choices=["1", "2c", "3"], default="2c", help="SNMP version")
@@ -473,7 +476,11 @@ async def main(forcedargs=None):
     parser.add_argument("-P", "--parameter", required=False, help="Check type parameter")
     parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
     parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
-    args = parser.parse_args()
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     check_type = args.type.upper()
     parameter = args.parameter.upper() if args.parameter else ""
