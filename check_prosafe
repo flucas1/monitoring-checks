@@ -58,6 +58,7 @@ async def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def generatedriver(proxy):
     chrome_options = selenium.webdriver.chrome.options.Options()
     chrome_options.add_argument("--disk-cache-size=0")
@@ -96,7 +97,9 @@ async def wait_page_loaded(driver):
             break
         await asyncio.sleep(1)
 
+
 # -------------------------------------------------------------------------------
+
 
 async def findswitchesininterface(interface, model):
     result = []
@@ -212,9 +215,6 @@ async def doprosafecall(model, expected, strict):
         await exitnagios("WARNING", "some switches are not as expected - failures " + str(failures) + " - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
 
 
-
-
-
 async def getexpected(proxy, model):
     expected = ""
     try:
@@ -252,6 +252,7 @@ async def getexpected(proxy, model):
 
 
 # -------------------------------------------------------------------------------
+
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()

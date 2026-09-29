@@ -49,6 +49,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 async def isvalidnode(nodespath, entry):
     configfile = os.path.join(nodespath, entry, "config.xml")
     if os.path.isfile(configfile) == False:

@@ -80,6 +80,7 @@ def format_uptime(seconds):
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="check_fritz Nagios Plugin")
     parser.add_argument("-H", "--host", default="fritz.box", help="IP-Adress or hostname from the Fritz!Box")
@@ -92,6 +93,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-c", "--critical", type=float, default=0, help="Critical threshold")
     parser.add_argument("-d", "--debug", action="store_true", help="prints debug information")
     return parser.parse_args(forcedargs)
+
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
