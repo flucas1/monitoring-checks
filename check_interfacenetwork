@@ -136,7 +136,7 @@ def dointerfacenetworkcheck(interface, segment, address, existence, notexists):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--interface", dest="interface", default="", help="interface to check")
     parser.add_argument("-s", "--segment", dest="segment", default="", help="expected network segment")
@@ -145,6 +145,11 @@ async def main(forcedargs=None):
     parser.add_argument("-t", "--notexists", action="store_true", dest="notexists", default=False, help="check only for interface not exitence")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
