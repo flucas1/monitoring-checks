@@ -46,6 +46,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -91,7 +92,10 @@ async def checkgetent(database, key, value, partial, outputlevel):
             exitnagios("CRITICAL", "key not found " + key)
 
 
-async def main(forcedargs=None):
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--database", dest="database", help="database to use (passwod, group, ...)")
     parser.add_argument("-k", "--key", dest="key", help="key to search")
@@ -101,6 +105,11 @@ async def main(forcedargs=None):
     parser.add_argument("-c", "--critical", action="store_true", dest="critical", default=True, help="Return critical if not matching (default)")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -110,6 +119,7 @@ async def main(forcedargs=None):
         outputlevel = "WARNING"
 
     await checkgetent(args.database, args.key, args.value, args.partial, outputlevel)
+
 
 # -------------------------------------------------------------------------------
 
