@@ -50,6 +50,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -70,6 +71,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
     return [response
             for response in responses
             if response[0] == socket.AF_INET]
+
 
 # -------------------------------------------------------------------------------
 
@@ -182,7 +184,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
@@ -198,7 +200,11 @@ async def main(forcedargs=None):
     parser.add_argument("-b", "--blocked", action="store_true", dest="blocked", default=False, help="check if the connection is blocked")
     parser.add_argument("-u", "--source", dest="source", default="", help="source IP for the connection")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -237,6 +243,7 @@ async def main(forcedargs=None):
         await dosmtpcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays, args.relay, args.blocked, source)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 
