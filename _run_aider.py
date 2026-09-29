@@ -63,6 +63,7 @@ async def main():
     PROMPT.append("Prefer \" rather than ' for string delimitator.")
     PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
     PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
+    PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 

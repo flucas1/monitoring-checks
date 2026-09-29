@@ -131,7 +131,7 @@ async def doarpcall(exclusion):
                     map6[basenetwork] = 1
                 else:
                     map6[basenetwork] = map6[basenetwork] + 1
-        infomsg(map6)
+        infomsg(str(map6))
         for basenetwork, count in map6.items():
             if count > 2:
                 iscritical = True
