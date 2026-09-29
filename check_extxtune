@@ -45,6 +45,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -126,6 +127,7 @@ async def dopostgresclustercountcall(mountcount, mountperiod):
     else:
         exitnagios("CRITICAL", "issue retrieving the list of mounted filesystems")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -143,6 +145,7 @@ async def main(forcedargs=None):
     mountcount = 1
     mountperiod = 604800
     await dopostgresclustercountcall(mountcount, mountperiod)
+
 
 # -------------------------------------------------------------------------------
 
