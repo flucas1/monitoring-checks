@@ -116,7 +116,7 @@ async def get_memory_info(opt_C, opt_v):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", action="store_true")
     parser.add_argument("-u", action="store_true")
@@ -125,8 +125,12 @@ async def main(forcedargs=None):
     parser.add_argument("-v", action="store_true")
     parser.add_argument("-w", type=float)
     parser.add_argument("-c", type=float)
+    args = parser.parse_args(forcedargs)
+    return args
 
-    args = parser.parse_args()
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     if args.w is None or args.w == 0 or args.c is None or args.c == 0:
         exitnagios("UNKNOWN", "You must define WARN and CRITICAL levels!")
