@@ -47,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -127,17 +128,22 @@ def get_city_country(ip_address):
         country = None
     return country, city
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
-
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-j", "--jail", dest="jail", help="Specify a specific jail to check.")
     parser.add_argument("-w", "--warning", dest="warning", default="1", help="Warning threshold for banned IPs.")
     parser.add_argument("-c", "--critical", dest="critical", default="2", help="Critical threshold for banned IPs.")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -174,6 +180,8 @@ async def main(forcedargs=None):
 
     exitnagios(state, str(countjails) + " detected jails with " + str(countbanned) + " banned IPs: " + str(dict_banned) + " | banned=" + str(countbanned) + " jails=" + str(countjails))
 
+
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
