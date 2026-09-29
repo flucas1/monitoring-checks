@@ -7,7 +7,8 @@ import sys
 import time
 import datetime
 
-# Nagios Return Codes
+# -------------------------------------------------------------------------------
+
 RC_OK = 0
 RC_WARNING = 1
 RC_CRITICAL = 2
@@ -27,6 +28,8 @@ def msg(status_class, message_text):
     else:
         sys.exit(RC_UNKNOWN)
 
+
+# -------------------------------------------------------------------------------
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
@@ -65,8 +68,8 @@ async def main(forcedargs=None):
         dt_format = format_map[args.server_time_format]
         parsed_time = datetime.datetime.strptime(args.server_time, dt_format)
         server_epoch_time = int(time.mktime(parsed_time.timetuple()))
-    except ValueError:
-        parser.error("Invalid -t value " + args.server_time + " (does not match " + args.server_time_format + " format)")
+    except ValueError as e:
+        msg("RC_UNKNOWN", str(e))
 
     # Calculate difference
     local_epoch_time = int(time.time())
@@ -82,5 +85,9 @@ async def main(forcedargs=None):
         msg("OK", diff_msg)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
