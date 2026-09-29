@@ -60,13 +60,18 @@ async def fetch_data(url, timeout):
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
     parser.add_argument("-H", "--hostaddress", required=True, help="Host address of the Bind9 server")
     parser.add_argument("-p", "--port", required=True, help="Port of the Bind9 statistics channel")
     parser.add_argument("-w", "--warning", type=float, default=5.0, help="Warning threshold for slow RTT percentage (default: 5.0 percent)")
     parser.add_argument("-c", "--critical", type=float, default=10.0, help="Critical threshold for slow RTT percentage (default: 10.0 percent)")
-    args = parser.parse_args()
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     url = "http://" + str(args.hostaddress) + ":" + str(args.port) + "/xml/v3/server"
 
