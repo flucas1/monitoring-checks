@@ -58,6 +58,45 @@ async def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+async def generatedriver(proxy):
+    chrome_options = selenium.webdriver.chrome.options.Options()
+    chrome_options.add_argument("--disk-cache-size=0")
+    chrome_options.add_argument("--media-cache-size=0")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--renderer-process-limit=1")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--in-process-gpu")
+    chrome_options.add_argument("--use-gl=angle")
+    chrome_options.add_argument("--use-angle=swiftshader-webgl")
+    chrome_options.add_argument("--disable-popup-blocking")
+    if proxy not in ["", None]:
+        chrome_options.add_argument("--proxy-server=" + proxy)
+
+    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
+
+    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
+
+    return driver
+
+
+def check_page_loaded(driver):
+    page_state = driver.execute_script("return document.readyState;")
+    return page_state == "complete"
+
+
+async def wait_page_loaded(driver):
+    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    while True:
+        if check_page_loaded(driver) == True:
+            break
+        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+            break
+        await asyncio.sleep(1)
+
+# -------------------------------------------------------------------------------
 
 async def findswitchesininterface(interface, model):
     result = []
@@ -151,8 +190,6 @@ async def getversions(switches, version, strict):
             results[mac]["version"] = version
     return results
 
-# -------------------------------------------------------------------------------
-
 
 async def doprosafecall(model, expected, strict):
     switches = await findallswitches(model)
@@ -174,52 +211,8 @@ async def doprosafecall(model, expected, strict):
     else:
         await exitnagios("WARNING", "some switches are not as expected - failures " + str(failures) + " - valid " + str(valid) + " | found=" + str(len(versions)) + " failures=" + str(len(failures)) + " valid=" + str(len(valid)) + " version=" + expected)
 
-# -------------------------------------------------------------------------------
 
 
-async def generatedriver(proxy):
-    chrome_options = selenium.webdriver.chrome.options.Options()
-    # chrome_options.add_argument("--incognito")
-    # chrome_options.add_argument("--enable-features=EphemeralGuestProfilesOnStartup")
-    chrome_options.add_argument("--disk-cache-size=0")
-    chrome_options.add_argument("--media-cache-size=0")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-zygote")
-    chrome_options.add_argument("--renderer-process-limit=1")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--in-process-gpu")
-    chrome_options.add_argument("--use-gl=angle")
-    chrome_options.add_argument("--use-angle=swiftshader-webgl")
-    chrome_options.add_argument("--disable-popup-blocking")
-    if proxy not in ["", None]:
-        chrome_options.add_argument("--proxy-server=" + proxy)
-
-    chrome_service = selenium.webdriver.ChromeService(executable_path="/usr/bin/chromedriver")
-
-    driver = selenium.webdriver.Chrome(options=chrome_options, service=chrome_service)
-    # driver.implicitly_Wait(10, TimeUnit.SECONDS)
-
-    return driver
-
-
-def check_page_loaded(driver):
-    # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
-    page_state = driver.execute_script("return document.readyState;")
-    return page_state == "complete"
-
-
-async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
-    while True:
-        if check_page_loaded(driver) == True:
-            break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
-            break
-        await asyncio.sleep(1)
-
-# -------------------------------------------------------------------------------
 
 
 async def getexpected(proxy, model):
@@ -249,12 +242,6 @@ async def getexpected(proxy, model):
                     candidates.append(version)
         if len(candidates) > 0:
             expected = candidates[0]
-        # for candidate in candidates:
-        #    if expected == "":
-        #        expected = candidate
-        #    else:
-        #        expparts = expected.split(".")
-        #        candparts = candidate.split(".")
 
         infomsg("the autodetected expected value is " + expected)
 
@@ -263,10 +250,10 @@ async def getexpected(proxy, model):
 
     return expected
 
+
 # -------------------------------------------------------------------------------
 
-
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", dest="model", default="", help="netgear prosafe model to check")
     parser.add_argument("-e", "--expected", dest="expected", default="auto", help="expected firmware version")
@@ -274,12 +261,13 @@ async def main(forcedargs=None):
     parser.add_argument("-l", "--tolerant", action="store_false", dest="strict", help="if version not found, do not raise problem")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
-
-    # model = "GS108Ev3"
-    # expected = "2.06.24"
-    # strict = False
 
     model = args.model
     strict = args.strict
@@ -291,6 +279,7 @@ async def main(forcedargs=None):
         expected = args.expected
 
     await doprosafecall(model, expected, strict)
+
 
 # -------------------------------------------------------------------------------
 
