@@ -9,11 +9,15 @@ import asyncio
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", action="store", dest="mode", default="pipeline", help="choose one of: monitoring,pipeline")
     parser.add_argument("-n", "--namespace", action="store", dest="namespace", default="", help="only check this namespace")
-    args = parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     fullcheckpath = "/etc/nagios/scripts/check_kubernetes"
     cmdline = [fullcheckpath, "-m", args.mode, "-n", args.namespace]
