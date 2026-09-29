@@ -8,6 +8,9 @@ import sys
 import datetime
 
 
+# -------------------------------------------------------------------------------
+
+
 async def run_cmd(cmd):
     """Executes a shell command asynchronously and returns the stripped stdout."""
     try:
@@ -25,7 +28,10 @@ async def run_cmd(cmd):
         sys.exit(3)
 
 
-async def main(forcedargs=None):
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check DNSSEC validity and remaining expiration time.")
     parser.add_argument("-H", dest="zone", required=True, help="specify zone to check")
     parser.add_argument("-w", dest="warning", type=int, default=5, help="warning time left days")
@@ -33,7 +39,11 @@ async def main(forcedargs=None):
     parser.add_argument("-r", dest="resolver", default="8.8.8.8", help="specify which resolver to use")
     parser.add_argument("-f", dest="always_failing_domain", default="dnssec-failed.org", help="specify a domain that will always fail DNSSEC")
     parser.add_argument("-t", dest="record_type", default="SOA", help="specify a DNS record type to check")
-    args = parser.parse_args()
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     # Check the resolver to properly validate DNSSEC at all
     resolver_cmd = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, "@" + args.resolver]
@@ -123,5 +133,10 @@ async def main(forcedargs=None):
         sys.exit(0)
 
 
+# -------------------------------------------------------------------------------
+
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
