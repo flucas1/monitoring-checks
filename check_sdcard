@@ -65,14 +65,19 @@ async def doospfroutescall(device):
     else:
         exitnagios("CRITICAL", "there are issues with the sdcard")
 
+
 # -------------------------------------------------------------------------------
 
-
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--device", dest="device", default="", help="block device to check")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 

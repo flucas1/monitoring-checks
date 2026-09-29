@@ -46,6 +46,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -112,14 +113,20 @@ async def do_sensors_call(expected):
     else:
         exitnagios("CRITICAL", "issue retrieving sensors data")
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--expected", dest="expected", default="", help="expected values")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -130,6 +137,7 @@ async def main(forcedargs=None):
     expected = " ; ".join(clean)
 
     await do_sensors_call(expected)
+
 
 # -------------------------------------------------------------------------------
 
