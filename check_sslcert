@@ -51,6 +51,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -84,13 +85,11 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
         context = ssl.create_default_context()
         with socket.create_connection((hostname, port)) as sock:
             with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                # https://docs.python.org/3/library/ssl.html#ssl.SSLSocket.getpeercert
                 cert_data = ssock.getpeercert()
     except Exception as e:
         lasterror = str(e)
     elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
-    # daysremaining = -1
 
     if cert_data is None:
         exitnagios("CRITICAL", "cannot retrieve certificate: " + lasterror + " | time=" + str(duration) + " validity=0")
@@ -111,6 +110,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
                 matching = True
                 break
 
+        daysremaining = 0
         if certificatedays != "":
             certexpirationraw = None
             certexpirationparsed = None
@@ -147,10 +147,11 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
 
         exitnagios("OK", "everything seems OK - totaltime: " + str(duration) + " | time=" + str(duration) + " validity=" + str(daysremaining))
 
+
 # -------------------------------------------------------------------------------
 
 
-async def main(forcedargs=None):
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
@@ -160,7 +161,11 @@ async def main(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-C", "--certificatedays", dest="certificatedays", default="5,20", help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
 
     setcandebug(args.debug)
 
@@ -195,6 +200,7 @@ async def main(forcedargs=None):
         await dosslcertcheck(protocol, args.hostname, args.port, timeoutvalue, timeoutstatus, args.certificatedays)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@
 import sys
 import os
 import asyncio
+import argparse
 
 # -------------------------------------------------------------------------------
 
@@ -45,6 +46,9 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
+# -------------------------------------------------------------------------------
+
+
 async def doretrycall(cmdline):
     counter = 0
     retries = 3
@@ -76,13 +80,22 @@ async def doretrycall(cmdline):
             await asyncio.sleep(10)
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Retry a command multiple times")
+    parser.add_argument("cmdline", nargs="+", help="Command and arguments to execute")
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
-    if forcedargs is None:
-        forcedargs = sys.argv[1:]
-    cmdline = forcedargs
-    result = await doretrycall(cmdline)
+    args = parse_args(forcedargs)
+    result = await doretrycall(args.cmdline)
     sys.exit(result)
 
+
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -2,10 +2,22 @@
 # -------------------------------------------------------------------------------
 
 import asyncio
+import argparse
 import sys
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="Check Raspberry Pi firmware version")
+    parser.parse_args(forcedargs)
+    return parser.parse_args(forcedargs)
+
+
 async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
     try:
         cmdline = ["/opt/vc/bin/vcgencmd", "version"]
         process = await asyncio.create_subprocess_exec(
@@ -20,26 +32,23 @@ async def main(forcedargs=None):
             print("Command failed with exit status " + str(process.returncode))
             sys.exit(1)
 
-        # Splitting by whitespace automatically mimics shell's unquoted variable
-        # expansion, which flattens newlines and spaces into an array of words.
         words = stdout.decode().split()
 
-        # awk '{print $1,$2,$3,$4}' corresponds to Python indices 0 through 3
         date_version = " ".join(words[0:4]) if len(words) >= 4 else "Unknown Date"
 
-        # awk '{print $10}' corresponds to Python index 9
         git_version = words[9] if len(words) >= 10 else "Unknown Version"
 
         print(date_version + " - (" + git_version + ")")
         sys.exit(0)
 
-    except FileNotFoundError:
-        print("Error: Command '/opt/vc/bin/vcgencmd' not found.")
-        sys.exit(1)
     except Exception as e:
-        print("Command failed with exit status " + str(e.returncode))
+        print("Command failed with exception: " + str(e))
         sys.exit(1)
 
+
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
