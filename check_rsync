@@ -5,6 +5,8 @@ import sys
 import asyncio
 import argparse
 
+# -------------------------------------------------------------------------------
+
 
 async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
     try:
@@ -19,7 +21,7 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
                 reader.read(1024),
                 timeout=timeoutvalue
             )
-            rsync_out = rsync_out.decode('utf-8', errors='ignore').strip()
+            rsync_out = rsync_out.decode("utf-8", errors="ignore").strip()
 
             if rsync_out.startswith("@RSYNCD:"):
                 print("OK - " + rsync_out)
@@ -44,16 +46,20 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
 # -------------------------------------------------------------------------------
 
 
-async def main():
+def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--hostname', dest='remote', type=str, default='')
-    parser.add_argument('-t', '--timeout', dest='timeoutmerged', type=str, default='30:CRITICAL')
-    parser.add_argument('-p', '--port', dest='rsync_port', type=int, default=873)
-    args = parser.parse_args()
+    parser.add_argument("-H", "--hostname", dest="remote", type=str, default="")
+    parser.add_argument("-t", "--timeout", dest="timeoutmerged", type=str, default="30:CRITICAL")
+    parser.add_argument("-p", "--port", dest="rsync_port", type=int, default=873)
+    return parser.parse_args(forcedargs)
 
-    timeout_parts = args.timeoutmerged.split(':')
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+
+    timeout_parts = args.timeoutmerged.split(":")
     timeoutvalue = float(timeout_parts[0])
-    timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else 'CRITICAL'
+    timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else "CRITICAL"
 
     exit_code = await check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus)
 
