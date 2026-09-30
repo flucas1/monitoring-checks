@@ -60,7 +60,8 @@ async def isvalidjob(jobspath, entry):
         lastCompletedBuild = -1
         lastStableBuild = -1
         lastSuccessfulBuild = -1
-        lines = pathlib.Path(permalinks).read_text().splitlines()
+        content = pathlib.Path(permalinks).read_text()
+        lines = content.splitlines()
         for line in lines:
             infomsg(line)
             parts = line.split()

@@ -50,7 +50,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def doospfroutescall(device):
+async def dosdcardcheck(device):
     cmdline = ["/usr/bin/mmc", "extcsd", "read", device]
     process = await asyncio.create_subprocess_exec(
         *cmdline,
@@ -86,7 +86,7 @@ async def main(forcedargs=None):
     if args.device == "":
         exitnagios("CRITICAL", "no device specified")
 
-    await doospfroutescall(args.device)
+    await dosdcardcheck(args.device)
 
 
 # -------------------------------------------------------------------------------

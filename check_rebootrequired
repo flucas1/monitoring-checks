@@ -61,11 +61,9 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     if os.path.exists("/var/run/reboot-required"):
-        print("CRITICAL: a reboot is needed")
-        sys.exit(2)
+        exitnagios("CRITICAL", "a reboot is needed")
     else:
-        print("OK: no pending reboot")
-        sys.exit(0)
+        exitnagios("OK", "no pending reboot")
 
 
 # -------------------------------------------------------------------------------
