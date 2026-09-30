@@ -12,7 +12,56 @@ import syslog
 import asyncio
 import aiofiles
 
+
 # -------------------------------------------------------------------------------
+
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
+async def log(message):
+    syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
+    syslog.syslog(syslog.LOG_WARNING, message)
+    syslog.closelog()
+
 
 STATE_OK = 0
 STATE_WARNING = 1
@@ -20,17 +69,7 @@ STATE_CRITICAL = 2
 STATE_UNKNOWN = 3
 
 
-def setcandebug(debug):
-    if debug:
-        syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
-        syslog.syslog(syslog.LOG_DEBUG, "Debug mode enabled")
-        syslog.closelog()
-
-
-async def log(message):
-    syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
-    syslog.syslog(syslog.LOG_WARNING, message)
-    syslog.closelog()
+# -------------------------------------------------------------------------------
 
 
 async def create_zfs_fstab(original_fstab):
@@ -268,28 +307,23 @@ async def main(forcedargs=None):
             pass
 
     if not mps and args.autoignore:
-        print("OK: no external mounts were found in " + args.fstab)
-        sys.exit(STATE_OK)
+        exitnagios(STATE_OK, "OK: no external mounts were found in " + args.fstab)
     elif not mps:
         msg = "ERROR: no mountpoints given!"
-        await log(msg)
-        print(msg)
-        sys.exit(STATE_UNKNOWN)
+        exitnagios(STATE_UNKNOWN, msg)
 
     if not os.path.exists("/proc/mounts") and mtab_file == "/proc/mounts":
-        await log("CRIT: /proc wasn't mounted!")
+        await log("/proc wasn't mounted!")
         ret = await asyncio.create_subprocess_exec("mount", "-t", "proc", "proc", "/proc")
         await ret.wait()
-        err_mesg.append("CRIT: mounted /proc " + str(ret))
+        err_mesg.append("mounted /proc " + str(ret))
 
     if mtab_file == "none":
         mtab_file = await make_mtab()
 
     if not os.path.exists(mtab_file):
-        msg = "CRIT: " + mtab_file + " doesn't exist!"
-        await log(msg)
-        print(msg)
-        sys.exit(STATE_CRITICAL)
+        msg = mtab_file + " doesn't exist!"
+        exitnagios(STATE_CRITICAL, msg)
 
     fstab_lines = []
     if os.path.exists(fstab_file):
@@ -317,11 +351,9 @@ async def main(forcedargs=None):
         os.remove(fstab_file)
 
     if err_mesg:
-        print("CRITICAL: " + " ; ".join(err_mesg))
-        sys.exit(STATE_CRITICAL)
+        exitnagios(STATE_CRITICAL, "CRITICAL: " + " ; ".join(err_mesg))
 
-    print("OK: all mounts were found (" + " ".join(mps) + ")")
-    sys.exit(STATE_OK)
+    exitnagios(STATE_OK, "OK: all mounts were found (" + " ".join(mps) + ")")
 
 
 # -------------------------------------------------------------------------------
