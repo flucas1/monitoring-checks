@@ -10,6 +10,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -97,6 +99,7 @@ async def dogpscountcall(timeout, warning, critical):
         else:
             exitnagios("OK", message)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -107,14 +110,15 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", action="store", type=int, default=90, help="seconds to wait before timeout, default 90; SKY each min it should be over 60")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
-
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
+
     await dogpscountcall(args.timeout, args.warning, args.critical)
+
 
 # -------------------------------------------------------------------------------
 
