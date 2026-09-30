@@ -181,7 +181,7 @@ async def dodnssecverisigncall(domain, proxy):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-H', '--host', dest="host", help="domain")
+    parser.add_argument("-H", "--hostname", dest="host", help="domain")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args

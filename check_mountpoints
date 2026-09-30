@@ -57,10 +57,8 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def log(message):
-    syslog.openlog(os.path.basename(sys.argv[0]), syslog.LOG_PID, syslog.LOG_KERN)
-    syslog.syslog(syslog.LOG_WARNING, message)
-    syslog.closelog()
+async def log(msg):
+    infomsg(msg)
 
 
 STATE_OK = 0
@@ -81,21 +79,21 @@ async def create_zfs_fstab(original_fstab):
             tmp_fstab.write(content)
 
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             "zfs", "list", "-H", "-o", "name",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await proc.communicate()
+        stdout, _ = await process.communicate()
         zfs_list = stdout.decode().strip().splitlines()
 
         for ds in zfs_list:
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 "zfs", "get", "-H", "mountpoint", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, _ = await proc.communicate()
+            stdout, _ = await process.communicate()
             parts = stdout.decode().strip().split()
             if len(parts) < 3:
                 continue
@@ -103,12 +101,12 @@ async def create_zfs_fstab(original_fstab):
             if not os.path.isdir(mp):
                 continue
 
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 "zfs", "get", "-H", "canmount", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, _ = await proc.communicate()
+            stdout, _ = await process.communicate()
             parts = stdout.decode().strip().split()
             if len(parts) < 3:
                 continue
@@ -116,12 +114,12 @@ async def create_zfs_fstab(original_fstab):
             if canmount == "off":
                 continue
 
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 "zfs", "get", "-H", "readonly", ds,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, _ = await proc.communicate()
+            stdout, _ = await process.communicate()
             parts = stdout.decode().strip().split()
             ro = "ro" if len(parts) >= 3 and parts[2] == "on" else "rw"
 
@@ -136,12 +134,12 @@ async def create_zfs_fstab(original_fstab):
 async def make_mtab():
     tmp_mtab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             "mount",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await proc.communicate()
+        stdout, _ = await process.communicate()
         mount_output = stdout.decode().strip().splitlines()
         for line in mount_output:
             parts = line.replace(" on ", " ").replace(" (", " ").replace(",", " ").split()
@@ -155,12 +153,12 @@ async def make_mtab():
 
 async def run_df(mp, timeout):
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             "df", "-k", mp,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
-        await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        await asyncio.wait_for(process.communicate(), timeout=timeout)
     except asyncio.TimeoutError:
         raise Exception("df timeout")
 
@@ -217,12 +215,12 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
         touchfile = os.path.join(mp, ".mount_test_from_" + socket.gethostname() + "_" + timestamp + "_" + str(os.getpid()))
 
         try:
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 "touch", touchfile,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL
             )
-            await asyncio.wait_for(proc.communicate(), timeout=args.timeout)
+            await asyncio.wait_for(process.communicate(), timeout=args.timeout)
             if not os.path.isfile(touchfile):
                 await log("CRIT: " + touchfile + " is not writable.")
                 err_mesg.append("Could not write in " + mp + ".")
