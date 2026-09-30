@@ -108,7 +108,8 @@ async def main(forcedargs=None):
     if args.filecred == "":
         exitnagios("CRITICAL", "filecred is not specified | clients=-1")
     else:
-        filecontentslines = pathlib.Path(args.filecred).read_text().splitlines()
+        filecontents = pathlib.Path(args.filecred).read_text()
+        filecontentslines = filecontents.splitlines()
         password = filecontentslines[0]
 
     if args.target == "":

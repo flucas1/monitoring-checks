@@ -291,10 +291,12 @@ async def test_kubernetes_daemonsets(kubeconfig, namespace):
 async def test_kubernetes_deployments(kubeconfig, namespace):
     return await generic_compare_columns(kubeconfig, namespace, "deployments", [2, 3, 4])
 
+
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get statefulsets --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get persistentvolumeclaims --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get jobs --no-headers --all-namespaces
 # kubectl --kubeconfig=/etc/kubernetes/admin.conf get cronjobs --no-headers --all-namespaces
+
 
 # -------------------------------------------------------------------------------
 
