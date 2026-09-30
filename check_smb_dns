@@ -9,6 +9,47 @@ import sys
 # -------------------------------------------------------------------------------
 
 
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 async def get_cmd_output(cmd):
     """Runs a shell command asynchronously and returns its standard output."""
     try:
@@ -53,12 +94,14 @@ async def get_current_ip(ahosts_type, fqdn):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB DNS resolution")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     parser.parse_args(forcedargs)
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     errors = ""
     fqdn = await get_cmd_output(["hostname", "-f"])
