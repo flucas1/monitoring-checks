@@ -56,12 +56,12 @@ async def cleanup(cc_path, conf_path):
     """Destroy credentials and remove temporary configuration."""
     if cc_path and os.path.exists(cc_path):
         try:
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 "kdestroy", "-c", cc_path,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL
             )
-            await proc.wait()
+            await process.wait()
         except OSError:
             pass
 
@@ -129,17 +129,17 @@ async def main(forcedargs=None):
         # Construct and run the kinit command
         cmd = ["/usr/bin/kinit", "-c", cc_path, "-k", "-t", args.keytab, args.principal]
 
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *cmd,
             env=env,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT
         )
 
-        stdout, _ = await proc.communicate()
+        stdout, _ = await process.communicate()
 
         # Check success
-        if proc.returncode == 0:
+        if process.returncode == 0:
             exitnagios("OK", "")
         else:
             # Grab the first line of stdout (equivalent to head -n 1)

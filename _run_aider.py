@@ -58,7 +58,7 @@ async def main():
     PROMPT.append("Keep the comments.")
     PROMPT.append("Review the attached python for issues and transform to async.")
     PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
-    PROMPT.append("Avoid to_thread, get_event_loop and get_running_loop.")
+    PROMPT.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
     PROMPT.append("File reading and writing should be always async.")
     PROMPT.append("For python imports do not use 'from'.")
     PROMPT.append("Remove legacy subprocess, urllib and concurrent.futures.")
