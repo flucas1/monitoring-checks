@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
+import aiohttp
+import argparse
 import asyncio
 import datetime
 import json
 import os
+import pathlib
 import re
 import ssl
 import sys
-import argparse
-import pathlib
-import aiohttp
 import pytz
 import dateutil.parser
 import dateutil.relativedelta
@@ -260,7 +260,7 @@ async def fetch_object(item_url, args, timeoutstatus):
             if not os.path.isfile(args.authorization):
                 exitnagios("CRITICAL", "Authorization parameters not in username:password format, nor an existing file")
             else:
-                filecontentslines = pathlib.Path(args.authorization).read_text().splitlines()
+                filecontentslines = await read_text_file(args.authorization)
                 auth_params = []
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
@@ -280,6 +280,13 @@ async def fetch_object(item_url, args, timeoutstatus):
                 return object_json
     except Exception as e:
         exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
+
+
+async def read_text_file(file_path):
+    path = pathlib.Path(file_path)
+    content = path.read_text()
+    return content.splitlines()
+
 
 # -------------------------------------------------------------------------------
 
