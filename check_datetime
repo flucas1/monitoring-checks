@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,14 +47,15 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", dest="ntpserver", default="172.16.4.253")
-    parser.add_argument("-w", dest="warnlevel", type=float, default=150.0)
-    parser.add_argument("-c", dest="critlevel", type=float, default=300.0)
+    parser.add_argument("-H", "--hostname", dest="ntpserver", default="172.16.4.253")
+    parser.add_argument("-w", "--warning", dest="warnlevel", type=float, default=150.0)
+    parser.add_argument("-c", "--critical", dest="critlevel", type=float, default=300.0)
     parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
