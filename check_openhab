@@ -4,6 +4,7 @@
 import aiohttp
 import argparse
 import asyncio
+import aiofiles
 import datetime
 import json
 import os
@@ -283,8 +284,8 @@ async def fetch_object(item_url, args, timeoutstatus):
 
 
 async def readtextfile(file_path):
-    path = pathlib.Path(file_path)
-    content = path.read_text()
+    async with aiofiles.open(file_path, mode="r") as f:
+        content = await f.read()
     return content.splitlines()
 
 
