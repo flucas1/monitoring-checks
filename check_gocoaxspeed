@@ -8,6 +8,7 @@ import datetime
 import socket
 import pathlib
 import asyncio
+import aiofiles
 
 import selenium
 import selenium.webdriver
