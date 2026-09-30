@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
-# aptitude install python-nagiosplugin
 
 import os
 import sys
 import argparse
 import asyncio
+import aiofiles
 
 # -------------------------------------------------------------------------------
 

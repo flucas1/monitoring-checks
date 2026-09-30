@@ -5,6 +5,7 @@ import os
 import argparse
 import sys
 import asyncio
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
