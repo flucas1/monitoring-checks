@@ -202,11 +202,11 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     proxy = ""
     await dodnssecverisigncall(args.host, proxy)
+
 
 # -------------------------------------------------------------------------------
 

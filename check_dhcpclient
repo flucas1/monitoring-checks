@@ -115,7 +115,7 @@ async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
     output = await findservers(interface, requestmac, timeout)
     infomsg(output)
 
-    sucesses = []
+    successes = []
     warnings = []
     criticals = []
     total = -1
@@ -142,24 +142,24 @@ async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
             if len(goodones) < warning:
                 warnings.append("difference between valid servers and found servers - validservers [" + ",".join(validservers) + "] - foundservers [" + ",".join(responses) + "] on interface '" + interface + "'")
             else:
-                sucesses.append("foundservers [" + ",".join(responses) + "] all answer " + foundip + " for mac " + requestmac + " on interface '" + interface + "'")
+                successes.append("foundservers [" + ",".join(responses) + "] all answer " + foundip + " for mac " + requestmac + " on interface '" + interface + "'")
         total = len(responses)
 
-    return sucesses, warnings, criticals, total
+    return successes, warnings, criticals, total
 
 
 async def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
     result = True
     infomsg("List of interfaces: " + " ".join(interfaces))
 
-    sucesses = []
+    successes = []
     warnings = []
     criticals = []
     performance = []
     for interface in interfaces:
         infomsg("evaluating: " + interface)
-        temp_sucesses, temp_warnings, temp_criticals, temp_total = await checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
-        sucesses = sucesses + temp_sucesses
+        temp_successes, temp_warnings, temp_criticals, temp_total = await checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout)
+        successes = successes + temp_successes
         warnings = warnings + temp_warnings
         criticals = criticals + temp_criticals
         performance = performance + [interface + "=" + str(temp_total)]
@@ -168,10 +168,10 @@ async def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
         exitnagios("CRITICAL", " - ".join(criticals) + " | " + " ".join(performance))
     if len(warnings) > 0:
         exitnagios("WARNING", " - ".join(warnings) + " | " + " ".join(performance))
-    if len(sucesses) > 0:
-        exitnagios("OK", " - ".join(sucesses) + " | " + " ".join(performance))
+    if len(successes) > 0:
+        exitnagios("OK", " - ".join(successes) + " | " + " ".join(performance))
 
-    exitnagios("UNKNOWN", "unexpected scenario - successes: " + str(sucesses) + " - warnings: " + str(warnings) + " - criticals: " + str(criticals) + " | " + " ".join(performance))
+    exitnagios("UNKNOWN", "unexpected scenario - successes: " + str(successes) + " - warnings: " + str(warnings) + " - criticals: " + str(criticals) + " | " + " ".join(performance))
 
 # -------------------------------------------------------------------------------
 

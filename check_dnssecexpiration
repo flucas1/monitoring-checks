@@ -64,8 +64,7 @@ async def run_cmd(cmd):
             raise Exception("Command failed with code " + str(process.returncode) + ": " + stderr.decode().strip())
         return stdout.decode().strip()
     except Exception as e:
-        print("UNKNOWN: Command execution failed - " + str(e))
-        sys.exit(3)
+        exitnagios("UNKNOWN", "Command execution failed - " + str(e))
 
 
 # -------------------------------------------------------------------------------
@@ -91,8 +90,7 @@ async def main(forcedargs=None):
     resolver_cmd = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, "@" + args.resolver]
     resolver_out = await run_cmd(resolver_cmd)
     if "opcode: QUERY" not in resolver_out or "status: SERVFAIL" not in resolver_out:
-        print("WARNING: Resolver seems to not validate DNSSEC signatures - going further seems hopeless right now.")
-        sys.exit(1)
+        exitnagios("WARNING", "Resolver seems to not validate DNSSEC signatures - going further seems hopeless right now.")
 
     # Check if the resolver delivers an answer for the domain to test
     check_resolvable_out = await run_cmd(["dig", "+short", "@" + args.resolver, "SOA", args.zone])
@@ -100,17 +98,14 @@ async def main(forcedargs=None):
         # Check explicit disabled validation
         check_cd_out = await run_cmd(["dig", "+short", "@" + args.resolver, "SOA", args.zone, "+cd"])
         if check_cd_out:
-            print("CRITICAL: The domain " + args.zone + " can be validated without DNSSEC validation - but will fail on resolvers that do validate DNSSEC.")
-            sys.exit(2)
+            exitnagios("CRITICAL", "The domain " + args.zone + " can be validated without DNSSEC validation - but will fail on resolvers that do validate DNSSEC.")
         else:
-            print("CRITICAL: The domain " + args.zone + " cannot be resolved via " + args.resolver + " as resolver while DNSSEC validation is active.")
-            sys.exit(2)
+            exitnagios("CRITICAL", "The domain " + args.zone + " cannot be resolved via " + args.resolver + " as resolver while DNSSEC validation is active.")
 
     # Check if the domain is DNSSEC signed at all
     check_signed_out = await run_cmd(["dig", args.zone, "@" + args.resolver, "DS", "+short"])
     if not check_signed_out:
-        print("WARNING: Zone " + args.zone + " seems to be unsigned itself (= resolvable, but no DNSSEC involved at all)")
-        sys.exit(1)
+        exitnagios("WARNING", "Zone " + args.zone + " seems to be unsigned itself (= resolvable, but no DNSSEC involved at all)")
 
     # Check if there are multiple RRSIG responses and check them one after the other
     now = datetime.datetime.now(datetime.timezone.utc).timestamp()
@@ -118,8 +113,7 @@ async def main(forcedargs=None):
     rrsig_lines = [line for line in rrsig_out.split('\n') if 'RRSIG' in line and not line.startswith(';')]
 
     if not rrsig_lines:
-        print("CRITICAL: There is no RRSIG for the " + args.record_type + " of your zone.")
-        sys.exit(2)
+        exitnagios("CRITICAL", "There is no RRSIG for the " + args.record_type + " of your zone.")
 
     max_remaining_lifetime = None
     max_remaining_days = None
@@ -134,12 +128,10 @@ async def main(forcedargs=None):
         inception_str = parts[9]
 
         if not re.match(r'^[0-9]{14}$', expiry_str):
-            print("UNKNOWN: Something went wrong while checking the expiration of the RRSIG entry - investigate please.")
-            sys.exit(3)
+            exitnagios("UNKNOWN", "Something went wrong while checking the expiration of the RRSIG entry - investigate please.")
 
         if not re.match(r'^[0-9]{14}$', inception_str):
-            print("UNKNOWN: Something went wrong while checking the inception date of the RRSIG entry - investigate please.")
-            sys.exit(3)
+            exitnagios("UNKNOWN", "Something went wrong while checking the inception date of the RRSIG entry - investigate please.")
 
         # Parse the YYYYMMDDHHMMSS strings into UTC datetimes
         expiry_dt = datetime.datetime.strptime(expiry_str, "%Y%m%d%H%M%S").replace(tzinfo=datetime.timezone.utc)
@@ -158,21 +150,17 @@ async def main(forcedargs=None):
             max_remaining_days = remaining_days
 
     if max_remaining_lifetime is None:
-        print("UNKNOWN: Could not parse any valid RRSIG dates.")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "Could not parse any valid RRSIG dates.")
 
     # Determine if we need to alert, depending on warning/critical thresholds provided
     perf_data = "| sig_lifetime=" + str(max_remaining_lifetime) + "  sig_lifetime_days=" + str(max_remaining_days) + "%;" + str(args.warning) + ";" + str(args.critical)
 
     if max_remaining_days < args.critical:
-        print("CRITICAL: DNSSEC signature for " + args.zone + " is very short before expiration! (" + str(max_remaining_days) + " days remaining) " + perf_data)
-        sys.exit(2)
+        exitnagios("CRITICAL", "DNSSEC signature for " + args.zone + " is very short before expiration! (" + str(max_remaining_days) + " days remaining) " + perf_data)
     elif max_remaining_days < args.warning:
-        print("WARNING: DNSSEC signature for " + args.zone + " is short before expiration! (" + str(max_remaining_days) + " days remaining) " + perf_data)
-        sys.exit(1)
+        exitnagios("WARNING", "DNSSEC signature for " + args.zone + " is short before expiration! (" + str(max_remaining_days) + " days remaining) " + perf_data)
     else:
-        print("OK: DNSSEC signatures for " + args.zone + " seem to be valid and not expired (" + str(max_remaining_days) + " days remaining) " + perf_data)
-        sys.exit(0)
+        exitnagios("OK", "DNSSEC signatures for " + args.zone + " seem to be valid and not expired (" + str(max_remaining_days) + " days remaining) " + perf_data)
 
 
 # -------------------------------------------------------------------------------
