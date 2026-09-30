@@ -50,7 +50,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def dointerfacenetworkcheck(interface, segment, address, existence, notexists):
+async def dointerfacenetworkcheck(interface, segment, address, existence, notexists):
     interfaces = netifaces.interfaces()
 
     found_addrs = []
@@ -150,13 +150,12 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     if (args.interface == ""):
         exitnagios("CRITICAL", "interface not defined")
 
-    dointerfacenetworkcheck(args.interface, args.segment, args.address, args.existence, args.notexists)
+    await dointerfacenetworkcheck(args.interface, args.segment, args.address, args.existence, args.notexists)
 
 # -------------------------------------------------------------------------------
 

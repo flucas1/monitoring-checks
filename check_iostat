@@ -102,14 +102,14 @@ def parse_thresholds(thresh_str, default_val=99999):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-k", dest="disk", default="sda", help="Device to be checked")
-    parser.add_argument("-w", dest="warning", default="", help="Warning levels")
-    parser.add_argument("-c", dest="critical", default="", help="Critical levels")
-    parser.add_argument("-i", dest="io", action="store_true", help="IO Check Mode")
-    parser.add_argument("-q", dest="queue", action="store_true", help="Queue Mode")
-    parser.add_argument("-W", dest="waittime", action="store_true", help="Wait Time Mode")
-    parser.add_argument("-p", dest="printperfdata", action="store_true", help="Provide performance data")
-    parser.add_argument("-g", dest="samples", action="store_const", const="1", default="2", help="Since last reboot")
+    parser.add_argument("-k", "--disk", dest="disk", default="sda", help="Device to be checked")
+    parser.add_argument("-w", "--warning", dest="warning", default="", help="Warning levels")
+    parser.add_argument("-c", "--critical", dest="critical", default="", help="Critical levels")
+    parser.add_argument("-i", "--io", dest="io", action="store_true", help="IO Check Mode")
+    parser.add_argument("-q", "--queue", dest="queue", action="store_true", help="Queue Mode")
+    parser.add_argument("-W", "--waittime", dest="waittime", action="store_true", help="Wait Time Mode")
+    parser.add_argument("-p", "--printperfdata", dest="printperfdata", action="store_true", help="Provide performance data")
+    parser.add_argument("-g", "--samples", dest="samples", action="store_const", const="1", default="2", help="Since last reboot")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
