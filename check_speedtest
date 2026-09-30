@@ -5,6 +5,50 @@ import argparse
 import sys
 import asyncio
 
+# -------------------------------------------------------------------------------
+
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 # Set up the variable for the location of the speedtest binary
 # Edit this path so that it points to speedtest on your system
 STB = "/usr/bin/speedtest"
@@ -81,13 +125,14 @@ def parse_args(forcedargs=None):
     parser.add_argument('-p', action='store_true', help="Output Performance Data")
     parser.add_argument('-m', type=float, help="Download Maximum Level")
     parser.add_argument('-M', type=float, help="Upload Maximum Level")
-    parser.add_argument('-d', dest='debug', action='store_true', help="Output debug info for testing")
+    parser.add_argument("-d", "--debug", dest='debug', action='store_true', help="Output debug info for testing")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     if args.p:
         if args.m is None or args.M is None:
@@ -101,24 +146,21 @@ async def main(forcedargs=None):
         print("$ULw is less than $ULc!")
         sys.exit(3)
 
-    if args.debug:
-        print("Download Warning Level = " + str(args.w))
-        print("Download Critical Level = " + str(args.c))
-        print("Upload Warning Level = " + str(args.W))
-        print("Upload Critical Level = " + str(args.C))
-        print("Server Location = " + str(args.l))
-        print("Server URL or Integer = " + str(args.s))
+    infomsg("Download Warning Level = " + str(args.w))
+    infomsg("Download Critical Level = " + str(args.c))
+    infomsg("Upload Warning Level = " + str(args.W))
+    infomsg("Upload Critical Level = " + str(args.C))
+    infomsg("Server Location = " + str(args.l))
+    infomsg("Server URL or Integer = " + str(args.s))
 
     cmd = [STB, "--simple"]
 
     if args.l == 'e':
-        if args.debug:
-            print("External Server defined")
+        infomsg("External Server defined")
         if args.s:
             cmd = [STB, "--server=" + str(args.s), "--simple"]
     elif args.l == 'i':
-        if args.debug:
-            print("Internal Server defined")
+        infomsg("Internal Server defined")
         if args.s:
             cmd = [STB, "--mini=" + str(args.s), "--simple"]
         else:
@@ -127,8 +169,7 @@ async def main(forcedargs=None):
 
     try:
         output = await run_speedtest_command(cmd)
-        if args.debug:
-            print(output)
+        infomsg(output)
     except Exception as e:
         if "Cannot parse" in str(e):
             print("ERROR: Cannot parse speedtest output")
@@ -142,10 +183,9 @@ async def main(forcedargs=None):
         print("ERROR: Cannot parse speedtest output")
         sys.exit(2)
 
-    if args.debug:
-        print("Ping = " + str(ping))
-        print("Download = " + str(download))
-        print("Upload = " + str(upload))
+    infomsg("Ping = " + str(ping))
+    infomsg("Download = " + str(download))
+    infomsg("Upload = " + str(upload))
 
     status, nagcode = check_thresholds(download, upload, args)
 
