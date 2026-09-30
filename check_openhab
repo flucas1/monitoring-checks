@@ -260,7 +260,7 @@ async def fetch_object(item_url, args, timeoutstatus):
             if not os.path.isfile(args.authorization):
                 exitnagios("CRITICAL", "Authorization parameters not in username:password format, nor an existing file")
             else:
-                filecontentslines = await read_text_file(args.authorization)
+                filecontentslines = await readtextfile(args.authorization)
                 auth_params = []
                 auth_params.append(filecontentslines[0])
                 auth_params.append(filecontentslines[1])
@@ -282,7 +282,7 @@ async def fetch_object(item_url, args, timeoutstatus):
         exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
 
 
-async def read_text_file(file_path):
+async def readtextfile(file_path):
     path = pathlib.Path(file_path)
     content = path.read_text()
     return content.splitlines()
