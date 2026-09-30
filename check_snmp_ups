@@ -60,7 +60,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    cmdline = ["/etc/nagios/scripts/check_nut", "-d", args.host, "-v", args.expression]
+    cmdline = ["/etc/nagios/scripts/check_nut", "--device", args.host, "--value", args.expression]
     process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,
