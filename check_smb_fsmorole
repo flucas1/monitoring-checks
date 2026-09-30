@@ -114,7 +114,7 @@ async def main(forcedargs=None):
             (ForestDnsZonesMasterRole == args.master)):
         exitnagios("OK", "All FSMO roles are " + args.master)
     else:
-        exitnagios("CRITICAL", "not all FSMO roles are not matching " + args.master + " -- " + " -- ".join(roles))
+        exitnagios("CRITICAL", "not all FSMO roles match " + args.master + " -- " + " -- ".join(roles))
 
 # -------------------------------------------------------------------------------
 
