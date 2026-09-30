@@ -9,6 +9,7 @@ import aiofiles
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -57,6 +59,7 @@ async def read_temperature():
     except Exception:
         return None
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -64,17 +67,19 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Monitor temperature of Raspberry Pi")
     parser.add_argument("-w", "--warning", dest="warn", type=float, default=None, help="Set warning threshold")
     parser.add_argument("-c", "--critical", dest="crit", type=float, default=None, help="Set critical threshold")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+
     temp = 0.0
     warn = 0.0
     crit = 0.0
     max_temp = 85.0
     min_temp = 0.0
-
-    args = parse_args(forcedargs)
 
     if args.warn is not None:
         warn = args.warn
@@ -96,7 +101,6 @@ async def main(forcedargs=None):
         exitnagios("OK", "Temperature " + "{:.2f}".format(temp) + perfdata)
 
 # -------------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     asyncio.run(main())
