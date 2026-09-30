@@ -62,9 +62,9 @@ def prettify_size(size, multiplier):
     binary_str = "i" if multiplier == 1024 else ""
     for unit in ("", f"K{binary_str}", f"M{binary_str}", f"G{binary_str}"):
         if abs(size) < multiplier:
-            return str(size) + unit
+            return str(round(size, 2)) + unit
         size /= multiplier
-    return str(size) + "T" + binary_str
+    return str(round(size, 2)) + "T" + binary_str
 
 
 def human_size(string):
@@ -185,6 +185,13 @@ def check_thresholds(value, warn, crit):
     return "OK"
 
 
+def max_status(status1, status2):
+    hierarchy = {"OK": 0, "WARNING": 1, STATUS_CRITICAL: 2, STATUS_UNKNOWN: 3}
+    if hierarchy.get(status2, 3) > hierarchy.get(status1, 3):
+        return status2
+    return status1
+
+
 def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file):
     overall_status = "OK"
     messages = []
@@ -196,6 +203,12 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
         return overall_status, messages, perf_data
 
     time_delta = current_state["execution_time"] - old_state["execution_time"]
+
+    if time_delta <= 0:
+        overall_status = "WARNING"
+        messages.append("time delta is zero or negative")
+        return overall_status, messages, perf_data
+
     multiplier = 1 if args.bytes else 8
     unit = "B" if args.bytes else "b"
 
@@ -203,7 +216,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
         interface_name = interface["pretty_ifname"]
 
         if interface_name not in old_state["statistics"]:
-            overall_status = max(overall_status, "WARNING")
+            overall_status = max_status(overall_status, "WARNING")
             messages.append("no data in state file for " + interface_name + ", new interface?")
             continue
 
@@ -213,7 +226,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
             bandwidth = multiplier * (current_bytes - old_bytes) / time_delta
 
             if bandwidth < 0:
-                overall_status = max(overall_status, "WARNING")
+                overall_status = max_status(overall_status, "WARNING")
                 messages.append("Counter for " + interface_name + "/" + direction + " is decreasing, this could be caused by a reboot")
                 continue
 
@@ -221,7 +234,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
             crit_limit = getattr(args, "critical_" + direction)
 
             metric_status = check_thresholds(bandwidth, warn_limit, crit_limit)
-            overall_status = max(overall_status, metric_status)
+            overall_status = max_status(overall_status, metric_status)
 
             human_readable = prettify_size(bandwidth, 1024 if args.bytes else 1000)
             perf_str = "'" + interface_name + "_" + direction + "'=" + str(bandwidth) + unit + ";" + (str(warn_limit) if warn_limit else "") + ";" + (str(crit_limit) if crit_limit else "") + ";;"
