@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -45,6 +46,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -142,7 +144,6 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
-
     return args
 
 
@@ -205,6 +206,7 @@ async def main(forcedargs=None):
         exitnagios(timeoutstatus, "It was not possible to retreive speeds having targetmac as " + targetmac)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 
