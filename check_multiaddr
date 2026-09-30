@@ -156,7 +156,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]")
     parser.add_argument("-c", "--childtimeout", dest="childtimeout", help="Child timeout in seconds[:status]")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
-    parser.add_argument("args", nargs="*", help="Arguments for the underlying check command")
+    parser.add_argument("args", nargs=argparse.REMAINDER, help="Arguments for the underlying check command")
 
     if forcedargs is None:
         forcedargs = sys.argv[1:]
