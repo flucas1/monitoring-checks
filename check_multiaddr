@@ -163,8 +163,8 @@ def parse_args(forcedargs=None):
 
     args = parser.parse_args(forcedargs)
 
-    # Handle legacy positional host argument if present
-    if args.hostname is None and args.host is None and len(args.args) > 0:
+    # Handle legacy positional hostname argument if present
+    if args.hostname is None and len(args.args) > 0:
         if args.args[0] == "-H":
             if len(args.args) > 1:
                 args.hostname = args.args[1]
