@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -45,6 +46,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -136,7 +138,6 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     if args.hostname == "":
@@ -152,6 +153,7 @@ async def main(forcedargs=None):
         await dosnmpwifilinkcall(args.warning, args.critical, args.hostname, int(args.port), args.community, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 
