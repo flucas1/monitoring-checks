@@ -65,8 +65,8 @@ async def generateOvhClient(credentialsfile):
     try:
         lines = []
         async with aiofiles.open(credentialsfile, "rb") as f:
-            lines = await f.readlines()
-            lines = lines.decode("utf-8").strip()
+            lines = await f.read()
+            lines = lines.decode("utf-8").strip().splitlines()
         value_application_key = ""
         value_application_secret = ""
         value_consumer_key = ""

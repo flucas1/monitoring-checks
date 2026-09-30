@@ -312,8 +312,9 @@ async def main(forcedargs=None):
                     fstab_lines.append(stripped)
 
     mtab_lines = []
-    async with aiofiles.open(mtab_file, "r") as f:
-        mtab_lines = await f.readlines()
+    async with aiofiles.open(mtab_file, "rb") as f:
+        mtab_lines = await f.read()
+        mtab_lines = mtab_lines.decode("utf-8").strip().splitlines()
 
     tasks = []
     for mp in mps:
