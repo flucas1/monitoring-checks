@@ -11,6 +11,7 @@ import pickle
 import re
 import sys
 import time
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -272,76 +273,31 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description=__doc__)
-    parser.add_argument("-v",
-        "--verbose",
-        help="enable more verbose output, can be specified multiple times",
-        default=0,
-        action="count",
-    )
+    parser.add_argument("-v", "--verbose", help="enable more verbose output, can be specified multiple times",
+                        default=0, action="count")
     parser.add_argument("-d", "--debug", help="enable debug output", default=False, action="store_true")
     filter_group = parser.add_argument_group(
         "filtering options, exclusions are applied before inclusions, "
         "increase verbosity for details"
     )
-    filter_group.add_argument(
-        "-t",
-        "--type",
-        help="only select interfaces of this type, can be specified multiple times",
-        action="append",
-        default=[],
-    )
-    filter_group.add_argument(
-        "-T",
-        "--exclude-type",
-        help="exclude interfaces of this type, can be specified multiple times",
-        action="append",
-        default=[],
-    )
-    filter_group.add_argument(
-        "-n", "--name", help="only select interfaces whose names match this regular expression"
-    )
-    filter_group.add_argument(
-        "-N", "--exclude-name", help="exclude interfaces whose names match this regular expression"
-    )
-    filter_group.add_argument(
-        "-d",
-        "--down",
-        help="include interfaces whose operstate is down",
-        action="store_true",
-        default=False,
-    )
-    filter_group.add_argument(
-        "--include-netns",
-        help='include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. "container/wg0"',
-        action="store_true",
-        default=False,
-    )
-    parser.add_argument(
-        "-b", "--bytes",
-        help="use bytes as output unit instead of bits, does not affect thresholds",
-        action="store_true",
-        default=False,
-    )
+    filter_group.add_argument("-t", "--type",
+                              help="only select interfaces of this type, can be specified multiple times",
+                              action="append", default=[],
+                              )
+    filter_group.add_argument("-T", "--exclude-type", help="exclude interfaces of this type, can be specified multiple times",
+                              action="append", default=[],
+                              )
+    filter_group.add_argument("-n", "--name", help="only select interfaces whose names match this regular expression")
+    filter_group.add_argument("-N", "--exclude-name", help="exclude interfaces whose names match this regular expression")
+    filter_group.add_argument("-D", "--down", help="include interfaces whose operstate is down", action="store_true", default=False)
+    filter_group.add_argument("--include-netns", help='include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. "container/wg0"', action="store_true", default=False)
+    parser.add_argument("-b", "--bytes", help="use bytes as output unit instead of bits, does not affect thresholds", action="store_true", default=False)
     threshold_group = parser.add_argument_group(
         "threshold options, suffixes K, M, G and T (case-insensitive) are accepted, "
         "multiples of 1000 are used for bits and 1024 for bytes"
     )
-    threshold_group.add_argument(
-        "-w",
-        "--warning",
-        metavar=("RX", "TX"),
-        nargs=2,
-        help="warning threshold",
-        type=human_size,
-    )
-    threshold_group.add_argument(
-        "-c",
-        "--critical",
-        metavar=("RX", "TX"),
-        nargs=2,
-        help="critical threshold",
-        type=human_size,
-    )
+    threshold_group.add_argument("-w", "--warning", metavar=("RX", "TX"), nargs=2, help="warning threshold", type=human_size)
+    threshold_group.add_argument("-c", "--critical", metavar=("RX", "TX"), nargs=2, help="critical threshold", type=human_size)
     args = parser.parse_args(forcedargs)
     multiplier = 1024 if args.bytes else 1000
     for threshold in ("warning", "critical"):

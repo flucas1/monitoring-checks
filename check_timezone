@@ -2,14 +2,13 @@
 # -------------------------------------------------------------------------------
 
 import argparse
+import asyncio
 import os
 import sys
 import time
 import filecmp
 import signal
 import re
-import asyncio
-
 
 # -------------------------------------------------------------------------------
 
@@ -144,6 +143,7 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
+
     await check_timezone_logic(args.timezone, args.alternate, args.zoneinfo_file)
 
 
