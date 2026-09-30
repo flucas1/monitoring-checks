@@ -71,6 +71,7 @@ async def main():
     PROMPT.append("The option '-d' is the last one of the command line arguments.")
     PROMPT.append("All command line arguments should have short and long form.")
     PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
+    PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process'.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 

@@ -67,10 +67,9 @@ async def run_iostat(disk, extended, samples):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print("ERROR: Failed to run iostat command")
-            sys.exit(-1)
+            exitnagios("UNKNOWN", "Failed to run iostat command")
 
-        output = stdout.decode('utf-8')
+        output = stdout.decode("utf-8")
         # grep $disk | tail -1
         matching_lines = [line.strip() for line in output.splitlines() if disk in line]
         if not matching_lines:
@@ -78,10 +77,9 @@ async def run_iostat(disk, extended, samples):
 
         last_line = matching_lines[-1]
         # Replace commas with dots for float parsing, then split by whitespace
-        return last_line.replace(',', '.').split()
+        return last_line.replace(",", ".").split()
     except Exception as e:
-        print("ERROR: Failed to run iostat command: " + str(e))
-        sys.exit(-1)
+        exitnagios("UNKNOWN", "Failed to run iostat command: " + str(e))
 
 
 def parse_thresholds(thresh_str, default_val=99999):
@@ -89,7 +87,7 @@ def parse_thresholds(thresh_str, default_val=99999):
     if not thresh_str:
         return [default_val] * 5
 
-    parts = thresh_str.split(',')
+    parts = thresh_str.split(",")
     # Pad the list to ensure it has 5 elements for the comparisons
     while len(parts) < 5:
         parts.append(default_val)
@@ -121,13 +119,11 @@ async def main(forcedargs=None):
 
     # Checks that only one query type is run
     if sum([args.io, args.queue, args.waittime]) != 1:
-        print("ERROR: select one and only one run mode")
-        sys.exit(-1)
+        exitnagios("UNKNOWN", "select one and only one run mode")
 
     # Checks for sane Disk name
     if not os.path.exists("/dev/" + args.disk):
-        print("ERROR: Device incorrectly specified")
-        sys.exit(-1)
+        exitnagios("UNKNOWN", "Device incorrectly specified")
 
     warn = parse_thresholds(args.warning, 99999)
     crit = parse_thresholds(args.critical, 99999)
@@ -135,17 +131,14 @@ async def main(forcedargs=None):
     # Checks for sane warning/critical levels
     if args.warning or args.critical:
         if warn[0] > crit[0] or warn[1] > crit[1]:
-            print("ERROR: critical levels must be higher than warning levels")
-            sys.exit(-1)
+            exitnagios("UNKNOWN", "critical levels must be higher than warning levels")
         if args.io or args.waittime:
             if warn[2] > crit[2] or warn[3] > crit[3] or warn[4] > crit[4]:
-                print("ERROR: critical levels must be higher than warning levels")
-                sys.exit(-1)
+                exitnagios("UNKNOWN", "critical levels must be higher than warning levels")
 
     tmpx = await run_iostat(args.disk, extended=True, samples=args.samples)
     if not tmpx:
-        print("ERROR: No data returned for disk " + args.disk)
-        sys.exit(-1)
+        exitnagios("UNKNOWN", "No data returned for disk " + args.disk)
 
     state = "OK"
     status = 0
@@ -214,8 +207,7 @@ async def main(forcedargs=None):
     if args.printperfdata:
         final_output += perfdata
 
-    print(final_output)
-    sys.exit(status)
+    exitnagios(state, final_output)
 
 
 # -------------------------------------------------------------------------------
