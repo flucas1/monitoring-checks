@@ -51,12 +51,9 @@ def exitnagios(status, message):
 
 async def read_file_async(filepath):
     try:
-        handle = open(filepath, "r")
-        try:
-            content = handle.read()
+        async with aiofiles.open(filepath, "r") as handle:
+            content = await handle.read()
             return content
-        finally:
-            handle.close()
     except Exception as e:
         raise e
 

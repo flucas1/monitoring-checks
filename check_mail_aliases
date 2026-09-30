@@ -71,12 +71,9 @@ def isexpected(parts):
 
 async def read_aliases_file(filepath):
     try:
-        handle = open(filepath, "r")
-        try:
-            lines = handle.read().splitlines()
-            return lines
-        finally:
-            handle.close()
+        async with aiofiles.open(filepath, "r") as handle:
+            content = await handle.read()
+            return content.splitlines()
     except Exception as e:
         raise e
 
