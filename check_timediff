@@ -90,13 +90,13 @@ async def main(forcedargs=None):
 
     # Validate required arguments
     if not args.server_time_format:
-        msg("ERROR", "Option -f/--format is required")
+        exitnagios("UNKNOWN", "Option -f/--format is required")
     if not args.server_time:
-        msg("ERROR", "Option -t/--time is required")
+        exitnagios("UNKNOWN", "Option -t/--time is required")
 
     # Validate logical thresholds
     if args.warning_seconds >= args.critical_seconds:
-        parser.error("warning seconds (" + str(args.warning_seconds) + ") cannot be >= critical seconds (" + str(args.critical_seconds) + ")")
+        exitnagios("UNKNOWN", "warning seconds (" + str(args.warning_seconds) + ") cannot be >= critical seconds (" + str(args.critical_seconds) + ")")
 
     # Time format mapping
     format_map = {
@@ -112,7 +112,7 @@ async def main(forcedargs=None):
         parsed_time = datetime.datetime.strptime(args.server_time, dt_format)
         server_epoch_time = int(time.mktime(parsed_time.timetuple()))
     except ValueError as e:
-        msg("RC_UNKNOWN", str(e))
+        exitnagios("UNKNOWN", str(e))
 
     # Calculate difference
     local_epoch_time = int(time.time())
@@ -121,11 +121,11 @@ async def main(forcedargs=None):
 
     # Evaluate against thresholds
     if diff >= args.critical_seconds:
-        msg("CRITICAL", diff_msg)
+        exitnagios("CRITICAL", diff_msg)
     elif diff >= args.warning_seconds:
-        msg("WARNING", diff_msg)
+        exitnagios("WARNING", diff_msg)
     else:
-        msg("OK", diff_msg)
+        exitnagios("OK", diff_msg)
 
 
 # -------------------------------------------------------------------------------

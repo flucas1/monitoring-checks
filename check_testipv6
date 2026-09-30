@@ -18,6 +18,7 @@ import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -63,6 +64,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -107,6 +109,7 @@ async def wait_page_loaded(driver):
         if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
         await asyncio.sleep(1)
+
 
 # -------------------------------------------------------------------------------
 
@@ -172,15 +175,16 @@ async def dotestipv6call(proxy):
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     await dotestipv6call(args.proxy)
+
 
 # -------------------------------------------------------------------------------
 
