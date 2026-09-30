@@ -246,7 +246,7 @@ async def main(forcedargs=None):
     if args.filecred == "":
         exitnagios("CRITICAL", "filecred is not specified")
     else:
-        filecontents = pathlib.Path(args.filecred).read_text()
+        filecontents = await aiofiles.open(args.filecred, mode="r").read()
         filecontentslines = filecontents.splitlines()
         username = filecontentslines[0]
         password = filecontentslines[1]

@@ -532,7 +532,7 @@ async def main(forcedargs=None):
     elif args.mode not in ["uptime", "memory", "cpu"]:
         exitnagios("CRITICAL", "mode must be uptime, memory, cpu")
     else:
-        filecontents = pathlib.Path(args.filecred).read_text()
+        filecontents = await aiofiles.open(args.filecred, mode="r").read()
         filecontentslines = filecontents.splitlines()
         username = filecontentslines[0]
         password = filecontentslines[1]
