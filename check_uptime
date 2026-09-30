@@ -126,7 +126,6 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", "--min-warning", type=int, dest="min_warning", help="Minimum warning uptime (minutes)")
     parser.add_argument("-C", "--max-critical", type=int, dest="max_critical", help="Maximum critical uptime (minutes)")
     parser.add_argument("-W", "--max-warning", type=int, dest="max_warning", help="Maximum warning uptime (minutes)")
-    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="Verbose output")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
@@ -148,7 +147,7 @@ async def main(forcedargs=None):
     min_c = str(args.min_critical) if args.min_critical is not None else ""
     max_c = str(args.max_critical) if args.max_critical is not None else ""
 
-    perfdata = "|Uptime=" + uptime_days + ";" + min_w + ":" + max_w + ";" + min_c + ":" + max_c + ";0;"
+    perfdata = " | Uptime=" + uptime_days + ";" + min_w + ":" + max_w + ";" + min_c + ":" + max_c + ";0;"
 
     if args.min_critical is not None and uptime_minutes < args.min_critical:
         exitnagios("CRITICAL", "minimum - system booted " + uptime_msg + " ago" + perfdata)

@@ -125,7 +125,6 @@ def parse_args(forcedargs=None):
     parser.add_argument("-u", "--used", action="store_true", dest="used")
     parser.add_argument("-C", "--caches", action="store_true", dest="caches")
     parser.add_argument("-g", "--huge", action="store_true", dest="huge")
-    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose")
     parser.add_argument("-w", "--warning", type=float, dest="warning")
     parser.add_argument("-c", "--critical", type=float, dest="critical")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug")
@@ -147,9 +146,9 @@ async def main(forcedargs=None):
     elif args.warning >= args.critical and args.used:
         exitnagios("UNKNOWN", "WARNING level must not be greater than CRITICAL when checking USED memory!")
 
-    free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info(args.caches, args.verbose)
+    free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info(args.caches, args.debug)
 
-    if args.verbose:
+    if args.debug:
         infomsg(str(free_kb) + " Free\n" + str(used_kb) + " Used\n" + str(caches_kb) + " Cache")
         if args.huge:
             infomsg(str(hugepages_kb) + " Hugepages")
@@ -161,7 +160,7 @@ async def main(forcedargs=None):
     if args.huge:
         used_kb -= hugepages_kb
 
-    if args.verbose:
+    if args.debug:
         infomsg(str(used_kb) + " Used (after Hugepages)")
 
     free_kb = int(free_kb)
@@ -169,7 +168,7 @@ async def main(forcedargs=None):
     caches_kb = int(caches_kb)
 
     total = free_kb + used_kb
-    if args.verbose:
+    if args.debug:
         infomsg(str(total) + " Total")
 
     if args.used:
