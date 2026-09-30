@@ -49,20 +49,11 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STATE_OK = 0
-STATE_WARNING = 1
-STATE_CRITICAL = 2
-STATE_UNKNOWN = 3
-
-
-# -------------------------------------------------------------------------------
-
-
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
-    parser.add_argument("-w", '--warning', dest="warning", type=int, required=True, help="Queue size at which a warning is triggered")
-    parser.add_argument("-c", '--critical', dest="critical", type=int, required=True, help="Queue size at which a critical is triggered")
-    parser.add_argument("-d", '--debug', dest="debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("-w", "--warning", dest="warning", type=int, required=True, help="Queue size at which a warning is triggered")
+    parser.add_argument("-c", "--critical", dest="critical", type=int, required=True, help="Queue size at which a critical is triggered")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args(forcedargs)
     return args
 
@@ -84,21 +75,17 @@ async def main(forcedargs=None):
 
     # Check if the output is empty or invalid
     if not output or not output.isdigit():
-        print("Mailqueue WARNING - query returned no output!")
-        sys.exit(STATE_WARNING)
+        exitnagios("WARNING", "query returned no output!")
 
     queue_size = int(output)
 
     # Evaluate thresholds and return information and exit status
     if queue_size >= args.critical:
-        print("CRITICAL:- " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
-        sys.exit(STATE_CRITICAL)
+        exitnagios("CRITICAL", str(queue_size) + " messages on queue | queue=" + str(queue_size))
     elif queue_size >= args.warning:
-        print("WARNING: " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
-        sys.exit(STATE_WARNING)
+        exitnagios("WARNING", str(queue_size) + " messages on queue | queue=" + str(queue_size))
     else:
-        print("OK: " + str(queue_size) + " messages on queue | queue=" + str(queue_size))
-        sys.exit(STATE_OK)
+        exitnagios("OK", str(queue_size) + " messages on queue | queue=" + str(queue_size))
 
 
 # -------------------------------------------------------------------------------
