@@ -9,6 +9,47 @@ import datetime
 
 # -------------------------------------------------------------------------------
 
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
 RC_OK = 0
 RC_WARNING = 1
 RC_CRITICAL = 2
@@ -31,12 +72,14 @@ def msg(status_class, message_text):
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", type=int, default=3, dest="critical_seconds")
     parser.add_argument("-w", type=int, default=2, dest="warning_seconds")
     parser.add_argument("-f", dest="server_time_format", choices=["euro", "iso8601", "strict-iso8601", "us"])
     parser.add_argument("-t", dest="server_time", type=str)
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug")
     args = parser.parse_args(forcedargs)
 
     # Validate required arguments
@@ -54,6 +97,7 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     # Time format mapping
     format_map = {
