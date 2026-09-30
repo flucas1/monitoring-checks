@@ -721,13 +721,12 @@ async def main(forcedargs=None):
     else:
         exitinfo = build_exitinfo("CRITICAL", "timeout status is not valid")
 
-    return exitinfo
+    exitnagios(exitinfo)
 
 
 # -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    exitinfo = asyncio.run(main())
-    exitnagios(exitinfo)
+    asyncio.run(main())
 
 # -------------------------------------------------------------------------------
