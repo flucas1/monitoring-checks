@@ -120,8 +120,6 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "choose ipv4 or ipv6, not both")
     if (args.ipv4 == False) and (args.ipv6 == False):
         args.ipv4 = True
-    # infomsg(args.ipv4)
-    # infomsg(args.ipv6)
 
     if (args.hostname == ""):
         exitnagios("CRITICAL", "hostname not defined")
