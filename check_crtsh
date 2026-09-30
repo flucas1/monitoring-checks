@@ -19,6 +19,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -56,6 +57,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -83,6 +85,7 @@ async def ipv4_default_route_exists() -> bool:
         return False
     except FileNotFoundError:
         return False
+
 
 # -------------------------------------------------------------------------------
 
@@ -172,8 +175,6 @@ async def load_json(mode, proxy, domain, retries, timeoutvalue):
 
     return object_json
 
-# -------------------------------------------------------------------------------
-
 
 async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
     if mode:
@@ -218,6 +219,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
 
     # do not fallback here, so several calls can be chained
     # exitnagios("WARNING","crt.sh does not answer properly")
+
 
 # -------------------------------------------------------------------------------
 
@@ -266,6 +268,7 @@ async def main(forcedargs=None):
     duration = elapsed.total_seconds()
 
     exitnagios(timeoutstatus, "cannot get crt.sh data | found=0 duration=" + str(duration))
+
 
 # -------------------------------------------------------------------------------
 

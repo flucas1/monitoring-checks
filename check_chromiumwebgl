@@ -97,6 +97,7 @@ async def wait_page_loaded(driver):
             break
         await asyncio.sleep(1)
 
+
 # -------------------------------------------------------------------------------
 
 
