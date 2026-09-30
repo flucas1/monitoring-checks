@@ -52,12 +52,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STATE_OK = 0
-STATE_WARNING = 1
-STATE_CRITICAL = 2
-STATE_UNKNOWN = 3
-
-
 async def cleanup(cc_path, conf_path):
     """Destroy credentials and remove temporary configuration."""
     if cc_path and os.path.exists(cc_path):
@@ -98,8 +92,7 @@ async def main(forcedargs=None):
 
     # Validate principal format
     if "@" not in args.principal:
-        print("UNKNOWN: Principal must include realm (e.g., user@REALM)")
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Principal must include realm (e.g., user@REALM)")
 
     # Extract realm (equivalent to: sed -e s/.*@//)
     realm = args.principal.split("@", 1)[-1]
@@ -128,8 +121,6 @@ async def main(forcedargs=None):
     async with aiofiles.open(conf_path, "w") as f:
         await f.write(krb5_conf_content)
 
-    state = STATE_CRITICAL
-
     try:
         # Prepare environment with our temporary config
         env = os.environ.copy()
@@ -149,27 +140,22 @@ async def main(forcedargs=None):
 
         # Check success
         if proc.returncode == 0:
-            print("OK")
-            state = STATE_OK
+            exitnagios("OK", "")
         else:
             # Grab the first line of stdout (equivalent to head -n 1)
             error_msg = ""
             if stdout:
                 decoded = stdout.decode().strip()
                 error_msg = decoded.replace("\n", " ")
-            print("CRITICAL Getting Kerberos ticket: " + error_msg)
-            state = STATE_CRITICAL
+            exitnagios("CRITICAL", "Getting Kerberos ticket: " + error_msg)
 
     except FileNotFoundError:
-        print("CRITICAL: /usr/bin/kinit not found")
-        state = STATE_CRITICAL
+        exitnagios("CRITICAL", "/usr/bin/kinit not found")
     except Exception as e:
-        print("CRITICAL: " + str(e))
-        state = STATE_CRITICAL
+        exitnagios("CRITICAL", str(e))
     finally:
         # Cleanup mechanism via finally (equivalent to bash trap)
         await cleanup(cc_path, conf_path)
-        sys.exit(state)
 
 
 # -------------------------------------------------------------------------------
