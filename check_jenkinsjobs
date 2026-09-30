@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,7 +47,33 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
+
+
+async def isvalidjob(jobspath, entry):
+    permalinks = os.path.join(jobspath, entry, "builds", "permalinks")
+    if not os.path.isdir(permalinks):
+        return False
+    else:
+        isOK = False
+        lastCompletedBuild = -1
+        lastStableBuild = -1
+        lastSuccessfulBuild = -1
+        lines = pathlib.Path(permalinks).read_text().splitlines()
+        for line in lines:
+            infomsg(line)
+            parts = line.split()
+            if len(parts) > 0:
+                if parts[0] == "lastCompletedBuild":
+                    lastCompletedBuild = int(parts[1])
+                elif parts[0] == "lastStableBuild":
+                    lastStableBuild = int(parts[1])
+                elif parts[0] == "lastSuccessfulBuild":
+                    lastSuccessfulBuild = int(parts[1])
+        isOK = (lastSuccessfulBuild == lastStableBuild) and (lastSuccessfulBuild == lastCompletedBuild) and (lastSuccessfulBuild > 0)
+        infomsg(entry + " " + str(lastCompletedBuild) + " " + str(lastStableBuild) + " " + str(lastSuccessfulBuild) + " " + str(isOK))
+        return isOK
 
 
 async def docheckjenkinsjobs(directory, critical):
@@ -80,30 +107,6 @@ async def docheckjenkinsjobs(directory, critical):
         exitnagios("OK", "all jenkins jobs are in valid state | alerts=0 issues=0")
 
 
-async def isvalidjob(jobspath, entry):
-    permalinks = os.path.join(jobspath, entry, "builds", "permalinks")
-    if not os.path.isdir(permalinks):
-        return False
-    else:
-        isOK = False
-        lastCompletedBuild = -1
-        lastStableBuild = -1
-        lastSuccessfulBuild = -1
-        lines = pathlib.Path(permalinks).read_text().splitlines()
-        for line in lines:
-            infomsg(line)
-            parts = line.split()
-            if len(parts) > 0:
-                if parts[0] == "lastCompletedBuild":
-                    lastCompletedBuild = int(parts[1])
-                elif parts[0] == "lastStableBuild":
-                    lastStableBuild = int(parts[1])
-                elif parts[0] == "lastSuccessfulBuild":
-                    lastSuccessfulBuild = int(parts[1])
-        isOK = (lastSuccessfulBuild == lastStableBuild) and (lastSuccessfulBuild == lastCompletedBuild) and (lastSuccessfulBuild > 0)
-        infomsg(entry + " " + str(lastCompletedBuild) + " " + str(lastStableBuild) + " " + str(lastSuccessfulBuild) + " " + str(isOK))
-        return isOK
-
 # -------------------------------------------------------------------------------
 
 
@@ -118,12 +121,12 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     critical = args.critical.split(",")
     critical = [job for job in critical if job != ""]
     await docheckjenkinsjobs(args.directory, critical)
+
 
 # -------------------------------------------------------------------------------
 

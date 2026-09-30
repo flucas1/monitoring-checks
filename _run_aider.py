@@ -59,6 +59,7 @@ async def main():
     PROMPT.append("Review the attached python for issues and transform to async.")
     PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     PROMPT.append("Avoid to_thread, get_event_loop and get_running_loop.")
+    PROMPT.append("File reading and writing should be always async.")
     PROMPT.append("For python imports do not use 'from'.")
     PROMPT.append("Remove legacy subprocess, urllib and concurrent.futures.")
     PROMPT.append("Prefer \" rather than ' for string delimitator.")
@@ -67,6 +68,7 @@ async def main():
     PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
     PROMPT.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
     PROMPT.append("There is always a command line argument '-d' '--debug'.")
+    PROMPT.append("All command line arguments should have short and long form.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
