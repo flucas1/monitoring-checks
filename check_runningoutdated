@@ -5,32 +5,65 @@ import argparse
 import asyncio
 import sys
 
-
 # -------------------------------------------------------------------------------
 
+_candebug = False
 
-# Define default values for warning and critical thresholds
-WARNING_DEFAULT = 1
-CRITICAL_DEFAULT = 4
 
-# Path to checkrestart binary
-CHECKRESTART_BIN = "/usr/sbin/checkrestart"
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
 
 
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
+    WARNING_DEFAULT = 1
+    CRITICAL_DEFAULT = 4
     parser = argparse.ArgumentParser(description="check_checkrestart - Check obsolete libraries still in use\n\nNeeds debian-goodies!")
     parser.add_argument("-w", "--warning", type=int, default=WARNING_DEFAULT, help="Warning number of processes using old libraries. Default: " + str(WARNING_DEFAULT))
     parser.add_argument("-c", "--critical", type=int, default=CRITICAL_DEFAULT, help="Critical number of processes using old libraries. Default: " + str(CRITICAL_DEFAULT))
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
+    CHECKRESTART_BIN = "/usr/sbin/checkrestart"
     cmd = [CHECKRESTART_BIN]
 
     # Check if -p is supported by looking for 'vhpa' in the help output
