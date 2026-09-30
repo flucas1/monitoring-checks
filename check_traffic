@@ -55,7 +55,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STATE_FILE_PATH = "/tmp"
+STATE_FILE_PATH = "/var/lib/nagios"
 
 
 def prettify_size(size, multiplier):
