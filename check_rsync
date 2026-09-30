@@ -65,23 +65,14 @@ async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
             rsync_out = rsync_out.decode("utf-8", errors="ignore").strip()
 
             if rsync_out.startswith("@RSYNCD:"):
-                print("OK - " + rsync_out)
-                return 0
+                exitnagios("OK", rsync_out)
             else:
-                print("WARNING - rsync out: " + rsync_out)
-                return 1
+                exitnagios("WARNING", "rsync out: " + rsync_out)
         finally:
             writer.close()
             await writer.wait_closed()
     except (asyncio.TimeoutError, OSError):
-        print(timeoutstatus + " - Could not connect to " + remote + ":" + str(rsync_port))
-        if timeoutstatus == "CRITICAL":
-            return 2
-        if timeoutstatus == "WARNING":
-            return 1
-        if timeoutstatus == "OK":
-            return 0
-        return 3
+        exitnagios(timeoutstatus, "Could not connect to " + remote + ":" + str(rsync_port))
 
 
 # -------------------------------------------------------------------------------
@@ -105,13 +96,8 @@ async def main(forcedargs=None):
     timeoutvalue = float(timeout_parts[0])
     timeoutstatus = timeout_parts[1] if len(timeout_parts) > 1 else "CRITICAL"
 
-    exit_code = await check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus)
-
-    if exit_code is None:
-        print("UNKNOW - Plugin internal error")
-        exit_code = 3
-
-    sys.exit(exit_code)
+    await check_rsync(args.remote, args.rsync_port, timeoutvalue, timeoutstatus)
+    exitnagios("UNKNOWN", "unexpected case")
 
 
 # -------------------------------------------------------------------------------
