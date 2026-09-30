@@ -129,8 +129,8 @@ async def check_rtc_utc():
     if os.path.isfile(adjfilename):
         hwclockdata = None
         try:
-            async with aiofiles.open(adjfilename, "rt") as filehandle:
-                content = await filehandle.read()
+            async with aiofiles.open(adjfilename, "rb") as f:
+                content = await f.read()
                 hwclockdata = content.decode("utf-8").strip().splitlines()
         except Exception:
             pass
@@ -150,20 +150,22 @@ async def get_rtc_data(device):
     try:
         # Read date
         date_str = None
-        async with aiofiles.open(os.path.join(rtc_sys_path, "date"), "rt") as f:
-            date_str = (await f.read()).strip()  # format: YYYY-MM-DD
+        async with aiofiles.open(os.path.join(rtc_sys_path, "date"), "rb") as f:
+            content = await f.read()
+            date_str = content.decode("utf-8").strip()  # format: YYYY-MM-DD
 
         # Read time
         time_str = None
-        async with aiofiles.open(os.path.join(rtc_sys_path, "time"), "rt") as f:
-            time_str = (await f.read()).strip()  # format: HH:MM:SS
+        async with aiofiles.open(os.path.join(rtc_sys_path, "time"), "rb") as f:
+            content = await f.read()
+            time_str = content.decode("utf-8").strip()  # format: HH:MM:SS
 
         # Optional: check battery status
         batt_file = os.path.join(rtc_sys_path, "batt_status")
         if os.path.exists(batt_file):
-            async with aiofiles.open(batt_file, "rt") as f:
+            async with aiofiles.open(batt_file, "rb") as f:
                 content = await f.read()
-                batt_status = content.strip()
+                batt_status = content.decode("utf-8").strip()
             if batt_status != "okay":
                 exitnagios("CRITICAL", "RTC battery not valid for " + device)
 

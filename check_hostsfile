@@ -57,7 +57,7 @@ def exitnagios(status, message):
 async def extractsearchlist():
     result = []
     try:
-        async with aiofiles.open("/etc/resolv.conf", "r") as handle:
+        async with aiofiles.open("/etc/resolv.conf", "rb") as handle:
             content = await handle.read()
             lines = content.decode("utf-8").strip().splitlines()
             for line in lines:
@@ -75,7 +75,7 @@ async def extractsearchlist():
 async def extracthostslist():
     result = {}
     try:
-        async with aiofiles.open("/etc/hosts", "r") as handle:
+        async with aiofiles.open("/etc/hosts", "rb") as handle:
             content = await handle.read()
             lines = content.decode("utf-8").strip().splitlines()
             for line in lines:

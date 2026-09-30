@@ -137,7 +137,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        async with aiofiles.open(args.accesstokenfile, "r") as handle:
+        async with aiofiles.open(args.accesstokenfile, "rb") as handle:
             content = await handle.read()
             accesstoken = content.decode("utf-8").strip().splitlines()[0]
         await doportexternalcall(accesstoken, protocol, args.hostname, args.record, args.querytype, normalizemultivalues(args.expected), timeoutvalue, timeoutstatus)

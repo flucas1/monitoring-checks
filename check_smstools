@@ -58,7 +58,7 @@ async def dosmstoolscall(modem):
     for counter in range(3):
         try:
             if os.path.isfile(filename):
-                async with aiofiles.open(filename, "r") as handle:
+                async with aiofiles.open(filename, "rb") as handle:
                     contents = await handle.read()
                     for line in contents.decode("utf-8").strip().splitlines():
                         infomsg(line)
