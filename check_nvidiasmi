@@ -9,6 +9,7 @@ import xml.etree.ElementTree
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -45,6 +46,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -155,6 +157,7 @@ async def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_criti
                 exitnagios(finalstatus, " ".join(issues) + " | " + performance)
 
     exitnagios("CRITICAL", "unexpected case")
+
 
 # -------------------------------------------------------------------------------
 
