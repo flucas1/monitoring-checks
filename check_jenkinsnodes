@@ -7,6 +7,7 @@ import os
 import pathlib
 import asyncio
 import xml.etree.ElementTree
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -58,12 +59,15 @@ async def isvalidnode(nodespath, entry):
     else:
         isOK = False
 
-        tree = xml.etree.ElementTree.parse(configfile)
-        root = tree.getroot()
-
-        tempOffline = root.findall("temporaryOfflineCause")
-        if len(tempOffline) == 0:
-            isOK = True
+        try:
+            async with aiofiles.open(configfile, "r") as f:
+                content = await f.read()
+            tree = xml.etree.ElementTree.fromstring(content)
+            tempOffline = tree.findall("temporaryOfflineCause")
+            if len(tempOffline) == 0:
+                isOK = True
+        except Exception:
+            isOK = False
 
         return isOK
 
