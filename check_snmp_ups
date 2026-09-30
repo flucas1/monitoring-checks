@@ -51,11 +51,13 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", required=True, help="Hostname or IP of the UPS")
     parser.add_argument("-e", "--expression", default="", help="expression for the check")
+    parser.add_argument("-d", "--debug", action="store_true", help="enable debug output")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     cmdline = ["/etc/nagios/scripts/check_nut", "-d", args.host, "-v", args.expression]
     process = await asyncio.create_subprocess_exec(
@@ -68,8 +70,9 @@ async def main(forcedargs=None):
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
 
-    print(output, flush=True)
+    infomsg("Command errors: " + errors)
 
+    print(output, flush=True)
     sys.exit(exitcode)
 
 
