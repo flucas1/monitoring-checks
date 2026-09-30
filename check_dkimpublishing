@@ -11,6 +11,7 @@ import base64
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -47,6 +48,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -164,6 +166,7 @@ async def check_dkimpublishing(dkimpath):
 
     return failurelist, validlist
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -198,8 +201,8 @@ async def main(forcedargs=None):
     else:
         exitnagios("CRITICAL", "there are issues with some keys: " + str(failurelist) + " | failures=" + str(len(failurelist)) + " valid=" + str(len(validlist)))
 
-# -------------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
