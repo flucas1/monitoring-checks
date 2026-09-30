@@ -49,6 +49,7 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -70,20 +71,16 @@ async def check_selinux_mode(expected_mode, warning_flag):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print("ERROR: unable to retrieve SELinux mode")
-            sys.exit(STATE_CRITICAL)
+            exitnagios("ERROR", "unable to retrieve SELinux mode")
 
         current_mode = stdout.decode().strip().lower()
     except (FileNotFoundError, OSError):
-        print("ERROR: unable to retrieve SELinux mode")
-        sys.exit(STATE_CRITICAL)
+        exitnagios("ERROR", "unable to retrieve SELinux mode")
 
     if current_mode != expected_mode:
-        print(error_state_label + ": SELinux is not " + expected_mode + " (currently " + current_mode + ")")
-        sys.exit(error_state)
+        exitnagios(error_state_label, "SELinux is not " + expected_mode + " (currently " + current_mode + ")")
 
-    print("OK: SELinux is " + expected_mode)
-    sys.exit(STATE_OK)
+    exitnagios("OK", "SELinux is " + expected_mode)
 
 
 # -------------------------------------------------------------------------------

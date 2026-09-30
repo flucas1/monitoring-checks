@@ -7,6 +7,7 @@ import sys
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -78,8 +79,7 @@ async def main(forcedargs=None):
         if "vhpa" in help_output:
             cmd.append("-p")
     except FileNotFoundError:
-        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
-        sys.exit(2)
+        exitnagios("CRITICAL", "No data, maybe " + CHECKRESTART_BIN + " missing?")
     except Exception:
         # If help command fails, assume -p is not supported
         pass
@@ -97,8 +97,7 @@ async def main(forcedargs=None):
             # Even on non-zero exit, checkrestart may output useful data
             output = output + stderr.decode("utf-8")
     except FileNotFoundError:
-        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
-        sys.exit(2)
+        exitnagios("CRITICAL", "No data, maybe " + CHECKRESTART_BIN + " missing?")
 
     # Parse result: equivalent to grep Found | awk '{print $2}'
     result = None
@@ -111,19 +110,15 @@ async def main(forcedargs=None):
 
     # Make sure we have a result. Fail if connection or execution failed
     if result is None:
-        print("CRITICAL - No data, maybe " + CHECKRESTART_BIN + " missing?")
-        sys.exit(2)
+        exitnagios("CRITICAL", "No data, maybe " + CHECKRESTART_BIN + " missing?")
 
     # Threshold comparison and Nagios standard exit codes
     if result >= args.critical:
-        print("CRITICAL: " + str(result) + " services or processes to restart | to_restart=" + str(result))
-        sys.exit(2)
+        exitnagios("CRITICAL", str(result) + " services or processes to restart | to_restart=" + str(result))
     elif result >= args.warning:
-        print("WARNING: " + str(result) + " services or processes to restart | to_restart=" + str(result))
-        sys.exit(1)
+        exitnagios("WARNING", str(result) + " services or processes to restart | to_restart=" + str(result))
     else:
-        print("OK: no service or process to restart | to_restart=" + str(result))
-        sys.exit(0)
+        exitnagios("OK", "no service or process to restart | to_restart=" + str(result))
 
 
 # -------------------------------------------------------------------------------
