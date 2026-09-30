@@ -75,7 +75,10 @@ async def main(forcedargs=None):
     stdout, stderr = await process.communicate()
     exitcode = process.returncode
 
-    sys.exit(exitcode)
+    if exitcode == 0:
+        exitnagios("OK", "Kubernetes check completed without issues")
+    else:
+        exitnagios("CRITICAL", "Kubernetes check completed with exit code " + str(exitcode))
 
 
 # -------------------------------------------------------------------------------

@@ -50,28 +50,6 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-RC_OK = 0
-RC_WARNING = 1
-RC_CRITICAL = 2
-RC_UNKNOWN = 3
-
-
-def msg(status_class, message_text):
-    prefix = "TIME_DIFF " + status_class
-    print(prefix + " - " + message_text)
-
-    if status_class == "OK":
-        sys.exit(RC_OK)
-    elif status_class == "WARNING":
-        sys.exit(RC_WARNING)
-    elif status_class == "CRITICAL":
-        sys.exit(RC_CRITICAL)
-    else:
-        sys.exit(RC_UNKNOWN)
-
-
-# -------------------------------------------------------------------------------
-
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
