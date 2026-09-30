@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-import aiontp
+import ntplib
 import asyncio
 
 
@@ -80,9 +80,9 @@ async def main(forcedargs=None):
 
     ntpserver = args.ntpserver
 
-    client = aiontp.NTPClient()
+    client = ntplib.NTPClient()
     try:
-        response = await client.request(ntpserver, version=3)
+        response = client.request(ntpserver, version=4)
         offset = response.offset
     except Exception:
         exitnagios("CRITICAL", "NTP Server " + str(ntpserver) + " is unreachable")
