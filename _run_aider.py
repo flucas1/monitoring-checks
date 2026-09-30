@@ -68,7 +68,9 @@ async def main():
     PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
     PROMPT.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
     PROMPT.append("There is always a command line argument '-d' '--debug'.")
+    PROMPT.append("The option '-d' is the last one of the command line arguments.")
     PROMPT.append("All command line arguments should have short and long form.")
+    PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
