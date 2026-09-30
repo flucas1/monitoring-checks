@@ -12,6 +12,7 @@ import samba.dcerpc.drsuapi
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -49,10 +50,11 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
-def dosmbreplicationcall():
+async def dosmbreplicationcall():
     failures = False
     msg = ""
     try:
@@ -88,6 +90,7 @@ def dosmbreplicationcall():
     else:
         exitnagios("OK", "no drs failures")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -101,7 +104,8 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    dosmbreplicationcall()
+    await dosmbreplicationcall()
+
 
 # -------------------------------------------------------------------------------
 

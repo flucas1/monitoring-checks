@@ -50,27 +50,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STATE_OK = 0
-STATE_WARNING = 1
-STATE_CRITICAL = 2
-STATE_UNKNOWN = 3
-
-
-def get_state_string(state):
-    """Maps the integer state to its corresponding string representation."""
-    if state == STATE_OK:
-        return "OK"
-    elif state == STATE_WARNING:
-        return "WARNING"
-    elif state == STATE_CRITICAL:
-        return "CRITICAL"
-    else:
-        return "UNKNOWN"
-
-
-# -------------------------------------------------------------------------------
-
-
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB winbind trust status")
     parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
@@ -99,30 +78,18 @@ async def main(forcedargs=None):
         output = stdout.decode().strip() if stdout else ""
 
     except FileNotFoundError:
-        print("Cannot find wbinfo executable")
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Cannot find wbinfo executable")
 
     # Replace newlines with semicolons and strip the trailing semicolon
     msg = output.replace('\n', ';').rstrip(';')
 
     # Evaluate the return code and exit with the appropriate state
     if ret != 0:
-        state = STATE_CRITICAL
-        state_string = get_state_string(state)
-        print(state_string + ": wbinfo failed: " + msg)
-        sys.exit(state)
+        exitnagios("CRITICAL", "wbinfo failed: " + msg)
     else:
-        state = STATE_OK
-        state_string = get_state_string(state)
-        print(state_string + ": " + msg)
-        sys.exit(state)
+        exitnagios("OK", msg)
 
-    # Fallback failure state (kept for structural parity with the original script)
-    state = STATE_CRITICAL
-    state_string = get_state_string(state)
-    print(state_string + ": PLUGIN FAILED")
-    sys.exit(state)
-
+    exitnagios("UNKNOWN", "unexpected case")
 
 # -------------------------------------------------------------------------------
 

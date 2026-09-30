@@ -69,8 +69,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     if not args.ip or not args.port or not args.target:
-        print("UNKNOWN - Missing required parameter(s).")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "Missing required parameter(s).")
 
     connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
     timeout = aiohttp.ClientTimeout(total=args.max_time)
@@ -93,11 +92,9 @@ async def main(forcedargs=None):
     tt = (time.time_ns() - ts) // 1_000_000
 
     if ret == 0:
-        print("OK - Latency " + str(tt) + "ms.")
-        sys.exit(0)
+        exitnagios("OK", "Latency " + str(tt) + "ms.")
     else:
-        print("CRITICAL - Proxy is down, curl returns " + str(ret) + " after " + str(tt) + "ms")
-        sys.exit(1)
+        exitnagios("CRITICAL", "Proxy is down, curl returns " + str(ret) + " after " + str(tt) + "ms")
 
 
 # -------------------------------------------------------------------------------
