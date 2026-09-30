@@ -72,8 +72,7 @@ async def main(forcedargs=None):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print("Command failed with exit status " + str(process.returncode))
-            sys.exit(1)
+            exitnagios("UNKNOWN", "Command failed with exit status " + str(process.returncode))
 
         words = stdout.decode().split()
 
@@ -81,12 +80,10 @@ async def main(forcedargs=None):
 
         git_version = words[9] if len(words) >= 10 else "Unknown Version"
 
-        print(date_version + " - (" + git_version + ")")
-        sys.exit(0)
+        exitnagios("OK", date_version + " - (" + git_version + ")")
 
     except Exception as e:
-        print("Command failed with exception: " + str(e))
-        sys.exit(1)
+        exitnagios("UNKNOWN", "Command failed with exception: " + str(e))
 
 
 # -------------------------------------------------------------------------------

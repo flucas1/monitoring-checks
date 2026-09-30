@@ -86,8 +86,8 @@ async def doretrycall(cmdline):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Retry a command multiple times")
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     parser.add_argument("cmdline", nargs="+", help="Command and arguments to execute")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
@@ -97,7 +97,10 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     result = await doretrycall(args.cmdline)
-    sys.exit(result)
+    if result == 0:
+        exitnagios("OK", "Command succeeded after " + str(args.cmdline))
+    else:
+        exitnagios("CRITICAL", "Command failed with exit code " + str(result))
 
 
 # -------------------------------------------------------------------------------

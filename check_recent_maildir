@@ -12,6 +12,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -48,6 +49,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -392,6 +394,7 @@ async def dorecentmaildircall(username, warning, critical):
     except Exception as e:
         exitnagios("CRITICAL", "there was an exception - " + str(e) + " | maxage=-1")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -409,6 +412,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
     await dorecentmaildircall(args.username, args.warning, args.critical)
+
 
 # -------------------------------------------------------------------------------
 
