@@ -81,12 +81,12 @@ async def checkgetent(database, key, value, partial, outputlevel):
                 found = True
                 if ((value == None) or (value == "")):
                     exitnagios("OK", "found key and no expected value was set - " + line)
-                elif (line == key + value):
+                elif (line == key + ":" + value):
                     exitnagios("OK", "found fully matching expected line " + line)
-                elif partial and (line.startswith(key + value)):
+                elif partial and (line.startswith(key + ":" + value)):
                     exitnagios("OK", "found partial match with expected line " + line)
                 else:
-                    exitnagios(outputlevel, "found unexpected line " + line + " but it was expected " + key + value)
+                    exitnagios(outputlevel, "found unexpected line " + line + " but it was expected " + key + ":" + value)
                 break
         if found == False:
             exitnagios("CRITICAL", "key not found " + key)
