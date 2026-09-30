@@ -13,6 +13,7 @@ import datetime
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -49,6 +50,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -150,6 +152,7 @@ def on_disconnect(mosq, userdata, disconnect_flags, reason_code, properties):
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     DEFAULTS = {
         "mqtt_host": "localhost",
@@ -177,24 +180,18 @@ def parse_args(forcedargs=None):
 
     operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
-    parser = argparse.ArgumentParser(description="Nagios/Icinga plugin for checking connectivity or status of MQTT clients on an MQTT broker.",
-                                     epilog="There are no required arguments, defaults are displayed using --help. If --warning and/or --critical is used then possible given --operator and --value arguments are ignored.")
-
+    parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", metavar="<hostname>", help="mqtt host to connect to (default: {})".format(DEFAULTS["mqtt_host"]), dest="mqtt_host", default=DEFAULTS["mqtt_host"])
     parser.add_argument("-P", "--port", metavar="<port>", help="network port to connect to (default: {})".format(DEFAULTS["mqtt_port"]), dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
-
     parser.add_argument("-u", "--username", metavar="<username>", help="MQTT username (default: {})".format(DEFAULTS["mqtt_username"]), dest="mqtt_username", default=DEFAULTS["mqtt_username"])
     parser.add_argument("-p", "--password", metavar="<password>", help="MQTT password (default: {})".format(DEFAULTS["mqtt_password"]), dest="mqtt_password", default=DEFAULTS["mqtt_password"])
-
     parser.add_argument("-m", "--max-wait", metavar="<seconds>", help="maximum time to wait for the check (default: {} seconds)".format(DEFAULTS["max_wait"]), dest="max_wait", default=DEFAULTS["max_wait"], type=int)
     parser.add_argument("-e", "--keepalive", metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: {} seconds)".format(DEFAULTS["keepalive"]), dest="keepalive", default=DEFAULTS["keepalive"], type=int)
-    parser.add_argument("--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS["sleep"]), dest="sleep", default=DEFAULTS["sleep"], type=float)
-
+    parser.add_argument("-L", "--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS["sleep"]), dest="sleep", default=DEFAULTS["sleep"], type=float)
     parser.add_argument("-a", "--cafile", metavar="<cafile>", help="cafile (default: {})".format(DEFAULTS["mqtt_cafile"]), dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
     parser.add_argument("-C", "--certfile", metavar="<certfile>", help="certfile (default: {})".format(DEFAULTS["mqtt_certfile"]), dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
     parser.add_argument("-k", "--keyfile", metavar="<keyfile>", help="keyfile (default: {})".format(DEFAULTS["mqtt_keyfile"]), dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
     parser.add_argument("-n", "--insecure", help="suppress TLS verification of server hostname{}".format(" (default)" if DEFAULTS["mqtt_insecure"] else ""), dest="mqtt_insecure", default=DEFAULTS["mqtt_insecure"], action="store_true")
-
     parser.add_argument("-i", "--topic", metavar="<topic>", help="topic to use for the active check (default: {})".format(DEFAULTS["check_topic"]), dest="check_topic", default=DEFAULTS["check_topic"])
     parser.add_argument("-s", "--subscription", metavar="<subscription>", help="topic to use for the passive check (default: {})".format(DEFAULTS["check_subscription"]), dest="check_subscription", default=DEFAULTS["check_subscription"])
     parser.add_argument("-r", "--readonly", help="just read the value of the topic{}".format(" (default)" if DEFAULTS["mqtt_readonly"] else ""), dest="mqtt_readonly", default=DEFAULTS["mqtt_readonly"], action="store_true")
@@ -216,7 +213,6 @@ async def main(forcedargs=None):
     global status
 
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     timeoutparts = args.timeout.split(":")
@@ -277,6 +273,7 @@ async def main(forcedargs=None):
 
     mqttc.disconnect()
     exitnagios(status, message)
+
 
 # -------------------------------------------------------------------------------
 
