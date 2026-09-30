@@ -10,11 +10,53 @@ import asyncio
 # -------------------------------------------------------------------------------
 
 
-async def check_stratum(hostname):
-    """Executes ntpdc asynchronously, parses the output for stratum and peer, and returns the appropriate Nagios status code."""
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
+async def check_stratum(hostname, debug=False):
     cmd = ["ntpdc", "-c", "sysinfo"]
     if hostname:
         cmd.append(hostname)
+
+    infomsg("Running command: " + " ".join(cmd))
 
     try:
         process = await asyncio.create_subprocess_exec(
@@ -29,8 +71,8 @@ async def check_stratum(hostname):
             sys.exit(3)
 
         output = stdout.decode("utf-8").strip()
-    except Exception:
-        print("STRATUM UNKNOWN. Error executing ntpdc. Ensure the daemon is running and reachable.")
+    except Exception as e:
+        print("ERROR: Exception occurred: " + str(e))
         sys.exit(3)
 
     stratum = None
@@ -86,14 +128,16 @@ async def check_stratum(hostname):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check NTP stratum level")
-    parser.add_argument("hostname", nargs="?", default="", help="NTP server hostname (optional)")
+    parser.add_argument("-H", "--hostname", nargs="?", default="", help="NTP server hostname (optional)")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-    await check_stratum(args.hostname)
+    setcandebug(args.debug)
+    await check_stratum(args.hostname, args.debug)
 
 
 # -------------------------------------------------------------------------------
