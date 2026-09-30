@@ -5,9 +5,50 @@ import argparse
 import asyncio
 import sys
 
+
 # -------------------------------------------------------------------------------
 
-# Standard Nagios/Icinga exit codes
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -21,7 +62,6 @@ async def check_selinux_mode(expected_mode, warning_flag):
     error_state_label = "WARNING" if warning_flag else "ERROR"
 
     try:
-        # Fetch current mode using the system binary with async subprocess
         process = await asyncio.create_subprocess_exec(
             '/usr/sbin/getenforce',
             stdout=asyncio.subprocess.PIPE,
@@ -52,6 +92,7 @@ async def check_selinux_mode(expected_mode, warning_flag):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check expected SELinux mode.")
     parser.add_argument('-w', '--warning', action='store_true', help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one")
+    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug mode")
     parser.add_argument('selinux_mode', type=str.lower, choices=SELINUX_MODES, metavar='SELINUX_MODE', help="Expected SELinux mode (allowed values: " + " ".join(SELINUX_MODES) + ")")
     args = parser.parse_args(forcedargs)
     return args
@@ -59,7 +100,9 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
     await check_selinux_mode(args.selinux_mode, args.warning)
+
 
 # -------------------------------------------------------------------------------
 
