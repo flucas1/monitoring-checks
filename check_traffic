@@ -57,11 +57,6 @@ def exitnagios(status, message):
 
 STATE_FILE_PATH = "/tmp"
 
-STATUS_OK = 0
-STATUS_WARNING = 1
-STATUS_CRITICAL = 2
-STATUS_UNKNOWN = 3
-
 
 def prettify_size(size, multiplier):
     binary_str = "i" if multiplier == 1024 else ""
@@ -75,10 +70,7 @@ def prettify_size(size, multiplier):
 def human_size(string):
     match = re.search(r"\A(\d+)([KMGT]?)\Z", string, flags=re.I)
     if not match:
-        raise argparse.ArgumentTypeError(
-            "invalid argument: " + string + ", must be an integer, "
-            "optionally followed by K, M, G or T (case-insensitive)"
-        )
+        raise argparse.ArgumentTypeError("invalid argument: " + string + ", must be an integer, " "optionally followed by K, M, G or T (case-insensitive)")
     value, unit = match.groups()
     units = ("", "K", "M", "G", "T")
     power = units.index(unit.upper())
@@ -94,12 +86,11 @@ async def run_command(command):
         )
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
-            exitnagios(STATUS_UNKNOWN, "command " + str(command) + " exited with status " + str(process.returncode) + ": " + repr(stderr.decode())
-            )
+            exitnagios("UNKNOWN", "command " + str(command) + " exited with status " + str(process.returncode) + ": " + repr(stderr.decode()))
         infomsg("Output from " + " ".join(command) + ": " + stdout.decode())
         return stdout.decode()
     except Exception as exc:
-        exitnagios(STATUS_UNKNOWN, "command " + str(command) + " failed: " + str(exc))
+        exitnagios("UNKNOWN", "command " + str(command) + " failed: " + str(exc))
 
 
 async def get_interfaces(args):
@@ -143,23 +134,17 @@ def include_interface(interface, args):
         return False
 
     if interface_type in args.exclude_type:
-        infomsg(
-            "[-] Skipping interface " + interface_pretty_name + " (type " + interface_type + " matches " + str(args.exclude_type) + ")"
-        )
+        infomsg("[-] Skipping interface " + interface_pretty_name + " (type " + interface_type + " matches " + str(args.exclude_type) + ")")
         return False
     if args.exclude_name and re.search(args.exclude_name, interface_name):
-        infomsg(
-            "[-] Skipping interface " + interface_pretty_name + " (name matches " + args.exclude_name + ")"
-        )
+        infomsg("[-] Skipping interface " + interface_pretty_name + " (name matches " + args.exclude_name + ")")
         return False
 
     inclusion_tests = []
     if args.type:
         inclusion_tests.append(("type", args.type, interface_type in args.type))
     if args.name:
-        inclusion_tests.append(
-            ("name", args.name, re.search(args.name, interface_name))
-        )
+        inclusion_tests.append(("name", args.name, re.search(args.name, interface_name)))
     if inclusion_tests:
         messages = []
         tests_match = True
@@ -168,14 +153,10 @@ def include_interface(interface, args):
             additional_info = " " + interface_type if test_type == "type" else ""
             messages.append(test_type + additional_info + " " + verb + " " + str(test_str))
             tests_match = tests_match and test_result
-        infomsg(
-            ("[+] Including" if tests_match else "[-] Skipping") + " interface " + interface_pretty_name + " (" + ", ".join(messages) + ")"
-        )
+        infomsg(("[+] Including" if tests_match else "[-] Skipping") + " interface " + interface_pretty_name + " (" + ", ".join(messages) + ")")
         return tests_match
 
-    infomsg(
-        "[+] Including interface " + interface_pretty_name + " of type " + interface_type + " (no inclusion filter specified)"
-    )
+    infomsg("[+] Including interface " + interface_pretty_name + " of type " + interface_type + " (no inclusion filter specified)")
     return True
 
 
@@ -184,7 +165,7 @@ async def load_state(state_file):
         async with aiofiles.open(state_file, "rb") as f:
             content = await f.read()
             state = json.loads(content.decode("utf-8"))
-            infomsg("Loaded old metrics from " + state_file)
+            infomsg("Loaded old metrics from " + str(state_file))
             return state
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
@@ -198,20 +179,20 @@ async def save_state(state_file, state):
 
 def check_thresholds(value, warn, crit):
     if crit is not None and value >= crit:
-        return STATUS_CRITICAL
+        return "CRITICAL"
     if warn is not None and value >= warn:
-        return STATUS_WARNING
-    return STATUS_OK
+        return "WARNING"
+    return "OK"
 
 
 def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file):
-    overall_status = STATUS_OK
+    overall_status = "OK"
     messages = []
     perf_data = []
 
     if not old_state:
-        overall_status = STATUS_WARNING
-        messages.append("no data in state file " + state_file + ", first run?")
+        overall_status = "WARNING"
+        messages.append("no data in state file " + str(state_file) + ", first run?")
         return overall_status, messages, perf_data
 
     time_delta = current_state["execution_time"] - old_state["execution_time"]
@@ -222,7 +203,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
         interface_name = interface["pretty_ifname"]
 
         if interface_name not in old_state["statistics"]:
-            overall_status = max(overall_status, STATUS_WARNING)
+            overall_status = max(overall_status, "WARNING")
             messages.append("no data in state file for " + interface_name + ", new interface?")
             continue
 
@@ -232,7 +213,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
             bandwidth = multiplier * (current_bytes - old_bytes) / time_delta
 
             if bandwidth < 0:
-                overall_status = max(overall_status, STATUS_WARNING)
+                overall_status = max(overall_status, "WARNING")
                 messages.append("Counter for " + interface_name + "/" + direction + " is decreasing, this could be caused by a reboot")
                 continue
 
@@ -246,7 +227,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
             perf_str = "'" + interface_name + "_" + direction + "'=" + str(bandwidth) + unit + ";" + (str(warn_limit) if warn_limit else "") + ";" + (str(crit_limit) if crit_limit else "") + ";;"
             perf_data.append(perf_str)
 
-            if metric_status != STATUS_OK or args.verbose:
+            if metric_status != "OK" or args.verbose:
                 messages.append(interface_name + "_" + direction + " = " + human_readable + unit + "/s")
 
     return overall_status, messages, perf_data
@@ -257,29 +238,17 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description=__doc__)
-    parser.add_argument("-v", "--verbose", help="enable more verbose output, can be specified multiple times",
-                        default=0, action="count")
+    parser.add_argument("-v", "--verbose", help="enable more verbose output, can be specified multiple times", default=0, action="count")
     parser.add_argument("-d", "--debug", help="enable debug output", default=False, action="store_true")
-    filter_group = parser.add_argument_group(
-        "filtering options, exclusions are applied before inclusions, "
-        "increase verbosity for details"
-    )
-    filter_group.add_argument("-t", "--type",
-                              help="only select interfaces of this type, can be specified multiple times",
-                              action="append", default=[],
-                              )
-    filter_group.add_argument("-T", "--exclude-type", help="exclude interfaces of this type, can be specified multiple times",
-                              action="append", default=[],
-                              )
+    filter_group = parser.add_argument_group("filtering options, exclusions are applied before inclusions, " "increase verbosity for details")
+    filter_group.add_argument("-t", "--type", help="only select interfaces of this type, can be specified multiple times", action="append", default=[])
+    filter_group.add_argument("-T", "--exclude-type", help="exclude interfaces of this type, can be specified multiple times", action="append", default=[])
     filter_group.add_argument("-n", "--name", help="only select interfaces whose names match this regular expression")
     filter_group.add_argument("-N", "--exclude-name", help="exclude interfaces whose names match this regular expression")
     filter_group.add_argument("-D", "--down", help="include interfaces whose operstate is down", action="store_true", default=False)
     filter_group.add_argument("--include-netns", help='include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. "container/wg0"', action="store_true", default=False)
     parser.add_argument("-b", "--bytes", help="use bytes as output unit instead of bits, does not affect thresholds", action="store_true", default=False)
-    threshold_group = parser.add_argument_group(
-        "threshold options, suffixes K, M, G and T (case-insensitive) are accepted, "
-        "multiples of 1000 are used for bits and 1024 for bytes"
-    )
+    threshold_group = parser.add_argument_group("threshold options, suffixes K, M, G and T (case-insensitive) are accepted, " "multiples of 1000 are used for bits and 1024 for bytes")
     threshold_group.add_argument("-w", "--warning", metavar=("RX", "TX"), nargs=2, help="warning threshold", type=human_size)
     threshold_group.add_argument("-c", "--critical", metavar=("RX", "TX"), nargs=2, help="critical threshold", type=human_size)
     args = parser.parse_args(forcedargs)
@@ -289,11 +258,7 @@ def parse_args(forcedargs=None):
         for i, direction in enumerate(("rx", "tx")):
             setattr(args, threshold + "_" + direction, None)
             if arg:
-                setattr(
-                    args,
-                    threshold + "_" + direction,
-                    arg[i][0] * multiplier ** arg[i][1],
-                )
+                setattr(args, threshold + "_" + direction, arg[i][0] * multiplier ** arg[i][1])
     return args
 
 
@@ -315,21 +280,18 @@ async def main(forcedargs=None):
     execution_time, interfaces = await get_interfaces(args)
 
     if not interfaces:
-        exitnagios(STATUS_UNKNOWN, "No interfaces found")
+        exitnagios("UNKNOWN", "No interfaces found")
 
     filtered_interfaces = [e for e in interfaces if include_interface(e, args)]
     infomsg("Included interfaces: " + ", ".join(e["pretty_ifname"] for e in filtered_interfaces))
 
     if not filtered_interfaces:
-        exitnagios(STATUS_UNKNOWN, "No matching interfaces found after applying filters")
+        exitnagios("UNKNOWN", "No matching interfaces found after applying filters")
 
     current_state = {"execution_time": execution_time, "statistics": {}}
     for interface in filtered_interfaces:
         interface_name = interface["pretty_ifname"]
-        current_state["statistics"][interface_name] = {
-            "rx": interface["stats64"]["rx"]["bytes"],
-            "tx": interface["stats64"]["tx"]["bytes"]
-        }
+        current_state["statistics"][interface_name] = {"rx": interface["stats64"]["rx"]["bytes"], "tx": interface["stats64"]["tx"]["bytes"]}
 
     status, messages, perf_data = evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_file)
 
