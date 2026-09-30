@@ -8,6 +8,7 @@ import argparse
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -85,12 +86,14 @@ async def doretrycall(cmdline):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Retry a command multiple times")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     parser.add_argument("cmdline", nargs="+", help="Command and arguments to execute")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
     result = await doretrycall(args.cmdline)
     sys.exit(result)
 
