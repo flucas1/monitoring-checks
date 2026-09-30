@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -45,6 +46,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -89,6 +91,7 @@ async def dodpkgetcfilescall(ignorelist):
     except Exception as e:
         exitnagios("CRITICAL", "issue retrieving extra dpkg-etc files - " + str(e) + " total=-1")
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -110,6 +113,7 @@ async def main(forcedargs=None):
     infomsg("ignorelist -> " + str(ignorelist))
 
     await dodpkgetcfilescall(ignorelist)
+
 
 # -------------------------------------------------------------------------------
 
