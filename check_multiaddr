@@ -8,6 +8,7 @@ import argparse
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -151,11 +152,10 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Multi-address checker")
-    parser.add_argument("timeout", help="Multi timeout in seconds[:status]")
-    parser.add_argument("--hostname", dest="hostname", help="Comma-separated hostnames")
-    parser.add_argument("-H", dest="host", help="Single hostname (alternative to --hostname)")
-    parser.add_argument("--timeout-child", dest="childtimeout", help="Child timeout in seconds[:status]")
-    parser.add_argument("-t", dest="childtimeoutarg", help="Child timeout (alternative to --timeout-child)")
+    parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames")
+    parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]")
+    parser.add_argument("-c", "--childtimeout", dest="childtimeout", help="Child timeout in seconds[:status]")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
     parser.add_argument("args", nargs="*", help="Arguments for the underlying check command")
 
     if forcedargs is None:
@@ -178,6 +178,7 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     multitimeoutparts = args.timeout.split(":")
     multitimeoutvalue = int(multitimeoutparts[0])
@@ -186,14 +187,10 @@ async def main(forcedargs=None):
         multitimeoutstatus = multitimeoutparts[1]
 
     multihostnames = args.hostname if args.hostname else ""
-    if args.host:
-        multihostnames = args.host
 
     multiargs = args.args
 
     childtimeout = args.childtimeout if args.childtimeout else ""
-    if args.childtimeoutarg:
-        childtimeout = args.childtimeoutarg
 
     allhosts = multihostnames.split(",") if multihostnames else []
 
