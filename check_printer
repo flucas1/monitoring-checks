@@ -389,11 +389,11 @@ async def check_toner_levels(args):
     return toner_state, state_string, perfdata
 
 
-def _get_tray_dimensions(args, tray_id):
+async def _get_tray_dimensions(args, tray_id):
     """Helper to calculate tray dimension strings"""
-    feed = int(walk_snmp(args, OIDS["prtInputMediaDimFeedDirDeclared"] + "." + tray_id, True) or -1)
-    xfeed = int(walk_snmp(args, OIDS["prtInputMediaDimXFeedDirDeclared"] + "." + tray_id, True) or -1)
-    units = walk_snmp(args, OIDS["prtInputDimUnit"] + "." + tray_id, True)
+    feed = int(await walk_snmp(args, OIDS["prtInputMediaDimFeedDirDeclared"] + "." + tray_id, True) or -1)
+    xfeed = int(await walk_snmp(args, OIDS["prtInputMediaDimXFeedDirDeclared"] + "." + tray_id, True) or -1)
+    units = await walk_snmp(args, OIDS["prtInputDimUnit"] + "." + tray_id, True)
 
     if feed < 0 and xfeed < 0:
         return "paper."
@@ -432,7 +432,7 @@ async def _check_one_tray(args, tray_id, state_string, perfdata):
         state_string += tray_name + " status is UNKNOWN - "
         tray_state = STATE_UNK
     elif tray_cap == 0:
-        dim_str = _get_tray_dimensions(args, tray_id)
+        dim_str = await _get_tray_dimensions(args, tray_id)
         state_string += tray_name + " is at CRITICAL level - please refill with more " + dim_str + " - "
         tray_state = STATE_CRIT
     else:
@@ -442,7 +442,7 @@ async def _check_one_tray(args, tray_id, state_string, perfdata):
         if pct > args.critical and pct > args.warning:
             state_string += tray_name + " is at " + str(pct) + "% - OK - "
         elif pct <= args.warning:
-            dim_str = _get_tray_dimensions(args, tray_id)
+            dim_str = await _get_tray_dimensions(args, tray_id)
             if pct <= args.critical:
                 state_string += tray_name + " is at " + str(pct) + "% - CRITICAL - Please refill with more " + dim_str + " - "
                 tray_state = STATE_CRIT
