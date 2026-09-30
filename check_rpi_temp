@@ -53,8 +53,9 @@ def exitnagios(status, message):
 
 async def read_temperature():
     try:
-        async with aiofiles.open("/sys/class/thermal/thermal_zone0/temp", "r", encoding="utf-8") as f:
-            temp_str = await f.read()
+        async with aiofiles.open("/sys/class/thermal/thermal_zone0/temp", "rb") as f:
+            content = await f.read()
+            temp_str = content.decode("utf-8")
         return float(temp_str.strip()) / 1000.0
     except Exception:
         return None
