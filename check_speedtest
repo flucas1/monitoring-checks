@@ -78,16 +78,16 @@ def check_thresholds(download, upload, args):
     status = ""
     nagcode = 0
 
-    if download < args.c:
+    if download < args.critical_download:
         status = "CRITICAL"
         nagcode = 2
-    elif upload < args.C:
+    elif upload < args.critical_upload:
         status = "CRITICAL"
         nagcode = 2
-    elif download < args.w:
+    elif download < args.warning_download:
         status = "WARNING"
         nagcode = 1
-    elif upload < args.W:
+    elif upload < args.warning_upload:
         status = "WARNING"
         nagcode = 1
     else:
@@ -100,10 +100,10 @@ def check_thresholds(download, upload, args):
 def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args):
     nagout = status + " - Ping = " + str(ping) + " " + pingUOM + " Download = " + str(download) + " " + downloadUOM + " Upload = " + str(upload) + " " + uploadUOM
 
-    if args.p:
-        max_dl_calc = args.m * 1.05
-        max_ul_calc = args.M * 1.05
-        perfout = "|'download'=" + str(download) + ";" + str(args.w) + ";" + str(args.c) + ";0;" + str(max_dl_calc) + " 'upload'=" + str(upload) + ";" + str(args.W) + ";" + str(args.C) + ";0;" + str(max_ul_calc)
+    if args.perfdata:
+        max_dl_calc = args.max_download * 1.05
+        max_ul_calc = args.max_upload * 1.05
+        perfout = "|'download'=" + str(download) + ";" + str(args.warning_download) + ";" + str(args.critical_download) + ";0;" + str(max_dl_calc) + " 'upload'=" + str(upload) + ";" + str(args.warning_upload) + ";" + str(args.critical_upload) + ";0;" + str(max_ul_calc)
         nagout += perfout
 
     return nagout
@@ -132,33 +132,33 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    if args.p:
-        if args.m is None or args.M is None:
+    if args.perfdata:
+        if args.max_download is None or args.max_upload is None:
             exitnagios("UNKNOWN", "Download and Upload Maximum Levels are required if perfdata is requested.")
 
-    if args.w < args.c:
+    if args.warning_download < args.critical_download:
         exitnagios("UNKNOWN", "$DLw is less than $DLc!")
-    elif args.W < args.C:
+    elif args.warning_upload < args.critical_upload:
         exitnagios("UNKNOWN", "$ULw is less than $ULc!")
 
-    infomsg("Download Warning Level = " + str(args.w))
-    infomsg("Download Critical Level = " + str(args.c))
-    infomsg("Upload Warning Level = " + str(args.W))
-    infomsg("Upload Critical Level = " + str(args.C))
-    infomsg("Server Location = " + str(args.l))
-    infomsg("Server URL or Integer = " + str(args.s))
+    infomsg("Download Warning Level = " + str(args.warning_download))
+    infomsg("Download Critical Level = " + str(args.critical_download))
+    infomsg("Upload Warning Level = " + str(args.warning_upload))
+    infomsg("Upload Critical Level = " + str(args.critical_upload))
+    infomsg("Server Location = " + str(args.location))
+    infomsg("Server URL or Integer = " + str(args.server))
 
     STB = "/usr/bin/speedtest"
     cmd = [STB, "--simple"]
 
-    if args.l == 'e':
+    if args.location == 'e':
         infomsg("External Server defined")
-        if args.s:
-            cmd = [STB, "--server=" + str(args.s), "--simple"]
-    elif args.l == 'i':
+        if args.server:
+            cmd = [STB, "--server=" + str(args.server), "--simple"]
+    elif args.location == 'i':
         infomsg("Internal Server defined")
-        if args.s:
-            cmd = [STB, "--mini=" + str(args.s), "--simple"]
+        if args.server:
+            cmd = [STB, "--mini=" + str(args.server), "--simple"]
         else:
             exitnagios("UNKNOWN", "Error: URL required for Internal Mini Server")
 
