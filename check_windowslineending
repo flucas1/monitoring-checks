@@ -9,6 +9,7 @@ import aiofiles
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -54,9 +55,10 @@ async def read_file_async(filepath):
     try:
         async with aiofiles.open(filepath, "rb") as handle:
             content = await handle.read()
-            return content.decode("utf-8").strip()
+            return content.decode("utf-8", errors="ignore").strip()
     except Exception as e:
-        raise e
+        infomsg("Cannot read '"+str(filepath)+"'")
+        return None
 
 
 async def check_file_has_windows_endings(filepath):
@@ -66,21 +68,56 @@ async def check_file_has_windows_endings(filepath):
     return "\r\n" in content
 
 
-async def scan_directory(path, debug):
+async def scan_directory(path, debug, ignore_files=None, ignore_folders=None, ignore_extensions=None):
     """Scan a directory recursively for text files with Windows line endings."""
     found_files = []
 
+    # Convert lists to sets for O(1) lookups and normalize to absolute paths
+    ignore_files_set = {os.path.abspath(f) for f in (ignore_files or [])}
+    ignore_folders_set = {os.path.abspath(d) for d in (ignore_folders or [])}
+
+    # Normalize extensions (e.g., "txt" -> ".txt") and make case-insensitive
+    ignore_ext_set = set()
+    for ext in (ignore_extensions or []):
+        ext = ext.lower()
+        if not ext.startswith('.'):
+            ext = f".{ext}"
+        ignore_ext_set.add(ext)
+
     for root, dirs, files in os.walk(path, followlinks=False):
-        # Skip symbolic link directories
-        dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(root, d))]
+        # 1. Filter directories in-place to prevent os.walk from descending into them
+        valid_dirs = []
+        for d in dirs:
+            dir_path = os.path.join(root, d)
+            if os.path.islink(dir_path):
+                continue
+            if os.path.abspath(dir_path) in ignore_folders_set:
+                continue
+            valid_dirs.append(d)
+
+        dirs[:] = valid_dirs  # Overwrite dirs so os.walk only traverses valid ones
+
+        # 2. Filter and process files
         for file in files:
             full_path = os.path.join(root, file)
-            # Skip symbolic link files
+
+            # Skip symbolic links
             if os.path.islink(full_path):
                 continue
+
+            # Skip ignored files
+            if os.path.abspath(full_path) in ignore_files_set:
+                continue
+
+            # Skip ignored extensions
+            _, ext = os.path.splitext(file)
+            if ext.lower() in ignore_ext_set:
+                continue
+
+            # Execute the core check
             if await check_file_has_windows_endings(full_path):
                 found_files.append(full_path)
-                infomsg(full_path)
+                infomsg(full_path) # Assuming infomsg is globally defined
 
     return found_files
 
@@ -102,14 +139,18 @@ async def main(forcedargs=None):
     all_found_files = []
 
     paths_to_check = args.paths if args.paths else ["/etc"]
+    ignore_files = ["/etc/ssl/certs/java/cacerts", "/etc/java-11-openjdk/security/public_suffix_list.dat", "/etc/java-17-openjdk/security/public_suffix_list.dat", "/etc/java-21-openjdk/security/public_suffix_list.dat", "/etc/java-25-openjdk/security/public_suffix_list.dat", "/etc/java-29-openjdk/security/public_suffix_list.dat"]
+    ignore_folders = []
+    ignore_extensions = [".pyc", ".gpg", ".gpg~"]
     for path in paths_to_check:
-        found_files = await scan_directory(path, args.debug)
+        found_files = await scan_directory(path, args.debug, ignore_files, ignore_folders, ignore_extensions)
         all_found_files.extend(found_files)
 
     if len(all_found_files) > 0:
         exitnagios("CRITICAL", "Files with Windows line endings: " + str(all_found_files))
     else:
         exitnagios("OK", "No files with Windows line endings found")
+
 
 # -------------------------------------------------------------------------------
 
