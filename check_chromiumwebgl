@@ -17,6 +17,7 @@ import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -53,6 +54,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -127,11 +129,13 @@ async def dowebgl(proxy):
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
+
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--proxy", type=str, dest="proxy", default="", help="proxy server address")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -140,11 +144,11 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
-    proxy = ""
+    proxy = args.proxy
     await dowebgl(proxy)
 
-# -------------------------------------------------------------------------------
 
+# -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     asyncio.run(main())
