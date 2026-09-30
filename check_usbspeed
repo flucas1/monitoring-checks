@@ -99,8 +99,9 @@ async def printinfo(device):
     status = False
     try:
         versionpath = os.path.join(device, "version")
-        async with aiofiles.open(versionpath, mode="r") as f:
+        async with aiofiles.open(versionpath, mode="rb") as f:
             version = await f.read()
+            version = version.decode("utf-8")
         version = version.strip()
         parts = version.split(".")
         major = int(parts[0])
@@ -108,8 +109,9 @@ async def printinfo(device):
         if major >= 3:
             maxspeed = await getmaxspeed(device)
             speedpath = os.path.join(device, "speed")
-            async with aiofiles.open(speedpath, mode="r") as f:
+            async with aiofiles.open(speedpath, mode="rb") as f:
                 actualspeed = await f.read()
+                actualspeed = actualspeed.decode("utf-8")
             actualspeed = int(actualspeed.strip())
             reference = speedfromversion(version)
             infomsg("\tusb version: " + version)

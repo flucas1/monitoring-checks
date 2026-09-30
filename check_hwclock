@@ -75,17 +75,17 @@ async def read_rtc(rtc_name):
     time_str = None
     date_str = None
 
-    # Read time
     try:
-        async with aiofiles.open(time_file, "r") as f_time:
-            time_str = (await f_time.read()).strip()
+        async with aiofiles.open(time_file, "rb") as f_time:
+            content = await f_time.read()
+            time_str = content.decode("utf-8").strip()
     except Exception:
         pass
 
-    # Read date
     try:
-        async with aiofiles.open(date_file, "r") as f_date:
-            date_str = (await f_date.read()).strip()
+        async with aiofiles.open(date_file, "rb") as f_date:
+            content = await f_date.read()
+            date_str = content.decode("utf-8").strip()
     except Exception:
         pass
 

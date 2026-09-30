@@ -230,9 +230,9 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "filecred is not specified")
     else:
         try:
-            async with aiofiles.open(args.filecred, mode="r") as f:
+            async with aiofiles.open(args.filecred, mode="rb") as f:
                 filecontents = await f.read()
-            filecontentslines = filecontents.splitlines()
+            filecontentslines = filecontents.decode("utf-8").splitlines()
             username = filecontentslines[0]
             password = filecontentslines[1]
         except Exception as e:
