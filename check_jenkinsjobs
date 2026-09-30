@@ -57,11 +57,11 @@ async def isvalidjob(jobspath, entry):
     if not os.path.isdir(permalinks):
         return False
     else:
-        isOK = False
         lastCompletedBuild = -1
         lastStableBuild = -1
         lastSuccessfulBuild = -1
-        content = pathlib.Path(permalinks).read_text()
+        async with aiofiles.open(permalinks, mode="r") as f:
+            content = await f.read()
         lines = content.splitlines()
         for line in lines:
             infomsg(line)
