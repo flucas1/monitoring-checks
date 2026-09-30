@@ -73,12 +73,12 @@ async def run_cmd(cmd):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check DNSSEC validity and remaining expiration time.")
-    parser.add_argument("-H", dest="zone", required=True, help="specify zone to check")
-    parser.add_argument("-w", dest="warning", type=int, default=5, help="warning time left days")
-    parser.add_argument("-c", dest="critical", type=int, default=2, help="critical time left days")
-    parser.add_argument("-r", dest="resolver", default="8.8.8.8", help="specify which resolver to use")
-    parser.add_argument("-f", dest="always_failing_domain", default="dnssec-failed.org", help="specify a domain that will always fail DNSSEC")
-    parser.add_argument("-t", dest="record_type", default="SOA", help="specify a DNS record type to check")
+    parser.add_argument("-H", "--hostname", dest="zone", required=True, help="specify zone to check")
+    parser.add_argument("-w", "--warning", dest="warning", type=int, default=5, help="warning time left days")
+    parser.add_argument("-c", "--critical", dest="critical", type=int, default=2, help="critical time left days")
+    parser.add_argument("-r", "--resolver", dest="resolver", default="8.8.8.8", help="specify which resolver to use")
+    parser.add_argument("-f", "--alwaysfailingdomain", dest="always_failing_domain", default="dnssec-failed.org", help="specify a domain that will always fail DNSSEC")
+    parser.add_argument("-t", "--type", dest="record_type", default="SOA", help="specify a DNS record type to check")
     parser.add_argument("-d", "--debug", action="store_true", help="enable debug mode")
     return parser.parse_args(forcedargs)
 
