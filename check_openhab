@@ -219,7 +219,8 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
     perfdata = ""
     for i in group_json["members"]:
         if i["type"] == "GroupItem":
-            rc, messages, perfdata = await check_group(await fetch_object(i["link"], args, timeoutstatus), thresholds, args, timeoutstatus)
+            link = await fetch_object(i["link"], args, timeoutstatus)
+            rc, messages, perfdata = await check_group(link, thresholds, args, timeoutstatus)
             final_messages += messages
             perfdata += perfdata
         else:

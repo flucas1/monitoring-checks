@@ -60,9 +60,9 @@ async def isvalidjob(jobspath, entry):
         lastCompletedBuild = -1
         lastStableBuild = -1
         lastSuccessfulBuild = -1
-        async with aiofiles.open(permalinks, mode="r") as f:
+        async with aiofiles.open(permalinks, mode="rb") as f:
             content = await f.read()
-        lines = content.splitlines()
+        lines = content.decode("utf-8").strip().splitlines()
         for line in lines:
             infomsg(line)
             parts = line.split()

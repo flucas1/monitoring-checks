@@ -131,8 +131,9 @@ async def get_latest_values(values_log_file):
         return "WARNING", msg
 
     try:
-        async with aiofiles.open(values_log_file, "r") as f:
-            line = (await f.readline()).strip()
+        async with aiofiles.open(values_log_file, "rb") as f:
+            line = await f.readline()
+            line = line.decode("utf-8").strip()
             if line:
                 parts = [p.strip() for p in line.split(":")]
                 last_status = parts[0] if len(parts) > 0 else ""

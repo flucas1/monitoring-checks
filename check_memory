@@ -104,9 +104,9 @@ async def get_memory_info(opt_C, opt_v):
             if m:
                 h_size = int(m.group(1))
                 try:
-                    async with aiofiles.open(os.path.join(sysfs_dir, entry, "nr_hugepages"), "r") as f:
+                    async with aiofiles.open(os.path.join(sysfs_dir, entry, "nr_hugepages"), "rb") as f:
                         content = await f.read()
-                        h_nr = int(content.strip())
+                        h_nr = int(content.decode("utf-8").strip())
                     hugepages_kb += h_nr * h_size
                 except IOError:
                     pass
