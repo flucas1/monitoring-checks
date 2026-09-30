@@ -73,8 +73,10 @@ async def main(forcedargs=None):
 
     infomsg("Command errors: " + errors)
 
-    print(output, flush=True)
-    sys.exit(exitcode)
+    if exitcode == 0:
+        exitnagios("OK", output)
+    else:
+        exitnagios("CRITICAL", output)
 
 
 # -------------------------------------------------------------------------------
