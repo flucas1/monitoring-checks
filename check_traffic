@@ -312,7 +312,7 @@ async def main(forcedargs=None):
     state_file = pathlib.Path(STATE_FILE_PATH) / ("." + "check_traffic" + "_" + args_hash + ".json")
 
     old_state = await load_state(state_file)
-    execution_time, interfaces = get_interfaces(args)
+    execution_time, interfaces = await get_interfaces(args)
 
     if not interfaces:
         exitnagios(STATUS_UNKNOWN, "No interfaces found")
