@@ -13,6 +13,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -49,6 +50,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -134,12 +136,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-T", "--timezone", type=str)
     parser.add_argument("-A", "--alternate", type=str)
     parser.add_argument("-Z", "--zoneinfo-file", type=str)
+    parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
     await check_timezone_logic(args.timezone, args.alternate, args.zoneinfo_file)
 
 
