@@ -150,8 +150,10 @@ async def get_latest_values(values_log_file):
 
 async def write_latest_values(values_log_file, status, count_last, avg_avg):
     try:
-        async with aiofiles.open(values_log_file, "w") as f:
-            await f.write(status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n")
+        async with aiofiles.open(values_log_file, "wb") as f:
+            line = status + " : " + str(count_last) + " : " + str(avg_avg) + " : " + NOW_DATE + "\n"
+            content = line.encode("utf-8")
+            await f.write(content)
     except IOError:
         pass
     infomsg(status + " : " + str(count_last) + " : " + str(avg_avg) + " values_log_file -> " + values_log_file)

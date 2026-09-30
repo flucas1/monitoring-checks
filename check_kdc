@@ -118,8 +118,9 @@ async def main(forcedargs=None):
     os.close(conf_fd)
     os.close(cc_fd)
 
-    async with aiofiles.open(conf_path, "w") as f:
-        await f.write(krb5_conf_content)
+    async with aiofiles.open(conf_path, "wb") as f:
+        content = krb5_conf_content.encode("utf-8")
+        await f.write(content)
 
     try:
         # Prepare environment with our temporary config

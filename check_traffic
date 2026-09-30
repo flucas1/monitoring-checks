@@ -191,8 +191,8 @@ async def load_state(state_file):
 
 
 async def save_state(state_file, state):
-    async with aiofiles.open(state_file, "w", encoding="utf-8") as f:
-        content = json.dumps(state)
+    async with aiofiles.open(state_file, "wb") as f:
+        content = json.dumps(state).encode("utf-8")
         await f.write(content)
 
 
