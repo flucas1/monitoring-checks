@@ -144,7 +144,7 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
             finalmsg = build_final_message(mappings[task], output, errors)
             exitnagios(childtimeoutstatus, finalmsg)
 
-    exitnagios("CRITICAL", "unexpected multiaddr case")
+    exitnagios(multitimeoutstatus, "no results obtained for any alternative")
 
 
 # -------------------------------------------------------------------------------
@@ -152,9 +152,9 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Multi-address checker")
-    parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames")
-    parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]")
-    parser.add_argument("-c", "--childtimeout", dest="childtimeout", help="Child timeout in seconds[:status]")
+    parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames", default="")
+    parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]", default="30")
+    parser.add_argument("-c", "--childtimeout", dest="childtimeout", help="Child timeout in seconds[:status]", default="")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
     parser.add_argument("args", nargs=argparse.REMAINDER, help="Arguments for the underlying check command")
 
@@ -182,7 +182,7 @@ async def main(forcedargs=None):
 
     multitimeoutparts = args.timeout.split(":")
     multitimeoutvalue = int(multitimeoutparts[0])
-    multitimeoutstatus = "CRITICAL"
+    multitimeoutstatus = "UNKNOWN"
     if len(multitimeoutparts) > 1:
         multitimeoutstatus = multitimeoutparts[1]
 
