@@ -21,6 +21,7 @@ import datetime
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -66,6 +67,7 @@ def build_exitinfo(status, message):
     exitinfo["status"] = status
     exitinfo["message"] = message
     return exitinfo
+
 
 # -------------------------------------------------------------------------------
 
@@ -720,6 +722,7 @@ async def main(forcedargs=None):
         exitinfo = build_exitinfo("CRITICAL", "timeout status is not valid")
 
     return exitinfo
+
 
 # -------------------------------------------------------------------------------
 
