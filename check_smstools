@@ -60,7 +60,7 @@ async def dosmstoolscall(modem):
             if os.path.isfile(filename):
                 async with aiofiles.open(filename, "r") as handle:
                     contents = await handle.read()
-                    for line in contents.splitlines():
+                    for line in contents.decode("utf-8").strip().splitlines():
                         infomsg(line)
                         if line.startswith(modem + ":"):
                             infomsg("MATCHING -> " + line)

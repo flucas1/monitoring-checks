@@ -202,7 +202,7 @@ async def main(forcedargs=None):
             exitnagios("CRITICAL", "access token file does not exist")
         async with aiofiles.open(args.accesstokenfile, "r") as handle:
             content = await handle.read()
-            accesstoken = content.splitlines()[0]
+            accesstoken = content.decode("utf-8").strip().splitlines()[0]
         await dodynamiccall(accesstoken, protocol, args.interface, args.record, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")

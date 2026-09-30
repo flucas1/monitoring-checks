@@ -226,7 +226,7 @@ async def main(forcedargs=None):
         else:
             async with aiofiles.open(args.accesstokenfile, "r") as handle:
                 content = await handle.read()
-                accesstoken = content.splitlines()[0]
+                accesstoken = content.decode("utf-8").strip().splitlines()[0]
         baseurl = args.baseurl
         retries = int(args.retries)
         await doportexternalcall(retries, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)

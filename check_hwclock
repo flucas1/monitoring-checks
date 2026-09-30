@@ -131,7 +131,7 @@ async def check_rtc_utc():
         try:
             async with aiofiles.open(adjfilename, "rt") as filehandle:
                 content = await filehandle.read()
-                hwclockdata = content.splitlines()
+                hwclockdata = content.decode("utf-8").strip().splitlines()
         except Exception:
             pass
 

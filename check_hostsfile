@@ -59,7 +59,7 @@ async def extractsearchlist():
     try:
         async with aiofiles.open("/etc/resolv.conf", "r") as handle:
             content = await handle.read()
-            lines = content.splitlines()
+            lines = content.decode("utf-8").strip().splitlines()
             for line in lines:
                 line = line.strip().split("#", 1)[0]
                 if len(line) > 0:
@@ -77,7 +77,7 @@ async def extracthostslist():
     try:
         async with aiofiles.open("/etc/hosts", "r") as handle:
             content = await handle.read()
-            lines = content.splitlines()
+            lines = content.decode("utf-8").strip().splitlines()
             for line in lines:
                 line = line.strip().split("#", 1)[0]
                 if len(line) > 0:

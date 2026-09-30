@@ -55,7 +55,7 @@ async def read_grub_file(filepath):
     try:
         async with aiofiles.open(filepath, "r") as handle:
             content = await handle.read()
-            return content.strip().splitlines()
+            return content.decode("utf-8").strip().splitlines()
     except Exception as e:
         raise Exception("failed to read grub file: " + str(e))
 

@@ -54,7 +54,7 @@ async def read_file_async(filepath):
     try:
         async with aiofiles.open(filepath, "r") as handle:
             content = await handle.read()
-            return content
+            return content.decode("utf-8").strip()
     except Exception as e:
         raise e
 
