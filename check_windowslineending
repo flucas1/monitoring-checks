@@ -49,24 +49,27 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def is_text_file_with_windows_endings(file_path):
-    """Return True if the file is text and contains Windows line endings (CRLF)."""
+async def read_file_async(file_path):
     try:
-        cmdline = ["file", "--brief", file_path]
+        cmdline = ["cat", file_path]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
-        output = stdout.decode("utf-8").strip() if stdout else ""
-        errors = stderr.decode("utf-8").strip() if stderr else ""
-        exitcode = process.returncode
-        return "CRLF" in output
+        if process.returncode != 0:
+            return None
+        return stdout.decode("utf-8", errors="ignore")
     except Exception:
-        return False
+        return None
 
-# -------------------------------------------------------------------------------
+
+async def check_file_has_windows_endings(file_path):
+    content = await read_file_async(file_path)
+    if content is None:
+        return False
+    return "\r\n" in content
 
 
 async def scan_directory(path, debug):
@@ -81,7 +84,7 @@ async def scan_directory(path, debug):
             # Skip symbolic link files
             if os.path.islink(full_path):
                 continue
-            if await is_text_file_with_windows_endings(full_path):
+            if await check_file_has_windows_endings(full_path):
                 found_files.append(full_path)
                 infomsg(full_path)
 
@@ -92,6 +95,7 @@ async def scan_directory(path, debug):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Detect files with Windows line endings.")
+    parser.add_argument("-p", "--path", action="append", dest="paths", default=None, help="Path(s) to check (default: /etc)")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="Enable debug output")
     return parser.parse_args(forcedargs)
 
@@ -102,7 +106,7 @@ async def main(forcedargs=None):
 
     all_found_files = []
 
-    paths_to_check = ["/etc"]
+    paths_to_check = args.paths if args.paths else ["/etc"]
     for path in paths_to_check:
         found_files = await scan_directory(path, args.debug)
         all_found_files.extend(found_files)
