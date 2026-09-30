@@ -94,9 +94,9 @@ async def get_current_ip(ahosts_type, fqdn):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB DNS resolution")
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     parser.add_argument("-4", "--ipv4", action="store_true", help="Check only IPv4")
     parser.add_argument("-6", "--ipv6", action="store_true", help="Check only IPv6")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
@@ -109,8 +109,7 @@ async def main(forcedargs=None):
     fqdn = await get_cmd_output(["hostname", "-f"])
 
     if not fqdn:
-        print("CRITICAL: Cannot determine hostname")
-        sys.exit(2)
+        exitnagios("CRITICAL", "Cannot determine hostname")
 
     # IPv4 Check
     if not args.ipv6:
@@ -144,11 +143,9 @@ async def main(forcedargs=None):
 
     # Status Reporting
     if errors:
-        print("CRITICAL: the samba dns resolver has issues" + errors)
-        sys.exit(2)
+        exitnagios("CRITICAL", "the samba dns resolver has issues" + errors)
     else:
-        print("OK: the samba dns resolver is behaving as expected")
-        sys.exit(0)
+        exitnagios("OK", "the samba dns resolver is behaving as expected")
 
 
 # -------------------------------------------------------------------------------
