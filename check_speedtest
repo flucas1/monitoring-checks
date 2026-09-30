@@ -49,9 +49,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-STB = "/usr/bin/speedtest"
-
-
 async def run_speedtest_command(cmd):
     process = await asyncio.create_subprocess_exec(
         *cmd,
@@ -137,15 +134,12 @@ async def main(forcedargs=None):
 
     if args.p:
         if args.m is None or args.M is None:
-            print("Usage error: Download and Upload Maximum Levels are required if perfdata is requested.")
-            sys.exit(3)
+            exitnagios("UNKNOWN", "Download and Upload Maximum Levels are required if perfdata is requested.")
 
     if args.w < args.c:
-        print("$DLw is less than $DLc!")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "$DLw is less than $DLc!")
     elif args.W < args.C:
-        print("$ULw is less than $ULc!")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "$ULw is less than $ULc!")
 
     infomsg("Download Warning Level = " + str(args.w))
     infomsg("Download Critical Level = " + str(args.c))
@@ -154,6 +148,7 @@ async def main(forcedargs=None):
     infomsg("Server Location = " + str(args.l))
     infomsg("Server URL or Integer = " + str(args.s))
 
+    STB = "/usr/bin/speedtest"
     cmd = [STB, "--simple"]
 
     if args.l == 'e':
@@ -165,24 +160,20 @@ async def main(forcedargs=None):
         if args.s:
             cmd = [STB, "--mini=" + str(args.s), "--simple"]
         else:
-            print("Error: URL required for Internal Mini Server")
-            sys.exit(3)
+            exitnagios("UNKNOWN", "Error: URL required for Internal Mini Server")
 
     try:
         output = await run_speedtest_command(cmd)
         infomsg(output)
     except Exception as e:
         if "Cannot parse" in str(e):
-            print("ERROR: Cannot parse speedtest output")
-            sys.exit(2)
-        print("You have not defined the location of the speedtest binary in the script!")
-        sys.exit(3)
+            exitnagios("CRITICAL", "Cannot parse speedtest output")
+        exitnagios("UNKNOWN", "You have not defined the location of the speedtest binary in the script!")
 
     try:
         ping, pingUOM, download, downloadUOM, upload, uploadUOM = parse_speedtest_output(output)
     except ValueError:
-        print("ERROR: Cannot parse speedtest output")
-        sys.exit(2)
+        exitnagios("CRITICAL", "Cannot parse speedtest output")
 
     infomsg("Ping = " + str(ping))
     infomsg("Download = " + str(download))
@@ -192,8 +183,7 @@ async def main(forcedargs=None):
 
     nagout = build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args)
 
-    print(nagout)
-    sys.exit(nagcode)
+    exitnagios(status, nagout)
 
 
 # -------------------------------------------------------------------------------

@@ -67,13 +67,11 @@ async def check_stratum(hostname, debug=False):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print("STRATUM UNKNOWN. Error executing ntpdc. Ensure the daemon is running and reachable.")
-            sys.exit(3)
+            exitnagios("UNKNOWN", "Error executing ntpdc. Ensure the daemon is running and reachable.")
 
         output = stdout.decode("utf-8").strip()
     except Exception as e:
-        print("ERROR: Exception occurred: " + str(e))
-        sys.exit(3)
+        exitnagios("UNKNOWN", "Exception occurred: " + str(e))
 
     stratum = None
     peer = None
@@ -92,35 +90,24 @@ async def check_stratum(hostname, debug=False):
                 peer = parts[2]
 
     if stratum is None:
-        print("STRATUM UNKNOWN. Could not determine stratum from ntpdc output.")
-        sys.exit(3)
+        exitnagios("UNKNOWN", "Could not determine stratum from ntpdc output.")
 
     if stratum < 3:
-        print("STRATUM OK. Level: " + str(stratum) + " (Excellent) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 0
+        exitnagios("OK", "Level: " + str(stratum) + " (Excellent) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum < 4:
-        print("STRATUM OK. Level: " + str(stratum) + " (Good) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 0
+        exitnagios("OK", "Level: " + str(stratum) + " (Good) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum < 5:
-        print("STRATUM OK. Level: " + str(stratum) + " (Normal) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 0
+        exitnagios("OK", "Level: " + str(stratum) + " (Normal) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum < 6:
-        print("STRATUM WARNING. Level: " + str(stratum) + " (Warning) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 1
+        exitnagios("WARNING", "Level: " + str(stratum) + " (Warning) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum < 7:
-        print("STRATUM CRITICAL. Level: " + str(stratum) + " (Critical) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 2
+        exitnagios("CRITICAL", "Level: " + str(stratum) + " (Critical) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum < 16:
-        print("STRATUM UNKNOWN. Level: " + str(stratum) + " (Unknown Stratum Level reached) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 3
+        exitnagios("UNKNOWN", "Level: " + str(stratum) + " (Unknown Stratum Level reached) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     elif stratum == 16:
-        print("STRATUM CRITICAL. Level: " + str(stratum) + " (NTP Service is Dead!) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 2
+        exitnagios("CRITICAL", "Level: " + str(stratum) + " (NTP Service is Dead!) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
     else:
-        print("STRATUM UNKNOWN. Level: " + str(stratum) + " (Out of bounds) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
-        stateid = 3
-
-    sys.exit(stateid)
+        exitnagios("UNKNOWN", "Level: " + str(stratum) + " (Out of bounds) System Peer: " + str(peer) + " |stratum=" + str(stratum) + ";")
 
 
 # -------------------------------------------------------------------------------
