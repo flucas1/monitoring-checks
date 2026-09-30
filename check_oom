@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -139,6 +140,7 @@ async def oom_check(criticallevel, warninglevel, short=False):
             exitnagios("WARNING", str(counter) + " processes was killed by OOM - " + str(logs) + " | counter=" + str(counter))
         else:
             exitnagios("OK", "No OOM killer activity found | counter=-1")
+
 
 # -------------------------------------------------------------------------------
 
