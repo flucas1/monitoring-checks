@@ -8,6 +8,47 @@ import argparse
 # -------------------------------------------------------------------------------
 
 
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
     try:
         reader, writer = await asyncio.wait_for(
@@ -51,11 +92,13 @@ def parse_args(forcedargs=None):
     parser.add_argument("-H", "--hostname", dest="remote", type=str, default="")
     parser.add_argument("-t", "--timeout", dest="timeoutmerged", type=str, default="30:CRITICAL")
     parser.add_argument("-p", "--port", dest="rsync_port", type=int, default=873)
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     timeout_parts = args.timeoutmerged.split(":")
     timeoutvalue = float(timeout_parts[0])
