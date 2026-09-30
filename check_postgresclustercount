@@ -49,14 +49,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--expected", dest="expected", default="1", help="expected")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
-    return args
-
-
 async def dopostgresclustercountcall(expected):
     cmdline = ["/usr/bin/pg_lsclusters", "--no-header"]
     process = await asyncio.create_subprocess_exec(
@@ -80,13 +72,24 @@ async def dopostgresclustercountcall(expected):
         exitnagios("CRITICAL", "issue retrieving the list of postgres clusters | count=-1")
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-e", "--expected", dest="expected", default="1", help="expected")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     expected = int(args.expected)
     await dopostgresclustercountcall(expected)
+
 
 # -------------------------------------------------------------------------------
 

@@ -68,7 +68,6 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     print(args.message)
-
     sys.exit(args.exit_code)
 
 # -------------------------------------------------------------------------------
