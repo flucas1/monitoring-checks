@@ -95,6 +95,8 @@ async def get_current_ip(ahosts_type, fqdn):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB DNS resolution")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
+    parser.add_argument("-4", "--ipv4", action="store_true", help="Check only IPv4")
+    parser.add_argument("-6", "--ipv6", action="store_true", help="Check only IPv6")
     parser.parse_args(forcedargs)
     return parser.parse_args(forcedargs)
 
@@ -111,32 +113,34 @@ async def main(forcedargs=None):
         sys.exit(2)
 
     # IPv4 Check
-    list_ipv4_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "A"])
-    list_ipv4 = list_ipv4_out.split() if list_ipv4_out else []
-    current_ipv4 = await get_current_ip("ahostsv4", fqdn)
+    if not args.ipv6:
+        list_ipv4_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "A"])
+        list_ipv4 = list_ipv4_out.split() if list_ipv4_out else []
+        current_ipv4 = await get_current_ip("ahostsv4", fqdn)
 
-    ipv4_ok = False
-    for test_ipv4 in list_ipv4:
-        if test_ipv4 == current_ipv4:
-            ipv4_ok = True
-            break
+        ipv4_ok = False
+        for test_ipv4 in list_ipv4:
+            if test_ipv4 == current_ipv4:
+                ipv4_ok = True
+                break
 
-    if not ipv4_ok:
-        errors += " - cannot resolve A"
+        if not ipv4_ok:
+            errors += " - cannot resolve A"
 
     # IPv6 Check
-    list_ipv6_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "AAAA"])
-    list_ipv6 = list_ipv6_out.split() if list_ipv6_out else []
-    current_ipv6 = await get_current_ip("ahostsv6", fqdn)
+    if not args.ipv4:
+        list_ipv6_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "AAAA"])
+        list_ipv6 = list_ipv6_out.split() if list_ipv6_out else []
+        current_ipv6 = await get_current_ip("ahostsv6", fqdn)
 
-    ipv6_ok = False
-    for test_ipv6 in list_ipv6:
-        if test_ipv6 == current_ipv6:
-            ipv6_ok = True
-            break
+        ipv6_ok = False
+        for test_ipv6 in list_ipv6:
+            if test_ipv6 == current_ipv6:
+                ipv6_ok = True
+                break
 
-    if not ipv6_ok:
-        errors += " - cannot resolve AAAA"
+        if not ipv6_ok:
+            errors += " - cannot resolve AAAA"
 
     # Status Reporting
     if errors:
