@@ -122,12 +122,12 @@ def parse_uptime(uptime_report):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check system uptime and return standard plugin exit codes.")
-    parser.add_argument("-c", '--min-critical', type=int, dest='min_critical', help='Minimum critical uptime (minutes)')
-    parser.add_argument("-w", '--min-warning', type=int, dest='min_warning', help='Minimum warning uptime (minutes)')
-    parser.add_argument('-C', '--max-critical', type=int, dest='max_critical', help='Maximum critical uptime (minutes)')
-    parser.add_argument('-W', '--max-warning', type=int, dest='max_warning', help='Maximum warning uptime (minutes)')
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', help='Verbose output')
-    parser.add_argument("-d", '--debug', action='store_true', dest='debug', help='Enable debug output')
+    parser.add_argument("-c", "--min-critical", type=int, dest="min_critical", help="Minimum critical uptime (minutes)")
+    parser.add_argument("-w", "--min-warning", type=int, dest="min_warning", help="Minimum warning uptime (minutes)")
+    parser.add_argument("-C", "--max-critical", type=int, dest="max_critical", help="Maximum critical uptime (minutes)")
+    parser.add_argument("-W", "--max-warning", type=int, dest="max_warning", help="Maximum warning uptime (minutes)")
+    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="Verbose output")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
@@ -139,8 +139,7 @@ async def main(forcedargs=None):
     try:
         uptime_report = await get_uptime()
     except Exception as e:
-        print("Error: " + str(e))
-        sys.exit(STATE_UNKNOWN)
+        exitnagios("UNKNOWN", "Error: " + str(e))
 
     uptime_minutes, uptime_days, uptime_msg = parse_uptime(uptime_report)
 
@@ -152,24 +151,19 @@ async def main(forcedargs=None):
     perfdata = "|Uptime=" + uptime_days + ";" + min_w + ":" + max_w + ";" + min_c + ":" + max_c + ";0;"
 
     if args.min_critical is not None and uptime_minutes < args.min_critical:
-        print("CRITICAL: minimum - system booted " + uptime_msg + " ago" + perfdata)
-        sys.exit(STATE_CRITICAL)
+        exitnagios("CRITICAL", "minimum - system booted " + uptime_msg + " ago" + perfdata)
 
     elif args.min_warning is not None and uptime_minutes < args.min_warning:
-        print("WARNING: minimum - system booted " + uptime_msg + " ago" + perfdata)
-        sys.exit(STATE_WARNING)
+        exitnagios("WARNING", "minimum - system booted " + uptime_msg + " ago" + perfdata)
 
     elif args.max_critical is not None and uptime_minutes > args.max_critical:
-        print("CRITICAL: maximum - system has not booted for " + uptime_msg + perfdata)
-        sys.exit(STATE_CRITICAL)
+        exitnagios("CRITICAL", "maximum - system has not booted for " + uptime_msg + perfdata)
 
     elif args.max_warning is not None and uptime_minutes > args.max_warning:
-        print("WARNING: maximum - system has not booted for " + uptime_msg + perfdata)
-        sys.exit(STATE_WARNING)
+        exitnagios("WARNING", "maximum - system has not booted for " + uptime_msg + perfdata)
 
     else:
-        print("OK: uptime is " + uptime_msg + perfdata)
-        sys.exit(STATE_OK)
+        exitnagios("OK", "uptime is " + uptime_msg + perfdata)
 
 
 # -------------------------------------------------------------------------------
