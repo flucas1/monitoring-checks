@@ -10,6 +10,47 @@ import asyncio
 # -------------------------------------------------------------------------------
 
 
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARN = 1
 STATE_CRIT = 2
@@ -476,11 +517,13 @@ def parse_args(forcedargs=None):
     parser.add_argument("-P", "--parameter", required=False, help="Check type parameter")
     parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
     parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     check_type = args.type.upper()
     parameter = args.parameter.upper() if args.parameter else ""
