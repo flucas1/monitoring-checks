@@ -58,10 +58,10 @@ def exitnagios(status, message):
 
 
 async def create_zfs_fstab(original_fstab):
-    tmp_fstab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+    tmp_fstab = tempfile.NamedTemporaryFile(mode="wb+", delete=False)
 
     if os.path.exists(original_fstab):
-        async with aiofiles.open(original_fstab, "r") as f:
+        async with aiofiles.open(original_fstab, "rb") as f:
             content = await f.read()
             tmp_fstab.write(content)
 

@@ -122,7 +122,7 @@ async def get_alert_count(time_diff_seconds, priority_level):
 async def get_latest_values(values_log_file):
     if not os.path.isfile(values_log_file):
         try:
-            async with aiofiles.open(values_log_file, "a") as f:
+            async with aiofiles.open(values_log_file, "ab") as f:
                 pass
         except IOError:
             pass

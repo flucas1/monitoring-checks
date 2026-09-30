@@ -60,8 +60,9 @@ async def isvalidnode(nodespath, entry):
         isOK = False
 
         try:
-            async with aiofiles.open(configfile, "r") as f:
+            async with aiofiles.open(configfile, "rb") as f:
                 content = await f.read()
+                content = content.decode("utf-8").strip()
             tree = xml.etree.ElementTree.fromstring(content)
             tempOffline = tree.findall("temporaryOfflineCause")
             if len(tempOffline) == 0:
