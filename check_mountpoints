@@ -273,7 +273,7 @@ async def main(forcedargs=None):
         mps = []
         valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs", "fuse", "glusterfs", "ocfs2", "lustre", "ufs", "zfs", "ceph", "btrfs", "yas3fs"}
         try:
-            async with aiofiles.open(fstab_file, "r") as f:
+            async with aiofiles.open(fstab_file, "rb") as f:
                 lines = await f.read()
                 lines = lines.decode("utf-8").strip().splitlines()
                 for line in lines:
@@ -307,7 +307,7 @@ async def main(forcedargs=None):
 
     fstab_lines = []
     if os.path.exists(fstab_file):
-        async with aiofiles.open(fstab_file, "r") as f:
+        async with aiofiles.open(fstab_file, "rb") as f:
             lines = await f.read()
             lines = lines.decode("utf-8").strip().splitlines()
             for line in lines:

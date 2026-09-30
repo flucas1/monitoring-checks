@@ -63,7 +63,7 @@ async def get_memory_info(opt_C, opt_v):
     hugepages_kb = 0
 
     try:
-        async with aiofiles.open("/proc/meminfo", "r") as f:
+        async with aiofiles.open("/proc/meminfo", "rb") as f:
             lines = await f.read()
             lines = lines.decode("utf-8").strip().splitlines()
             for line in lines:

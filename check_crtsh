@@ -63,7 +63,7 @@ def exitnagios(status, message):
 
 async def ipv6_default_route_exists() -> bool:
     try:
-        async with aiofiles.open("/proc/net/ipv6_route", "r") as f:
+        async with aiofiles.open("/proc/net/ipv6_route", "rb") as f:
             lines = await f.read()
             lines = lines.decode("utf-8").strip().splitlines()
             for line in lines:
@@ -78,7 +78,7 @@ async def ipv6_default_route_exists() -> bool:
 
 async def ipv4_default_route_exists() -> bool:
     try:
-        async with aiofiles.open("/proc/net/route", "r") as f:
+        async with aiofiles.open("/proc/net/route", "rb") as f:
             lines = await f.read()
             lines = lines.decode("utf-8").strip().splitlines()
             lines = lines[1:]  # skip header
