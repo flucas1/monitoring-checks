@@ -114,6 +114,7 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
             else:
                 exitnagios("UNKNOWN", output + "\n" + errors)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -173,6 +174,7 @@ async def main(forcedargs=None):
         await dobysshcheck(protocol, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
+
 
 # -------------------------------------------------------------------------------
 
