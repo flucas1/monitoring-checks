@@ -186,7 +186,7 @@ def check_thresholds(value, warn, crit):
 
 
 def max_status(status1, status2):
-    hierarchy = {"OK": 0, "WARNING": 1, STATUS_CRITICAL: 2, STATUS_UNKNOWN: 3}
+    hierarchy = {"OK": 0, "WARNING": 1, "CRITICAL": 2, "UNKNOWN": 3}
     if hierarchy.get(status2, 3) > hierarchy.get(status1, 3):
         return status2
     return status1
