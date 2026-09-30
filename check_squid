@@ -10,6 +10,7 @@ import aiofiles
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -129,18 +131,20 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", default="localhost")
     parser.add_argument("-f", "--filecreds")
-    parser.add_argument("-d", "--data", default="Connections")
+    parser.add_argument("-t", "--data", default="Connections")
     parser.add_argument("-p", "--port", type=int, default=3128)
     parser.add_argument("-U", "--user", default="root")
     parser.add_argument("-W", "--password", default="")
     parser.add_argument("-w", "--warning")
     parser.add_argument("-c", "--critical")
+    parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     host = args.host
     port = args.port
