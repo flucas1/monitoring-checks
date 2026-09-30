@@ -68,7 +68,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", "--warning", dest="warn", type=float, default=None, help="Set warning threshold")
     parser.add_argument("-c", "--critical", dest="crit", type=float, default=None, help="Set critical threshold")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

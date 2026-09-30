@@ -53,7 +53,8 @@ def exitnagios(status, message):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if a reboot is required")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

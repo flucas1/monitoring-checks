@@ -151,7 +151,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-C", "--certificatedays", dest="certificatedays", default="5,20", help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

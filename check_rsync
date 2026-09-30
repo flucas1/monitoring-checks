@@ -93,7 +93,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", dest="timeoutmerged", type=str, default="30:CRITICAL")
     parser.add_argument("-p", "--port", dest="rsync_port", type=int, default=873)
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

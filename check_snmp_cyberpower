@@ -119,7 +119,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-r", "--warnrun", type=int, default=10, help="Warning threshold for runtime in minutes.")
     parser.add_argument("-R", "--critrun", type=int, default=8, help="Critical threshold for runtime in minutes.")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output.")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

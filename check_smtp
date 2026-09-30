@@ -200,7 +200,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-b", "--blocked", action="store_true", dest="blocked", default=False, help="check if the connection is blocked")
     parser.add_argument("-u", "--source", dest="source", default="", help="source IP for the connection")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

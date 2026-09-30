@@ -52,7 +52,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-H", "--host", required=True, help="Hostname or IP of the UPS")
     parser.add_argument("-e", "--expression", default="", help="expression for the check")
     parser.add_argument("-d", "--debug", action="store_true", help="enable debug output")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

@@ -358,7 +358,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-k", "--kubeconfig", action="store", dest="kubeconfig", default="/etc/kubernetes/admin.conf", help="path to kubeconfig admin file")
     parser.add_argument("-n", "--namespace", action="store", dest="namespace", default="", help="only check this namespace")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

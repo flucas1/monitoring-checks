@@ -53,7 +53,8 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check systemd timers and their associated services")
     parser.add_argument("-t", "--timeout", type=int, default=30, help="Timeout for operations in seconds")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

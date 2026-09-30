@@ -518,7 +518,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", "--warning", type=int, default=20, help="WARNING threshold percent")
     parser.add_argument("-c", "--critical", type=int, default=5, help="CRITICAL threshold percent")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

@@ -60,7 +60,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("exit_code", nargs="?", type=int, default=0)
     parser.add_argument("message", nargs="?", default="")
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):
