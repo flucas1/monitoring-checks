@@ -307,6 +307,7 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     global MODUS, INTERVAL, CRITICAL_THRESH, DROPPED_CRITICAL, WARNING_THRESH, DROPPED_WARNING, PRIORITY_LEVEL, DEBUG, LOG_FILE, SPOOL_DATA_DIR
 
