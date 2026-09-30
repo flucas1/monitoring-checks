@@ -8,7 +8,48 @@ import argparse
 
 # -------------------------------------------------------------------------------
 
-# Define state constants based on the shell script
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 STATE_OK = 0
 STATE_WARNING = 1
 STATE_CRITICAL = 2
@@ -29,14 +70,17 @@ def get_state_string(state):
 
 # -------------------------------------------------------------------------------
 
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB winbind trust status")
+    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
     parser.parse_args(forcedargs)
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     # Define the command
     cmd = "/usr/bin/wbinfo"
@@ -78,6 +122,7 @@ async def main(forcedargs=None):
     state_string = get_state_string(state)
     print(state_string + ": PLUGIN FAILED")
     sys.exit(state)
+
 
 # -------------------------------------------------------------------------------
 
