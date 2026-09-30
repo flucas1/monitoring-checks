@@ -87,14 +87,14 @@ def human_size(string):
 
 async def run_command(command):
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            exitnagios(STATUS_UNKNOWN, "command " + str(command) + " exited with status " + str(proc.returncode) + ": " + repr(stderr.decode())
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            exitnagios(STATUS_UNKNOWN, "command " + str(command) + " exited with status " + str(process.returncode) + ": " + repr(stderr.decode())
             )
         infomsg("Output from " + " ".join(command) + ": " + stdout.decode())
         return stdout.decode()

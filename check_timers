@@ -63,12 +63,12 @@ async def main(forcedargs=None):
 
     # Reload the systemd manager configuration
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             "systemctl", "daemon-reload",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
-        await proc.wait()
+        await process.wait()
     except Exception as e:
         exitnagios("UNKNOWN", "Error reloading daemon: " + str(e))
 
@@ -80,13 +80,13 @@ async def main(forcedargs=None):
     ]
 
     try:
-        proc = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *list_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
+        stdout, stderr = await process.communicate()
+        if process.returncode != 0:
             exitnagios("UNKNOWN", "Error listing unit files: " + stderr.decode().strip())
         list_result = stdout.decode()
     except Exception as e:
@@ -114,13 +114,13 @@ async def main(forcedargs=None):
         is_enabled_cmd = ["systemctl", "is-enabled", service]
 
         try:
-            proc = await asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 *is_enabled_cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, stderr = await proc.communicate()
-            if proc.returncode == 0:
+            stdout, stderr = await process.communicate()
+            if process.returncode == 0:
                 output = stdout.decode().strip()
                 if output == "enabled":
                     problematic_services.append(service)
