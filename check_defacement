@@ -95,9 +95,9 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
             word_match.append(word)
 
     if len(word_match) > 0:
-        exitnagios("CRITICAL", "Dangerous words were found, verify that the following " + str(len(word_match)) + " words '" + (", ".join(word_match)) + "', are legitimate in the following web page: " + url)
+        exitnagios("CRITICAL", "Suspicious content detected, verify that the following " + str(len(word_match)) + " words '" + (", ".join(word_match)) + "', are legitimate in the following web page: " + url)
     else:
-        exitnagios("OK", "No dangerous words are found")
+        exitnagios("OK", "No issues found")
 
 
 # -------------------------------------------------------------------------------
