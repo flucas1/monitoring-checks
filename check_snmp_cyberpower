@@ -170,7 +170,6 @@ async def main(forcedargs=None):
 
         full_message = " - ".join(output_messages) + " | " + " ".join(performance_data)
 
-        # Utilize exitnagios instead of sys.exit()
         exitnagios(final_status, full_message)
 
     except Exception as e:
