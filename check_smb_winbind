@@ -74,8 +74,8 @@ def get_state_string(state):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB winbind trust status")
     parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
-    parser.parse_args(forcedargs)
-    return parser.parse_args(forcedargs)
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):
