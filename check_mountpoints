@@ -274,7 +274,9 @@ async def main(forcedargs=None):
         valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs", "fuse", "glusterfs", "ocfs2", "lustre", "ufs", "zfs", "ceph", "btrfs", "yas3fs"}
         try:
             async with aiofiles.open(fstab_file, "r") as f:
-                async for line in f:
+                lines = await f.read()
+                lines = lines.decode("utf-8").strip().splitlines()
+                for line in lines:
                     if line.strip().startswith("#"):
                         continue
                     if args.exclude != "none" and re.search(args.exclude, line):
@@ -306,7 +308,9 @@ async def main(forcedargs=None):
     fstab_lines = []
     if os.path.exists(fstab_file):
         async with aiofiles.open(fstab_file, "r") as f:
-            async for line in f:
+            lines = await f.read()
+            lines = lines.decode("utf-8").strip().splitlines()
+            for line in lines:
                 stripped = line.strip()
                 if not stripped.startswith("#"):
                     fstab_lines.append(stripped)

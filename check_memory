@@ -64,7 +64,9 @@ async def get_memory_info(opt_C, opt_v):
 
     try:
         async with aiofiles.open("/proc/meminfo", "r") as f:
-            async for line in f:
+            lines = await f.read()
+            lines = lines.decode("utf-8").strip().splitlines()
+            for line in lines:
                 line = line.strip()
                 m1 = re.match(r"^Mem(Total|Free):\s+(\d+) kB", line)
                 if m1:
