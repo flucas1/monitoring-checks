@@ -10,6 +10,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -104,7 +106,6 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     protocol = None
@@ -140,6 +141,7 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "no expected methods")
 
     await test_ssh_auth(protocol, args.host, int(args.port), timeoutvalue, timeoutstatus, expectedlist)
+
 
 # -------------------------------------------------------------------------------
 
