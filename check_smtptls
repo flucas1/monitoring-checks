@@ -18,6 +18,7 @@ import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -54,6 +55,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
@@ -163,7 +165,7 @@ async def dosmtptlscall(domain, proxy):
         else:
             infomsg("finding valid message")
             valid = await tryfindbyclassname(driver, "tool_alert_success")
-            if len(valid):
+            if len(valid) > 0:
                 exitnagios("OK", valid[0].text.strip())
             else:
                 infomsg(element[0].text.strip())
@@ -185,11 +187,11 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     proxy = ""
     await dosmtptlscall(args.host, proxy)
+
 
 # -------------------------------------------------------------------------------
 
