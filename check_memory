@@ -11,6 +11,7 @@ import aiofiles
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -125,12 +126,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-v", action="store_true")
     parser.add_argument("-w", type=float)
     parser.add_argument("-c", type=float)
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     if args.w is None or args.w == 0 or args.c is None or args.c == 0:
         exitnagios("UNKNOWN", "You must define WARN and CRITICAL levels!")
