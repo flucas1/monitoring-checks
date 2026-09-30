@@ -9,6 +9,7 @@ import asyncio
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -80,15 +82,14 @@ def parse_args(forcedargs=None):
     parser.add_argument("-t", "--timeout", action="store", default=10, help="timeout")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
-
     return args
+
 
 # -------------------------------------------------------------------------------
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     protocol = None
@@ -136,9 +137,12 @@ async def main(forcedargs=None):
     else:
         exitnagios("OK", args.hostname + " is not reachable!")
 
+
 # -------------------------------------------------------------------------------
+
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 # -------------------------------------------------------------------------------
