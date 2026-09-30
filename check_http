@@ -18,6 +18,7 @@ import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -64,6 +65,7 @@ def build_exitinfo(status, message):
     exitinfo["message"] = message
     return exitinfo
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -84,6 +86,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
     return [response
             for response in responses
             if response[0] == socket.AF_INET]
+
 
 # -------------------------------------------------------------------------------
 
@@ -448,6 +451,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
 #        foundname = output.split("'")[1]
 #        output = "can connect, but the certificate found '"+foundname+"' name does not match the expected '"+hostname+"'"
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -475,11 +479,10 @@ def parse_args(forcedargs=None):
 
 
 async def main(forcedargs=None):
-    exitinfo = None
-
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
+
+    exitinfo = None
 
     protocol = None
     exclist = 0
@@ -516,6 +519,7 @@ async def main(forcedargs=None):
         exitinfo = build_exitinfo("CRITICAL", "timeout status is not valid")
 
     return exitinfo
+
 
 # -------------------------------------------------------------------------------
 

@@ -10,6 +10,7 @@ import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -46,6 +47,7 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
