@@ -57,7 +57,7 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
         cmdline = multiargs + ["-H", host]
         if childtimeoutvalue is not None and childtimeoutstatus is not None:
             cmdline = cmdline + ["-t", str(childtimeoutvalue) + ":" + childtimeoutstatus]
-        infomsg(cmdline)
+        infomsg("cmdline -> "+str(cmdline))
 
         process = await asyncio.create_subprocess_exec(
             *cmdline,
@@ -108,6 +108,7 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
     tasks = []
     mappings = {}
     for host in allhosts:
+        infomsg(host + " " + str(multiargs))
         task = asyncio.create_task(dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, childtimeoutstatus))
         tasks.append(task)
         mappings[task] = host
@@ -151,46 +152,46 @@ async def domultiaddrcall(multitimeoutvalue, multitimeoutstatus, childtimeoutval
 
 
 def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser(description="Multi-address checker")
-    parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames", default="")
-    parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]", default="30")
-    parser.add_argument("-c", "--childtimeout", dest="childtimeout", help="Child timeout in seconds[:status]", default="")
-    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output")
-    parser.add_argument("args", nargs=argparse.REMAINDER, help="Arguments for the underlying check command")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames", default=None)
+    parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]", default=None)
 
     if forcedargs is None:
-        forcedargs = sys.argv[1:]
+        forcedargs = sys.argv[3:]
+    #print(forcedargs)
+    args, unknown = parser.parse_known_args(forcedargs)
+    #print(args)
+    #print(unknown)
 
-    args = parser.parse_args(forcedargs)
+    hostnames = args.hostname
+    maintimeout = sys.argv[1]
+    childtimeout = args.timeout
 
-    # Handle legacy positional hostname argument if present
-    if args.hostname is None and len(args.args) > 0:
-        if args.args[0] == "-H":
-            if len(args.args) > 1:
-                args.hostname = args.args[1]
-                args.args = args.args[2:]
-        elif not args.args[0].startswith("-"):
-            args.hostname = args.args[0]
-            args.args = args.args[1:]
-
-    return args
+    return hostnames,maintimeout,childtimeout,sys.argv[2],unknown
 
 
 async def main(forcedargs=None):
-    args = parse_args(forcedargs)
-    setcandebug(args.debug)
+    hostnames,maintimeout,childtimeout,script,childargs = parse_args(forcedargs)
+    setcandebug(False)
 
-    multitimeoutparts = args.timeout.split(":")
+    infomsg(maintimeout)
+    if maintimeout in ["", None]:
+        maintimeout = "CRITICAL:30"
+    multitimeoutparts = maintimeout.split(":")
+    infomsg(multitimeoutparts)
     multitimeoutvalue = int(multitimeoutparts[0])
-    multitimeoutstatus = "UNKNOWN"
+    infomsg(multitimeoutvalue)
     if len(multitimeoutparts) > 1:
         multitimeoutstatus = multitimeoutparts[1]
+    else:
+        multitimeoutstatus = "CRITICAL"
+    infomsg(multitimeoutstatus)
 
-    multihostnames = args.hostname if args.hostname else ""
+    multihostnames = hostnames
+    infomsg("multihostname: "+str(multihostnames))
 
-    multiargs = args.args
-
-    childtimeout = args.childtimeout if args.childtimeout else ""
+    multiargs = [script] + childargs
+    infomsg("multiarg: "+str(multiargs))
 
     allhosts = multihostnames.split(",") if multihostnames else []
 
