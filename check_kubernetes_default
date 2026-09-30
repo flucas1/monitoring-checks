@@ -9,15 +9,58 @@ import asyncio
 # -------------------------------------------------------------------------------
 
 
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--mode", action="store", dest="mode", default="pipeline", help="choose one of: monitoring,pipeline")
     parser.add_argument("-n", "--namespace", action="store", dest="namespace", default="", help="only check this namespace")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="enable debug mode")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     fullcheckpath = "/etc/nagios/scripts/check_kubernetes"
     cmdline = [fullcheckpath, "-m", args.mode, "-n", args.namespace]
@@ -32,6 +75,7 @@ async def main(forcedargs=None):
     exitcode = process.returncode
 
     sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
