@@ -6,17 +6,59 @@ import sys
 import argparse
 import asyncio
 
+# -------------------------------------------------------------------------------
+
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
 
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check if a reboot is required")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     return parser.parse_args(forcedargs)
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     if os.path.exists("/var/run/reboot-required"):
         print("CRITICAL: a reboot is needed")
