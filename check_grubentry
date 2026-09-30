@@ -52,8 +52,8 @@ def exitnagios(status, message):
 
 async def read_grub_file(filepath):
     try:
-        async with await asyncio.to_thread(open, filepath, "r") as handle:
-            content = await asyncio.to_thread(handle.read)
+        with open(filepath, "r") as handle:
+            content = handle.read()
             return content.strip().splitlines()
     except Exception as e:
         raise Exception("failed to read grub file: " + str(e))
