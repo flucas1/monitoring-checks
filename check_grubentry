@@ -50,19 +50,22 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+async def read_grub_file(filepath):
+    try:
+        async with await asyncio.to_thread(open, filepath, "r") as handle:
+            content = await asyncio.to_thread(handle.read)
+            return content.strip().splitlines()
+    except Exception as e:
+        raise Exception("failed to read grub file: " + str(e))
+
+
 async def dogrubentrycall(expectedpos):
     try:
-        lines = []
-        handle = open("/boot/grub/grub.cfg", "r")
-        try:
-            lines = handle.read().strip().splitlines()
-        finally:
-            handle.close()
+        lines = await read_grub_file("/boot/grub/grub.cfg")
         allcandidates = []
         for line in lines:
             line = line.strip()
             if line.startswith("menuentry "):
-
                 singlequotes = re.findall("'([^']*)'", line)
                 if len(singlequotes) > 0:
                     allcandidates.append(singlequotes[0])
@@ -107,15 +110,14 @@ async def dogrubentrycall(expectedpos):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--expected", dest="expected", default="0", help="expected")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    parser.add_argument("-e", "--expected", dest="expected", default="0", help="expected grub entry position")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     expected = int(args.expected)
