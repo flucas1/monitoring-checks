@@ -74,6 +74,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
             for response in responses
             if response[0] == socket.AF_INET]
 
+
 # -------------------------------------------------------------------------------
 
 

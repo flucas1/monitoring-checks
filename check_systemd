@@ -46,17 +46,7 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
-def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--service", dest="service", default=None, help="Name of the Service that is beeing tested")
-    parser.add_argument("-m", "--system", action="store_true", dest="system", default=False, help="Check the gobal systemd (default)")
-    parser.add_argument("-u", "--user", dest="user", default="root", help="Check at userlevel (linger) systemd (default root)")
-    parser.add_argument("-l", "--toleratecritical", default="", help="Systemd units to mark as warning instead of critical")
-    parser.add_argument("-e", "--toleratewarning", default="", help="Systemd units to mark as ok instead of warning")
-    parser.add_argument("-g", "--ignore", default="", help="Systemd units to fully ignore")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
-    return args
+# -------------------------------------------------------------------------------
 
 
 async def execute_systemd_call(system, service, user):
@@ -193,9 +183,24 @@ async def systemd_check(service, system, user, toleratecriticallist, toleratewar
                 exitnagios("CRITICAL", "unit " + service + " is " + status + " instead of active")
 
 
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--service", dest="service", default=None, help="Name of the Service that is beeing tested")
+    parser.add_argument("-m", "--system", action="store_true", dest="system", default=False, help="Check the gobal systemd (default)")
+    parser.add_argument("-u", "--user", dest="user", default="root", help="Check at userlevel (linger) systemd (default root)")
+    parser.add_argument("-l", "--toleratecritical", dest="toleratecritical", default="", help="Systemd units to mark as warning instead of critical")
+    parser.add_argument("-e", "--toleratewarning", dest="toleratewarning", default="", help="Systemd units to mark as ok instead of warning")
+    parser.add_argument("-g", "--ignore", dest="ignore", default="", help="Systemd units to fully ignore")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     toleratecriticallist = args.toleratecritical.replace(" ", ";").replace(",", ";").split(";")
@@ -203,6 +208,9 @@ async def main(forcedargs=None):
     ignorelist = args.ignore.replace(" ", ";").replace(",", ";").split(";")
 
     await systemd_check(args.service, args.system, args.user, toleratecriticallist, toleratewarninglist, ignorelist)
+
+
+# -------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
