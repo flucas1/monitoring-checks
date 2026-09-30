@@ -100,6 +100,7 @@ async def main(forcedargs=None):
     else:
         exitnagios("OK", "Temperature " + "{:.2f}".format(temp) + perfdata)
 
+
 # -------------------------------------------------------------------------------
 
 if __name__ == "__main__":
