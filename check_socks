@@ -9,18 +9,64 @@ import aiohttp
 import aiohttp_socks
 
 
+# -------------------------------------------------------------------------------
+
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", dest="ip", default="127.0.0.1")
     parser.add_argument("-p", dest="port", default="1080")
     parser.add_argument("--target", dest="target", default="https://www.google.com")
     parser.add_argument("--max-time", dest="max_time", default=10, type=int)
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
+    setcandebug(args.debug)
 
     if not args.ip or not args.port or not args.target:
         print("UNKNOWN - Missing required parameter(s).")
@@ -54,5 +100,9 @@ async def main(forcedargs=None):
         sys.exit(1)
 
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
