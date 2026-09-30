@@ -57,19 +57,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def log(msg):
-    infomsg(msg)
-
-
-STATE_OK = 0
-STATE_WARNING = 1
-STATE_CRITICAL = 2
-STATE_UNKNOWN = 3
-
-
-# -------------------------------------------------------------------------------
-
-
 async def create_zfs_fstab(original_fstab):
     tmp_fstab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
 
@@ -175,7 +162,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
                 found_in_fstab = True
                 break
         if not found_in_fstab:
-            await log("CRIT: " + mp + " doesn't exist in /etc/fstab")
+            infomsg("CRIT: " + mp + " doesn't exist in /etc/fstab")
             err_mesg.append(mp + " doesn't exist in fstab " + args.fstab)
 
     found_in_mtab = False
@@ -186,7 +173,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             break
     if not found_in_mtab:
         if not (args.linkok and os.path.islink(mp)):
-            await log("CRIT: " + mp + " is not mounted")
+            infomsg("CRIT: " + mp + " is not mounted")
             err_mesg.append(mp + " is not mounted")
 
     try:
@@ -197,7 +184,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
 
     is_rw = 0
     if not os.path.isdir(mp):
-        await log("CRIT: " + mp + " doesn't exist on filesystem")
+        infomsg("CRIT: " + mp + " doesn't exist on filesystem")
         err_mesg.append(mp + " doesn't exist on filesystem")
     elif args.writetest:
         is_rw = 1
@@ -207,7 +194,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
                 if len(fields) > max(args.mf - 1, args.of - 1) and fields[args.mf - 1] == mp:
                     if "ro" in fields[args.of - 1].split(","):
                         is_rw = 0
-                        await log("CRIT: " + mp + " is not mounted as writable.")
+                        infomsg("CRIT: " + mp + " is not mounted as writable.")
                         err_mesg.append("Could not write in " + mp + " filesystem was mounted RO.")
 
     if is_rw == 1:
@@ -222,15 +209,15 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             )
             await asyncio.wait_for(process.communicate(), timeout=args.timeout)
             if not os.path.isfile(touchfile):
-                await log("CRIT: " + touchfile + " is not writable.")
+                infomsg("CRIT: " + touchfile + " is not writable.")
                 err_mesg.append("Could not write in " + mp + ".")
             else:
                 os.remove(touchfile)
         except asyncio.TimeoutError:
-            await log("CRIT: " + touchfile + " is not writable.")
+            infomsg("CRIT: " + touchfile + " is not writable.")
             err_mesg.append("Could not write in " + mp + " in " + str(args.timeout) + " sec. Seems to be stale.")
         except Exception:
-            await log("CRIT: " + touchfile + " is not writable.")
+            infomsg("CRIT: " + touchfile + " is not writable.")
             err_mesg.append("Could not write in " + mp + ".")
 
     return err_mesg
@@ -284,8 +271,7 @@ async def main(forcedargs=None):
 
     if args.auto:
         mps = []
-        valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs",
-                    "fuse", "glusterfs", "ocfs2", "lustre", "ufs", "zfs", "ceph", "btrfs", "yas3fs"}
+        valid_fs = {"ext2", "ext3", "xfs", "auto", "ext4", "nfs", "nfs4", "davfs", "cifs", "fuse", "glusterfs", "ocfs2", "lustre", "ufs", "zfs", "ceph", "btrfs", "yas3fs"}
         try:
             async with aiofiles.open(fstab_file, "r") as f:
                 async for line in f:
@@ -305,23 +291,17 @@ async def main(forcedargs=None):
             pass
 
     if not mps and args.autoignore:
-        exitnagios(STATE_OK, "OK: no external mounts were found in " + args.fstab)
+        exitnagios("OK", "no external mounts were found in " + args.fstab)
     elif not mps:
         msg = "ERROR: no mountpoints given!"
-        exitnagios(STATE_UNKNOWN, msg)
-
-    if not os.path.exists("/proc/mounts") and mtab_file == "/proc/mounts":
-        await log("/proc wasn't mounted!")
-        ret = await asyncio.create_subprocess_exec("mount", "-t", "proc", "proc", "/proc")
-        await ret.wait()
-        err_mesg.append("mounted /proc " + str(ret))
+        exitnagios("UNKNOWN", msg)
 
     if mtab_file == "none":
         mtab_file = await make_mtab()
 
     if not os.path.exists(mtab_file):
         msg = mtab_file + " doesn't exist!"
-        exitnagios(STATE_CRITICAL, msg)
+        exitnagios("CRITICAL", msg)
 
     fstab_lines = []
     if os.path.exists(fstab_file):
@@ -349,9 +329,9 @@ async def main(forcedargs=None):
         os.remove(fstab_file)
 
     if err_mesg:
-        exitnagios(STATE_CRITICAL, "CRITICAL: " + " ; ".join(err_mesg))
+        exitnagios("CRITICAL", " ; ".join(err_mesg))
 
-    exitnagios(STATE_OK, "OK: all mounts were found (" + " ".join(mps) + ")")
+    exitnagios("OK", "all mounts were found (" + " ".join(mps) + ")")
 
 
 # -------------------------------------------------------------------------------
