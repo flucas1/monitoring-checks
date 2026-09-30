@@ -17,6 +17,7 @@ import dateutil.relativedelta
 
 # -------------------------------------------------------------------------------
 
+
 _candebug = False
 
 
@@ -54,6 +55,7 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
 
 
@@ -88,7 +90,7 @@ def split_threshold(value, level, convert):
         else:
             exitnagios("CRITICAL", "Malformed " + str(level) + " value: " + str(value))
     except:
-        exitnagios("CRITICAL", "invalid value passed as %s parameter: %s" % (level, value))
+        exitnagios("CRITICAL", "invalid value passed as " + str(level) + " parameter: " + str(value))
 
 
 def check_limits(state, low, high, name, return_code):
@@ -353,6 +355,7 @@ async def main(forcedargs=None):
     elif args.thing:
         rc, message = await check_thing(object_json, args)
         exitnagios(rc, message)
+
 
 # -------------------------------------------------------------------------------
 
