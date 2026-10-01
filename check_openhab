@@ -270,18 +270,32 @@ async def fetch_object(item_url, args, timeoutstatus):
         auth_header = aiohttp.encode_basic_auth(auth_params[0], auth_params[1])
         headers['Authorization'] = auth_header
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
-                if response.status == 404:
-                    exitnagios(timeoutstatus, "item " + str(item_url) + " does not exist.")
-                elif response.status != 200:
-                    exitnagios(timeoutstatus, "exception fetching item data - HTTP " + str(response.status))
-                object_json = await response.json()
-                infomsg("# " + str(json.dumps(object_json)))
-                return object_json
-    except Exception as e:
-        exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
+    max_retries = getattr(args, 'retries', 3)
+    retry_delay = getattr(args, 'retry_delay', 2)
+    retryable_statuses = {408, 429, 500, 502, 503, 504}
+    for attempt in range(max_retries + 1):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
+                    if response.status in retryable_statuses and attempt < max_retries:
+                        infomsg(f"# HTTP {response.status} received. Retrying {attempt + 1}/{max_retries} in {retry_delay}s...")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    elif response.status == 404:
+                        exitnagios(timeoutstatus, "item " + str(item_url) + " does not exist.")
+                    elif response.status != 200:
+                        exitnagios(timeoutstatus, "exception fetching item data - HTTP " + str(response.status))
+                    object_json = await response.json()
+                    infomsg("# " + str(json.dumps(object_json)))
+                    return object_json
+        except Exception as e:
+            if attempt < max_retries:
+                infomsg(f"# Exception fetching item data: {str(e)}. Retrying {attempt + 1}/{max_retries} in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+                continue
+            exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
+            
+    exitnagios(timeoutstatus, "exception fetching item data - Max retries exceeded.")
 
 
 async def readtextfile(file_path):
@@ -313,6 +327,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-O", "--string-ok", dest="string_ok", default=None, help="Regular expression to search for in string values.  Returns OK if pattern is found.")
     parser.add_argument("-g", "--string-warn", dest="string_warn", default=None, help="Regular expression to search for in string values.  Returns WARNING if pattern is found.")
     parser.add_argument("-l", "--string-crit", dest="string_crit", default=None, help="Regular expression to search for in string values.  Returns CRITICAL if pattern is found.")
+    parser.add_argument("-R", "--retries", dest="retries", default=3, type=int, help="Maximum number of retries for transient HTTP errors (e.g., 503). Defaults to 3.")
+    parser.add_argument("-e", "--retry-delay", dest="retry_delay", default=2, type=int, help="Delay in seconds between retries. Defaults to 2.")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
