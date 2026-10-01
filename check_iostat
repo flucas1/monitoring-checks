@@ -163,7 +163,7 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = state + " - I/O stats: Transfers/Sec=" + str(tps) + " Read Requests/Sec=" + str(read_sec) + " Write Requests/Sec=" + str(written_sec) + " KBytes Read/Sec=" + str(kbytes_read_sec) + " KBytes_Written/Sec=" + str(kbytes_written_sec)
+        msg = "I/O stats: Transfers/Sec=" + str(tps) + " ; Read Requests/Sec=" + str(read_sec) + " ; Write Requests/Sec=" + str(written_sec) + " ; KBytes Read/Sec=" + str(kbytes_read_sec) + " ; KBytes_Written/Sec=" + str(kbytes_written_sec)
         perfdata = " | total_io_sec=" + str(tps) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " read_io_sec=" + str(read_sec) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";" + " write_io_sec=" + str(written_sec) + ";" + str(warn[2]) + ";" + str(crit[2]) + ";" + " kbytes_read_sec=" + str(kbytes_read_sec) + ";" + str(warn[3]) + ";" + str(crit[3]) + ";" + " kbytes_written_sec=" + str(kbytes_written_sec) + ";" + str(warn[4]) + ";" + str(crit[4]) + ";"
 
     # ------------Queue Test-------------
@@ -180,7 +180,7 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = state + " - Disk Queue Stats: Average Request Size=" + str(qsize) + " Average Queue Length=" + str(qlength)
+        msg = "Disk Queue Stats: Average Request Size=" + str(qsize) + " ; Average Queue Length=" + str(qlength)
         perfdata = " | qsize=" + str(qsize) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " queue_length=" + str(qlength) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";"
 
     # ------------Wait Time Test-------------
@@ -200,7 +200,7 @@ async def main(forcedargs=None):
                 state = "CRITICAL"
                 status = 2
 
-        msg = state + " - Wait Time Stats: Avg I/O Wait Time (ms)=" + str(avgwait) + " Avg Read Wait Time (ms)=" + str(avgrwait) + " Avg Write Wait Time (ms)=" + str(avgwwait) + " Avg Service Wait Time (ms)=" + str(avgsvctime) + " Avg CPU Utilization=" + str(avgcpuutil)
+        msg = "Wait Time Stats: Avg I/O Wait Time (ms)=" + str(avgwait) + " ; Avg Read Wait Time (ms)=" + str(avgrwait) + " ; Avg Write Wait Time (ms)=" + str(avgwwait) + " ; Avg Service Wait Time (ms)=" + str(avgsvctime) + " ; Avg CPU Utilization=" + str(avgcpuutil)
         perfdata = " | avg_io_waittime_ms=" + str(avgwait) + ";" + str(warn[0]) + ";" + str(crit[0]) + ";" + " avg_r_waittime_ms=" + str(avgrwait) + ";" + str(warn[1]) + ";" + str(crit[1]) + ";" + " avg_w_waittime_ms=" + str(avgwwait) + ";" + str(warn[2]) + ";" + str(crit[2]) + ";" + " avg_service_waittime_ms=" + str(avgsvctime) + ";" + str(warn[3]) + ";" + str(crit[3]) + ";" + " avg_cpu_utilization=" + str(avgcpuutil) + ";" + str(warn[4]) + ";" + str(crit[4]) + ";"
 
     final_output = msg

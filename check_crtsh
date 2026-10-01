@@ -94,9 +94,7 @@ async def ipv4_default_route_exists() -> bool:
 # -------------------------------------------------------------------------------
 
 
-async def load_json(mode, proxy, domain, retries, timeoutvalue):
-    item_url = "https://crt.sh/?Identity=" + domain + "&exclude=expired&output=json"
-    infomsg(item_url)
+async def load_json(mode, proxy, domain, retries, timeoutvalue, item_url):
 
     headers = {
         "Upgrade-Insecure-Requests": "1",
@@ -196,15 +194,68 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     ignored = ignorecerts.split(";")
 
     start = datetime.datetime.now(datetime.timezone.utc)
-    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue)
+    item_url = "https://crt.sh/Identity=" + hostname + "&exclude=expired&output=json"
+    infomsg(item_url)
+    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
     elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
     if parsed is not None:
         valid = True
         problems = []
         totalfound = len(parsed)
+        infomsg("found "+str(totalfound)+" entries")
         for item in parsed:
             issuerid = str(item["issuer_ca_id"])
+            certificateid = str(item["id"])
+            if (issuerid not in issuers) and (certificateid not in ignored):
+                rawnotafter = str(item["not_after"])
+                parsednotafter = dateutil.parser.parse(rawnotafter)
+                infomsg(parsednotafter)
+                if parsednotafter >= datetime.datetime.now(datetime.timezone.utc):
+                    valid = False
+                    problems.append(item)
+                    infomsg(item)
+        if totalfound == 0:
+            exitnagios("WARNING", "no certificates in crt.sh | found=" + str(totalfound) + " duration=" + str(duration))
+        elif valid:
+            exitnagios("OK", "no issues found | found=" + str(totalfound) + " duration=" + str(duration))
+        else:
+            exitnagios("CRITICAL", "found problems --- " + str(problems) + " | found=" + str(totalfound) + " duration=" + str(duration))
+
+    # do not fallback here, so several calls can be chained
+    # exitnagios("WARNING","crt.sh does not answer properly")
+
+
+async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue, retries):
+    if mode:
+        mode = mode.lower()
+    if mode not in ("ipv6", "ipv4", None):
+        exitnagios("CRITICAL", "invalid IP mode")
+
+    hostnameparts = hostname.split(".")
+    if "" in hostnameparts:
+        hostnameparts.remove("")
+    if len(hostnameparts) == 2:
+        hostnameparts.insert(0, "*")
+    hostname = ".".join(hostnameparts)
+    issuers = validcas.split(";")
+    ignored = ignorecerts.split(";")
+
+    start = datetime.datetime.now(datetime.timezone.utc)
+    item_url = "https://ctlogs.dev/search?q=" + hostname + "&exclude=expired&output=json"
+    infomsg(item_url)
+    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
+    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
+    duration = elapsed.total_seconds()
+    if parsed is not None:
+        valid = True
+        problems = []
+        rows = parsed["rows"]
+        totalfound = len(rows)
+        infomsg("found "+str(totalfound)+" entries")
+        for item in rows:
+            #infomsg(str(item))
+            issuerid = str(item["issuer"])
             certificateid = str(item["id"])
             if (issuerid not in issuers) and (certificateid not in ignored):
                 rawnotafter = str(item["not_after"])
@@ -262,12 +313,15 @@ async def main(forcedargs=None):
     if await ipv6_default_route_exists():
         infomsg("call ipv6")
         await docrtshcall("ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await doctlogscall("ipv6", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     if await ipv4_default_route_exists():
         infomsg("call ipv4")
         await docrtshcall("ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await doctlogscall("ipv4", None, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     for proxy in proxies:
         infomsg("call " + str(proxy))
         await docrtshcall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
+        await doctlogscall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
     elapsed = datetime.datetime.now(datetime.timezone.utc) - start
     duration = elapsed.total_seconds()
 
