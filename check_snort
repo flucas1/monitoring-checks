@@ -255,10 +255,8 @@ async def check_alerts():
     if read_status != "OK":
         return read_status, read_msg, "", None
 
-    count_last, count_avg = await asyncio.gather(
-        get_alert_count(actual_alerts, PRIORITY_LEVEL),
-        get_alert_count(average_alerts, PRIORITY_LEVEL)
-    )
+    tasks = [get_alert_count(actual_alerts, PRIORITY_LEVEL), get_alert_count(average_alerts, PRIORITY_LEVEL)]
+    count_last, count_avg = await asyncio.gather(*tasks, return_exceptions=True)
 
     avg_avg = count_avg // divider
     if avg_avg == 0:

@@ -252,7 +252,7 @@ async def check_consumables(args, param):
         for i in range(1, len(all_markers) + 1):
             tasks.append(_check_one_consumable(args, str(i), state_string, perfdata))
 
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
             state_string = s_string
             perfdata = p_data
@@ -271,7 +271,7 @@ async def check_consumables(args, param):
             if match:
                 tasks.append(_check_one_consumable(args, match.group(1), state_string, perfdata))
 
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
             state_string = s_string
             perfdata = p_data
@@ -479,7 +479,7 @@ async def check_paper_trays(args, param, arg_token):
         for i in range(1, len(all_trays_raw) + 1):
             tasks.append(_check_one_tray(args, str(i), state_string, perfdata))
 
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
             state_string = s_string
             perfdata = p_data
@@ -489,7 +489,7 @@ async def check_paper_trays(args, param, arg_token):
         for tray_id in param.split(arg_token):
             tasks.append(_check_one_tray(args, tray_id.strip(), state_string, perfdata))
 
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
             state_string = s_string
             perfdata = p_data

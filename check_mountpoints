@@ -326,7 +326,7 @@ async def main(forcedargs=None):
     for mp in mps:
         tasks.append(check_mountpoint(mp, args, fstab_lines, mtab_lines))
 
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     for res in results:
         err_mesg.extend(res)
 

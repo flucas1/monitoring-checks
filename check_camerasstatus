@@ -170,7 +170,7 @@ async def docamerasstatuscall(cameraspath, warning, critical):
     tasks = []
     for entry in listcameras:
         tasks.append(checkcameravalid(cameraspath, entry))
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     for idx, entry in enumerate(listcameras):
         iscameravalid = results[idx]
         if not iscameravalid:

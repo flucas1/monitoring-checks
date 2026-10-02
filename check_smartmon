@@ -304,7 +304,7 @@ async def main(forcedargs=None):
         infomsg("Devices: " + str(devices))
 
     tasks = [process_device(dev, args) for dev in devices]
-    results = await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
     exit_status = 0
     return_text = ""
