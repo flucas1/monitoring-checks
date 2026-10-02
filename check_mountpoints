@@ -140,8 +140,9 @@ async def make_mtab():
 
 async def run_df(mp, timeout):
     try:
+        cmdline = ["df", "-k", mp]
         process = await asyncio.create_subprocess_exec(
-            "df", "-k", mp,
+            *cmdline,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
@@ -202,8 +203,9 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
         touchfile = os.path.join(mp, ".mount_test_from_" + socket.gethostname() + "_" + timestamp + "_" + str(os.getpid()))
 
         try:
+            cmdline = ["touch", touchfile]
             process = await asyncio.create_subprocess_exec(
-                "touch", touchfile,
+                *cmdline,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL
             )

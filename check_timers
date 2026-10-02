@@ -63,8 +63,9 @@ async def main(forcedargs=None):
 
     # Reload the systemd manager configuration
     try:
+        cmdline = ["systemctl", "daemon-reload"]
         process = await asyncio.create_subprocess_exec(
-            "systemctl", "daemon-reload",
+            *cmdline,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
