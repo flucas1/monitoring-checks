@@ -78,8 +78,13 @@ async def main(forcedargs=None):
 
     if exitcode == 0:
         exitnagios("OK", "Kubernetes check completed without issues")
-    else:
+    elif exitcode == 1:
+        exitnagios("WARNING", output + " - " + errors)
+    elif exitcode == 2:
         exitnagios("CRITICAL", output + " - " + errors)
+    else:
+        exitnagios("UNKNOWN", output + " - " + errors)
+
 
 # -------------------------------------------------------------------------------
 
