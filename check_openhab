@@ -197,7 +197,7 @@ def check_thresholds(thresholds, state, name):
 
 async def check_item(object_json, thresholds, timeoutstatus):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
-        return (timeoutstatus, object_json["name"] + " is uninitialized.")
+        return ("WARNING", object_json["name"] + " is uninitialized.")
     else:
         return check_thresholds(thresholds, object_json["state"], object_json["name"])
 
