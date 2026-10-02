@@ -61,7 +61,7 @@ async def main():
     PROMPT.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
     PROMPT.append("File reading and writing should be always async.")
     PROMPT.append("For python imports do not use 'from'.")
-    PROMPT.append("Remove legacy subprocess, urllib and concurrent.futures.")
+    PROMPT.append("Remove legacy subprocess, urllib, requests and concurrent.futures and replace them with async alternatives.")
     PROMPT.append("Prefer \" rather than ' for string delimitator.")
     PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
     PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
