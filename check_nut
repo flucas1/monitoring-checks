@@ -82,16 +82,16 @@ def compare(val, op, limit):
     return False
 
 
-async def run_command(cmd):
+async def run_command(cmdline):
     process = await asyncio.create_subprocess_exec(
-        *cmd,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
     error_details = stderr.decode().strip()
     if process.returncode != 0:
-        raise RuntimeError("Command " + " ".join(cmd) + " failed with code " + str(process.returncode) + ". " + error_details)
+        raise RuntimeError("Command " + " ".join(cmdline) + " failed with code " + str(process.returncode) + ". " + error_details)
     return stdout.decode().strip()
 
 

@@ -50,15 +50,14 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def get_cmd_output(cmd):
-    """Runs a shell command asynchronously and returns its standard output."""
+async def get_cmd_output(cmdline):
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL
+            stderr=asyncio.subprocess.PIPE
         )
-        stdout, _ = await process.communicate()
+        stdout, stderr = await process.communicate()
         return stdout.decode().strip() if stdout else ""
     except (asyncio.SubprocessError, OSError):
         return ""

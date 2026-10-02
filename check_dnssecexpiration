@@ -51,11 +51,10 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def run_cmd(cmd):
-    """Executes a shell command asynchronously and returns the stripped stdout."""
+async def run_cmd(cmdline):
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
