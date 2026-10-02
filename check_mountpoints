@@ -143,8 +143,8 @@ async def run_df(mp, timeout):
         cmdline = ["df", "-k", mp]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
         await asyncio.wait_for(process.communicate(), timeout=timeout)
     except asyncio.TimeoutError:
@@ -206,8 +206,8 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             cmdline = ["touch", touchfile]
             process = await asyncio.create_subprocess_exec(
                 *cmdline,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             await asyncio.wait_for(process.communicate(), timeout=args.timeout)
             if not os.path.isfile(touchfile):

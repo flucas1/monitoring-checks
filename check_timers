@@ -66,10 +66,10 @@ async def main(forcedargs=None):
         cmdline = ["systemctl", "daemon-reload"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
-        await process.wait()
+        stdout, stderr = await process.communicate()
     except Exception as e:
         exitnagios("UNKNOWN", "Error reloading daemon: " + str(e))
 
