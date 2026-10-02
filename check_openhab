@@ -282,7 +282,7 @@ async def fetch_object(item_url, args, timeoutstatus):
                         await asyncio.sleep(retry_delay)
                         continue
                     elif response.status == 404:
-                        exitnagios(timeoutstatus, "item " + str(item_url) + " does not exist.")
+                        exitnagios("WARNING", "item " + str(item_url) + " does not exist.")
                     elif response.status != 200:
                         exitnagios(timeoutstatus, "exception fetching item data - HTTP " + str(response.status))
                     object_json = await response.json()
