@@ -98,9 +98,9 @@ def check_threshold(value, warning, critical):
 
 
 async def run_squidclient(squidclient, host, port, user, password):
-    cmd = [squidclient, "-h", host, "-p", str(port), "-U", user, "-W", password, "mgr:info"]
+    cmdline = [squidclient, "-h", host, "-p", str(port), "-U", user, "-W", password, "mgr:info"]
     process = await asyncio.create_subprocess_exec(
-        *cmd,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )

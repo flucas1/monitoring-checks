@@ -49,9 +49,9 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def run_speedtest_command(cmd):
+async def run_speedtest_command(cmdline):
     process = await asyncio.create_subprocess_exec(
-        *cmd,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -149,21 +149,21 @@ async def main(forcedargs=None):
     infomsg("Server URL or Integer = " + str(args.server))
 
     STB = "/usr/bin/speedtest"
-    cmd = [STB, "--simple"]
+    cmdline = [STB, "--simple"]
 
     if args.location == 'e':
         infomsg("External Server defined")
         if args.server:
-            cmd = [STB, "--server=" + str(args.server), "--simple"]
+            cmdline = [STB, "--server=" + str(args.server), "--simple"]
     elif args.location == 'i':
         infomsg("Internal Server defined")
         if args.server:
-            cmd = [STB, "--mini=" + str(args.server), "--simple"]
+            cmdline = [STB, "--mini=" + str(args.server), "--simple"]
         else:
             exitnagios("UNKNOWN", "Error: URL required for Internal Mini Server")
 
     try:
-        output = await run_speedtest_command(cmd)
+        output = await run_speedtest_command(cmdline)
         infomsg(output)
     except Exception as e:
         if "Cannot parse" in str(e):

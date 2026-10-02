@@ -87,8 +87,8 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     # Check the resolver to properly validate DNSSEC at all
-    resolver_cmd = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, "@" + args.resolver]
-    resolver_out = await run_cmd(resolver_cmd)
+    cmdline = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, "@" + args.resolver]
+    resolver_out = await run_cmd(cmdline)
     if "opcode: QUERY" not in resolver_out or "status: SERVFAIL" not in resolver_out:
         exitnagios("WARNING", "Resolver seems to not validate DNSSEC signatures - going further seems hopeless right now.")
 

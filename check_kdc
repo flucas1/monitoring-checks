@@ -128,10 +128,10 @@ async def main(forcedargs=None):
         env["KRB5_CONFIG"] = conf_path
 
         # Construct and run the kinit command
-        cmd = ["/usr/bin/kinit", "-c", cc_path, "-k", "-t", args.keytab, args.principal]
+        cmdline = ["/usr/bin/kinit", "-c", cc_path, "-k", "-t", args.keytab, args.principal]
 
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             env=env,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT

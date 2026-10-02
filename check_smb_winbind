@@ -62,12 +62,12 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     # Define the command
-    cmd = "/usr/bin/wbinfo"
+    cmdline = ["/usr/bin/wbinfo", "-t"]
 
     try:
         # Create async subprocess
         process = await asyncio.create_subprocess_exec(
-            cmd, "-t",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT
         )

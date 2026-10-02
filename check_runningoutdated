@@ -65,7 +65,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     CHECKRESTART_BIN = "/usr/sbin/checkrestart"
-    cmd = [CHECKRESTART_BIN]
+    cmdline = [CHECKRESTART_BIN]
 
     # Check if -p is supported by looking for 'vhpa' in the help output
     try:
@@ -77,7 +77,7 @@ async def main(forcedargs=None):
         stdout, stderr = await process.communicate()
         help_output = stdout.decode("utf-8") + stderr.decode("utf-8")
         if "vhpa" in help_output:
-            cmd.append("-p")
+            cmdline.append("-p")
     except FileNotFoundError:
         exitnagios("CRITICAL", "No data, maybe " + CHECKRESTART_BIN + " missing?")
     except Exception:
@@ -87,7 +87,7 @@ async def main(forcedargs=None):
     # Execute checkrestart
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

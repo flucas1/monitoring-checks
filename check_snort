@@ -83,7 +83,7 @@ def stamp2date(ts):
 
 
 async def run_mysql_query(query):
-    cmd = [
+    cmdline = [
         "mysql", "--skip-column-names",
         "-h", SNORT_DB_HOST,
         "-P", str(SNORT_DB_PORT),
@@ -93,7 +93,7 @@ async def run_mysql_query(query):
     ]
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

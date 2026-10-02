@@ -52,15 +52,15 @@ def exitnagios(status, message):
 
 
 async def check_stratum(hostname, debug=False):
-    cmd = ["ntpdc", "-c", "sysinfo"]
+    cmdline = ["ntpdc", "-c", "sysinfo"]
     if hostname:
-        cmd.append(hostname)
+        cmdline.append(hostname)
 
-    infomsg("Running command: " + " ".join(cmd))
+    infomsg("Running command: " + " ".join(cmdline))
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
