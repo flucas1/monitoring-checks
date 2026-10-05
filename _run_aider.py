@@ -1,12 +1,16 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
 import os
 import asyncio
 import pathlib
 
+# -------------------------------------------------------------------------------
 
 async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_env: dict):
     print(f"\n--- Processing: {file_path.name} ---")
 
-    command = [
+    cmdline = [
         "aider",
         str(file_path),
         "--message", prompt,
@@ -19,7 +23,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             env=custom_env
         )
 
@@ -37,10 +41,12 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
-    target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith("check_")]
+    pattern = "feature_"
+
+    target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith(pattern)]
 
     if not target_files:
-        print(f"No files starting with 'check_' found in {target_dir}")
+        print(f"No files starting with '" + pattern + "' found in {target_dir}")
         return
 
     custom_env = os.environ.copy()
@@ -50,6 +56,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     for file_path in target_files:
         await process_file(file_path, model, prompt, custom_env)
 
+# -------------------------------------------------------------------------------
 
 async def main():
     DIRECTORY = "."
@@ -75,5 +82,9 @@ async def main():
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
+# -------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     asyncio.run(main())
+
+# -------------------------------------------------------------------------------
