@@ -141,7 +141,7 @@ async def main(forcedargs=None):
     paths_to_check = args.paths if args.paths else ["/etc"]
     ignore_files = ["/etc/ssl/certs/java/cacerts", "/etc/java-11-openjdk/security/public_suffix_list.dat", "/etc/java-17-openjdk/security/public_suffix_list.dat", "/etc/java-21-openjdk/security/public_suffix_list.dat", "/etc/java-25-openjdk/security/public_suffix_list.dat", "/etc/java-29-openjdk/security/public_suffix_list.dat"]
     ignore_folders = []
-    ignore_extensions = [".pyc", ".gpg", ".gpg~", ".tgz", ".mp3"]
+    ignore_extensions = [".pyc", ".gpg", ".gpg~", ".tgz", ".mp3", ".cache"]
     for path in paths_to_check:
         found_files = await scan_directory(path, args.debug, ignore_files, ignore_folders, ignore_extensions)
         all_found_files.extend(found_files)
