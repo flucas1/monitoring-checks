@@ -86,10 +86,11 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
             for test in segment.split(","):
                 found = False
                 for option in found_addrs:
-                    if "/" in option["netmask"]:
-                        extra = option["netmask"].split("/")[-1]
+                    infomsg(option)
+                    if "/" in option["mask"]:
+                        extra = option["mask"].split("/")[-1]
                     else:
-                        extra = option["netmask"]
+                        extra = option["mask"]
                     network = ipaddress.ip_network(option["addr"] + "/" + extra, strict=False)
                     cmp_found = str(network)
                     cmp_target = str(ipaddress.ip_network(test, strict=False))
