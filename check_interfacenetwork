@@ -88,10 +88,15 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
                 for option in found_addrs:
                     infomsg(option)
                     if "/" in option["mask"]:
-                        extra = option["mask"].split("/")[-1]
+                        mask_part = option["mask"].split("/")[-1]
                     else:
-                        extra = option["mask"]
-                    network = ipaddress.ip_network(option["addr"] + "/" + extra, strict=False)
+                        mask_part = option["mask"]
+                    if mask_part.isdigit():
+                        cidr = mask_part
+                    else:
+                        mask_int = int(ipaddress.ip_address(mask_part))
+                        cidr = bin(mask_int).count('1')
+                    network = ipaddress.ip_network(option["addr"] + "/" + str(cidr), strict=False)
                     cmp_found = str(network)
                     cmp_target = str(ipaddress.ip_network(test, strict=False))
                     infomsg("comparing segment " + cmp_found + " with " + cmp_target)
