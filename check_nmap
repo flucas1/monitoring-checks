@@ -202,7 +202,8 @@ def findprivateaddress(protocol):
         return None
 
     try:
-        iface = netifaces.gateways()["default"][family][1]
+        defaultgateway = netifaces.default_gateway()
+        iface = defaultgateway[family][1]
     except:
         return None
 
