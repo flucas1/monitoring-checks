@@ -74,18 +74,20 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 
 async def check_ping_answer(hostname, protocol, packets, timeoutseconds):
-    try:
-        family = abs(int(protocol))
-        if family not in (4, 6):
+    family = None
+    if protocol not in ("", None):
+        try:
+            family = abs(int(protocol))
+            if family not in (4, 6):
+                family = None
+        except (ValueError, TypeError):
             family = None
-    except (ValueError, TypeError):
-        family = None
 
     timeout = datetime.timedelta(seconds=timeoutseconds)
     start = datetime.datetime.now()
     while True:
         try:
-            host = await icmplib.async_ping(hostname, count=packets, timeout=1, interval=0.2, family=family, privileged=False)
+            host = await icmplib.async_ping(hostname, count=int(packets), timeout=1, interval=0.2, family=family, privileged=False)
             if host.is_alive:
                 return True
             elif datetime.datetime.now() > start + timeout:

@@ -108,78 +108,52 @@ def interface_to_address(interface, protocol):
 
 
 async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
+    family = None
+    if protocol not in ("", None):
+        try:
+            family = abs(int(protocol))
+            if family not in (4, 6):
+                family = None
+        except (ValueError, TypeError):
+            family = None
+
     source = interface_to_address(interface, protocol)
 
-    cmdline = ["/usr/bin/ping"]
-    if protocol not in ["", None]:
-        cmdline = cmdline + [protocol]
-    if source is not None:
-        cmdline = cmdline + ["-I", source]
-    elif interface != "":
-        cmdline = cmdline + ["-I", interface]
-    cmdline = cmdline + ["-c", str(packets)]
-    cmdline = cmdline + ["-W", str(2)]
-    cmdline = cmdline + [hostname]
-    infomsg(str(cmdline))
-
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmdline,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
-            output = stdout.decode("utf-8").strip() if stdout else ""
-            errors = stderr.decode("utf-8").strip() if stderr else ""
-            exitcode = process.returncode
-        except asyncio.TimeoutError:
-            try:
-                process.kill()
-            except OSError:
-                pass
-            await process.wait()
-            output = ""
-            errors = ""
-            exitcode = 2
-    except Exception:
-        output = ""
-        errors = ""
-        exitcode = 2
+        host = await asyncio.wait_for(icmplib.async_ping(hostname, count=int(packets), timeout=2, interval=0.2, family=family, source=source, privileged=False), timeout=timeout)
+    except asyncio.TimeoutError:
+        return [2, -1, 100.0, "error"]
+    except Exception as e:
+        infomsg(str(e))
+        return [2, -1, 100.0, "error"]
 
-    infomsg(output)
-    if exitcode != 0:
-        return [2, -1, 100, "error"]
+    if not host.is_alive or host.packets_received == 0:
+        avgms = -1.0
+        percent = 100.0
     else:
-        alllines = output.splitlines()
-        linems = alllines[-1]
-        linepercent = alllines[-2]
-        try:
-            avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
-            percent = float(linepercent.split(",")[2].strip().split()[0].replace("%", ""))
-        except Exception:
-            avgms = -1
-            percent = 100.0
-        if avgms >= criticalms or avgms == -1.0:
-            reason = "critical latency"
-            infomsg(reason)
-            return [2, avgms, percent, reason]
-        elif percent >= criticalpercent:
-            reason = "critical ping loss"
-            infomsg(reason)
-            return [2, avgms, percent, reason]
-        elif avgms >= warningms:
-            reason = "warning latency"
-            infomsg(reason)
-            return [1, avgms, percent, reason]
-        elif percent >= warningpercent:
-            reason = "warning ping loss"
-            infomsg(reason)
-            return [1, avgms, percent, reason]
-        else:
-            reason = "no issues"
-            infomsg(reason)
-            return [0, avgms, percent, reason]
+        avgms = host.avg_rtt if host.avg_rtt is not None else -1.0
+        percent = round(host.packet_loss * 100.0, 1)
+
+    if avgms >= criticalms or avgms == -1.0:
+        reason = "critical latency"
+        infomsg(reason)
+        return [2, avgms, percent, reason]
+    elif percent >= criticalpercent:
+        reason = "critical ping loss"
+        infomsg(reason)
+        return [2, avgms, percent, reason]
+    elif avgms >= warningms:
+        reason = "warning latency"
+        infomsg(reason)
+        return [1, avgms, percent, reason]
+    elif percent >= warningpercent:
+        reason = "warning ping loss"
+        infomsg(reason)
+        return [1, avgms, percent, reason]
+    else:
+        reason = "no issues"
+        infomsg(reason)
+        return [0, avgms, percent, reason]
 
 
 async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
