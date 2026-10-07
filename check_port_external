@@ -104,7 +104,8 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port):
     return content
 
 
-async def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
+async def dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
+    infomsg("doing http call")
     try:
         url = baseurl + "?hostname=" + hostname + "&protocol=" + tcporudp + "&port=" + str(port)
         if ipprotocol != "":
@@ -115,7 +116,7 @@ async def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
                 "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
                 "Authorization": "Bearer " + accesstoken
             }
-            async with session.get(url, headers=headers, ssl=False) as response:
+            async with session.get(url, headers=headers, proxy=proxy) as response:
                 content = await response.text()
     except Exception as e:
         content = ""
@@ -125,14 +126,14 @@ async def dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
 # -------------------------------------------------------------------------------
 
 
-async def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     try:
         ipprotocol = ipprotocol.strip().replace("-", "")
         tcporudp = tcporudp.lower().strip()
-        if baseurl == "":
+        if baseurl in ["", None]:
             content = await dointernalcall(ipprotocol, tcporudp, hostname, port)
         else:
-            content = await dohttpcall(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
+            content = await dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
         infomsg(content)
         if content is None:
             exitnagios("CRITICAL", "no result from page")
@@ -158,10 +159,10 @@ async def doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, h
         return ("CRITICAL", "unexpected error during the check " + str(e))
 
 
-async def doportexternalcall(retries, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcall(retries, proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     counter = 0
     while True:
-        exitlevel, message = await doportexternalcallsimple(baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
+        exitlevel, message = await doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
         if (exitlevel == "OK") or (counter >= retries):
             exitnagios(exitlevel, message)
         else:
@@ -229,7 +230,8 @@ async def main(forcedargs=None):
                 accesstoken = content.decode("utf-8").strip().splitlines()[0]
         baseurl = args.baseurl
         retries = int(args.retries)
-        await doportexternalcall(retries, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)
+        proxy = None
+        await doportexternalcall(retries, proxy, baseurl, accesstoken, protocol, tcporudp, args.hostname, int(args.port), args.responses.split(","), timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
