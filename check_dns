@@ -330,23 +330,11 @@ async def get_resolver(addressinfo, timeoutvalue):
         customresolver = dns.asyncresolver.Resolver()
     else:
         customresolver = dns.asyncresolver.Resolver(configure=False)
-        for counter in range(5):
-            validparsing = False
-            try:
-                stream = io.StringIO("nameserver " + address)
-                customresolver.read_resolv_conf(stream)
-            except:
-                pass
-            if len(customresolver.nameservers) == 1:
-                if customresolver.nameservers[0] == address:
-                    validparsing = True
-            if validparsing:
-                break
-            else:
-                await asyncio.sleep(1)
+        # Bypassed io.StringIO parsing to set nameservers directly
+        customresolver.nameservers = [address]
         customresolver.port = port
     customresolver.timeout = timeoutvalue
-    infomsg("found resolver " + str(customresolver._nameservers))
+    infomsg("found resolver " + str(customresolver.nameservers))
     return customresolver
 
 # -------------------------------------------------------------------------------
@@ -422,6 +410,20 @@ async def check_record(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
 # -------------------------------------------------------------------------------
 
 
+async def _check_single_ns_consistency(test, useTcp, protocol, addressinfo, timeoutvalue, zone, text_server):
+    try:
+        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
+        text_test = await get_zone(useTcp, querydata, timeoutvalue, zone)
+        if text_test == "":
+            return test, "error"
+        elif text_test == text_server:
+            return test, "valid"
+        else:
+            return test, "diff"
+    except Exception:
+        return test, "error"
+
+
 async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, mincountwarn, mincountcrit):
     try:
         addressinfo = await get_address(protocol, server)
@@ -448,22 +450,20 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
                 # infomsg(ns)
                 validservers = []
                 errorservers = []
-                for test in ns:
-                    # infomsg(test)
-                    try:
-                        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
-                        text_test = await get_zone(useTcp, querydata, timeoutvalue, zone)
-                        if text_test == "":
-                            if test not in errorservers:
-                                errorservers.append(test)
-                        elif text_test == text_server:
-                            validservers.append(test)
-                        else:
-                            # zonediff = os.linesep.join(difflib.unified_diff(text_server.splitlines(),text_test.splitlines()))
-                            return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and NS server " + test + " are different.")
-                    except Exception as e:
+
+                # Execute NS checks concurrently using asyncio.gather
+                tasks = [_check_single_ns_consistency(test, useTcp, protocol, addressinfo, timeoutvalue, zone, text_server) for test in ns]
+                results = await asyncio.gather(*tasks)
+
+                for test, status in results:
+                    if status == "error":
                         if test not in errorservers:
                             errorservers.append(test)
+                    elif status == "valid":
+                        validservers.append(test)
+                    elif status == "diff":
+                        return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and NS server " + test + " are different.")
+
                 if len(validservers) < mincountcrit and mincountcrit >= 0 and len(errorservers) > 0:
                     return build_exitinfo("CRITICAL", "zone '" + zone + "' match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " | valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
                 elif len(validservers) < mincountwarn and mincountwarn >= 0 and len(errorservers) > 0:
@@ -482,6 +482,17 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
     except Exception as e:
         infomsg(traceback.format_exc())
         return build_exitinfo("CRITICAL", "error during check consistency - " + type(e).__name__ + " - " + str(e))
+
+
+async def _check_single_ns_serial(test, useTcp, protocol, addressinfo, timeoutvalue, zone):
+    try:
+        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
+        serial_test = await get_serial(useTcp, querydata, timeoutvalue, zone)
+        if serial_test == "":
+            return test, "error", None
+        return test, "valid", serial_test
+    except Exception:
+        return test, "error", None
 
 
 async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, authoritative, zone, tolerancewarn, tolerancecrit, mincountwarn, mincountcrit):
@@ -540,15 +551,16 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                 validservers = []
                 errorservers = []
                 maxdifference = -1
-                for test in ns:
-                    # infomsg(test)
-                    try:
-                        querydata = await get_query(useTcp, protocol, addressinfo, timeoutvalue, build_name(test, zone))
-                        serial_test = await get_serial(useTcp, querydata, timeoutvalue, zone)
-                        if serial_test == "":
-                            if test not in errorservers:
-                                errorservers.append(test)
-                        # infomsg(str(serial_test))
+
+                # Execute NS serial checks concurrently using asyncio.gather
+                tasks = [_check_single_ns_serial(test, useTcp, protocol, addressinfo, timeoutvalue, zone) for test in ns]
+                results = await asyncio.gather(*tasks)
+
+                for test, status, serial_test in results:
+                    if status == "error":
+                        if test not in errorservers:
+                            errorservers.append(test)
+                    elif status == "valid":
                         difference = abs(serial_test - serial_server)
                         if difference > maxdifference:
                             maxdifference = difference
@@ -561,9 +573,7 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                         if difference > 0:
                             identical = False
                         validservers.append(test)
-                    except Exception as e:
-                        if test not in errorservers:
-                            errorservers.append(test)
+
                 if len(validservers) < mincountcrit and mincountcrit >= 0 and len(errorservers) > 0:
                     return build_exitinfo("CRITICAL", "serials match, but too many servers are not responding - errors: " + " ".join(errorservers) + " - valid: " + " ".join(validservers))
                 elif len(validservers) < mincountwarn and mincountwarn >= 0 and len(errorservers) > 0:
