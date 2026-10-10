@@ -141,6 +141,8 @@ async def get_address(protocol, serverinfo):
         result = "." + "@" + str(port)
     else:
         address = ""
+
+        # 1. Check if the server string is already a valid IP address
         try:
             if protocol == "-6":
                 address = ipaddress.IPv6Address(server).compressed
@@ -150,17 +152,29 @@ async def get_address(protocol, serverinfo):
                 address = ipaddress.ip_address(server).compressed
 
             return address + "@" + str(port)
-        except Exception as e:
+        except Exception:
             pass
 
+        # 2. Asynchronously resolve the hostname using dnspython
         try:
+            # Using the default async resolver for standard system DNS queries
+            sys_resolver = dns.asyncresolver.Resolver()
             if protocol == "-6":
-                address = socket.getaddrinfo(server, None, socket.AF_INET6)[0][4][0]
+                answers = await sys_resolver.resolve(server, 'AAAA')
+                address = answers[0].to_text()
             elif protocol == "-4":
-                address = socket.getaddrinfo(server, None, socket.AF_INET)[0][4][0]
+                answers = await sys_resolver.resolve(server, 'A')
+                address = answers[0].to_text()
             else:
-                address = socket.getaddrinfo(server, None)[0][4][0]
+                # If no protocol is specified, try A first, then fallback to AAAA
+                try:
+                    answers = await sys_resolver.resolve(server, 'A')
+                    address = answers[0].to_text()
+                except dns.resolver.NoAnswer:
+                    answers = await sys_resolver.resolve(server, 'AAAA')
+                    address = answers[0].to_text()
         except Exception as e:
+            infomsg("DNS resolution failed for " + server + ": " + str(e))
             return None
 
         result = address + "@" + str(port)
