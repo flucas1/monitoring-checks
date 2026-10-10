@@ -181,7 +181,7 @@ async def get_rtc_data(device):
             tzinfo=datetime.timezone.utc
         )
 
-        return int(rtctime.timestamp())
+        return rtctime.timestamp()
 
     except Exception as e:
         exitnagios("CRITICAL", "Error reading RTC data for " + device + ": " + str(e))
@@ -220,9 +220,9 @@ async def main(forcedargs=None):
         await check_rtc_utc()
         rtctime = await get_rtc_data(device)
         infomsg(str(rtctime))
-        systime = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+        systime = datetime.datetime.now(datetime.timezone.utc).timestamp()
         infomsg(str(systime))
-        difference = abs(rtctime - systime)
+        difference = abs(int(rtctime - systime))
         evaluate(device, difference, args.warning, args.critical)
         exitnagios("CRITICAL", "Internal error")
 

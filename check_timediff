@@ -93,7 +93,7 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", str(e))
 
     # Calculate difference
-    local_epoch_time = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    local_epoch_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
     diff = local_epoch_time - server_epoch_time
     diff_msg = str(diff) + " seconds"
 
