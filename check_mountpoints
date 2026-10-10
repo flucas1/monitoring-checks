@@ -3,7 +3,7 @@
 
 import os
 import sys
-import time
+import datetime
 import argparse
 import socket
 import tempfile
@@ -11,7 +11,6 @@ import re
 import syslog
 import asyncio
 import aiofiles
-
 
 # -------------------------------------------------------------------------------
 
@@ -199,7 +198,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
                         err_mesg.append("Could not write in " + mp + " filesystem was mounted RO.")
 
     if is_rw == 1:
-        timestamp = time.strftime("%Y-%m-%d--%H-%M-%S")
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d--%H-%M-%S")
         touchfile = os.path.join(mp, ".mount_test_from_" + socket.gethostname() + "_" + timestamp + "_" + str(os.getpid()))
 
         try:
