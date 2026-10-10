@@ -4,7 +4,6 @@
 import argparse
 import asyncio
 import sys
-import time
 import datetime
 
 # -------------------------------------------------------------------------------
@@ -88,13 +87,14 @@ async def main(forcedargs=None):
     try:
         dt_format = format_map[args.server_time_format]
         parsed_time = datetime.datetime.strptime(args.server_time, dt_format)
-        server_epoch_time = int(time.mktime(parsed_time.timetuple()))
+        utc_time = parsed_time.astimezone(datetime.timezone.utc)
+        server_epoch_time = utc_time.timestamp()
     except ValueError as e:
         exitnagios("UNKNOWN", str(e))
 
     # Calculate difference
-    local_epoch_time = int(time.time())
-    diff = abs(local_epoch_time - server_epoch_time)
+    local_epoch_time = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    diff = local_epoch_time - server_epoch_time
     diff_msg = str(diff) + " seconds"
 
     # Evaluate against thresholds
