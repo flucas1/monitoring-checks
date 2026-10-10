@@ -3,7 +3,6 @@
 
 import sys
 import os
-import time
 import datetime
 import argparse
 import socket
@@ -109,7 +108,7 @@ async def run_mysql_query(query):
 
 
 async def get_alert_count(time_diff_seconds, priority_level):
-    now = int(time.time())
+    now = int(datetime.datetime.now().timestamp())
     time_diff = stamp2date(now - time_diff_seconds)
     query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '" + str(priority_level - 1) + "' and timestamp(event.timestamp) > '" + time_diff + "';"
     infomsg("get_alert_count -> " + query)
