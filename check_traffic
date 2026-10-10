@@ -10,7 +10,7 @@ import pathlib
 import pickle
 import re
 import sys
-import time
+import datetime
 import aiofiles
 
 # -------------------------------------------------------------------------------
@@ -117,7 +117,7 @@ async def get_interfaces(args):
             else:
                 interface["pretty_ifname"] = netns_name + "/" + interface["ifname"]
         interfaces.extend(interfaces_by_netns)
-    execution_time = time.time()
+    execution_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
     return execution_time, interfaces
 
 
