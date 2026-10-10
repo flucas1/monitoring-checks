@@ -3,7 +3,7 @@
 
 import argparse
 import sys
-import time
+import datetime
 import asyncio
 import aiohttp
 import aiohttp_socks
@@ -74,7 +74,7 @@ async def main(forcedargs=None):
     connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
     timeout = aiohttp.ClientTimeout(total=args.max_time)
 
-    ts = time.time_ns()
+    ts = datetime.now(timezone.utc).timestamp()
 
     try:
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
@@ -89,12 +89,13 @@ async def main(forcedargs=None):
     except Exception:
         ret = 1
 
-    tt = (time.time_ns() - ts) // 1_000_000
+    tt = datetime.now(timezone.utc).timestamp() - ts
+    mse = int(tt * 1000)
 
     if ret == 0:
-        exitnagios("OK", "Latency " + str(tt) + "ms.")
+        exitnagios("OK", "Latency " + str(mse) + "ms.")
     else:
-        exitnagios("CRITICAL", "Proxy is down, curl returns " + str(ret) + " after " + str(tt) + "ms")
+        exitnagios("CRITICAL", "Proxy is down, returning " + str(ret) + " after " + str(mse) + "ms")
 
 
 # -------------------------------------------------------------------------------
