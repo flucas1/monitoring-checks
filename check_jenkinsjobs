@@ -53,8 +53,11 @@ def exitnagios(status, message):
 
 
 async def isvalidjob(jobspath, entry):
+    infomsg("Checking for "+entry)
+
     permalinks = os.path.join(jobspath, entry, "builds", "permalinks")
-    if not os.path.isdir(permalinks):
+    if not os.path.isfile(permalinks):
+        infomsg("The statistics file was not found -> "+str(permalinks))
         return False
     else:
         lastCompletedBuild = -1
@@ -75,6 +78,7 @@ async def isvalidjob(jobspath, entry):
                     lastSuccessfulBuild = int(parts[1])
         isOK = (lastSuccessfulBuild == lastStableBuild) and (lastSuccessfulBuild == lastCompletedBuild) and (lastSuccessfulBuild > 0)
         infomsg(entry + " " + str(lastCompletedBuild) + " " + str(lastStableBuild) + " " + str(lastSuccessfulBuild) + " " + str(isOK))
+        infomsg("The project "+entry+" was evaluated as "+str(isOK))
         return isOK
 
 
