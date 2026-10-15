@@ -211,7 +211,8 @@ async def main(forcedargs=None):
     target_url = "https://" + args.host + ":" + args.port + "/upnp/control/" + url
     headers = {
         "Content-Type": "text/xml; charset='utf-8'",
-        "SOAPACTION": "urn:dslforum-org:service:" + service + ":1#" + action
+        "SOAPACTION": "urn:dslforum-org:service:" + service + ":1#" + action,
+        "Authorization": aiohttp.encode_basic_auth(username, password)
     }
     soap_body = """<?xml version='1.0'?> 
     <s:Envelope xmlns:s='http://schemas.xmlsoap.org/soap/envelope/' s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/'> 
@@ -226,7 +227,6 @@ async def main(forcedargs=None):
                 target_url,
                 data=soap_body,
                 headers=headers,
-                auth=aiohttp.BasicAuth(username, password),
                 ssl=False,
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
