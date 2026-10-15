@@ -465,9 +465,8 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
                 validservers = []
                 errorservers = []
 
-                # Execute NS checks concurrently using asyncio.gather
                 tasks = [_check_single_ns_consistency(test, useTcp, protocol, addressinfo, timeoutvalue, zone, text_server) for test in ns]
-                results = await asyncio.gather(*tasks)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 for test, status in results:
                     if status == "error":
@@ -566,9 +565,8 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                 errorservers = []
                 maxdifference = -1
 
-                # Execute NS serial checks concurrently using asyncio.gather
                 tasks = [_check_single_ns_serial(test, useTcp, protocol, addressinfo, timeoutvalue, zone) for test in ns]
-                results = await asyncio.gather(*tasks)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 for test, status, serial_test in results:
                     if status == "error":
