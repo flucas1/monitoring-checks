@@ -55,6 +55,7 @@ async def dosmstoolscall(modem):
     resultstatus = ""
     resultmsg = ""
 
+    found = False
     for counter in range(3):
         try:
             if os.path.isfile(filename):
@@ -64,6 +65,7 @@ async def dosmstoolscall(modem):
                         infomsg(line)
                         if line.startswith(modem + ":"):
                             infomsg("MATCHING -> " + line)
+                            found = True
                             resultstatus = ""
                             resultmsg = ""
                             try:
@@ -90,10 +92,11 @@ async def dosmstoolscall(modem):
                                             resultstatus = "CRITICAL"
                                     else:
                                         infomsg("the line format is unknown")
-                            except:
-                                pass
-        except:
-            pass
+                            except Exception as e:
+                                infomsg("Exception: " + str(e))
+                            break
+        except Exception as e:
+            infomsg("Exception: " + str(e))
 
         if resultmsg != "" and resultstatus != "":
             exitnagios(resultstatus, resultmsg)
@@ -101,7 +104,10 @@ async def dosmstoolscall(modem):
             infomsg("sleeping...")
             await asyncio.sleep(5)
 
-    exitnagios("CRITICAL", "modem ID " + modem + " could not be parsed or is not defined | signal=0")
+    if found:
+        exitnagios("CRITICAL", "modem ID " + modem + " could not be parsed | signal=0")
+    else:
+        exitnagios("CRITICAL", "modem ID " + modem + " is not defined | signal=0")
 
 
 # -------------------------------------------------------------------------------
