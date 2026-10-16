@@ -9,6 +9,7 @@ import datetime
 import re
 import argparse
 import asyncio
+import asyncssh
 
 # -------------------------------------------------------------------------------
 
@@ -80,48 +81,54 @@ async def doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, 
 
     retries = 3
     counter = 0
+
+    family = socket.AF_UNSPEC
+    if protocol == "-4":
+        family = socket.AF_INET
+    elif protocol == "-6":
+        family = socket.AF_INET6
+
+    connect_kwargs = {
+        "host": hostname,
+        "username": login,
+        "family": family,
+        "login_timeout": float(timeoutvalue),
+    }
+    if key != "" and key is not None:
+        connect_kwargs["client_keys"] = [key]
+        connect_kwargs["preferred_auth"] = ['publickey'] 
+    if autoaccept:
+        connect_kwargs["known_hosts"] = None
+
     while True:
-        infomsg("executing retry " + str(counter))
-        counter = counter + 1
+        infomsg(f"executing retry {counter}")
+        counter += 1
 
-        command = ["/usr/bin/ssh", "-l", login, hostname]
-        if protocol != "" and protocol is not None:
-            command = command + [protocol]
-        if key != "" and key is not None:
-            command = command + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
-        if autoaccept:
-            command = command + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
-        command = command + ["-o", "ConnectTimeout=" + str(timeoutvalue), remotecmdline]
-        infomsg(" ".join(command))
-
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-        exitcode = process.returncode
-        output = stdout.decode("utf-8").strip() if stdout else ""
-        errors = stderr.decode("utf-8").strip() if stderr else ""
-        exitcode = process.returncode
-
-        if output.endswith(": Connection timed out"):
+        try:
+            async with asyncssh.connect(**connect_kwargs) as conn:
+                result = await conn.run(remotecmdline)
+                exitcode = result.exit_status
+                output = result.stdout.strip() if result.stdout else ""
+                errors = result.stderr.strip() if result.stderr else ""
+                if exitcode == 0:
+                    infomsg(f"exitcode success {exitcode}")
+                    exitmsg = output
+                else:
+                    infomsg(f"exitcode failure {exitcode}")
+                    if output != "":
+                        infomsg(output)
+                    if errors != "":
+                        infomsg(errors)
+                break
+        except (asyncio.TimeoutError, asyncssh.TimeoutError, ConnectionError, OSError) as e:
             if counter > retries:
                 infomsg("too many retries, failing")
                 break
             else:
                 infomsg("sleeping for retry " + str(counter))
                 await asyncio.sleep(10)
-        else:
-            if exitcode == 0:
-                infomsg("exitcode success " + str(exitcode))
-                exitmsg = output
-            else:
-                infomsg("exitcode failure " + str(exitcode))
-                if output != "":
-                    infomsg(output)
-                if errors != "":
-                    infomsg(errors)
+        except asyncssh.Error as e:
+            infomsg(f"SSH Connection failed: {str(e)}")
             break
 
     return exitmsg
