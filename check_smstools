@@ -76,20 +76,31 @@ async def dosmstoolscall(modem):
                                     infomsg("failing condition detected")
                                     resultstatus = "CRITICAL"
                                     resultmsg = "modem ID " + modem + " is not connected | signal=0"
+                                # elif status in ["Receiving"]:
+                                #    infomsg("receiving condition detected")
+                                #    resultstatus = "WARNING"
+                                #    resultmsg = "modem ID " + modem + " is blocked | signal=0"
                                 else:
                                     infomsg("doing deeper analysis")
                                     if len(parts) > 5:
                                         info = parts[5].strip()
                                         blocks = info.split()
-                                        signal = blocks[3].strip("(),")
-                                        resultmsg = "modem ID " + modem + " is " + signal + " (" + blocks[1] + " dBm) | signal=" + str(blocks[1])
-                                        infomsg("the signal is " + signal)
-                                        if signal in ["Excellent", "Good", "Workable"]:
-                                            resultstatus = "OK"
-                                        elif signal in ["Marginal"]:
+                                        if len(blocks) > 2:
+                                            signal = blocks[3].strip("(),")
+                                            resultmsg = "modem ID " + modem + " is " + signal + " (" + blocks[1] + " dBm) | signal=" + str(blocks[1])
+                                            infomsg("the signal is " + signal)
+                                            if signal in ["Excellent", "Good", "Workable"]:
+                                                resultstatus = "OK"
+                                            elif signal in ["Marginal"]:
+                                                resultstatus = "WARNING"
+                                            else:
+                                                resultstatus = "CRITICAL"
+                                        elif blocks[1] == "??":
+                                            infomsg("the signal is ??")
+                                            resultmsg = "modem ID " + modem + " is ?? (-999 dBm) | signal=-999"
                                             resultstatus = "WARNING"
                                         else:
-                                            resultstatus = "CRITICAL"
+                                            infomsg("the block section '" + str(info) + "' is unknown")
                                     else:
                                         infomsg("the line format is unknown")
                             except Exception as e:
