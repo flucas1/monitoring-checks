@@ -84,7 +84,7 @@ async def doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, 
         infomsg("executing retry " + str(counter))
         counter = counter + 1
 
-        command = ["/usr/bin/ssh", login + "@" + hostname]
+        command = ["/usr/bin/ssh", "-l", login, hostname]
         if protocol != "" and protocol is not None:
             command = command + [protocol]
         if key != "" and key is not None:
