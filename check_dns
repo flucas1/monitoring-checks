@@ -594,7 +594,7 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
             if identical == True:
                 return build_exitinfo("OK", "zone in target server has identical serial " + str(serial_server) + " than the MNAME and NS entries - errors " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
             else:
-                return build_exitinfo("OK", "zone in target server withing the tolerance " + str(tolerancewarn) + " of the serial " + str(serial_server) + " from the MNAME and NS entries - errors: " + " ".join(validservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
+                return build_exitinfo("OK", "zone in target server withing the tolerance " + str(tolerancewarn) + " of the serial " + str(serial_server) + " from the MNAME and NS entries - errors: " + " ".join(errorservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
         except dns.exception.Timeout as e:
             return build_exitinfo(timeoutstatus, "timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
@@ -740,7 +740,7 @@ async def main(forcedargs=None):
         if (args.zone != ""):
             exitinfo = await check_zone(useTcp, protocol, args.hostname, timeoutvalue, timeoutstatus, args.authoritative, args.zone, args.consistency, args.serial, args.transfer, sertolerancewarn, sertolerancecrit, int(args.sermincountwarn), int(args.sermincountcrit))
         elif (args.record != ""):
-            exitinfo = await check_record(useTcp, protocol, args.hostname, timeoutvalue, timeoutstatus, args.authoritative, args.record, args.kind, args.expected, args.alternativeslogic, int(args.recmissingwarn), int(args.recmincountcrit), int(args.recmincountwarn), int(args.recmincountcrit))
+            exitinfo = await check_record(useTcp, protocol, args.hostname, timeoutvalue, timeoutstatus, args.authoritative, args.record, args.kind, args.expected, args.alternativeslogic, int(args.recmissingwarn), int(args.recmissingcrit), int(args.recmincountwarn), int(args.recmincountcrit))
         else:
             exitinfo = build_exitinfo("CRITICAL", "no zone or record defined")
     else:
