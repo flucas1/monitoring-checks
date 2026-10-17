@@ -58,10 +58,14 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
 
     uptime_min = None
     method = None
+    timed_out = False
     for key, value in alternatives.items():
         version, oid, search, factor = value
-        mycode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
-        if mycode == 0:
+        returncode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
+        if returncode is None:
+            timed_out = True
+            continue
+        if returncode == 0:
             match = re.search(search, stdout)
             if match:
                 uptime_sec = float(int(match.group(1)) * factor)
@@ -70,7 +74,10 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
                 break
 
     if method is None:
-        exitnagios("CRITICAL", "Unable to determine uptime")
+        if timed_out:
+            exitnagios(timeoutstatus, "Unable to determine uptime (timeout)")
+        else:
+            exitnagios("CRITICAL", "Unable to determine uptime")
 
     fractionaldays = uptime_sec / (3600 * 24)
     if (criticalmin != "") and (uptime_min < float(criticalmin)):
