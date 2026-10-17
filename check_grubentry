@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import os
 import re
 import asyncio
 import aiofiles
@@ -70,7 +69,7 @@ async def dogrubentrycall(expectedpos):
                 singlequotes = re.findall("'([^']*)'", line)
                 if len(singlequotes) > 0:
                     allcandidates.append(singlequotes[0])
-                doublequotes = re.findall('"([^"]*)"', line)
+                doublequotes = re.findall("\"([^\"]*)\"", line)
                 if len(doublequotes) > 0:
                     allcandidates.append(doublequotes[0])
         validcandidates = []

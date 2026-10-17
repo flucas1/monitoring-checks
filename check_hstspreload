@@ -6,12 +6,10 @@ import sys
 import argparse
 import asyncio
 import datetime
-
 import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -106,11 +104,11 @@ async def wait_page_loaded(driver):
 async def dohstspreloadcall(proxy, domain):
     infomsg(proxy)
     infomsg(domain)
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://hstspreload.org/?domain=" + domain
@@ -170,6 +168,9 @@ async def dohstspreloadcall(proxy, domain):
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 # -------------------------------------------------------------------------------
 
