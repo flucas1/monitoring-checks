@@ -166,11 +166,11 @@ def parse_args(forcedargs=None):
     maintimeout = sys.argv[1]
     childtimeout = args.timeout
 
-    return hostnames,maintimeout,childtimeout,sys.argv[2],unknown
+    return hostnames, maintimeout, childtimeout, sys.argv[2], unknown
 
 
 async def main(forcedargs=None):
-    hostnames,maintimeout,childtimeout,script,childargs = parse_args(forcedargs)
+    hostnames, maintimeout, childtimeout, script, childargs = parse_args(forcedargs)
     setcandebug(False)
 
     infomsg(maintimeout)

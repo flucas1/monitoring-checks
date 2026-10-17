@@ -254,7 +254,7 @@ async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalu
         totalfound = len(rows)
         infomsg("found " + str(totalfound) + " entries")
         for item in rows:
-            #infomsg(str(item))
+            # infomsg(str(item))
             issuerid = str(item["issuer"])
             certificateid = str(item["id"])
             if (issuerid not in issuers) and (certificateid not in ignored):

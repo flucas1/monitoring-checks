@@ -7,6 +7,7 @@ import pathlib
 
 # -------------------------------------------------------------------------------
 
+
 async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_env: dict):
     print(f"\n--- Processing: {file_path.name} ---")
 
@@ -40,7 +41,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 
     except Exception as e:
         print(f"Aider failed on {file_path.name} with error: {e}")
-    
+
     return success
 
 
@@ -68,10 +69,11 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
 # -------------------------------------------------------------------------------
 
+
 async def main():
     DIRECTORY = "."
-    #MODEL = "ollama/qwen3-coder-next:latest"
-    #MODEL = "ollama/qwen3.8:latest"
+    # MODEL = "ollama/qwen3-coder-next:latest"
+    # MODEL = "ollama/qwen3.8:latest"
     MODEL = "ollama/mgraffam/qwen3.8-coder390:27b"
     PROMPT = []
     PROMPT.append("Keep the comments.")
@@ -79,7 +81,7 @@ async def main():
     PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     PROMPT.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
     PROMPT.append("File reading and writing should be always async.")
-    PROMPT.append("For python imports do not use 'from'.")
+    PROMPT.append("For python imports do not use 'from', use only import.")
     PROMPT.append("Remove legacy subprocess, urllib, requests and concurrent.futures and replace them with async alternatives.")
     PROMPT.append("Prefer \" rather than ' for string delimitator.")
     PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
@@ -92,6 +94,7 @@ async def main():
     PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
     PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
     PROMPT.append("Executables should be full paths.")
+    PROMPT.append("File read and write operations should be async.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 

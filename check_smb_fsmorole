@@ -115,7 +115,7 @@ async def main(forcedargs=None):
         (PdcEmulationMasterRole == args.master) and
         (DomainNamingMasterRole == args.master) and
         (DomainDnsZonesMasterRole == args.master) and
-        (ForestDnsZonesMasterRole == args.master)):
+            (ForestDnsZonesMasterRole == args.master)):
         exitnagios("OK", "All FSMO roles are " + args.master)
     else:
         exitnagios("CRITICAL", "not all FSMO roles match " + args.master + " -- " + " -- ".join(roles))

@@ -110,6 +110,7 @@ def parse_args(forcedargs=None):
     args = parser.parse_args(forcedargs)
     return args
 
+
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
@@ -141,24 +142,24 @@ async def main(forcedargs=None):
         "keepalive": args.keepalive,
         "client_id": "nagios-" + str(os.getpid())
     }
-    
+
     if args.mqtt_username is not None:
         client_kwargs["username"] = args.mqtt_username
         client_kwargs["password"] = args.mqtt_password
-        
+
     if tls_context is not None:
         client_kwargs["tls"] = tls_context
 
     infomsg("Starting loop")
-    
+
     status = "OK"
     message = "no issues"
     try:
         async with zmqtt.create_client(**client_kwargs) as client:
-            
+
             # Use zmqtt's context manager subscription to read messages
             async with client.subscribe(args.check_subscription) as messages:
-                
+
                 # Publish active check message if not explicitly in readonly mode
                 if not args.mqtt_readonly:
                     await client.publish(args.check_topic, args.mqtt_payload, qos=zmqtt.QoS.EXACTLY_ONCE, retain=False)
@@ -185,7 +186,7 @@ async def main(forcedargs=None):
                             payload = None
                     else:
                         payload = rawpayload
-                        
+
                     infomsg("The payload is " + str(payload))
 
                     elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
