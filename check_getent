@@ -65,19 +65,18 @@ async def checkgetent(database, key, value, partial, outputlevel):
         if exitcode != 0:
             exitnagios("CRITICAL", "non-zero exit code from getent")
     except Exception as e:
-        exitnagios("CRITICAL", "exception during getent call")
+        exitnagios("CRITICAL", "exception during getent call: " + str(e))
 
-    if output is None:
+    if output in ["", None]:
         exitnagios("CRITICAL", "no output from getent")
     else:
         lines = output.splitlines()
-        isok = False
         found = False
         for line in lines:
             infomsg("Evaluating line - " + line)
             if line.startswith(key + ":"):
                 found = True
-                if ((value == None) or (value == "")):
+                if (value is None) or (value == ""):
                     exitnagios("OK", "found key and no expected value was set - " + line)
                 elif (line == key + value):
                     exitnagios("OK", "found fully matching expected line " + line)
