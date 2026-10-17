@@ -106,82 +106,82 @@ def check_limits(state, low, high, name, return_code):
 def build_thresholds(args):
     thresholds = {}
 
-    thresholds['numeric_limits'] = args.number_warn is not None or args.number_crit is not None or args.number_unkn is not None
-    if thresholds['numeric_limits']:
-        thresholds['number_warn_low'], thresholds['number_warn_high'] = split_threshold(args.number_warn, "number_warn", lambda i, f: float(i))
-        thresholds['number_crit_low'], thresholds['number_crit_high'] = split_threshold(args.number_crit, "number_crit", lambda i, f: float(i))
-        thresholds['number_unkn_low'], thresholds['number_unkn_high'] = split_threshold(args.number_unkn, "number_unkn", lambda i, f: float(i))
-        infomsg("# numeric thresholds: " + str(thresholds['number_unkn_low']) + " <<< " + str(thresholds['number_crit_low']) + " << " + str(thresholds['number_warn_low']) + " < x > " + str(thresholds['number_warn_high']) + " >> " + str(thresholds['number_crit_high']) + " >>> " + str(thresholds['number_unkn_high']))
+    thresholds["numeric_limits"] = args.number_warn is not None or args.number_crit is not None or args.number_unkn is not None
+    if thresholds["numeric_limits"]:
+        thresholds["number_warn_low"], thresholds["number_warn_high"] = split_threshold(args.number_warn, "number_warn", lambda i, f: float(i))
+        thresholds["number_crit_low"], thresholds["number_crit_high"] = split_threshold(args.number_crit, "number_crit", lambda i, f: float(i))
+        thresholds["number_unkn_low"], thresholds["number_unkn_high"] = split_threshold(args.number_unkn, "number_unkn", lambda i, f: float(i))
+        infomsg("# numeric thresholds: " + str(thresholds["number_unkn_low"]) + " <<< " + str(thresholds["number_crit_low"]) + " << " + str(thresholds["number_warn_low"]) + " < x > " + str(thresholds["number_warn_high"]) + " >> " + str(thresholds["number_crit_high"]) + " >>> " + str(thresholds["number_unkn_high"]))
 
-    thresholds['datetime_limits'] = args.datetime_warn is not None or args.datetime_crit is not None
-    if thresholds['datetime_limits']:
-        thresholds['datetime_warn_low'], thresholds['datetime_warn_high'] = split_threshold(args.datetime_warn, "datetime_warn", lambda i, f: parse_iso8601(i, f))
-        thresholds['datetime_crit_low'], thresholds['datetime_crit_high'] = split_threshold(args.datetime_crit, "datetime_crit", lambda i, f: parse_iso8601(i, f))
-        infomsg("# time thresholds: " + str(thresholds['datetime_crit_low']) + " << " + str(thresholds['datetime_warn_low']) + " < x > " + str(thresholds['datetime_warn_high']) + " >> " + str(thresholds['datetime_crit_high']))
+    thresholds["datetime_limits"] = args.datetime_warn is not None or args.datetime_crit is not None
+    if thresholds["datetime_limits"]:
+        thresholds["datetime_warn_low"], thresholds["datetime_warn_high"] = split_threshold(args.datetime_warn, "datetime_warn", lambda i, f: parse_iso8601(i, f))
+        thresholds["datetime_crit_low"], thresholds["datetime_crit_high"] = split_threshold(args.datetime_crit, "datetime_crit", lambda i, f: parse_iso8601(i, f))
+        infomsg("# time thresholds: " + str(thresholds["datetime_crit_low"]) + " << " + str(thresholds["datetime_warn_low"]) + " < x > " + str(thresholds["datetime_warn_high"]) + " >> " + str(thresholds["datetime_crit_high"]))
 
-    thresholds['string_limits'] = args.string_ok is not None or args.string_warn is not None or args.string_crit is not None
-    if thresholds['string_limits']:
+    thresholds["string_limits"] = args.string_ok is not None or args.string_warn is not None or args.string_crit is not None
+    if thresholds["string_limits"]:
         if args.string_ok:
             try:
-                thresholds['compiled_regex_ok'] = re.compile(args.string_ok)
+                thresholds["compiled_regex_ok"] = re.compile(args.string_ok)
             except:
                 exitnagios("CRITICAL", "Unable to compile string OK regex: " + args.string_ok)
         else:
-            thresholds['compiled_regex_ok'] = None
+            thresholds["compiled_regex_ok"] = None
 
         if args.string_warn:
             try:
-                thresholds['compiled_regex_warn'] = re.compile(args.string_warn)
+                thresholds["compiled_regex_warn"] = re.compile(args.string_warn)
             except:
                 exitnagios("CRITICAL", "Unable to compile string WARNING regex: " + args.string_warn)
         else:
-            thresholds['compiled_regex_warn'] = None
+            thresholds["compiled_regex_warn"] = None
 
         if args.string_crit:
             try:
-                thresholds['compiled_regex_crit'] = re.compile(args.string_crit)
+                thresholds["compiled_regex_crit"] = re.compile(args.string_crit)
             except:
                 exitnagios("CRITICAL", " Unable to compile string CRITICAL regex: " + args.string_crit)
         else:
-            thresholds['compiled_regex_crit'] = None
+            thresholds["compiled_regex_crit"] = None
 
     return thresholds
 
 
 def check_thresholds(thresholds, state, name):
-    if thresholds.get('numeric_limits'):
+    if thresholds.get("numeric_limits"):
         try:
             state_float = float(state.split()[0])
         except ValueError as e:
             return ("CRITICAL", "Numeric thresholds given for non-numeric state: " + str(state) + " | value=" + str(state))
-        rc, message = check_limits(state_float, thresholds.get('number_unkn_low'), thresholds.get('number_unkn_high'), name, "UNKNOWN")
+        rc, message = check_limits(state_float, thresholds.get("number_unkn_low"), thresholds.get("number_unkn_high"), name, "UNKNOWN")
         if rc is not None:
             return (rc, message)
-        rc, message = check_limits(state_float, thresholds.get('number_crit_low'), thresholds.get('number_crit_high'), name, "CRITICAL")
+        rc, message = check_limits(state_float, thresholds.get("number_crit_low"), thresholds.get("number_crit_high"), name, "CRITICAL")
         if rc is not None:
             return (rc, message)
-        rc, message = check_limits(state_float, thresholds.get('number_warn_low'), thresholds.get('number_warn_high'), name, "WARNING")
+        rc, message = check_limits(state_float, thresholds.get("number_warn_low"), thresholds.get("number_warn_high"), name, "WARNING")
         if rc is not None:
             return (rc, message)
         return ("OK", name + " state within valid numeric range: " + str(state) + " | value=" + str(state))
 
-    if thresholds.get('datetime_limits'):
+    if thresholds.get("datetime_limits"):
         try:
             state_time = dateutil.parser.parse(state)
         except ValueError as e:
             return ("CRITICAL", "Time thresholds given for non-time state: " + str(state) + " | value=" + str(state))
-        rc, message = check_limits(state_time, thresholds.get('datetime_crit_low'), thresholds.get('datetime_crit_high'), name, "CRITICAL")
+        rc, message = check_limits(state_time, thresholds.get("datetime_crit_low"), thresholds.get("datetime_crit_high"), name, "CRITICAL")
         if rc is not None:
             return (rc, message)
-        rc, message = check_limits(state_time, thresholds.get('datetime_warn_low'), thresholds.get('datetime_warn_high'), name, "WARNING")
+        rc, message = check_limits(state_time, thresholds.get("datetime_warn_low"), thresholds.get("datetime_warn_high"), name, "WARNING")
         if rc is not None:
             return (rc, message)
         return ("OK", name + " state within valid datetime range: " + str(state))
 
-    if thresholds.get('string_limits'):
-        compiled_regex_crit = thresholds.get('compiled_regex_crit')
-        compiled_regex_warn = thresholds.get('compiled_regex_warn')
-        compiled_regex_ok = thresholds.get('compiled_regex_ok')
+    if thresholds.get("string_limits"):
+        compiled_regex_crit = thresholds.get("compiled_regex_crit")
+        compiled_regex_warn = thresholds.get("compiled_regex_warn")
+        compiled_regex_ok = thresholds.get("compiled_regex_ok")
 
         if compiled_regex_crit and compiled_regex_crit.search(state):
             return ("CRITICAL", name + " string regex critical matched state: " + str(state) + " | value=" + str(state))
@@ -192,7 +192,7 @@ def check_thresholds(thresholds, state, name):
         else:
             return ("UNKNOWN", name + " any regex is matching " + str(state) + " | value=" + str(state))
 
-    return ("OK", name + " state within fallback sittuation: " + str(state) + " | value=" + str(state))
+    return ("OK", name + " state within fallback situation: " + str(state) + " | value=" + str(state))
 
 
 async def check_item(object_json, thresholds, timeoutstatus):
@@ -206,7 +206,7 @@ async def check_thing(object_json, args):
     status = object_json["statusInfo"]["status"]
     if status == "ONLINE":
         rc = "OK"
-    elif status == "UNKONWN":
+    elif status == "UNKNOWN":
         rc = "UNKNOWN"
     else:
         rc = "CRITICAL"
@@ -268,17 +268,17 @@ async def fetch_object(item_url, args, timeoutstatus):
                 auth_params.append(filecontentslines[1])
 
         auth_header = aiohttp.encode_basic_auth(auth_params[0], auth_params[1])
-        headers['Authorization'] = auth_header
+        headers["Authorization"] = auth_header
 
-    max_retries = getattr(args, 'retries', 3)
-    retry_delay = getattr(args, 'retry_delay', 2)
+    max_retries = getattr(args, "retries", 3)
+    retry_delay = getattr(args, "retry_delay", 2)
     retryable_statuses = {408, 429, 500, 502, 503, 504}
     for attempt in range(max_retries + 1):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
                     if response.status in retryable_statuses and attempt < max_retries:
-                        infomsg(f"# HTTP {response.status} received. Retrying {attempt + 1}/{max_retries} in {retry_delay}s...")
+                        infomsg("# HTTP " + str(response.status) + " received. Retrying " + str(attempt + 1) + "/" + str(max_retries) + " in " + str(retry_delay) + "s...")
                         await asyncio.sleep(retry_delay)
                         continue
                     elif response.status == 404:
@@ -290,11 +290,11 @@ async def fetch_object(item_url, args, timeoutstatus):
                     return object_json
         except Exception as e:
             if attempt < max_retries:
-                infomsg(f"# Exception fetching item data: {str(e)}. Retrying {attempt + 1}/{max_retries} in {retry_delay}s...")
+                infomsg("# Exception fetching item data: " + str(e) + ". Retrying " + str(attempt + 1) + "/" + str(max_retries) + " in " + str(retry_delay) + "s...")
                 await asyncio.sleep(retry_delay)
                 continue
             exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
-            
+
     exitnagios(timeoutstatus, "exception fetching item data - Max retries exceeded.")
 
 

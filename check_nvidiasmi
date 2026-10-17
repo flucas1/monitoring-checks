@@ -55,12 +55,12 @@ def extract_element(rootobj, blockname, entryname):
     if rootobj is not None:
         try:
             blockobj = rootobj.find(blockname)
-        except:
+        except Exception:
             blockobj = None
         if blockobj is not None:
             try:
                 entryobj = blockobj.find(entryname)
-            except:
+            except Exception:
                 entryobj = None
             if entryobj is not None:
                 return entryobj.text
@@ -74,7 +74,7 @@ def parse_element(rootobj, blockname, entryname):
         if len(parts) > 0:
             try:
                 candidate = float(parts[0])
-            except:
+            except Exception:
                 candidate = None
             return candidate
     return None
@@ -103,6 +103,7 @@ def mergestatus(final, partial):
         return "WARNING"
     if partial == "OK" and final not in ["CRITICAL", "UNKNOWN", "WARNING"]:
         return "OK"
+    return final
 
 
 async def nvidiasmicheck(gpu_warning, gpu_critical, memory_warning, memory_critical, temperature_warning, temperature_critical, device):
