@@ -74,7 +74,7 @@ async def main(forcedargs=None):
     connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
     timeout = aiohttp.ClientTimeout(total=args.max_time)
 
-    ts = datetime.now(timezone.utc).timestamp()
+    ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
 
     try:
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
@@ -89,7 +89,7 @@ async def main(forcedargs=None):
     except Exception:
         ret = 1
 
-    tt = datetime.now(timezone.utc).timestamp() - ts
+    tt = datetime.datetime.now(datetime.timezone.utc).timestamp() - ts
     mse = int(tt * 1000)
 
     if ret == 0:

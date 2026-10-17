@@ -190,7 +190,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
-    parser.add_argument("-p", "--port", dest="port", default=25, help="port to use, usually 143 or 993")
+    parser.add_argument("-p", "--port", dest="port", default=25, help="port to use, usually 25 or 465 or 587")
     parser.add_argument("-w", "--warning", dest="warning", default=15, help="warning time (float)")
     parser.add_argument("-c", "--critical", dest="critical", default=20, help="critical time (float)")
     parser.add_argument("-S", "--ssl", action="store_true", dest="ssl", default=False, help="use ssl")
@@ -240,7 +240,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await dosmtpcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays, args.relay, args.blocked, source)
+        await dosmtpcheck(protocol, args.hostname, int(args.port), args.ssl, float(args.warning), float(args.critical), timeoutvalue, timeoutstatus, args.certificatedays, args.relay, args.blocked, source)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
