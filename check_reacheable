@@ -199,14 +199,14 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
                     critreasons.append(reason)
         infomsg(str(result))
 
-    if not hosts:
-        average = 0.0
+    if not hosts or not protocolslist:
+        average_latency = 0.0
         average_percent_loss = 0.0
     else:
         average_latency = total_latency / len(hosts)
         average_percent_loss = total_percent_loss / len(hosts)
     success_percent = 100.0 - average_percent_loss
-    if not protocolslist:
+    if not hosts or not protocolslist:
         valid_ratio = 0.0
     else:
         valid_ratio = total_valid / len(protocolslist)
