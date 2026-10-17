@@ -8,7 +8,6 @@ import argparse
 import socket
 import tempfile
 import re
-import syslog
 import asyncio
 import aiofiles
 
@@ -65,8 +64,9 @@ async def create_zfs_fstab(original_fstab):
             tmp_fstab.write(content)
 
     try:
+        cmdline = ["zfs", "list", "-H", "-o", "name"]
         process = await asyncio.create_subprocess_exec(
-            "zfs", "list", "-H", "-o", "name",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -74,8 +74,9 @@ async def create_zfs_fstab(original_fstab):
         zfs_list = stdout.decode().strip().splitlines()
 
         for ds in zfs_list:
+            cmdline = ["zfs", "get", "-H", "mountpoint", ds]
             process = await asyncio.create_subprocess_exec(
-                "zfs", "get", "-H", "mountpoint", ds,
+                *cmdline,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -87,8 +88,9 @@ async def create_zfs_fstab(original_fstab):
             if not os.path.isdir(mp):
                 continue
 
+            cmdline = ["zfs", "get", "-H", "canmount", ds]
             process = await asyncio.create_subprocess_exec(
-                "zfs", "get", "-H", "canmount", ds,
+                *cmdline,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -100,8 +102,9 @@ async def create_zfs_fstab(original_fstab):
             if canmount == "off":
                 continue
 
+            cmdline = ["zfs", "get", "-H", "readonly", ds]
             process = await asyncio.create_subprocess_exec(
-                "zfs", "get", "-H", "readonly", ds,
+                *cmdline,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
