@@ -111,9 +111,7 @@ async def main(forcedargs=None):
     port_str = ":" + str(args.port) if args.port else ""
 
     url = proto + args.hostname + port_str + args.uri
-    if "?" not in url:
-        url += "?auto"
-    elif not url.endswith("auto"):
+    if "?" not in url or not url.endswith("auto"):
         url += "?auto"
 
     verify = not args.no_validate
