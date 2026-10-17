@@ -187,8 +187,8 @@ async def systemd_check(service, system, user, toleratecriticallist, toleratewar
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--service", dest="service", default=None, help="Name of the Service that is beeing tested")
-    parser.add_argument("-m", "--system", action="store_true", dest="system", default=False, help="Check the gobal systemd (default)")
+    parser.add_argument("-s", "--service", dest="service", default=None, help="Name of the Service that is being tested")
+    parser.add_argument("-m", "--system", action="store_true", dest="system", default=False, help="Check the global systemd (default)")
     parser.add_argument("-u", "--user", dest="user", default="root", help="Check at userlevel (linger) systemd (default root)")
     parser.add_argument("-l", "--toleratecritical", dest="toleratecritical", default="", help="Systemd units to mark as warning instead of critical")
     parser.add_argument("-e", "--toleratewarning", dest="toleratewarning", default="", help="Systemd units to mark as ok instead of warning")
