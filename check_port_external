@@ -52,7 +52,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def dointernalcall(ipprotocol, tcporudp, hostname, port):
+async def dointernalcall(ipprotocol, tcporudp, hostname, port, timeoutvalue):
     try:
         if ipprotocol == "4":
             sfamily = socket.AF_INET
@@ -67,7 +67,7 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port):
         except Exception:
             return "ERROR: issue resolving ip address"
 
-        timeout = 5
+        timeout = timeoutvalue
         content = "ERROR: uninitialized"
 
         if tcporudp == "tcp":
@@ -131,7 +131,7 @@ async def doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcpo
         ipprotocol = ipprotocol.strip().replace("-", "")
         tcporudp = tcporudp.lower().strip()
         if baseurl in ["", None]:
-            content = await dointernalcall(ipprotocol, tcporudp, hostname, port)
+            content = await dointernalcall(ipprotocol, tcporudp, hostname, port, timeoutvalue)
         else:
             content = await dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
         infomsg(content)
