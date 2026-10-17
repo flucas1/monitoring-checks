@@ -144,7 +144,7 @@ async def get_uptime(url, headers, timeout):
         return None
     else:
         temp = json.loads(r)["uptime"]
-        parts = temp.replace("(", "Â¶").replace(")", "Â¶").split("Â¶")
+        parts = temp.replace("(", "¶").replace(")", "¶").split("¶")
         since = parts[0]
         up = parts[1].split()[0]
         return json.loads('{"since":"' + since + '", "uptime":"' + up + '"}')
@@ -283,7 +283,7 @@ async def get_settings(url, headers, timeout):
     :returns: JSON with Router settings
     """
     settings = {}
-    for s in ["time_zone", "time_zone_dst", "time_zone_x", "time_zone_dstoff", "time_zone",
+    for s in ["time_zone", "time_zone_dst", "time_zone_x", "time_zone_dstoff",
               "ntp_server0", "acs_dfs", "productid", "apps_sq", "lan_hwaddr", "lan_ipaddr",
               "lan_proto", "x_Setting", "label_mac", "lan_netmask", "lan_gateway",
               "http_enable", "https_lanport", "wl0_country_code", "wl1_country_code"]:
