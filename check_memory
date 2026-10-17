@@ -53,7 +53,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def get_memory_info(opt_C, opt_v):
+async def get_memory_info():
     used_memory_kb = 0
     free_memory_kb = 0
     total_memory_kb = 0
@@ -146,7 +146,7 @@ async def main(forcedargs=None):
     elif args.warning >= args.critical and args.used:
         exitnagios("UNKNOWN", "WARNING level must not be greater than CRITICAL when checking USED memory!")
 
-    free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info(args.caches, args.debug)
+    free_kb, used_kb, caches_kb, hugepages_kb = await get_memory_info()
 
     if args.debug:
         infomsg(str(free_kb) + " Free\n" + str(used_kb) + " Used\n" + str(caches_kb) + " Cache")
