@@ -2,7 +2,6 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import os
 import asyncio
 import argparse
 
@@ -57,7 +56,7 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
         cmdline = multiargs + ["-H", host]
         if childtimeoutvalue is not None and childtimeoutstatus is not None:
             cmdline = cmdline + ["-t", str(childtimeoutvalue) + ":" + childtimeoutstatus]
-        infomsg("cmdline -> "+str(cmdline))
+        infomsg("cmdline -> " + str(cmdline))
 
         process = await asyncio.create_subprocess_exec(
             *cmdline,

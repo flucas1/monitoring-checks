@@ -6,7 +6,6 @@ import sys
 import re
 import asyncio
 import datetime
-import socket
 
 # -------------------------------------------------------------------------------
 
@@ -61,7 +60,7 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
     method = None
     for key, value in alternatives.items():
         version, oid, search, factor = value
-        mycode, stdout = await snmpget(hostname, port, version, community, oid)
+        mycode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
         if mycode == 0:
             match = re.search(search, stdout)
             if match:
@@ -86,8 +85,8 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
         exitnagios("OK", "The uptime is " + str(datetime.timedelta(minutes=uptime_min)) + " - (SNMP method: " + method + ") | uptime=" + str(fractionaldays))
 
 
-async def snmpget(hostname, port, version, community, oid):
-    cmdline = ["/usr/bin/snmpget", "-v", version, "-c", community, hostname + ":" + str(port), oid]
+async def snmpget(hostname, port, version, community, oid, timeoutvalue):
+    cmdline = ["/usr/bin/snmpget", "-v", version, "-c", community, "-t", str(timeoutvalue), hostname + ":" + str(port), oid]
     infomsg("[ '" + ("' '".join(cmdline)) + "' ]")
 
     process = await asyncio.create_subprocess_exec(
