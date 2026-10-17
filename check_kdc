@@ -56,8 +56,9 @@ async def cleanup(cc_path, conf_path):
     """Destroy credentials and remove temporary configuration."""
     if cc_path and os.path.exists(cc_path):
         try:
+            cmdline = ["kdestroy", "-c", cc_path]
             process = await asyncio.create_subprocess_exec(
-                "kdestroy", "-c", cc_path,
+                *cmdline,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
