@@ -84,7 +84,7 @@ async def do_sensors_call(expected):
                                 infomsg(alarmkey + " -> " + str(value_info))
                                 try:
                                     alarmvalue = float(value_info)
-                                except:
+                                except Exception:
                                     alarmvalue = -1
                                 if alarmvalue != 0:
                                     inputname = str(value_name).replace("alarm", "input")
@@ -92,7 +92,7 @@ async def do_sensors_call(expected):
                                     try:
                                         inputvalue = device_info[inputname]
                                         inputvalue = float(inputvalue)
-                                    except:
+                                    except Exception:
                                         inputvalue = None
                                     if inputvalue is not None:
                                         infomsg(inputkey + " -> " + str(inputvalue))
