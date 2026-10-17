@@ -51,7 +51,7 @@ def exitnagios(status, message):
 async def snmp_get(oid, host, community):
     """Perform an SNMP GET operation using the snmpget command asynchronously."""
     try:
-        cmdline = ["snmpget", "-v2c", "-c", community, host, oid]
+        cmdline = ["/usr/bin/snmpget", "-v2c", "-c", community, host, oid]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
