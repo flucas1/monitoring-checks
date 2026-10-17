@@ -88,6 +88,8 @@ async def main(forcedargs=None):
         ret = 1
     except Exception:
         ret = 1
+    finally:
+        await connector.close()
 
     tt = datetime.datetime.now(datetime.timezone.utc).timestamp() - ts
     mse = int(tt * 1000)

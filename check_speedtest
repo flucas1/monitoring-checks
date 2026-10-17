@@ -110,7 +110,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-c", "--critical-download", type=float, required=True, help="Download Critical Level - *Required*")
     parser.add_argument("-W", "--warning-upload", type=float, required=True, help="Upload Warning Level - *Required*")
     parser.add_argument("-C", "--critical-upload", type=float, required=True, help="Upload Critical Level - *Required*")
-    parser.add_argument("-l", "--location", choices=["i", "e"], required=True, help="Location of speedtest server (\"i\" or \"e\")")
+    parser.add_argument("-l", "--location", choices=["i", "e"], required=True, help="Location of speedtest server ('i' or 'e')")
     parser.add_argument("-s", "--server", type=str, default="", help="Server integer or URL for the speedtest server to test against")
     parser.add_argument("-p", "--perfdata", action="store_true", help="Output Performance Data")
     parser.add_argument("-m", "--max-download", type=float, help="Download Maximum Level")
