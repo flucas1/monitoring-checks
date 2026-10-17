@@ -68,7 +68,7 @@ async def check_file_has_windows_endings(filepath):
     return "\r\n" in content
 
 
-async def scan_directory(path, debug, ignore_files=None, ignore_folders=None, ignore_extensions=None):
+async def scan_directory(path, ignore_files=None, ignore_folders=None, ignore_extensions=None):
     """Scan a directory recursively for text files with Windows line endings."""
     found_files = []
 
@@ -143,7 +143,7 @@ async def main(forcedargs=None):
     ignore_folders = []
     ignore_extensions = [".pyc", ".gpg", ".gpg~", ".tgz", ".mp3", ".cache", ".keytab"]
     for path in paths_to_check:
-        found_files = await scan_directory(path, args.debug, ignore_files, ignore_folders, ignore_extensions)
+        found_files = await scan_directory(path, ignore_files, ignore_folders, ignore_extensions)
         all_found_files.extend(found_files)
 
     if len(all_found_files) > 0:
