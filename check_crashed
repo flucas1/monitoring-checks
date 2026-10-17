@@ -120,7 +120,7 @@ async def dolastloginscall(warning, critical):
                 else:
                     try:
                         crashdate = dateutil.parser.parse(linecurrent[4])
-                    except:
+                    except Exception:
                         pass
         else:
             crashed = False
