@@ -71,12 +71,12 @@ async def main(forcedargs=None):
     if not args.ip or not args.port or not args.target:
         exitnagios("UNKNOWN", "Missing required parameter(s).")
 
-    connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
     timeout = aiohttp.ClientTimeout(total=args.max_time)
-
     ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    connector = None
 
     try:
+        connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             async with session.get(args.target) as response:
                 ret = 0 if response.status == 200 else 1
@@ -89,7 +89,8 @@ async def main(forcedargs=None):
     except Exception:
         ret = 1
     finally:
-        await connector.close()
+        if connector is not None:
+            await connector.close()
 
     tt = datetime.datetime.now(datetime.timezone.utc).timestamp() - ts
     mse = int(tt * 1000)
