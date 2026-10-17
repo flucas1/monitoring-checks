@@ -3,8 +3,6 @@
 
 import argparse
 import sys
-import re
-import socket
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -71,7 +69,7 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
 
     values = {}
     for key, oid in parameters.items():
-        mycode, stdout = await snmpget(hostname, port, version, community, oid)
+        mycode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
         if mycode == 0:
             values[key] = extractvalue(stdout)
         else:
@@ -99,8 +97,8 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
         exitnagios("OK", "The signal is " + str(signal) + " | signal=" + str(signal) + " noise=" + str(noise))
 
 
-async def snmpget(hostname, port, version, community, oid):
-    cmdline = ["/usr/bin/snmpget", "-v", version, "-c", community, hostname + ":" + str(port), oid]
+async def snmpget(hostname, port, version, community, oid, timeoutvalue):
+    cmdline = ["/usr/bin/snmpget", "-v", version, "-c", community, "-t", str(timeoutvalue), hostname + ":" + str(port), oid]
     infomsg("[ '" + ("' '".join(cmdline)) + "' ]")
 
     process = await asyncio.create_subprocess_exec(
