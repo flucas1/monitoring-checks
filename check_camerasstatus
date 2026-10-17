@@ -7,6 +7,7 @@ import os
 import asyncio
 import datetime
 import io
+import aiofiles
 import tesserocr
 import PIL.Image
 import PIL.ImageOps
@@ -60,7 +61,9 @@ async def extract_text(cameraspath, entry):
     api = None
     try:
         infomsg(fullpath)
-        im = PIL.Image.open(fullpath)
+        async with aiofiles.open(fullpath, "rb") as f:
+            imagedata = await f.read()
+        im = PIL.Image.open(io.BytesIO(imagedata))
         w, h = im.size
         im_crop = im.crop((0, 0, w, int(h / 3)))
         im_invert = PIL.ImageOps.invert(im)
