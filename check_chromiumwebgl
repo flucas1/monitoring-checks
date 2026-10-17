@@ -102,6 +102,7 @@ async def wait_page_loaded(driver):
 
 
 async def dowebgl(proxy):
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -131,6 +132,9 @@ async def dowebgl(proxy):
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 
 # -------------------------------------------------------------------------------
