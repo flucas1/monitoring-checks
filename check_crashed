@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import os
 import asyncio
 import datetime
 import dateutil.parser

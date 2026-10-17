@@ -64,8 +64,6 @@ async def extract_text(cameraspath, entry):
         async with aiofiles.open(fullpath, "rb") as f:
             imagedata = await f.read()
         im = PIL.Image.open(io.BytesIO(imagedata))
-        w, h = im.size
-        im_crop = im.crop((0, 0, w, int(h / 3)))
         im_invert = PIL.ImageOps.invert(im)
 
         api = tesserocr.PyTessBaseAPI()
