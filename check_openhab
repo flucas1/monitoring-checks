@@ -273,9 +273,9 @@ async def fetch_object(item_url, args, timeoutstatus):
     max_retries = getattr(args, "retries", 3)
     retry_delay = getattr(args, "retry_delay", 2)
     retryable_statuses = {408, 429, 500, 502, 503, 504}
-    for attempt in range(max_retries + 1):
-        try:
-            async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession() as session:
+        for attempt in range(max_retries + 1):
+            try:
                 async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
                     if response.status in retryable_statuses and attempt < max_retries:
                         infomsg("# HTTP " + str(response.status) + " received. Retrying " + str(attempt + 1) + "/" + str(max_retries) + " in " + str(retry_delay) + "s...")
@@ -288,12 +288,12 @@ async def fetch_object(item_url, args, timeoutstatus):
                     object_json = await response.json()
                     infomsg("# " + str(json.dumps(object_json)))
                     return object_json
-        except Exception as e:
-            if attempt < max_retries:
-                infomsg("# Exception fetching item data: " + str(e) + ". Retrying " + str(attempt + 1) + "/" + str(max_retries) + " in " + str(retry_delay) + "s...")
-                await asyncio.sleep(retry_delay)
-                continue
-            exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
+            except Exception as e:
+                if attempt < max_retries:
+                    infomsg("# Exception fetching item data: " + str(e) + ". Retrying " + str(attempt + 1) + "/" + str(max_retries) + " in " + str(retry_delay) + "s...")
+                    await asyncio.sleep(retry_delay)
+                    continue
+                exitnagios(timeoutstatus, "exception fetching item data - " + str(e))
 
     exitnagios(timeoutstatus, "exception fetching item data - Max retries exceeded.")
 
