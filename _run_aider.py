@@ -22,6 +22,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
     ]
 
     try:
+        print("EXECUTING -> " + " ".join(cmdline))
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             env=custom_env
