@@ -209,11 +209,11 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         else:
             infomsg("extracting errors")
             errors = await tryfindbyclassname(driver, "error")
-            infomsg(len(errors))
+            infomsg(str(len(errors)))
             countError = 0
             for item in errors:
                 words = item.text.split()
-                infomsg(words)
+                infomsg(str(words))
                 if len(words) == 2:
                     partial = None
                     try:
@@ -224,11 +224,11 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
                         countError = countError + partial
             infomsg("extracting warns")
             warns = await tryfindbyclassname(driver, "warn")
-            infomsg(len(warns))
+            infomsg(str(len(warns)))
             countWarning = 0
             for item in warns:
                 words = item.text.split()
-                infomsg(words)
+                infomsg(str(words))
                 if len(words) == 2:
                     partial = None
                     try:
