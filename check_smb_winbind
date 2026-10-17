@@ -52,7 +52,7 @@ def exitnagios(status, message):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check SMB winbind trust status")
-    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
     args = parser.parse_args(forcedargs)
     return args
 
@@ -81,7 +81,7 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "Cannot find wbinfo executable")
 
     # Replace newlines with semicolons and strip the trailing semicolon
-    msg = output.replace('\n', ';').rstrip(';')
+    msg = output.replace("\n", ";").rstrip(";")
 
     # Evaluate the return code and exit with the appropriate state
     if ret != 0:

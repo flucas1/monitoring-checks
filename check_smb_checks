@@ -4,9 +4,7 @@
 
 import argparse
 import asyncio
-import socket
 import sys
-import re
 
 # -------------------------------------------------------------------------------
 
@@ -53,7 +51,6 @@ def exitnagios(status, message):
 
 
 async def check_kcc():
-    result = []
     command = ["/usr/bin/samba-tool", "drs", "kcc"]
     try:
         process = await asyncio.create_subprocess_exec(
@@ -68,11 +65,12 @@ async def check_kcc():
     except Exception:
         output = "Error during 'samba-tool drs kcc'"
         return False, output
+    if exitcode != 0:
+        return False, output + "\n" + errors
     return True, output
 
 
 async def check_sysvol():
-    result = []
     command = ["/usr/bin/samba-tool", "ntacl", "sysvolcheck"]
     try:
         process = await asyncio.create_subprocess_exec(
@@ -87,6 +85,8 @@ async def check_sysvol():
     except Exception:
         output = "Error during 'samba-tool ntacl sysvolcheck'"
         return False, output
+    if exitcode != 0:
+        return False, output + "\n" + errors
     return True, output
 
 

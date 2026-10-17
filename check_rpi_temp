@@ -93,14 +93,14 @@ async def main(forcedargs=None):
     if temp is None:
         exitnagios("UNKNOWN", "Unable to read the thermal zone")
 
-    perfdata = " | rpi_temp=" + "{:.2f}".format(temp) + ";" + "{:.2f}".format(warn) + ";" + "{:.2f}".format(crit) + ";" + "{:.2f}".format(min_temp) + ";" + "{:.2f}".format(max_temp)
+    perfdata = " | rpi_temp=" + "%.2f" % temp + ";" + "%.2f" % warn + ";" + "%.2f" % crit + ";" + "%.2f" % min_temp + ";" + "%.2f" % max_temp
 
     if crit > 0 and temp >= crit:
-        exitnagios("CRITICAL", "Temperature " + "{:.2f}".format(temp) + " is higher than critical threshold (" + "{:.2f}".format(crit) + ")" + perfdata)
+        exitnagios("CRITICAL", "Temperature " + "%.2f" % temp + " is higher than critical threshold (" + "%.2f" % crit + ")" + perfdata)
     elif warn > 0 and temp >= warn:
-        exitnagios("WARNING", "Temperature " + "{:.2f}".format(temp) + " is higher than warning threshold (" + "{:.2f}".format(warn) + ")" + perfdata)
+        exitnagios("WARNING", "Temperature " + "%.2f" % temp + " is higher than warning threshold (" + "%.2f" % warn + ")" + perfdata)
     else:
-        exitnagios("OK", "Temperature " + "{:.2f}".format(temp) + perfdata)
+        exitnagios("OK", "Temperature " + "%.2f" % temp + perfdata)
 
 
 # -------------------------------------------------------------------------------
