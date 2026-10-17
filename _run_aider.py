@@ -18,6 +18,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
         "--encoding", "utf8",
         "--edit-format", "whole",
         "--no-auto-commits",
+        "--no-stream",
         "--yes"
     ]
 
