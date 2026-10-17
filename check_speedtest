@@ -75,26 +75,18 @@ def parse_speedtest_output(output):
 
 
 def check_thresholds(download, upload, args):
-    status = ""
-    nagcode = 0
-
     if download < args.critical_download:
         status = "CRITICAL"
-        nagcode = 2
     elif upload < args.critical_upload:
         status = "CRITICAL"
-        nagcode = 2
     elif download < args.warning_download:
         status = "WARNING"
-        nagcode = 1
     elif upload < args.warning_upload:
         status = "WARNING"
-        nagcode = 1
     else:
         status = "OK"
-        nagcode = 0
 
-    return status, nagcode
+    return status
 
 
 def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args):
@@ -177,7 +169,7 @@ async def main(forcedargs=None):
     infomsg("Download = " + str(download))
     infomsg("Upload = " + str(upload))
 
-    status, nagcode = check_thresholds(download, upload, args)
+    status = check_thresholds(download, upload, args)
 
     nagout = build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args)
 
