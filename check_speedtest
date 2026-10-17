@@ -95,7 +95,7 @@ def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM
     if args.perfdata:
         max_dl_calc = args.max_download * 1.05
         max_ul_calc = args.max_upload * 1.05
-        perfout = "|'download'=" + str(download) + ";" + str(args.warning_download) + ";" + str(args.critical_download) + ";0;" + str(max_dl_calc) + " 'upload'=" + str(upload) + ";" + str(args.warning_upload) + ";" + str(args.critical_upload) + ";0;" + str(max_ul_calc)
+        perfout = " | download=" + str(download) + ";" + str(args.warning_download) + ";" + str(args.critical_download) + ";0;" + str(max_dl_calc) + " upload=" + str(upload) + ";" + str(args.warning_upload) + ";" + str(args.critical_upload) + ";0;" + str(max_ul_calc)
         nagout += perfout
 
     return nagout
