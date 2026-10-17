@@ -99,7 +99,10 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
     cmdline = ["/usr/bin/nmap"]
     if protocol != "":
         cmdline = cmdline + [protocol]
-    cmdline = cmdline + ["--privileged", sflag, pflag, "--discovery-ignore-rst", "-p", str(port), hostname, "--initial-rtt-timeout", initial_rtt, "--max-rtt-timeout", max_rtt, "--system-dns"]
+    cmdline = cmdline + ["--privileged", sflag]
+    if pflag != "":
+        cmdline = cmdline + [pflag]
+    cmdline = cmdline + ["--discovery-ignore-rst", "-p", str(port), hostname, "--initial-rtt-timeout", initial_rtt, "--max-rtt-timeout", max_rtt, "--system-dns"]
     if sourceip not in ["", None]:
         cmdline = cmdline + ["-S", str(sourceip)]
     infomsg(" ".join(cmdline))
@@ -122,11 +125,11 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
 
     if response != "":
         try:
-            parts = response.split()
-            status = parts[1]
-            service = parts[2]
+            responseparts = response.split()
+            status = responseparts[1]
+            service = responseparts[2]
 
-            infomsg("The response is '" + status + "' and it was expected '" + expectedresponse + "'")
+            infomsg("The response is \"" + status + "\" and it was expected \"" + expectedresponse + "\"")
 
             if expectedresponse == "open":
                 if status == "open":
@@ -188,7 +191,7 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
         except Exception as e:
             exitnagios("CRITICAL", "exception - " + str(e))
     else:
-        exitnagios(timeoutstatus, "nmap respose is empty for command '" + " ".join(cmdline) + "'")
+        exitnagios(timeoutstatus, "nmap respose is empty for command \"" + " ".join(cmdline) + "\"")
 
     exitnagios("CRITICAL", "unexpected scenario")
 
