@@ -6,7 +6,6 @@ import argparse
 import sys
 import datetime
 import socket
-import ssl
 import asyncio
 import dateutil.parser
 import traceback
