@@ -79,7 +79,7 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
         infomsg("executing retry " + str(counter))
         counter = counter + 1
         try:
-            response = client.request(hostname, version=4)
+            response = client.request(hostname, version=4, timeout=timeoutvalue)
             offset = response.offset
             infomsg("NTP offset: " + str(round(offset, 3)) + " seconds")
 
