@@ -156,6 +156,8 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
                 login = driver.find_element(by=selenium.webdriver.common.by.By.CLASS_NAME, value="button")
             except Exception as e:
                 pass
+        if login is None:
+            exitnagios("CRITICAL", "could not locate the login button")
         infomsg(login.get_attribute("outerHTML"))
         action.move_to_element(login).perform()
         login.click()
@@ -209,7 +211,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     try:
         wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "checkNewFW")))
         infomsg("check button found")
-    except:
+    except Exception:
         exitnagios("WARNING", "issue detecting the update status")
 
     available = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="checkNewFW")
