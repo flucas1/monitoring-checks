@@ -53,7 +53,7 @@ def checkifaddress(test):
     converted = None
     try:
         converted = ipaddress.ip_address(test)
-    except:
+    except Exception:
         pass
     return converted is not None
 
