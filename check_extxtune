@@ -92,7 +92,7 @@ async def checktune(partition, mountcount, mountperiod):
     return result
 
 
-async def dopostgresclustercountcall(mountcount, mountperiod):
+async def doexttunecall(mountcount, mountperiod):
     cmdline = ["/usr/bin/findmnt", "--real", "--types=ext2,ext3,ext4", "--noheadings", "--list", "--uniq", "--nofsroot", "--notruncate", "--output=SOURCE"]
     process = await asyncio.create_subprocess_exec(
         *cmdline,
@@ -143,7 +143,7 @@ async def main(forcedargs=None):
 
     mountcount = 1
     mountperiod = 604800
-    await dopostgresclustercountcall(mountcount, mountperiod)
+    await doexttunecall(mountcount, mountperiod)
 
 
 # -------------------------------------------------------------------------------
