@@ -177,9 +177,9 @@ async def main(forcedargs=None):
     if maintimeout in ["", None]:
         maintimeout = "CRITICAL:30"
     multitimeoutparts = maintimeout.split(":")
-    infomsg(multitimeoutparts)
+    infomsg(str(multitimeoutparts))
     multitimeoutvalue = int(multitimeoutparts[0])
-    infomsg(multitimeoutvalue)
+    infomsg(str(multitimeoutvalue))
     if len(multitimeoutparts) > 1:
         multitimeoutstatus = multitimeoutparts[1]
     else:
@@ -187,10 +187,10 @@ async def main(forcedargs=None):
     infomsg(multitimeoutstatus)
 
     multihostnames = hostnames
-    infomsg("multihostname: "+str(multihostnames))
+    infomsg("multihostname: " + str(multihostnames))
 
     multiargs = [script] + childargs
-    infomsg("multiarg: "+str(multiargs))
+    infomsg("multiarg: " + str(multiargs))
 
     allhosts = multihostnames.split(",") if multihostnames else []
 
@@ -198,14 +198,14 @@ async def main(forcedargs=None):
     childtimeoutstatus = None
     if childtimeout != "":
         childtimeoutparts = childtimeout.split(":")
-        infomsg(childtimeoutparts)
+        infomsg(str(childtimeoutparts))
         childtimeoutvalue = int(childtimeoutparts[0])
         if len(childtimeoutparts) > 1:
             childtimeoutstatus = childtimeoutparts[1]
     if childtimeoutstatus is None:
         childtimeoutstatus = "CRITICAL"
-    infomsg(childtimeoutvalue)
-    infomsg(childtimeoutstatus)
+    infomsg(str(childtimeoutvalue))
+    infomsg(str(childtimeoutstatus))
 
     infomsg("multitimeoutvalue: " + str(multitimeoutvalue))
     infomsg("multitimeoutstatus: " + str(multitimeoutstatus))
