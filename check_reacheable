@@ -159,8 +159,8 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     hosts = hostname.replace(",", " ").split()
     total_valid = 0
     warning = 0
-    average = 0
-    percentloss = 0
+    total_latency = 0
+    total_percent_loss = 0
     okreasons = []
     warnreasons = []
     critreasons = []
@@ -183,8 +183,8 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for result in results:
         if isinstance(result, list):
-            average += result[1]
-            percentloss += result[2]
+            total_latency += result[1]
+            total_percent_loss += result[2]
             reason = result[3]
             if result[0] == 0:
                 total_valid += 1
@@ -203,8 +203,8 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
         average = 0.0
         avg_percent_loss = 0.0
     else:
-        average = total_latency / len(hosts)
-        avg_percent_loss = total_percent_loss / len(hosts)
+        average_latency = total_latency / len(hosts)
+        average_percent_loss = total_percent_loss / len(hosts)
     success_percent = 100.0 - avg_percent_loss
     if not protocolslist:
         valid_ratio = 0.0
@@ -212,9 +212,9 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
         valid_ratio = total_valid / len(protocolslist)
 
     if valid_ratio >= minimum:
-        return ("OK", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(okreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(success_percent))
+        return ("OK", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(okreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average_latency) + " percent=" + str(success_percent))
     elif valid_ratio + warning >= minimum:
-        return ("WARNING", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(warnreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(success_percent))
+        return ("WARNING", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(warnreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average_latency) + " percent=" + str(success_percent))
     else:
         return (timeoutstatus, hostname + " - only " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(critreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=-1 percent=0")
 
