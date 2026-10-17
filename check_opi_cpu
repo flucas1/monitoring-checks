@@ -98,7 +98,7 @@ async def checkcpuid():
                 lineinfo = clearedline[len(token):].strip()
                 parts = lineinfo.split("@")
                 speed = "0"
-                if len(parts) > 0:
+                if len(parts) > 1:
                     speed = parts[1].strip()
                 values.append(speed)
         result = ",".join(values)
