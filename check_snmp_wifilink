@@ -69,8 +69,10 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
 
     values = {}
     for key, oid in parameters.items():
-        mycode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
-        if mycode == 0:
+        returncode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
+        if returncode is None:
+            exitnagios(timeoutstatus, "Timeout: No Response from " + hostname)
+        elif returncode == 0:
             values[key] = extractvalue(stdout)
         else:
             values[key] = None

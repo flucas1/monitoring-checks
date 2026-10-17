@@ -97,9 +97,10 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    result = await doretrycall(args.cmdline)
+    cmdline = args.cmdline
+    result = await doretrycall(cmdline)
     if result == 0:
-        exitnagios("OK", "Command succeeded after " + str(args.cmdline))
+        exitnagios("OK", "Command succeeded after " + str(cmdline))
     else:
         exitnagios("CRITICAL", "Command failed with exit code " + str(result))
 
