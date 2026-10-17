@@ -51,10 +51,10 @@ def exitnagios(status, message):
 
 
 async def check_kcc():
-    command = ["/usr/bin/samba-tool", "drs", "kcc"]
+    cmdline = ["/usr/bin/samba-tool", "drs", "kcc"]
     try:
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -71,10 +71,10 @@ async def check_kcc():
 
 
 async def check_sysvol():
-    command = ["/usr/bin/samba-tool", "ntacl", "sysvolcheck"]
+    cmdline = ["/usr/bin/samba-tool", "ntacl", "sysvolcheck"]
     try:
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

@@ -65,7 +65,8 @@ async def get_cmd_output(cmdline):
 
 async def get_current_ip(ahosts_type, fqdn):
     """Emulates `getent ahosts<v4/v6> $(hostname -f) | awk '{print $1}' | uniq`"""
-    output = await get_cmd_output(["getent", ahosts_type, fqdn])
+    cmdline = ["getent", ahosts_type, fqdn]
+    output = await get_cmd_output(cmdline)
     if not output:
         return ""
 
@@ -105,14 +106,16 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     errors = ""
-    fqdn = await get_cmd_output(["hostname", "-f"])
+    cmdline = ["hostname", "-f"]
+    fqdn = await get_cmd_output(cmdline)
 
     if not fqdn:
         exitnagios("CRITICAL", "Cannot determine hostname")
 
     # IPv4 Check
     if not args.ipv6:
-        list_ipv4_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "A"])
+        cmdline = ["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "A"]
+        list_ipv4_out = await get_cmd_output(cmdline)
         list_ipv4 = list_ipv4_out.split() if list_ipv4_out else []
         current_ipv4 = await get_current_ip("ahostsv4", fqdn)
 
@@ -127,7 +130,8 @@ async def main(forcedargs=None):
 
     # IPv6 Check
     if not args.ipv4:
-        list_ipv6_out = await get_cmd_output(["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "AAAA"])
+        cmdline = ["dig", fqdn, "@127.0.0.1", "-p", "52", "+short", "AAAA"]
+        list_ipv6_out = await get_cmd_output(cmdline)
         list_ipv6 = list_ipv6_out.split() if list_ipv6_out else []
         current_ipv6 = await get_current_ip("ahostsv6", fqdn)
 
