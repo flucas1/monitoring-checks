@@ -78,7 +78,7 @@ async def dossidcall(interface, passive, timeoutsecs, ignoredlist, alertlist, ex
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
     if exitcode != 0:
-        return ("WARNING", "The interface " + interface + " is not valid " + interface + ".")
+        return ("WARNING", "The interface " + interface + " is not valid.")
     else:
         for line in output.splitlines():
             cleared = line.strip()
