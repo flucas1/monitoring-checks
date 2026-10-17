@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -------------------------------------------------------------------------------
 
-import imaplib
+import aioimaplib
 import argparse
 import sys
 import datetime
