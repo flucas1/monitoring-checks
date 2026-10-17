@@ -6,8 +6,7 @@ import argparse
 import datetime
 import dns.resolver
 import asyncio
-
-import nodriver as uc
+import nodriver
 # import fake_useragent
 
 # -------------------------------------------------------------------------------
@@ -72,15 +71,15 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         browserargs.append("--proxy-server=" + proxy)
     # ua = fake_useragent.UserAgent()
-    # browserargs.append(f"user-agent={ua.random}")
+    # browserargs.append("user-agent=" + ua.random)
     browserargs.append("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
-    browserconfig = uc.Config(browser_args=browserargs)
+    browserconfig = nodriver.Config(browser_args=browserargs)
 
-    driver = await uc.start(browserconfig)
+    driver = await nodriver.start(browserconfig)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
-    uc.cdp.network.enable()
-    # uc.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
+    nodriver.cdp.network.enable()
+    # nodriver.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
 
@@ -91,7 +90,7 @@ async def get_html_source(page):
         return document.documentElement.outerHTML;
     })();
     """
-    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    response, session = await page.send(nodriver.cdp.runtime.evaluate(expression=js, return_by_value=True))
     html = response.value
     return html
 
@@ -102,7 +101,7 @@ async def get_page_title(page):
         return document.title;
     })();
     """
-    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    response, session = await page.send(nodriver.cdp.runtime.evaluate(expression=js, return_by_value=True))
     title = response.value
     return title
 
@@ -113,7 +112,7 @@ async def check_page_loaded(page):
         return document.readyState;
     })();
     """
-    response, session = await page.send(uc.cdp.runtime.evaluate(expression=js, return_by_value=True))
+    response, session = await page.send(nodriver.cdp.runtime.evaluate(expression=js, return_by_value=True))
     page_state_value = response.value
     infomsg("page state is '" + str(page_state_value) + "'")
     result = (page_state_value == "complete")
@@ -189,7 +188,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
 
         # driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent/")
         # detected_user_agent = driver.find_element(By.ID, "detected_value").text
-        # infomsg(f"Detected User Agent: {detected_user_agent}")
+        # infomsg("Detected User Agent: " + detected_user_agent)
 
         targeturl = "https://dnschecker.org/ip-blacklist-checker.php"
         infomsg("asking for navigating " + targeturl)
@@ -205,7 +204,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         # currenturl = driver.current_url
         # driver.get("the current page is "+currenturl)
 
-        # sourceraw = await page.send(uc.cdp.dom.get_outer_html())
+        # sourceraw = await page.send(nodriver.cdp.dom.get_outer_html())
         sourceraw = await get_html_source(page)
         if (sourceraw == None) or (sourceraw.strip() == ""):
             infomsg("The page source is empty")
@@ -234,7 +233,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         else:
             infomsg("sending ip")
             await elements[0].send_keys(targetip)
-            await elements[0].send_keys(uc.Keys.RETURN)
+            await elements[0].send_keys(nodriver.Keys.RETURN)
 
         infomsg("manual delay")
         await asyncio.sleep(10)
