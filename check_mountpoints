@@ -64,7 +64,7 @@ async def create_zfs_fstab(original_fstab):
             tmp_fstab.write(content)
 
     try:
-        cmdline = ["zfs", "list", "-H", "-o", "name"]
+        cmdline = ["/sbin/zfs", "list", "-H", "-o", "name"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -74,7 +74,7 @@ async def create_zfs_fstab(original_fstab):
         zfs_list = stdout.decode().strip().splitlines()
 
         for ds in zfs_list:
-            cmdline = ["zfs", "get", "-H", "mountpoint", ds]
+            cmdline = ["/sbin/zfs", "get", "-H", "mountpoint", ds]
             process = await asyncio.create_subprocess_exec(
                 *cmdline,
                 stdout=asyncio.subprocess.PIPE,
@@ -88,7 +88,7 @@ async def create_zfs_fstab(original_fstab):
             if not os.path.isdir(mp):
                 continue
 
-            cmdline = ["zfs", "get", "-H", "canmount", ds]
+            cmdline = ["/sbin/zfs", "get", "-H", "canmount", ds]
             process = await asyncio.create_subprocess_exec(
                 *cmdline,
                 stdout=asyncio.subprocess.PIPE,
@@ -102,7 +102,7 @@ async def create_zfs_fstab(original_fstab):
             if canmount == "off":
                 continue
 
-            cmdline = ["zfs", "get", "-H", "readonly", ds]
+            cmdline = ["/sbin/zfs", "get", "-H", "readonly", ds]
             process = await asyncio.create_subprocess_exec(
                 *cmdline,
                 stdout=asyncio.subprocess.PIPE,
@@ -123,8 +123,9 @@ async def create_zfs_fstab(original_fstab):
 async def make_mtab():
     tmp_mtab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
     try:
+        cmdline = ["/usr/bin/mount"]
         process = await asyncio.create_subprocess_exec(
-            "mount",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -142,7 +143,7 @@ async def make_mtab():
 
 async def run_df(mp, timeout):
     try:
-        cmdline = ["df", "-k", mp]
+        cmdline = ["/usr/bin/df", "-k", mp]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -205,7 +206,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
         touchfile = os.path.join(mp, ".mount_test_from_" + socket.gethostname() + "_" + timestamp + "_" + str(os.getpid()))
 
         try:
-            cmdline = ["touch", touchfile]
+            cmdline = ["/usr/bin/touch", touchfile]
             process = await asyncio.create_subprocess_exec(
                 *cmdline,
                 stdout=asyncio.subprocess.PIPE,
