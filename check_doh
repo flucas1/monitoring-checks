@@ -94,7 +94,7 @@ async def makedohtest(retries, targetdohurl, testquery, timeout_val):
                 infomsg("ended")
 
         counter += 1
-        if result == True:
+        if result:
             break
         if counter > retries:
             infomsg("aborted!")
