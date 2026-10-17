@@ -2,10 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import sys
-import os
 import argparse
-import traceback
-import datetime
 import ipaddress
 import dns.asyncresolver
 import dns.exception
