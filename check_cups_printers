@@ -4,7 +4,6 @@
 import cups
 import argparse
 import sys
-import socket
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -51,8 +50,8 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def connect_cups(socket):
-    cups.setServer(socket)
+def connect_cups(socket_path):
+    cups.setServer(socket_path)
     return cups.Connection()
 
 
