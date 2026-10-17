@@ -187,7 +187,7 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
             percentloss += result[2]
             reason = result[3]
             if result[0] == 0:
-                total_validlid += 1
+                total_valid += 1
                 if reason not in okreasons:
                     okreasons.append(reason)
             elif result[0] == 1:
