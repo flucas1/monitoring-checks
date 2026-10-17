@@ -55,6 +55,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
 
     timeout = False
     gps_time = None
+    error = None
     try:
         start = datetime.datetime.now(datetime.timezone.utc).timestamp()
         while True:
@@ -73,14 +74,18 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
             else:
                 await asyncio.sleep(1)
     except Exception as e:
-        exitnagios("UNKNOWN", "internal error - " + str(e))
+        error = str(e)
     finally:
-        if timeout:
-            exitnagios(timeoutstatus, "GPS time not received")
-        elif gps_time == None:
-            exitnagios("WARNING", "GPS data cannot be parsed: " + str(gps_time))
-        else:
-            exitnagios("OK", "GPS time is: " + str(gps_time))
+        gpsd.close()
+
+    if error is not None:
+        exitnagios("UNKNOWN", "internal error - " + error)
+    elif timeout:
+        exitnagios(timeoutstatus, "GPS time not received")
+    elif gps_time is None:
+        exitnagios("WARNING", "GPS data cannot be parsed: " + str(gps_time))
+    else:
+        exitnagios("OK", "GPS time is: " + str(gps_time))
 
 
 # -------------------------------------------------------------------------------
