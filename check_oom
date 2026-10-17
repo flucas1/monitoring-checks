@@ -138,7 +138,7 @@ async def oom_check(criticallevel, warninglevel, short=False):
         elif warninglevel != "" and counter > int(warninglevel):
             exitnagios("WARNING", str(counter) + " processes was killed by OOM - " + str(logs) + " | counter=" + str(counter))
         else:
-            exitnagios("OK", "No OOM killer activity found | counter=-1")
+            exitnagios("OK", "No OOM killer activity found | counter=" + str(counter))
 
 
 # -------------------------------------------------------------------------------

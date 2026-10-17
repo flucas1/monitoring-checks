@@ -65,7 +65,6 @@ async def doospfroutescall():
         for line in output.splitlines():
             if line.startswith("O") and ("is directly connected" not in line):
                 total = total + 1
-                break
         if total > 0:
             exitnagios("OK", "there are remote OSPF routes | total=" + str(total))
         else:
