@@ -50,48 +50,51 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+def get_swap_info():
+    total_kb = 0
+    free_kb = 0
+    has_swap = False
+
+    try:
+        with open('/proc/meminfo', 'r') as f:
+            for line in f:
+                if line.startswith('SwapTotal:'):
+                    total_kb = int(line.split()[1])
+                    has_swap = True
+                elif line.startswith('SwapFree:'):
+                    free_kb = int(line.split()[1])
+    except FileNotFoundError:
+        exitnagios("CRITICAL", "Could not read /proc/meminfo")
+
+    if total_kb == 0:
+        return False, 0, 0
+
+    # Convert kilobytes to megabytes
+    total_mb = total_kb / 1024.0
+    free_mb = free_kb / 1024.0
+    used_mb = total_mb - free_mb
+
+    return has_swap, total_mb, used_mb
+
+
 async def dofreeswapscall(warning, critical, minimum):
-    cmdline = ["/usr/bin/free", "--mega", "--wide"]
-    process = await asyncio.create_subprocess_exec(
-        *cmdline,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    output = stdout.decode("utf-8").strip() if stdout else ""
-    errors = stderr.decode("utf-8").strip() if stderr else ""
-    exitcode = process.returncode
+    hasswap, total, used = get_swap_info()
 
-    infomsg(output)
-    if exitcode == 0:
-        lines = output.splitlines()
-        hasswap = False
-        total = 0
-        used = 0
-        if len(lines) > 1:
-            lines.pop(0)
-            for line in lines:
-                parts = line.split()
-                if parts[0] == "Swap:":
-                    infomsg(parts)
-                    hasswap = True
-                    total = total + int(parts[1])
-                    used = used + int(parts[2])
+    infomsg(f"Swap Info -> Has Swap: {hasswap}, Total: {total}MB, Used: {used}MB")
 
-        if not hasswap:
-            exitnagios("CRITICAL", "no swap detected")
-        else:
-            usage = used / total
-            if minimum != "" and total < float(minimum):
-                exitnagios("CRITICAL", "swap is too small")
-            elif critical != "" and usage > float(critical):
-                exitnagios("CRITICAL", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
-            elif warning != "" and usage > float(warning):
-                exitnagios("WARNING", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
-            else:
-                exitnagios("OK", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
+    if not hasswap or total == 0:
+        exitnagios("CRITICAL", "no swap detected")
     else:
-        exitnagios("CRITICAL", "issue retrieving free swap")
+        usage = used / total
+
+        if minimum != "" and total < float(minimum):
+            exitnagios("CRITICAL", "swap is too small")
+        elif critical != "" and usage > float(critical):
+            exitnagios("CRITICAL", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
+        elif warning != "" and usage > float(warning):
+            exitnagios("WARNING", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
+        else:
+            exitnagios("OK", "swap is used at " + str(round(usage, 2)) + "% | percent=" + str(usage))
 
 
 # -------------------------------------------------------------------------------
