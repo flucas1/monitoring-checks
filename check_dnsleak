@@ -109,7 +109,7 @@ def extracttable(driver):
     infomsg(element.text)
     for line in lines:
         if len(value) > 0:
-            value = value + " § "
+            value = value + " # "
         cells = line.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "td")
         entry = ""
         for cell in cells:
@@ -157,7 +157,7 @@ def parseip(inputvalue):
     result = []
     inputvalue = inputvalue.strip()
     if inputvalue != "":
-        for item in inputvalue.split("§"):
+        for item in inputvalue.split("#"):
             item = item.strip()
             if item not in result:
                 result.append(item)
@@ -168,7 +168,7 @@ def parsedns(inputvalue):
     result = []
     inputvalue = inputvalue.strip()
     if inputvalue != "":
-        for item in inputvalue.split("§"):
+        for item in inputvalue.split("#"):
             item = item.strip()
             if item not in result:
                 result.append(item)
@@ -266,7 +266,7 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
         errormsg = ""
 
         if resultedip == "":
-            warningmsg += "The IP response is empty, and was expected '" + " § ".join(expectedip) + "'. "
+            warningmsg += "The IP response is empty, and was expected '" + " # ".join(expectedip) + "'. "
         else:
             # if something problematic is defined, find it and report it,
             # ifnot,... all the resulted dns should be in the expected dns
@@ -275,18 +275,18 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
             if len(problematicip) > 0:
                 failureip = findtripletsmatching(resultedipparts, problematicip)
                 if len(failureip) > 0:
-                    errormsg += "The IP response '" + " § ".join(resultedipparts) + "' is problematic. "
+                    errormsg += "The IP response '" + " # ".join(resultedipparts) + "' is problematic. "
                 else:
-                    successmsg += "The IP response '" + " § ".join(resultedipparts) + "' is not problematic. "
+                    successmsg += "The IP response '" + " # ".join(resultedipparts) + "' is not problematic. "
             else:
                 successip, toleratedip = alltripletsmatching(resultedipparts, expectedip, 0)
                 if successip or len(expectedip) == 0:
-                    successmsg += "The IP response '" + " § ".join(resultedipparts) + "' is as expected. "
+                    successmsg += "The IP response '" + " # ".join(resultedipparts) + "' is as expected. "
                 else:
-                    errormsg += "The IP response '" + " § ".join(resultedipparts) + "' is not as expected '" + " § ".join(expectedip) + "'. "
+                    errormsg += "The IP response '" + " # ".join(resultedipparts) + "' is not as expected '" + " # ".join(expectedip) + "'. "
 
         if resulteddns == "":
-            warningmsg += "The DNS response is empty, and was expected '" + " § ".join(expecteddns) + "'. "
+            warningmsg += "The DNS response is empty, and was expected '" + " # ".join(expecteddns) + "'. "
         else:
             # if something problematic is defined, find it and report it,
             # ifnot,... all the resulted dns should be in the expected dns
@@ -295,20 +295,20 @@ async def dodnsleakcall(proxy, problematicip, problematicdns, expectedip, expect
             if len(problematicdns) > 0:
                 failuredns = findtripletsmatching(resulteddnsparts, problematicdns)
                 if len(failuredns) > tolerancedns:
-                    errormsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is problematic. "
+                    errormsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is problematic. "
                 elif len(failuredns) > 0:
-                    warningmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is tolerated. "
+                    warningmsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is tolerated. "
                 else:
-                    successmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is not problematic. "
+                    successmsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is not problematic. "
             else:
                 successdns, tolerateddns = alltripletsmatching(resulteddnsparts, expecteddns, tolerancedns)
                 if successdns or len(expecteddns) == 0:
                     if len(tolerateddns) == 0:
-                        successmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is as expected. "
+                        successmsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is as expected. "
                     else:
-                        warningmsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is tolerated. "
+                        warningmsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is tolerated. "
                 else:
-                    errormsg += "The DNS response '" + " § ".join(resulteddnsparts) + "' is not as expected '" + " § ".join(expecteddns) + "'. "
+                    errormsg += "The DNS response '" + " # ".join(resulteddnsparts) + "' is not as expected '" + " # ".join(expecteddns) + "'. "
 
         if errormsg != "":
             exitnagios("CRITICAL", errormsg)

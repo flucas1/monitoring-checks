@@ -51,12 +51,12 @@ def exitnagios(status, message):
 
 def normalizemultivalues(original):
     parts = []
-    for item in original.strip().split("§"):
+    for item in original.strip().split("#"):
         value = item.strip()
         if value != "":
             parts.append(value)
     parts.sort()
-    return " § ".join(parts)
+    return " # ".join(parts)
 
 
 async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, expected, timeoutvalue, timeoutstatus):
@@ -79,7 +79,7 @@ async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, 
                     exitnagios(timeoutstatus, "timeout issues")
                 elif status == "ok":
                     found = normalizemultivalues(parts[1].strip())
-                    total = len(found.split("§"))
+                    total = len(found.split("#"))
                     if expected == "":
                         exitnagios("OK", "the result is '" + found + "' | count=" + str(total))
                     elif found == expected:
