@@ -60,6 +60,7 @@ async def doarpingcall(hostname, packets, timeout):
     exitcode = process.returncode
 
     infomsg(output)
+    infomsg(errors)
 
     if exitcode == 0:
         alllines = output.splitlines()
