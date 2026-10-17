@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import argparse
 import asyncio
 import datetime
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
@@ -53,14 +51,6 @@ def exitnagios(status, message):
     exitcode = mapstatustoexitcode(status)
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
-
-
-def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
-    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
-    args = parser.parse_args(forcedargs)
-    return args
 
 
 # -------------------------------------------------------------------------------
@@ -110,13 +100,6 @@ async def wait_page_loaded(driver):
 
 
 # -------------------------------------------------------------------------------
-
-
-def extractvalue(driver, entryname):
-    element = driver.find_element(selenium.webdriver.common.by.By.XPATH, "//td[text()=\"" + entryname + "\"]/following-sibling::td")
-    value = element.text
-    infomsg(value)
-    return value
 
 
 async def dotestipv6call(proxy):

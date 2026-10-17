@@ -112,11 +112,11 @@ async def main(forcedargs=None):
         service = unit[:-6] + ".service"
 
         # Check if the service is enabled
-        is_enabled_cmd = ["systemctl", "is-enabled", service]
+        cmdline = ["systemctl", "is-enabled", service]
 
         try:
             process = await asyncio.create_subprocess_exec(
-                *is_enabled_cmd,
+                *cmdline,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
