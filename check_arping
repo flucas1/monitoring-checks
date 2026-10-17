@@ -80,7 +80,7 @@ async def doarpingcall(hostname, packets, timeout):
             avgms = float(linems.split("=")[1].strip().split()[0].split("/")[1])
             percent = float(linepercent.split(",")[2].strip().split()[0].replace("%", ""))
 
-            exitnagios("OK", hostname + " is respoding to ARP | average=" + str(avgms) + " percent=" + str(percent))
+            exitnagios("OK", hostname + " is responding to ARP | average=" + str(avgms) + " percent=" + str(percent))
         else:
             exitnagios("CRITICAL", hostname + " has several MACs responding to ARP " + str(allmacs) + " | average=0 percent=0")
     else:
