@@ -82,7 +82,7 @@ OIDS = {
 
 async def walk_snmp(args, oid, raw=True):
     output_options = "-Oavq" if raw else "-Oa"
-    cmdline = ["snmpwalk", "-v", args.snmpversion, output_options]
+    cmdline = ["/usr/bin/snmpwalk", "-v", args.snmpversion, output_options]
     if args.snmpversion == "3":
         cmdline.extend(["-u", args.user, "-l", args.privlevel, "-x", args.privprotocol, "-X", args.privpassword, "-a", args.authprotocol, "-A", args.authpassword])
     else:
