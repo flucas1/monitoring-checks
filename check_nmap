@@ -96,16 +96,16 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
     else:
         exitnagios("CRITICAL", "mode must be udp or tcp")
 
-    command = ["/usr/bin/nmap"]
+    cmdline = ["/usr/bin/nmap"]
     if protocol != "":
-        command = command + [protocol]
-    command = command + ["--privileged", sflag, pflag, "--discovery-ignore-rst", "-p", str(port), hostname, "--initial-rtt-timeout", initial_rtt, "--max-rtt-timeout", max_rtt, "--system-dns"]
+        cmdline = cmdline + [protocol]
+    cmdline = cmdline + ["--privileged", sflag, pflag, "--discovery-ignore-rst", "-p", str(port), hostname, "--initial-rtt-timeout", initial_rtt, "--max-rtt-timeout", max_rtt, "--system-dns"]
     if sourceip not in ["", None]:
-        command = command + ["-S", str(sourceip)]
-    infomsg(" ".join(command))
+        cmdline = cmdline + ["-S", str(sourceip)]
+    infomsg(" ".join(cmdline))
 
     process = await asyncio.create_subprocess_exec(
-        *command,
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -188,7 +188,7 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
         except Exception as e:
             exitnagios("CRITICAL", "exception - " + str(e))
     else:
-        exitnagios(timeoutstatus, "nmap respose is empty for command '" + " ".join(command) + "'")
+        exitnagios(timeoutstatus, "nmap respose is empty for command '" + " ".join(cmdline) + "'")
 
     exitnagios("CRITICAL", "unexpected scenario")
 
