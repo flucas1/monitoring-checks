@@ -160,18 +160,18 @@ async def get_address(protocol, serverinfo):
             # Using the default async resolver for standard system DNS queries
             sys_resolver = dns.asyncresolver.Resolver()
             if protocol == "-6":
-                answers = await sys_resolver.resolve(server, 'AAAA')
+                answers = await sys_resolver.resolve(server, "AAAA")
                 address = answers[0].to_text()
             elif protocol == "-4":
-                answers = await sys_resolver.resolve(server, 'A')
+                answers = await sys_resolver.resolve(server, "A")
                 address = answers[0].to_text()
             else:
                 # If no protocol is specified, try A first, then fallback to AAAA
                 try:
-                    answers = await sys_resolver.resolve(server, 'A')
+                    answers = await sys_resolver.resolve(server, "A")
                     address = answers[0].to_text()
                 except dns.resolver.NoAnswer:
-                    answers = await sys_resolver.resolve(server, 'AAAA')
+                    answers = await sys_resolver.resolve(server, "AAAA")
                     address = answers[0].to_text()
         except Exception as e:
             infomsg("DNS resolution failed for " + server + ": " + str(e))
@@ -455,8 +455,8 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
             if text_server == "":
                 return build_exitinfo(timeoutstatus, "no response when trying to transfer zone '" + zone + "' from server")
             if text_mname != text_server:
-                return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and MNAME server " + mname + " are different.")
                 infomsg(os.linesep.join(difflib.unified_diff(text_server.splitlines(), text_mname.splitlines())))
+                return build_exitinfo("CRITICAL", "zone '" + zone + "' in target server " + server + " and MNAME server " + mname + " are different.")
             else:
                 ns = await get_ns(useTcp, addressinfo, timeoutvalue, zone)
                 if ns == "":
