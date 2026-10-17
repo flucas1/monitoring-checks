@@ -61,7 +61,7 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
     timed_out = False
     for key, value in alternatives.items():
         version, oid, search, factor = value
-        returncode, stdout = await snmpget(hostname, port, version, community, oid, timeoutvalue)
+        returncode, stdout = await snmpget(hostname, port, version, community, oid, 5)  # timeoutvalue
         if returncode is None:
             timed_out = True
             continue
