@@ -51,7 +51,7 @@ def exitnagios(status, message):
 
 
 async def check_stratum(hostname, debug=False):
-    cmdline = ["ntpdc", "-c", "sysinfo"]
+    cmdline = ["/usr/sbin/ntpdc", "-c", "sysinfo"]
     if hostname:
         cmdline.append(hostname)
 
