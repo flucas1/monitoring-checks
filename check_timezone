@@ -9,6 +9,7 @@ import datetime
 import filecmp
 import signal
 import re
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -63,7 +64,7 @@ def is_filename(filename):
         return None
     dirname_regex = r"[\/\w\s\\.,:*()=%?+-]+"
     filename_regex = dirname_regex + r"[^\/]"
-    match = re.match(f"^({filename_regex})$", filename)
+    match = re.match("^(" + filename_regex + ")$", filename)
     if match:
         return match.group(1)
     return None
