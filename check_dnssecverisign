@@ -6,12 +6,9 @@ import sys
 import argparse
 import asyncio
 import datetime
-
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -105,7 +102,7 @@ async def tryfindbyxpath(driver, xpath):
     result = None
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
-    except:
+    except Exception:
         pass
     return result
 
@@ -186,7 +183,6 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://dnssec-analyzer.verisignlabs.com/" + domain

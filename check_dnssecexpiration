@@ -109,7 +109,7 @@ async def main(forcedargs=None):
     # Check if there are multiple RRSIG responses and check them one after the other
     now = datetime.datetime.now(datetime.timezone.utc).timestamp()
     rrsig_out = await run_cmd(["dig", "@" + args.resolver, args.record_type, args.zone, "+dnssec"])
-    rrsig_lines = [line for line in rrsig_out.split('\n') if 'RRSIG' in line and not line.startswith(';')]
+    rrsig_lines = [line for line in rrsig_out.split("\n") if "RRSIG" in line and not line.startswith(";")]
 
     if not rrsig_lines:
         exitnagios("CRITICAL", "There is no RRSIG for the " + args.record_type + " of your zone.")
@@ -126,10 +126,10 @@ async def main(forcedargs=None):
         expiry_str = parts[8]
         inception_str = parts[9]
 
-        if not re.match(r'^[0-9]{14}$', expiry_str):
+        if not re.match(r"^[0-9]{14}$", expiry_str):
             exitnagios("UNKNOWN", "Something went wrong while checking the expiration of the RRSIG entry - investigate please.")
 
-        if not re.match(r'^[0-9]{14}$', inception_str):
+        if not re.match(r"^[0-9]{14}$", inception_str):
             exitnagios("UNKNOWN", "Something went wrong while checking the inception date of the RRSIG entry - investigate please.")
 
         # Parse the YYYYMMDDHHMMSS strings into UTC datetimes
