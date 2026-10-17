@@ -4,9 +4,7 @@
 import argparse
 import sys
 import os
-import platform
 import asyncio
-import aiofiles
 
 # -------------------------------------------------------------------------------
 
