@@ -85,7 +85,7 @@ async def dofreeswapscall(warning, critical, minimum):
     if not hasswap or total == 0:
         exitnagios("CRITICAL", "no swap detected")
     else:
-        usage = used / total
+        usage = (used / total) * 100
 
         if minimum != "" and total < float(minimum):
             exitnagios("CRITICAL", "swap is too small")
