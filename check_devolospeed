@@ -74,8 +74,9 @@ async def getmacfromip(remoteIP):
 
 
 async def findinterfaces():
+    cmdline = ["/usr/bin/plcdevs"]
     process = await asyncio.create_subprocess_exec(
-        "/usr/bin/plcdevs",
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -92,8 +93,9 @@ async def findinterfaces():
 
 
 async def getspeeds(interface, targetmac):
+    cmdline = ["/usr/bin/plcstat", "-i", interface, "-t", "-q"]
     process = await asyncio.create_subprocess_exec(
-        "/usr/bin/plcstat", "-i", interface, "-t", "-q",
+        *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -119,7 +121,7 @@ def change_mac(base, offset):
     infomsg(base)
     mac = base.replace(":", "").replace("-", "").replace(" ", "")
     infomsg(mac)
-    old_string = "{:012X}".format(int(mac, 16) + offset)
+    old_string = format(int(mac, 16) + offset, "012X")
     new_string = ":".join(s for s in re.split(r"(\w{2})", old_string.upper()) if s.isalnum())
     return new_string
 
