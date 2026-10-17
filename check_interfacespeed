@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import os
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -48,7 +47,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def doospfroutescall(interface, expectedspeeds, warningspeeds, expectedduplex, warningduplex):
+async def doethtoolcall(interface, expectedspeeds, warningspeeds, expectedduplex, warningduplex):
     cmdline = ["/usr/sbin/ethtool", interface]
     process = await asyncio.create_subprocess_exec(
         *cmdline,
@@ -79,7 +78,7 @@ async def doospfroutescall(interface, expectedspeeds, warningspeeds, expecteddup
             exitnagios("OK", "the interface speed is " + foundspeed + " and duplex is " + foundduplex)
         elif (foundspeed in expectedspeeds) and (foundduplex in expectedduplex):
             exitnagios("OK", "the interface speed is " + foundspeed + " and duplex is " + foundduplex + " as expected")
-        elif (foundspeed in warningspeeds) and (foundduplex in warningduplex):
+        elif (foundspeed in warningspeeds and foundduplex in expectedduplex) or (foundspeed in expectedspeeds and foundduplex in warningduplex):
             exitnagios("WARNING", "the interface speed is " + foundspeed + " and duplex is " + foundduplex + " but it was expected " + " ".join(expectedspeeds) + " and " + " ".join(expectedduplex))
         else:
             exitnagios("CRITICAL", "the interface speed is " + foundspeed + " and duplex is " + foundduplex + " but it was expected " + " ".join(expectedspeeds) + " and " + " ".join(expectedduplex))
@@ -114,7 +113,7 @@ async def main(forcedargs=None):
     for item in args.warning.split("¶"):
         warningspeeds.append(item.strip().lower())
 
-    await doospfroutescall(interface, expectedspeeds, warningspeeds, [args.duplex.lower()], [])
+    await doethtoolcall(interface, expectedspeeds, warningspeeds, [args.duplex.lower()], [])
 
 # -------------------------------------------------------------------------------
 
