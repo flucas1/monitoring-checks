@@ -91,6 +91,7 @@ async def main():
     PROMPT.append("All command line arguments should have short and long form.")
     PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
     PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
+    PROMPT.append("Executables should be full paths.")
 
     await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
