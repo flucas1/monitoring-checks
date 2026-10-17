@@ -73,7 +73,7 @@ async def generatedriver(proxy):
     if proxy not in ["", None]:
         browserargs.append("--proxy-server=" + proxy)
     # ua = fake_useragent.UserAgent()
-    # browserargs.append(f'user-agent={ua.random}')
+    # browserargs.append(f"user-agent={ua.random}")
     browserargs.append("--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.298 Safari/537.36\"")
     browserconfig = uc.Config(browser_args=browserargs)
 
@@ -135,19 +135,19 @@ async def wait_page_loaded(page):
 # -------------------------------------------------------------------------------
 
 
-async def tryfindbyid(driver, idname):
+async def tryfindbyid(page, idname):
     result = []
     try:
-        result = driver.find_elements(By.ID, idname)
+        result = await page.select_all("#" + idname)
     except:
         pass
     return result
 
 
-async def tryfindbytagname(driver, tagname):
+async def tryfindbytagname(page, tagname):
     result = []
     try:
-        result = driver.find_elements(By.TAG_NAME, tagname)
+        result = await page.select_all(tagname)
     except:
         pass
     return result
@@ -156,7 +156,7 @@ async def tryfindbytagname(driver, tagname):
 # -------------------------------------------------------------------------------
 
 
-def resolverecord(protocol, hostname):
+async def resolverecord(protocol, hostname):
     result = []
     try:
         record = None
@@ -175,7 +175,7 @@ def resolverecord(protocol, hostname):
 
 async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol, hostname)
+        ips = await resolverecord(protocol, hostname)
         if len(ips) == 0:
             exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
         if len(ips) > 1:
@@ -228,13 +228,13 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         await page.wait_for("#ipbc_submit", timeout=20)
 
         infomsg("finding textbox element")
-        elements = await tryfindbyid(driver, "ipbc_host")
+        elements = await tryfindbyid(page, "ipbc_host")
         if len(elements) == 0:
             exitnagios("CRITICAL", "cannot find textbox")
         else:
             infomsg("sending ip")
-            elements[0].send_keys(targetip)
-            elements[0].send_keys(uc.Keys.RETURN)
+            await elements[0].send_keys(targetip)
+            await elements[0].send_keys(uc.Keys.RETURN)
 
         infomsg("manual delay")
         await asyncio.sleep(10)
@@ -243,9 +243,9 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
         await page.wait_for("#blacklist_count", timeout=20)
 
         infomsg("extracting listed")
-        blocks = await tryfindbyid(driver, "ipbc_results_dnsbl")
+        blocks = await tryfindbyid(page, "ipbc_results_dnsbl")
         lists = await tryfindbytagname(blocks[0], "tr")
-        infomsg("row canidates: " + str(len(lists)))
+        infomsg("row candidates: " + str(len(lists)))
         issues = []
         for item in lists:
             providers = await tryfindbytagname(item, "th")
@@ -281,7 +281,7 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
 
 async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol, hostname)
+        ips = await resolverecord(protocol, hostname)
         if len(ips) == 0:
             exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
         if len(ips) > 1:
@@ -324,7 +324,7 @@ async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
 
 async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol, hostname)
+        ips = await resolverecord(protocol, hostname)
         if len(ips) == 0:
             exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
         if len(ips) > 1:
@@ -367,7 +367,7 @@ async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, prox
 
 async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol, hostname)
+        ips = await resolverecord(protocol, hostname)
         if len(ips) == 0:
             exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
         if len(ips) > 1:
@@ -410,7 +410,7 @@ async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
 
 async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
     try:
-        ips = resolverecord(protocol, hostname)
+        ips = await resolverecord(protocol, hostname)
         if len(ips) == 0:
             exitnagios("CRITICAL", "cannot resolve " + hostname + " with protocol " + protocol)
         if len(ips) > 1:
@@ -452,17 +452,17 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
         await asyncio.sleep(2)
 
         infomsg("waiting for blacklist")
-        blacklist_btn = await page.wait_for('button[data-cmd="blacklist"]', timeout=10)
+        blacklist_btn = await page.wait_for("button[data-cmd=\"blacklist\"]", timeout=10)
         await blacklist_btn.click()
 
         infomsg("manual delay")
         await asyncio.sleep(2)
 
-        currentaction = await page.wait_for('#btnAction3', timeout=10)
+        currentaction = await page.wait_for("#btnAction3", timeout=10)
         infomsg("current action: " + currentaction.text)
 
         infomsg("sending ip " + targetip)
-        inputbox = await page.wait_for('#txtInput2', timeout=10)
+        inputbox = await page.wait_for("#txtInput2", timeout=10)
         await inputbox.send_keys(targetip)
         infomsg(inputbox.text)
 
@@ -480,11 +480,11 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
         # infomsg(await get_html_source(page))
 
         infomsg("extracting listed")
-        table = await page.wait_for('#lblResult .tool-result-table', timeout=10)
+        table = await page.wait_for("#lblResult .tool-result-table", timeout=10)
         infomsg(table.text)
 
         rows = await page.select_all("#lblResult .tool-result-table tr")
-        infomsg("row canidates: " + str(len(rows)))
+        infomsg("row candidates: " + str(len(rows)))
         issues = []
         for index, row in enumerate(rows):
             cells = await row.query_selector_all("td")
