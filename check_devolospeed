@@ -105,7 +105,7 @@ async def getspeeds(interface, targetmac):
     exitcode = process.returncode
     rows = output.split("\n")
     infomsg(rows)
-    for row in output.split("\n"):
+    for row in rows:
         parts = row.split()
         if len(parts) > 0:
             infomsg(parts[3])
