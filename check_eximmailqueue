@@ -62,15 +62,16 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    cmdline = ["/usr/sbin/exim", "-bpc"]
     try:
         process = await asyncio.create_subprocess_exec(
-            "/usr/sbin/exim", "-bpc",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
         output = stdout.decode().strip() if stdout else ""
-    except (FileNotFoundError, Exception):
+    except Exception:
         output = ""
 
     # Check if the output is empty or invalid
