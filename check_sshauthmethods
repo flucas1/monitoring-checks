@@ -126,7 +126,7 @@ async def main(forcedargs=None):
     elif (exclist < 1):
         exitnagios("CRITICAL", "no protocol selected")
 
-    if (args.host == ""):
+    if args.host in ["", None]:
         exitnagios("CRITICAL", "specify a host/domain to check")
 
     parts = args.timeout.split(":")
@@ -136,9 +136,9 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
 
-    expectedlist = args.expected.split(",")
-    if (len(expectedlist) == 0):
+    if not args.expected:
         exitnagios("CRITICAL", "no expected methods")
+    expectedlist = args.expected.split(",")
 
     await test_ssh_auth(protocol, args.host, int(args.port), timeoutvalue, timeoutstatus, expectedlist)
 
