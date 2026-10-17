@@ -46,7 +46,14 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
+
 # -------------------------------------------------------------------------------
+
+
+async def execute_ssh_command(conn_kwargs, remotecmdline):
+    async with asyncssh.connect(**conn_kwargs) as conn:
+        return await conn.run(remotecmdline, check=False)
+
 
 async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
     retries = 3
@@ -69,12 +76,8 @@ async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdl
         infomsg("executing retry " + str(counter))
         counter = counter + 1
 
-        async def execute_ssh_command():
-            async with asyncssh.connect(**conn_kwargs) as conn:
-                return await conn.run(remotecmdline, check=False)
-
         try:
-            result = await asyncio.wait_for(execute_ssh_command(), timeout=timeoutvalue)
+            result = await asyncio.wait_for(execute_ssh_command(conn_kwargs, remotecmdline), timeout=timeoutvalue)
             output = result.stdout.strip() if result.stdout else ""
             errors = result.stderr.strip() if result.stderr else ""
             exitcode = result.exit_status
@@ -111,6 +114,7 @@ async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdl
             else:
                 infomsg("sleeping for retry " + str(counter))
                 await asyncio.sleep(10)
+
 
 # -------------------------------------------------------------------------------
 
