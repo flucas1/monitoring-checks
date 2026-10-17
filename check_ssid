@@ -132,7 +132,7 @@ async def dossidcall(interface, passive, timeoutsecs, ignoredlist, alertlist, ex
                 resultmessages.append("The SSID " + current_ssid + " with channel " + current_channel + " matches the ignore list " + str(ignoredlist) + ".")
                 ignoredcount = ignoredcount + 1
             elif match_ssid(current_ssid, alertlist):
-                resultstatus = "CRITICAL"
+                resultstatus = mergestatus(resultstatus, "CRITICAL")
                 resultmessages.append("The SSID " + current_ssid + " with channel " + current_channel + " matches the alert list " + str(alertlist) + ".")
                 alertcount = alertcount + 1
             elif current_ssid in expected.keys():
@@ -140,17 +140,17 @@ async def dossidcall(interface, passive, timeoutsecs, ignoredlist, alertlist, ex
                 cleaned_mac = current_mac.replace(":", "")
                 expected_macs = expected[current_ssid]
                 if cleaned_mac not in expected_macs:
-                    resultstatus = "CRITICAL"
+                    resultstatus = mergestatus(resultstatus, "CRITICAL")
                     resultmessages.append("The base mac " + current_mac + " for SSID " + current_ssid + " with channel " + current_channel + " is not in valid list " + str(expected_macs) + ".")
                 if "channel_utilisation" in network.keys():
                     current_utilization_parts = network["channel_utilisation"].strip().split("/")
                     current_utilization = round((int(current_utilization_parts[0]) / int(current_utilization_parts[1])) * 100)
                     infomsg(current_utilization)
                     if current_utilization >= utilcrit:
-                        resultstatus = "CRITICAL"
+                        resultstatus = mergestatus(resultstatus, "CRITICAL")
                         resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the critical " + str(utilcrit) + "%.")
                     elif current_utilization >= utilwarn:
-                        resultstatus = "WARNING"
+                        resultstatus = mergestatus(resultstatus, "WARNING")
                         resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the warning " + str(utilwarn) + "%.")
                     else:
                         resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " is OK.")
@@ -182,7 +182,8 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     interfacelist = args.interface.split(",")
-    interfacelist.remove("")
+    if "" in interfacelist:
+        interfacelist.remove("")
     if len(interfacelist) == 0:
         searchpath = "/sys/class/net"
         entries = os.listdir(searchpath)
@@ -195,15 +196,15 @@ async def main(forcedargs=None):
 
     timeoutsecs = 120
 
-    ignoredlist = args.ignored.split("Â¶")
+    ignoredlist = args.ignored.split("¶")
     if "" in ignoredlist:
         ignoredlist.remove("")
 
-    alertlist = args.alert.split("Â¶")
+    alertlist = args.alert.split("¶")
     if "" in alertlist:
         alertlist.remove("")
 
-    exptparts = args.expected.split("Â¶")
+    exptparts = args.expected.split("¶")
     if "" in exptparts:
         exptparts.remove("")
     expected = {}
