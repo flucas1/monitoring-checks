@@ -2,11 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import socket
-import os
-import traceback
 import sys
-import datetime
-import re
 import argparse
 import asyncio
 
