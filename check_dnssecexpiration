@@ -51,7 +51,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def run_cmd(cmdline):
+async def run_cmdline(cmdline):
     try:
         process = await asyncio.create_subprocess_exec(
             *cmdline,
@@ -87,28 +87,32 @@ async def main(forcedargs=None):
 
     # Check the resolver to properly validate DNSSEC at all
     cmdline = ["dig", "+nocmd", "+nostats", "+noquestion", args.always_failing_domain, "@" + args.resolver]
-    resolver_out = await run_cmd(cmdline)
+    resolver_out = await run_cmdline(cmdline)
     if "opcode: QUERY" not in resolver_out or "status: SERVFAIL" not in resolver_out:
         exitnagios("WARNING", "Resolver seems to not validate DNSSEC signatures - going further seems hopeless right now.")
 
     # Check if the resolver delivers an answer for the domain to test
-    check_resolvable_out = await run_cmd(["dig", "+short", "@" + args.resolver, "SOA", args.zone])
+    cmdline = ["dig", "+short", "@" + args.resolver, "SOA", args.zone]
+    check_resolvable_out = await run_cmdline(cmdline)
     if not check_resolvable_out:
         # Check explicit disabled validation
-        check_cd_out = await run_cmd(["dig", "+short", "@" + args.resolver, "SOA", args.zone, "+cd"])
+        cmdline = ["dig", "+short", "@" + args.resolver, "SOA", args.zone, "+cd"]
+        check_cd_out = await run_cmdline(cmdline)
         if check_cd_out:
             exitnagios("CRITICAL", "The domain " + args.zone + " can be validated without DNSSEC validation - but will fail on resolvers that do validate DNSSEC.")
         else:
             exitnagios("CRITICAL", "The domain " + args.zone + " cannot be resolved via " + args.resolver + " as resolver while DNSSEC validation is active.")
 
     # Check if the domain is DNSSEC signed at all
-    check_signed_out = await run_cmd(["dig", args.zone, "@" + args.resolver, "DS", "+short"])
+    cmdline = ["dig", args.zone, "@" + args.resolver, "DS", "+short"]
+    check_signed_out = await run_cmdline(cmdline)
     if not check_signed_out:
         exitnagios("WARNING", "Zone " + args.zone + " seems to be unsigned itself (= resolvable, but no DNSSEC involved at all)")
 
     # Check if there are multiple RRSIG responses and check them one after the other
     now = datetime.datetime.now(datetime.timezone.utc).timestamp()
-    rrsig_out = await run_cmd(["dig", "@" + args.resolver, args.record_type, args.zone, "+dnssec"])
+    cmdline = ["dig", "@" + args.resolver, args.record_type, args.zone, "+dnssec"]
+    rrsig_out = await run_cmdline(cmdline)
     rrsig_lines = [line for line in rrsig_out.split("\n") if "RRSIG" in line and not line.startswith(";")]
 
     if not rrsig_lines:
