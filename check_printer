@@ -252,8 +252,8 @@ async def check_consumables(args, param):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
-            state_string = s_string
-            perfdata = p_data
+            state_string += s_string
+            perfdata += p_data
             consums_state = max(consums_state, status)
     else:
         # Match specific string
@@ -271,8 +271,8 @@ async def check_consumables(args, param):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
-            state_string = s_string
-            perfdata = p_data
+            state_string += s_string
+            perfdata += p_data
             consums_state = max(consums_state, status)
 
     return consums_state, state_string, perfdata
@@ -479,8 +479,8 @@ async def check_paper_trays(args, param, arg_token):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
-            state_string = s_string
-            perfdata = p_data
+            state_string += s_string
+            perfdata += p_data
             trays_state = max(trays_state, status)
     else:
         tasks = []
@@ -489,8 +489,8 @@ async def check_paper_trays(args, param, arg_token):
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for status, s_string, p_data in results:
-            state_string = s_string
-            perfdata = p_data
+            state_string += s_string
+            perfdata += p_data
             trays_state = max(trays_state, status)
 
     return trays_state, state_string, perfdata
