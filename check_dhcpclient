@@ -84,12 +84,12 @@ async def get_ip_address(ifname):
 
 
 async def findservers(interface, requestmac, timeout):
-    command = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
-    infomsg(" ".join(command))
+    cmdline = ["/usr/lib/nagios/plugins/check_dhcp", "-i", interface, "-m", requestmac, "-t", str(timeout), "-v"]
+    infomsg(" ".join(cmdline))
 
     try:
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
