@@ -92,9 +92,8 @@ async def main(forcedargs=None):
     except ValueError as e:
         exitnagios("UNKNOWN", str(e))
 
-    # Calculate difference
     local_epoch_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
-    diff = local_epoch_time - server_epoch_time
+    diff = abs(local_epoch_time - server_epoch_time)
     diff_msg = str(diff) + " seconds"
 
     # Evaluate against thresholds
