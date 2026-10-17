@@ -75,7 +75,7 @@ def extractmaster(role, lines):
             if len(parts) == 2:
                 effectiverole = parts[1].strip()
                 infomsg(role + " -> " + effectiverole)
-                cns = [candidate.split('=')[1] for candidate in effectiverole.split(',') if candidate.startswith('CN=')]
+                cns = [candidate.split("=")[1] for candidate in effectiverole.split(",") if candidate.startswith("CN=")]
                 if len(cns) > 1:
                     second_cn = cns[1]
                     return second_cn

@@ -85,7 +85,7 @@ async def main(forcedargs=None):
         status = int(value, 16)
         infomsg("Throttling status: " + hex(status))
 
-    except (IndexError, ValueError) as e:
+    except Exception as e:
         exitnagios("UNKNOWN", "Error retrieving or parsing vcgencmd status: " + str(e))
 
     if (status & 0x1) != 0:
