@@ -91,7 +91,7 @@ def check_page_loaded(driver):
 async def wait_page_loaded(driver):
     timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
     while True:
-        if check_page_loaded(driver) == True:
+        if check_page_loaded(driver):
             break
         if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
@@ -116,6 +116,8 @@ async def findswitchesininterface(interface, model):
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
+        if errors != "":
+            infomsg("stderr: " + errors)
         if exitcode == 0:
             infos = {}
             for line in output.splitlines():
@@ -167,6 +169,8 @@ async def queryversion(interface, mac, strict):
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
+        if errors != "":
+            infomsg("stderr: " + errors)
         if exitcode == 0:
             for line in output.splitlines():
                 line = line.strip()
@@ -183,7 +187,7 @@ async def queryversion(interface, mac, strict):
     return result
 
 
-async def getversions(switches, version, strict):
+async def getversions(switches, strict):
     results = {}
     for interface, macs in switches.items():
         for mac in macs:
@@ -197,7 +201,7 @@ async def getversions(switches, version, strict):
 async def doprosafecall(model, expected, strict):
     switches = await findallswitches(model)
     infomsg(str(switches))
-    versions = await getversions(switches, expected, strict)
+    versions = await getversions(switches, strict)
     infomsg(str(versions))
 
     valid = {}
