@@ -4,7 +4,6 @@
 import asyncssh
 import argparse
 import sys
-import pathlib
 import asyncio
 import socket
 import aiofiles
