@@ -6,7 +6,6 @@ import base64
 import json
 import argparse
 import sys
-import pathlib
 import asyncio
 import socket
 import aiofiles
