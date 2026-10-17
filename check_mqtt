@@ -147,7 +147,7 @@ async def main(forcedargs=None):
         client_kwargs["password"] = args.mqtt_password
         
     if tls_context is not None:
-        client_kwargs["tls_context"] = tls_context
+        client_kwargs["tls"] = tls_context
 
     infomsg("Starting loop")
     
