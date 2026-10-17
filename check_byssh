@@ -95,7 +95,7 @@ async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdl
                             status = status_map[exitcode]
                             message = parts[0].lower() + " - " + parts[1]
                     else:
-                        status = "UNKNOWN"
+                        status = status_map[exitcode]
                         message = output
                     if errors != "":
                         message = message + " - " + errors
