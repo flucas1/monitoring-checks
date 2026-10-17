@@ -133,6 +133,8 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     exitnagios("OK", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
     except socket.error:
         exitnagios(timeoutstatus, "socket error | time=-1 validity=-1")
+    except Exception:
+        exitnagios("CRITICAL", "unexpected error | time=-1 validity=-1")
     exitnagios("CRITICAL", "unexpected error | time=-1 validity=-1")
 
 # -------------------------------------------------------------------------------
