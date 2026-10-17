@@ -55,19 +55,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def wait_for_message(client):
-    try:
-        async with client.messages() as messages:
-            async for msg in messages:
-                return msg
-    except AttributeError:
-        async for msg in client.messages:
-            return msg
-
-
-# -------------------------------------------------------------------------------
-
-
 def parse_args(forcedargs=None):
     # Setup default values and parse command line arguments for the MQTT check
     DEFAULTS = {
@@ -149,7 +136,7 @@ async def main(forcedargs=None):
             tls_context.verify_mode = ssl.CERT_NONE
 
     client_kwargs = {
-        "hostname": args.mqtt_host,
+        "host": args.mqtt_host,
         "port": args.mqtt_port,
         "keepalive": args.keepalive,
         "client_id": "nagios-" + str(os.getpid())
@@ -168,83 +155,85 @@ async def main(forcedargs=None):
     message = "no issues"
     try:
         async with zmqtt.create_client(**client_kwargs) as client:
-            await client.subscribe(args.check_subscription)
             
-            # Publish active check message if not explicitly in readonly mode
-            if not args.mqtt_readonly:
-                await client.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
-
-            try:
-                # Loop effectively blocked waiting for message unless timeout occurs
-                time_left = args.max_wait - (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
-                if time_left <= 0:
-                    raise asyncio.TimeoutError
-                    
-                msg = await asyncio.wait_for(wait_for_message(client), timeout=time_left)
+            # Use zmqtt's context manager subscription to read messages
+            async with client.subscribe(args.check_subscription) as messages:
                 
-                rawpayload = msg.payload.decode("utf-8")
-                infomsg("The rawpayload is " + str(rawpayload))
-                
-                # Check jsonpath mapping to correctly extract payload values
-                if args.mqtt_jsonpath:
-                    try:
-                        jspayload = json.loads(rawpayload)
-                        jspath = jsonpath_rw.parse(args.mqtt_jsonpath)
-                        extractpayload = [match.value for match in jspath.find(jspayload)]
-                        payload = extractpayload[0]
-                    except Exception:
-                        payload = None
-                else:
-                    payload = rawpayload
-                    
-                infomsg("The payload is " + str(payload))
+                # Publish active check message if not explicitly in readonly mode
+                if not args.mqtt_readonly:
+                    await client.publish(args.check_topic, args.mqtt_payload, qos=zmqtt.QoS.EXACTLY_ONCE, retain=False)
 
-                elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
+                try:
+                    time_left = args.max_wait - (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
+                    if time_left <= 0:
+                        raise asyncio.TimeoutError
 
-                if args.short_output:
-                    message = "value=" + str(payload) + " | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
-                else:
-                    message = "message from " + args.check_subscription + " at " + args.mqtt_host + " in " + str("%.2f" % elapsed) + "s | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
+                    # Fetch the next message directly from the async subscription queue
+                    msg = await asyncio.wait_for(messages.get_message(), timeout=time_left)
 
-                # Execute dynamic evaluation of warning/critical expression variables
-                if args.critical is not None or args.warning is not None:
-                    infomsg("non-value checks")
-                    status = "OK"
-                    if args.critical is not None:
+                    rawpayload = msg.payload.decode("utf-8")
+                    infomsg("The rawpayload is " + str(rawpayload))
+
+                    # Check jsonpath mapping to correctly extract payload values
+                    if args.mqtt_jsonpath:
                         try:
-                            if eval(args.critical):
+                            jspayload = json.loads(rawpayload)
+                            jspath = jsonpath_rw.parse(args.mqtt_jsonpath)
+                            extractpayload = [match.value for match in jspath.find(jspayload)]
+                            payload = extractpayload[0]
+                        except Exception:
+                            payload = None
+                    else:
+                        payload = rawpayload
+                        
+                    infomsg("The payload is " + str(payload))
+
+                    elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
+
+                    if args.short_output:
+                        message = "value=" + str(payload) + " | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
+                    else:
+                        message = "message from " + args.check_subscription + " at " + args.mqtt_host + " in " + str("%.2f" % elapsed) + "s | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
+
+                    # Execute dynamic evaluation of warning/critical expression variables
+                    if args.critical is not None or args.warning is not None:
+                        infomsg("non-value checks")
+                        status = "OK"
+                        if args.critical is not None:
+                            try:
+                                if eval(args.critical):
+                                    status = "CRITICAL"
+                            except Exception:
                                 status = "CRITICAL"
-                        except Exception:
-                            status = "CRITICAL"
-                            message = "critical expression error '" + args.critical + "'"
-                    if status == "OK" and args.warning is not None:
-                        try:
-                            if eval(args.warning):
-                                status = "WARNING"
-                        except Exception:
-                            status = "CRITICAL"
-                            message = "warning expression error '" + args.warning + "'"
-                else:
-                    infomsg("value checks")
-                    status = "CRITICAL"
-                    try:
-                        # Conditional operators verify payload dynamically to apply the exit statuses
-                        if (args.mqtt_operator == "lt" or args.mqtt_operator == "lessthan") and float(payload) < float(args.mqtt_value):
-                            status = "OK"
-                        if (args.mqtt_operator == "gt" or args.mqtt_operator == "greaterthan") and float(payload) > float(args.mqtt_value):
-                            status = "OK"
-                        if (args.mqtt_operator == "eq" or args.mqtt_operator == "equal") and str(payload) == args.mqtt_value:
-                            status = "OK"
-                        if (args.mqtt_operator == "ct" or args.mqtt_operator == "contains") and str(payload).find(args.mqtt_value) != -1:
-                            status = "OK"
-                        if (args.mqtt_operator == "any") and payload:
-                            status = "OK"
-                    except Exception:
+                                message = "critical expression error '" + args.critical + "'"
+                        if status == "OK" and args.warning is not None:
+                            try:
+                                if eval(args.warning):
+                                    status = "WARNING"
+                            except Exception:
+                                status = "CRITICAL"
+                                message = "warning expression error '" + args.warning + "'"
+                    else:
+                        infomsg("value checks")
                         status = "CRITICAL"
+                        try:
+                            # Conditional operators verify payload dynamically to apply the exit statuses
+                            if (args.mqtt_operator == "lt" or args.mqtt_operator == "lessthan") and float(payload) < float(args.mqtt_value):
+                                status = "OK"
+                            if (args.mqtt_operator == "gt" or args.mqtt_operator == "greaterthan") and float(payload) > float(args.mqtt_value):
+                                status = "OK"
+                            if (args.mqtt_operator == "eq" or args.mqtt_operator == "equal") and str(payload) == args.mqtt_value:
+                                status = "OK"
+                            if (args.mqtt_operator == "ct" or args.mqtt_operator == "contains") and str(payload).find(args.mqtt_value) != -1:
+                                status = "OK"
+                            if (args.mqtt_operator == "any") and payload:
+                                status = "OK"
+                        except Exception:
+                            status = "CRITICAL"
 
-            except asyncio.TimeoutError:
-                message = "timeout waiting for message"
-                status = timeoutstatus
+                except asyncio.TimeoutError:
+                    message = "timeout waiting for message"
+                    status = timeoutstatus
 
     except Exception as e:
         status = "CRITICAL"
@@ -254,7 +243,6 @@ async def main(forcedargs=None):
     infomsg("Ending loop")
     infomsg("status: " + str(status))
     exitnagios(status, message)
-
 
 # -------------------------------------------------------------------------------
 
