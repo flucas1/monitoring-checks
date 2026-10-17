@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import os
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -62,7 +61,6 @@ async def doresolveddnsseccall():
     exitcode = process.returncode
 
     if exitcode == 0:
-        allenabled = True
         failed = []
         for line in output.splitlines():
             parts = line.split()
@@ -71,7 +69,7 @@ async def doresolveddnsseccall():
                     failed.append("Global")
                 else:
                     failed.append(parts[2].replace("(", "").replace(")", ""))
-        if allenabled:
+        if not failed:
             exitnagios("OK", "all interfaces have dnssec activated")
         else:
             exitnagios("CRITICAL", "some interfaces do not have dnssec activated: " + ", ".join(failed))
