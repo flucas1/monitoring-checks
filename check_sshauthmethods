@@ -3,7 +3,6 @@
 
 import argparse
 import asyncssh
-import os
 import sys
 import socket
 import asyncio
