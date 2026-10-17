@@ -56,12 +56,13 @@ def exitnagios(status, message):
 
 
 async def create_zfs_fstab(original_fstab):
-    tmp_fstab = tempfile.NamedTemporaryFile(mode="wb+", delete=False)
+    fd, tmp_fstab_path = tempfile.mkstemp()
+    os.close(fd)
 
+    content = b""
     if os.path.exists(original_fstab):
         async with aiofiles.open(original_fstab, "rb") as f:
             content = await f.read()
-            tmp_fstab.write(content)
 
     try:
         cmdline = ["/sbin/zfs", "list", "-H", "-o", "name"]
@@ -112,16 +113,21 @@ async def create_zfs_fstab(original_fstab):
             parts = stdout.decode().strip().split()
             ro = "ro" if len(parts) >= 3 and parts[2] == "on" else "rw"
 
-            tmp_fstab.write(ds + "\t" + mp + "\tzfs\t" + ro + "\t0\t0\n")
+            content += (ds + "\t" + mp + "\tzfs\t" + ro + "\t0\t0\n").encode()
     except Exception:
         pass
 
-    tmp_fstab.close()
-    return tmp_fstab.name
+    async with aiofiles.open(tmp_fstab_path, "wb") as f:
+        await f.write(content)
+
+    return tmp_fstab_path
 
 
 async def make_mtab():
-    tmp_mtab = tempfile.NamedTemporaryFile(mode="w+", delete=False)
+    fd, tmp_mtab_path = tempfile.mkstemp()
+    os.close(fd)
+
+    content = ""
     try:
         cmdline = ["/usr/bin/mount"]
         process = await asyncio.create_subprocess_exec(
@@ -134,11 +140,14 @@ async def make_mtab():
         for line in mount_output:
             parts = line.replace(" on ", " ").replace(" (", " ").replace(",", " ").split()
             if len(parts) >= 3:
-                tmp_mtab.write(parts[0] + " " + parts[1] + " " + parts[2] + "\n")
+                content += parts[0] + " " + parts[1] + " " + parts[2] + "\n"
     except Exception:
         pass
-    tmp_mtab.close()
-    return tmp_mtab.name
+
+    async with aiofiles.open(tmp_mtab_path, "w") as f:
+        await f.write(content)
+
+    return tmp_mtab_path
 
 
 async def run_df(mp, timeout):
