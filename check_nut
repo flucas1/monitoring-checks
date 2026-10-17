@@ -163,8 +163,9 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "you have to specify some value to check")
 
     upsc_path = "/usr/bin/upsc"
+    cmdline = [upsc_path, args.device]
     try:
-        res = await run_command([upsc_path, args.device])
+        res = await run_command(cmdline)
     except RuntimeError as e:
         exitnagios("UNKNOWN", "can't run '" + str(upsc_path) + " " + str(args.device) + "': " + str(e))
 
