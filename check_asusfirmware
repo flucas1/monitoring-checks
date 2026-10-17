@@ -164,7 +164,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
     except Exception as e:
-        exitnagios("CRITICAL", "exeception during loging-in " + str(e))
+        exitnagios("CRITICAL", "exception during logging-in " + str(e))
 
     # end login
 
@@ -187,7 +187,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     await asyncio.sleep(5)
 
     await wait_page_loaded(driver)
-    infomsg("firmware page loaged")
+    infomsg("firmware page loaded")
 
     wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "current_version")))
     current = driver.find_element(by=selenium.webdriver.common.by.By.ID, value="current_version")
