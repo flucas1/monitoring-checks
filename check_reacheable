@@ -157,7 +157,7 @@ async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warn
 
 async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
     hosts = hostname.replace(",", " ").split()
-    valid = 0
+    total_valid = 0
     warning = 0
     average = 0
     percentloss = 0
@@ -187,7 +187,7 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
             percentloss += result[2]
             reason = result[3]
             if result[0] == 0:
-                valid += 1
+                total_validlid += 1
                 if reason not in okreasons:
                     okreasons.append(reason)
             elif result[0] == 1:
@@ -199,17 +199,24 @@ async def dopingtestmulti(protocol, interface, packets, timeoutvalue, timeoutsta
                     critreasons.append(reason)
         infomsg(str(result))
 
-    average = float(average) / len(hosts)
-    percentloss = float(percentloss) / len(hosts)
-    percent = 100 - percentloss
-    valid = float(valid) / len(protocolslist)
-
-    if valid >= minimum:
-        return ("OK", hostname + " - " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(okreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(percent))
-    elif valid + warning >= minimum:
-        return ("WARNING", hostname + " - " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(warnreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(percent))
+    if not hosts:
+        average = 0.0
+        avg_percent_loss = 0.0
     else:
-        return (timeoutstatus, hostname + " - only " + str(valid) + " of at least " + str(minimum) + " entries are reachable - " + str(critreasons) + " | valid=" + str(valid) + " warning=" + str(warning) + " average=-1 percent=0")
+        average = total_latency / len(hosts)
+        avg_percent_loss = total_percent_loss / len(hosts)
+    success_percent = 100.0 - avg_percent_loss
+    if not protocolslist:
+        valid_ratio = 0.0
+    else:
+        valid_ratio = total_valid / len(protocolslist)
+
+    if valid_ratio >= minimum:
+        return ("OK", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(okreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(success_percent))
+    elif valid_ratio + warning >= minimum:
+        return ("WARNING", hostname + " - " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(warnreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=" + str(average) + " percent=" + str(success_percent))
+    else:
+        return (timeoutstatus, hostname + " - only " + str(valid_ratio) + " of at least " + str(minimum) + " entries are reachable - " + str(critreasons) + " | valid=" + str(valid_ratio) + " warning=" + str(warning) + " average=-1 percent=0")
 
 
 async def dopingtestretry(retries, protocol, interface, packets, timeoutvalue, timeoutstatus, hostname, minimum, warningms, warningpercent, criticalms, criticalpercent):
