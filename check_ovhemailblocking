@@ -24,7 +24,7 @@ def setcandebug(value):
 
 
 def infomsg(msg):
-    if candebug() == True:
+    if candebug():
         print(msg, flush=True)
 
 
@@ -154,7 +154,7 @@ async def main(forcedargs=None):
     for counter in range(5):
         if client == None:
             client = await generateOvhClient(filetokens)
-        if (client == None) and (counter < 5 - 1):
+        if (client == None) and (counter < 4):
             await asyncio.sleep(10)
         else:
             break
