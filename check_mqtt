@@ -60,26 +60,24 @@ message = "no issues"
 args = {}
 
 
-def on_connect(mosq, userdata, flags, reason_code, properties):
+async def on_connect(mosq, userdata, flags, reason_code, properties):
     global args
 
-    mosq.subscribe(args.check_subscription, 0)
-    mosq.loop()
+    await mosq.subscribe(args.check_subscription, 0)
 
 
-def on_publish(mosq, userdata, mid, reason_code, properties):
+async def on_publish(mosq, userdata, mid, reason_code, properties):
     pass
 
 
-def on_subscribe(mosq, userdata, mid, reason_code_list, properties):
+async def on_subscribe(mosq, userdata, mid, reason_code_list, properties):
     global args
 
     if not args.mqtt_readonly:
-        (res, mid) = mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
-        mosq.loop()
+        await mosq.publish(args.check_topic, args.mqtt_payload, qos=2, retain=False)
 
 
-def on_message(mosq, userdata, msg):
+async def on_message(mosq, userdata, msg):
     global args
     global message
     global status
@@ -145,7 +143,7 @@ def on_log(mosq, userdata, level, buf):
     print(buf, file=sys.stderr)
 
 
-def on_disconnect(mosq, userdata, disconnect_flags, reason_code, properties):
+async def on_disconnect(mosq, userdata, disconnect_flags, reason_code, properties):
     if reason_code != 0:
         exitnagios("UNKNOWN", "Unexpected disconnection. Incorrect credentials?")
 
@@ -181,27 +179,27 @@ def parse_args(forcedargs=None):
     operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host", metavar="<hostname>", help="mqtt host to connect to (default: {})".format(DEFAULTS["mqtt_host"]), dest="mqtt_host", default=DEFAULTS["mqtt_host"])
-    parser.add_argument("-P", "--port", metavar="<port>", help="network port to connect to (default: {})".format(DEFAULTS["mqtt_port"]), dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
-    parser.add_argument("-u", "--username", metavar="<username>", help="MQTT username (default: {})".format(DEFAULTS["mqtt_username"]), dest="mqtt_username", default=DEFAULTS["mqtt_username"])
-    parser.add_argument("-p", "--password", metavar="<password>", help="MQTT password (default: {})".format(DEFAULTS["mqtt_password"]), dest="mqtt_password", default=DEFAULTS["mqtt_password"])
-    parser.add_argument("-m", "--max-wait", metavar="<seconds>", help="maximum time to wait for the check (default: {} seconds)".format(DEFAULTS["max_wait"]), dest="max_wait", default=DEFAULTS["max_wait"], type=int)
-    parser.add_argument("-e", "--keepalive", metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: {} seconds)".format(DEFAULTS["keepalive"]), dest="keepalive", default=DEFAULTS["keepalive"], type=int)
-    parser.add_argument("-L", "--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: {} seconds)".format(DEFAULTS["sleep"]), dest="sleep", default=DEFAULTS["sleep"], type=float)
-    parser.add_argument("-a", "--cafile", metavar="<cafile>", help="cafile (default: {})".format(DEFAULTS["mqtt_cafile"]), dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
-    parser.add_argument("-C", "--certfile", metavar="<certfile>", help="certfile (default: {})".format(DEFAULTS["mqtt_certfile"]), dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
-    parser.add_argument("-k", "--keyfile", metavar="<keyfile>", help="keyfile (default: {})".format(DEFAULTS["mqtt_keyfile"]), dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
-    parser.add_argument("-n", "--insecure", help="suppress TLS verification of server hostname{}".format(" (default)" if DEFAULTS["mqtt_insecure"] else ""), dest="mqtt_insecure", default=DEFAULTS["mqtt_insecure"], action="store_true")
-    parser.add_argument("-i", "--topic", metavar="<topic>", help="topic to use for the active check (default: {})".format(DEFAULTS["check_topic"]), dest="check_topic", default=DEFAULTS["check_topic"])
-    parser.add_argument("-s", "--subscription", metavar="<subscription>", help="topic to use for the passive check (default: {})".format(DEFAULTS["check_subscription"]), dest="check_subscription", default=DEFAULTS["check_subscription"])
-    parser.add_argument("-r", "--readonly", help="just read the value of the topic{}".format(" (default)" if DEFAULTS["mqtt_readonly"] else ""), dest="mqtt_readonly", default=DEFAULTS["mqtt_readonly"], action="store_true")
-    parser.add_argument("-l", "--payload", metavar="<payload>", help="payload which will be PUBLISHed (default: {}). If it starts with an exclamation mark (!) the output of the command will be used".format(DEFAULTS["mqtt_payload"]), dest="mqtt_payload", default=DEFAULTS["mqtt_payload"])
-    parser.add_argument("-j", "--jsonpath", metavar="<jsonpath>", help="if given, payload is interpreted as JSON string and value is extracted using <jsonpath> (default: {})".format(DEFAULTS["mqtt_jsonpath"]), dest="mqtt_jsonpath", default=DEFAULTS["mqtt_jsonpath"])
-    parser.add_argument("-v", "--value", metavar="<value>", help="value to compare against received payload (default: {}). If it starts with an exclamation mark (!) the output of the command will be used".format(DEFAULTS["mqtt_value"]), dest="mqtt_value", default=DEFAULTS["mqtt_value"])
-    parser.add_argument("-o", "--operator", metavar="<operator>", help="operator to compare received value with value. Choose from {} (default: {}). 'eq' compares Strings, the other convert the arguments to float before compare".format(operators, DEFAULTS["mqtt_operator"]), dest="mqtt_operator", default=DEFAULTS["mqtt_operator"], choices=operators)
-    parser.add_argument("-w", "--warning", metavar="<expr>", help="Exit with WARNING status if <expr> is true (default: {}). <expr> can be any Python expression, use <payload> within expression for current payload value.".format(DEFAULTS["warning"]), dest="warning", default=DEFAULTS["warning"])
-    parser.add_argument("-c", "--critical", metavar="<expr>", help="Exit with CRITICAL status if <expr> is true (default: {}). <expr> can be any Python expression, use <payload> within expression for current payload value.".format(DEFAULTS["critical"]), dest="critical", default=DEFAULTS["critical"])
-    parser.add_argument("-S", "--short", help="use a shorter string on output{}".format(" (default)" if DEFAULTS["short_output"] else ""), dest="short_output", default=DEFAULTS["short_output"], action="store_true")
+    parser.add_argument("-H", "--host", metavar="<hostname>", help="mqtt host to connect to (default: " + DEFAULTS["mqtt_host"] + ")", dest="mqtt_host", default=DEFAULTS["mqtt_host"])
+    parser.add_argument("-P", "--port", metavar="<port>", help="network port to connect to (default: " + str(DEFAULTS["mqtt_port"]) + ")", dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
+    parser.add_argument("-u", "--username", metavar="<username>", help="MQTT username (default: " + str(DEFAULTS["mqtt_username"]) + ")", dest="mqtt_username", default=DEFAULTS["mqtt_username"])
+    parser.add_argument("-p", "--password", metavar="<password>", help="MQTT password (default: " + str(DEFAULTS["mqtt_password"]) + ")", dest="mqtt_password", default=DEFAULTS["mqtt_password"])
+    parser.add_argument("-m", "--max-wait", metavar="<seconds>", help="maximum time to wait for the check (default: " + str(DEFAULTS["max_wait"]) + " seconds)", dest="max_wait", default=DEFAULTS["max_wait"], type=int)
+    parser.add_argument("-e", "--keepalive", metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: " + str(DEFAULTS["keepalive"]) + " seconds)", dest="keepalive", default=DEFAULTS["keepalive"], type=int)
+    parser.add_argument("-L", "--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: " + str(DEFAULTS["sleep"]) + ")", dest="sleep", default=DEFAULTS["sleep"], type=float)
+    parser.add_argument("-a", "--cafile", metavar="<cafile>", help="cafile (default: " + str(DEFAULTS["mqtt_cafile"]) + ")", dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
+    parser.add_argument("-C", "--certfile", metavar="<certfile>", help="certfile (default: " + str(DEFAULTS["mqtt_certfile"]) + ")", dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
+    parser.add_argument("-k", "--keyfile", metavar="<keyfile>", help="keyfile (default: " + str(DEFAULTS["mqtt_keyfile"]) + ")", dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
+    parser.add_argument("-n", "--insecure", help="suppress TLS verification of server hostname" + (" (default)" if DEFAULTS["mqtt_insecure"] else ""), dest="mqtt_insecure", default=DEFAULTS["mqtt_insecure"], action="store_true")
+    parser.add_argument("-i", "--topic", metavar="<topic>", help="topic to use for the active check (default: " + DEFAULTS["check_topic"] + ")", dest="check_topic", default=DEFAULTS["check_topic"])
+    parser.add_argument("-s", "--subscription", metavar="<subscription>", help="topic to use for the passive check (default: " + str(DEFAULTS["check_subscription"]) + ")", dest="check_subscription", default=DEFAULTS["check_subscription"])
+    parser.add_argument("-r", "--readonly", help="just read the value of the topic" + (" (default)" if DEFAULTS["mqtt_readonly"] else ""), dest="mqtt_readonly", default=DEFAULTS["mqtt_readonly"], action="store_true")
+    parser.add_argument("-l", "--payload", metavar="<payload>", help="payload which will be PUBLISHed (default: " + DEFAULTS["mqtt_payload"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_payload", default=DEFAULTS["mqtt_payload"])
+    parser.add_argument("-j", "--jsonpath", metavar="<jsonpath>", help="if given, payload is interpreted as JSON string and value is extracted using <jsonpath> (default: " + str(DEFAULTS["mqtt_jsonpath"]) + ")", dest="mqtt_jsonpath", default=DEFAULTS["mqtt_jsonpath"])
+    parser.add_argument("-v", "--value", metavar="<value>", help="value to compare against received payload (default: " + DEFAULTS["mqtt_value"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_value", default=DEFAULTS["mqtt_value"])
+    parser.add_argument("-o", "--operator", metavar="<operator>", help="operator to compare received value with value. Choose from " + str(operators) + " (default: " + DEFAULTS["mqtt_operator"] + "). 'eq' compares Strings, the other convert the arguments to float before compare", dest="mqtt_operator", default=DEFAULTS["mqtt_operator"], choices=operators)
+    parser.add_argument("-w", "--warning", metavar="<expr>", help="Exit with WARNING status if <expr> is true (default: " + str(DEFAULTS["warning"]) + "). <expr> can be any Python expression, use <payload> within expression for current payload value.", dest="warning", default=DEFAULTS["warning"])
+    parser.add_argument("-c", "--critical", metavar="<expr>", help="Exit with CRITICAL status if <expr> is true (default: " + str(DEFAULTS["critical"]) + "). <expr> can be any Python expression, use <payload> within expression for current payload value.", dest="critical", default=DEFAULTS["critical"])
+    parser.add_argument("-S", "--short", help="use a shorter string on output" + (" (default)" if DEFAULTS["short_output"] else ""), dest="short_output", default=DEFAULTS["short_output"], action="store_true")
     parser.add_argument("-t", "--timeout", action="store", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
@@ -229,7 +227,7 @@ async def main(forcedargs=None):
         "have_response": False,
         "start_time": datetime.datetime.now(datetime.timezone.utc).timestamp(),
     }
-    mqttc = paho.mqtt.client.Client(paho.mqtt.client.CallbackAPIVersion.VERSION2, "nagios-" + str(os.getpid()), clean_session=True, userdata=userdata, protocol=4)
+    mqttc = paho.mqtt.client.AsyncClient(paho.mqtt.client.CallbackAPIVersion.VERSION2, "nagios-" + str(os.getpid()), clean_session=True, userdata=userdata, protocol=4)
     mqttc.on_message = on_message
     mqttc.on_connect = on_connect
     mqttc.on_disconnect = on_disconnect
@@ -250,7 +248,7 @@ async def main(forcedargs=None):
         mqttc.username_pw_set(args.mqtt_username, args.mqtt_password)
 
     try:
-        mqttc.connect(args.mqtt_host, args.mqtt_port, args.keepalive)
+        await mqttc.connect_async(args.mqtt_host, args.mqtt_port, args.keepalive)
     except TimeoutError as e:
         status = timeoutstatus
         message = "Connection to " + args.mqtt_host + ":" + str(args.mqtt_port) + " timed out: " + str(type(e)) + " " + str(e)
@@ -261,9 +259,7 @@ async def main(forcedargs=None):
         exitnagios(status, message)
 
     infomsg("Starting loop")
-    rc = 0
-    while userdata["have_response"] == False and rc == 0:
-        rc = mqttc.loop()
+    while userdata["have_response"] == False:
         if datetime.datetime.now(datetime.timezone.utc).timestamp() - userdata["start_time"] > args.max_wait:
             message = "timeout waiting for message"
             status = timeoutstatus
@@ -272,7 +268,7 @@ async def main(forcedargs=None):
     infomsg("Ending loop")
     infomsg("status: " + str(status))
 
-    mqttc.disconnect()
+    await mqttc.disconnect()
     exitnagios(status, message)
 
 
