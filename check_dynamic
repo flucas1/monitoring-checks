@@ -140,8 +140,8 @@ async def dodynamiccall(accesstoken, protocol, interface, record, timeoutvalue, 
 
     resolvedip = await resolve_entry(protocol, interface, timeoutvalue, accesstoken, record)
     externalip = await query_external_ip(protocol, interface, timeoutvalue, accesstoken)
-    if (resolvedip == "") or (externalip == None):
-        exitnagios("WARNING", "could not resolve " + record)
+    if (resolvedip in ["", None]) or (externalip in ["", None]):
+        exitnagios(timeoutstatus, "could not resolve " + record)
     elif resolvedip == externalip:
         exitnagios("OK", "the resolved record '" + record + "' matches the external ip " + externalip)
     else:
