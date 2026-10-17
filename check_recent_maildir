@@ -292,7 +292,7 @@ def get_extra_tz():
     return extra_tz
 
 
-def get_maildir_state(inbox, warninglimit, criticallimit):
+async def get_maildir_state(inbox, warninglimit, criticallimit):
     """
     Traverse inbox and subfolders once, returning:
     "CRITICAL" if no email newer than criticallimit
@@ -313,7 +313,7 @@ def get_maildir_state(inbox, warninglimit, criticallimit):
                 candidatedate = dateutil.parser.parse(date, tzinfos=get_extra_tz())
                 if candidatedate.tzinfo is None:
                     candidatedate = candidatedate.replace(tzinfo=datetime.timezone.utc)
-            except:
+            except Exception:
                 continue
 
             if candidatedate > warninglimit:
@@ -324,7 +324,7 @@ def get_maildir_state(inbox, warninglimit, criticallimit):
         # check subfolders
         for folder in inbox.list_folders():
             nestedinbox = inbox.get_folder(folder)
-            substate = get_maildir_state(nestedinbox, warninglimit, criticallimit)
+            substate = await get_maildir_state(nestedinbox, warninglimit, criticallimit)
             if substate == "OK":
                 return "OK"
             elif substate == "WARNING" and state != "OK":
@@ -352,7 +352,7 @@ async def get_home_path(username):
         try:
             parts = output.splitlines()[0].split(":")
             return parts[5]
-        except:
+        except Exception:
             return None
     else:
         return None
@@ -382,7 +382,7 @@ async def dorecentmaildircall(username, warning, critical):
         criticallimit = now - datetime.timedelta(hours=critical)
 
         # single recursive traversal returns the merged state
-        state = get_maildir_state(inbox, warninglimit, criticallimit)
+        state = await get_maildir_state(inbox, warninglimit, criticallimit)
 
         if state == "CRITICAL":
             exitnagios("CRITICAL", "no email in the last " + str(critical) + " hours | maxage>=" + str(int(critical * 3600)))
