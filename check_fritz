@@ -69,45 +69,35 @@ def find_xml_value(xml_str, value):
 def check_number(val):
     """Validates if the input can be treated as a number."""
     if not val:
-        print("UNKNOWN: Could not parse output")
-        sys.exit(PLUGIN_UNKNOWN)
+        exitnagios("UNKNOWN", "Could not parse output")
     try:
         float(val)
     except ValueError:
-        print("UNKNOWN: Could not parse output")
-        sys.exit(PLUGIN_UNKNOWN)
+        exitnagios("UNKNOWN", "Could not parse output")
 
 
 def check_greater(value, warn, crit, msg, perfdata):
     """Threshold logic for values where higher is worse."""
     if warn == 0 or crit == 0:
-        print("OK: " + msg + " | " + perfdata + "=" + str(value) + ";;;;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", msg + " | " + perfdata + "=" + str(value) + ";;;;")
     elif value > crit:
-        print("CRITICAL: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_CRITICAL)
+        exitnagios("CRITICAL", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
     elif value > warn:
-        print("WARNING: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_WARNING)
+        exitnagios("WARNING", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
     else:
-        print("OK: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
 
 
 def check_lower(value, warn, crit, msg, perfdata):
     """Threshold logic for values where lower is worse."""
     if warn == 0 or crit == 0:
-        print("OK: " + msg + " | " + perfdata + "=" + str(value) + ";;;;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", msg + " | " + perfdata + "=" + str(value) + ";;;;")
     elif value < crit:
-        print("CRITICAL: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_CRITICAL)
+        exitnagios("CRITICAL", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
     elif value < warn:
-        print("WARNING: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_WARNING)
+        exitnagios("WARNING", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
     else:
-        print("OK: " + msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", msg + " | " + perfdata + "=" + str(value) + ";" + str(warn) + ";" + str(crit) + ";;")
 
 
 def format_uptime(seconds):
@@ -156,8 +146,7 @@ async def main(forcedargs=None):
                     username = lines[0]
                     password = lines[1]
         except Exception as e:
-            print("UNKNOWN: Could not read authfile - " + str(e))
-            sys.exit(PLUGIN_UNKNOWN)
+            exitnagios("UNKNOWN", "Could not read authfile - " + str(e))
 
     # Function and Index extraction
     func_parts = args.function.split(":", 1)
@@ -204,8 +193,7 @@ async def main(forcedargs=None):
         xml_var = "<NewIndex>" + index + "</NewIndex>"
 
     else:
-        print("UNKNOWN: Unknown function")
-        sys.exit(PLUGIN_UNKNOWN)
+        exitnagios("UNKNOWN", "Unknown function")
 
     # Formulate HTTP SOAP request
     target_url = "https://" + args.host + ":" + args.port + "/upnp/control/" + url
@@ -214,11 +202,11 @@ async def main(forcedargs=None):
         "SOAPACTION": "urn:dslforum-org:service:" + service + ":1#" + action,
         "Authorization": aiohttp.encode_basic_auth(username, password)
     }
-    soap_body = """<?xml version='1.0'?> 
-    <s:Envelope xmlns:s='http://schemas.xmlsoap.org/soap/envelope/' s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/'> 
-        <s:Body> 
-            <u:""" + action + """ xmlns:u='urn:dslforum-org:service:""" + service + """:1'> """ + xml_var + """ </u:""" + action + """> 
-        </s:Body> 
+    soap_body = """<?xml version='1.0'?>
+    <s:Envelope xmlns:s='http://schemas.xmlsoap.org/soap/envelope/' s:encodingStyle='http://schemas.xmlsoap.org/soap/encoding/'>
+        <s:Body>
+            <u:""" + action + """ xmlns:u='urn:dslforum-org:service:""" + service + """:1'> """ + xml_var + """ </u:""" + action + """>
+        </s:Body>
     </s:Envelope>"""
 
     try:
@@ -231,41 +219,35 @@ async def main(forcedargs=None):
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
                 query_result = await response.text()
+                response_status = response.status
     except Exception as e:
-        print("UNKNOWN: Connection error - " + str(e))
-        sys.exit(PLUGIN_UNKNOWN)
+        exitnagios("UNKNOWN", "Connection error - " + str(e))
 
     if args.debug:
         print(query_result)
 
-    if response.status == 401 or "401 Unauthorized" in query_result:
-        print("ERROR - Wrong Password")
-        sys.exit(PLUGIN_ERROR)
+    if response_status == 401 or "401 Unauthorized" in query_result:
+        exitnagios("CRITICAL", "Wrong Password")
 
     # Response parsing based on requested function
     if func_name == "status":
         status = find_xml_value(query_result, "NewConnectionStatus")
         if not status:
-            print("UNKNOWN: Could not get a response | 'status'=" + str(PLUGIN_UNKNOWN) + ";;;;")
-            sys.exit(PLUGIN_UNKNOWN)
+            exitnagios("UNKNOWN", "Could not get a response | 'status'=" + str(PLUGIN_UNKNOWN) + ";;;;")
 
         if status == "Connected":
-            print("OK: " + status + " | 'status'=" + str(PLUGIN_OK) + ";;;;")
-            sys.exit(PLUGIN_OK)
+            exitnagios("OK", status + " | 'status'=" + str(PLUGIN_OK) + ";;;;")
         elif status in ("Connecting", "Authenticating"):
-            print("WARNING: " + status + " | 'status'=" + str(PLUGIN_WARNING) + ";;;;")
-            sys.exit(PLUGIN_WARNING)
+            exitnagios("WARNING", status + " | 'status'=" + str(PLUGIN_WARNING) + ";;;;")
         else:
-            print("ERROR - " + status + " | 'status'=" + str(PLUGIN_ERROR) + ";;;;")
-            sys.exit(PLUGIN_ERROR)
+            exitnagios("CRITICAL", status + " | 'status'=" + str(PLUGIN_ERROR) + ";;;;")
 
     elif func_name == "linkuptime":
         linkuptime_str = find_xml_value(query_result, "NewUptime")
         check_number(linkuptime_str)
         linkuptime = int(linkuptime_str)
         d, h, m, s = format_uptime(linkuptime)
-        print("OK: Link Uptime " + str(linkuptime) + " seconds (" + str(d) + "d " + str(h) + "h " + str(m) + "m " + str(s) + "s) | 'linkuptime'=" + str(linkuptime) + "s;;;;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", "Link Uptime " + str(linkuptime) + " seconds (" + str(d) + "d " + str(h) + "h " + str(m) + "m " + str(s) + "s) | 'linkuptime'=" + str(linkuptime) + "s;;;;")
 
     elif func_name == "downstreamrate":
         list_ds_byte = find_xml_value(query_result, "Newds_current_bps")
@@ -304,29 +286,24 @@ async def main(forcedargs=None):
     elif func_name == "update":
         update_str = find_xml_value(query_result, "NewUpgradeAvailable")
         if update_str == "0":
-            print("OK: No Upgrade available | 'update_pending'=" + update_str + ";;;;")
-            sys.exit(PLUGIN_OK)
+            exitnagios("OK", "No Upgrade available | 'update_pending'=" + update_str + ";;;;")
         else:
-            print("CRITICAL: Upgrade available | 'update_pending'=" + update_str + ";;;;")
-            sys.exit(PLUGIN_CRITICAL)
+            exitnagios("CRITICAL", "Upgrade available | 'update_pending'=" + update_str + ";;;;")
 
     elif func_name == "uptime":
         uptime_str = find_xml_value(query_result, "NewUpTime")
         check_number(uptime_str)
         uptime = int(uptime_str)
         d, h, m, s = format_uptime(uptime)
-        print("OK: Uptime " + str(uptime) + " seconds (" + str(d) + "d " + str(h) + "h " + str(m) + "m " + str(s) + "s) | 'uptime'=" + str(uptime) + "s;;;;")
-        sys.exit(PLUGIN_OK)
+        exitnagios("OK", "Uptime " + str(uptime) + " seconds (" + str(d) + "d " + str(h) + "h " + str(m) + "m " + str(s) + "s) | 'uptime'=" + str(uptime) + "s;;;;")
 
     # Smart Home Features
     elif func_name in ("thermometer", "socketpower", "socketenergy", "socketswitch"):
         error_code = find_xml_value(query_result, "errorCode")
         if error_code == "820":
-            print("UNKNOWN: Not able to fetch current " + func_name + " status | '" + func_name + "_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
-            sys.exit(PLUGIN_UNKNOWN)
+            exitnagios("UNKNOWN", "Not able to fetch current " + func_name + " status | '" + func_name + "_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
         if error_code == "713":
-            print("UNKNOWN: Specified device index invalid")
-            sys.exit(PLUGIN_UNKNOWN)
+            exitnagios("UNKNOWN", "Specified device index invalid")
 
         device_firmware = find_xml_value(query_result, "NewFirmwareVersion")
         device_product = find_xml_value(query_result, "NewProductName")
@@ -339,26 +316,22 @@ async def main(forcedargs=None):
 
             if device_present == "CONNECTED":
                 if temp_feature != "ENABLED":
-                    print("UNKNOWN: Temperature is not enabled on this device | 'thermometer_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
-                    sys.exit(PLUGIN_UNKNOWN)
+                    exitnagios("UNKNOWN", "Temperature is not enabled on this device | 'thermometer_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
 
                 current_temp = round(float(temp_celsius) / 10.0, 1)
                 text = device_product + " " + device_firmware + " - " + device_name + " " + device_present + " " + str(current_temp) + " C"
                 check_lower(current_temp, warn, crit, text, "'thermometer_current_state'=" + str(PLUGIN_OK) + ";;;; 'thermometer_current_temp'")
             elif device_present == "UNKNOWN":
-                print("UNKNOWN: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present + " | 'thermometer_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
-                sys.exit(PLUGIN_UNKNOWN)
+                exitnagios("UNKNOWN", device_product + " " + device_firmware + " - " + device_name + " " + device_present + " | 'thermometer_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
             else:
-                print("CRITICAL: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present + " | 'thermometer_current_state'=" + str(PLUGIN_CRITICAL) + ";;;;")
-                sys.exit(PLUGIN_CRITICAL)
+                exitnagios("CRITICAL", device_product + " " + device_firmware + " - " + device_name + " " + device_present + " | 'thermometer_current_state'=" + str(PLUGIN_CRITICAL) + ";;;;")
 
         else:  # socketpower, socketenergy, socketswitch
             multimeter_feature = find_xml_value(query_result, "NewMultimeterIsEnabled")
 
             if device_present == "CONNECTED":
                 if multimeter_feature != "ENABLED":
-                    print("UNKNOWN: Device with index " + index + " is not a socket")
-                    sys.exit(PLUGIN_UNKNOWN)
+                    exitnagios("UNKNOWN", "Device with index " + index + " is not a socket")
 
                 if func_name == "socketpower":
                     power_str = find_xml_value(query_result, "NewMultimeterPower")
@@ -378,18 +351,14 @@ async def main(forcedargs=None):
                     switch_state_int = 1 if switch_state == "ON" else 0
 
                     if switch_state == "OFF" and interpret_off_as_critical:
-                        print("CRITICAL: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present + " Switch " + switch_state + " | 'socket_switch_state'=" + str(switch_state_int) + ";;;;")
-                        sys.exit(PLUGIN_CRITICAL)
+                        exitnagios("CRITICAL", device_product + " " + device_firmware + " - " + device_name + " " + device_present + " Switch " + switch_state + " | 'socket_switch_state'=" + str(switch_state_int) + ";;;;")
                     else:
-                        print("OK: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present + " Switch " + switch_state + " | 'socket_switch_state'=" + str(switch_state_int) + ";;;;")
-                        sys.exit(PLUGIN_OK)
+                        exitnagios("OK", device_product + " " + device_firmware + " - " + device_name + " " + device_present + " Switch " + switch_state + " | 'socket_switch_state'=" + str(switch_state_int) + ";;;;")
 
             elif device_present == "UNKNOWN":
-                print("UNKNOWN: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present)
-                sys.exit(PLUGIN_UNKNOWN)
+                exitnagios("UNKNOWN", device_product + " " + device_firmware + " - " + device_name + " " + device_present)
             else:
-                print("CRITICAL: " + device_product + " " + device_firmware + " - " + device_name + " " + device_present)
-                sys.exit(PLUGIN_CRITICAL)
+                exitnagios("CRITICAL", device_product + " " + device_firmware + " - " + device_name + " " + device_present)
 
 
 # -------------------------------------------------------------------------------
