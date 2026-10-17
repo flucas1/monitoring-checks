@@ -5,6 +5,7 @@ import socket
 import sys
 import argparse
 import asyncio
+import asyncssh
 
 # -------------------------------------------------------------------------------
 
@@ -47,60 +48,37 @@ def exitnagios(status, message):
 
 # -------------------------------------------------------------------------------
 
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-# -------------------------------------------------------------------------------
-
-
-async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
+async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
     retries = 3
     counter = 0
+    
+    conn_kwargs = {
+        "host": hostname,
+        "username": login,
+        "family": family
+    }
+
+    if key != "" and key is not None:
+        conn_kwargs["client_keys"] = [key]
+        conn_kwargs["password"] = None
+        
+    if autoaccept:
+        conn_kwargs["known_hosts"] = None
+
     while True:
         infomsg("executing retry " + str(counter))
         counter = counter + 1
 
-        cmdline = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
-        if key != "" and key is not None:
-            cmdline = cmdline + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
-        if autoaccept:
-            cmdline = cmdline + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
-        cmdline = cmdline + ["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
-        infomsg(" ".join(cmdline))
+        async def execute_ssh_command():
+            async with asyncssh.connect(**conn_kwargs) as conn:
+                return await conn.run(remotecmdline, check=False)
 
-        process = await asyncio.create_subprocess_exec(
-            *cmdline,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
-        output = stdout.decode("utf-8").strip() if stdout else ""
-        errors = stderr.decode("utf-8").strip() if stderr else ""
-        exitcode = process.returncode
+        try:
+            result = await asyncio.wait_for(execute_ssh_command(), timeout=timeoutvalue)
+            output = result.stdout.strip() if result.stdout else ""
+            errors = result.stderr.strip() if result.stderr else ""
+            exitcode = result.exit_status
 
-        if output in ["SSH connection failed: (no error output)"]:
-            if counter > retries:
-                exitnagios(timeoutstatus, output + " - " + errors)
-            else:
-                infomsg("sleeping for retry " + str(counter))
-                await asyncio.sleep(10)
-        else:
             if exitcode in [0, 1, 2, 3]:
                 if output != "":
                     parts = output.split(": ", 1)
@@ -123,6 +101,16 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
             else:
                 exitnagios("UNKNOWN", output + " - " + errors)
 
+        except asyncio.TimeoutError:
+            exitnagios(timeoutstatus, "Plugin timed out")
+        except (OSError, asyncssh.Error) as exc:
+            errors = str(exc)
+            output = "SSH connection failed"
+            if counter > retries:
+                exitnagios(timeoutstatus, output + " - " + errors)
+            else:
+                infomsg("sleeping for retry " + str(counter))
+                await asyncio.sleep(10)
 
 # -------------------------------------------------------------------------------
 
@@ -147,19 +135,18 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    protocol = None
+    family = socket.AF_UNSPEC
     exclist = 0
     if args.ipv0 == True:
-        protocol = ""
+        family = socket.AF_UNSPEC
         exclist = exclist + 1
     if args.ipv4 == True:
-        protocol = "-4"
+        family = socket.AF_INET
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
-        protocol = "-6"
+        family = socket.AF_INET6
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
+
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
@@ -180,8 +167,9 @@ async def main(forcedargs=None):
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
+        
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await dobysshcheck(protocol, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
+        await dobysshcheck(family, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
