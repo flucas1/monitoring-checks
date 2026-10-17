@@ -97,7 +97,7 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     infomsg("Expiry date: " + str(certexpirationraw))
                     if certexpirationraw is not None:
                         certexpirationparsed = dateutil.parser.parse(cert_data["notAfter"])
-                except:
+                except Exception:
                     infomsg(str(traceback.format_exc()))
                     pass
             imapconnection.shutdown()

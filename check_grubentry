@@ -71,14 +71,15 @@ async def dogrubentrycall(expectedpos):
                 if len(singlequotes) > 0:
                     allcandidates.append(singlequotes[0])
                 doublequotes = re.findall('"([^"]*)"', line)
-                if doublequotes is not None:
-                    if len(doublequotes) > 0:
-                        allcandidates.append(doublequotes[0])
+                if len(doublequotes) > 0:
+                    allcandidates.append(doublequotes[0])
         validcandidates = []
         for item in allcandidates:
             if item.startswith("Debian GNU/Linux"):
                 validcandidates.append(item)
-        infomsg(validcandidates)
+        infomsg(str(validcandidates))
+        if expectedpos >= len(validcandidates):
+            exitnagios("WARNING", "expected grub entry position " + str(expectedpos) + " is out of range, only " + str(len(validcandidates)) + " entries found")
         expectedstring = validcandidates[expectedpos]
         infomsg("expected -> " + expectedstring)
 
