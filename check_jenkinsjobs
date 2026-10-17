@@ -4,7 +4,6 @@
 import argparse
 import sys
 import os
-import pathlib
 import asyncio
 import aiofiles
 

@@ -21,14 +21,6 @@ def setcandebug(value):
     _candebug = value
 
 
-def candebug():
-    global _candebug
-    if _candebug:
-        return True
-    else:
-        return False
-
-
 def infomsg(msg):
     if candebug():
         print(msg, flush=True)
@@ -376,7 +368,7 @@ async def main(forcedargs=None):
     if os.path.isfile(kubeconfig):
         await dokubernetescall(kubeconfig, namespace)
     else:
-        exitnagios("CRITICAL", "cannot find kubeconfig file '" + kubeconfig + "'")
+        exitnagios("CRITICAL", "cannot find kubeconfig file \"" + kubeconfig + "\"")
 
 
 # -------------------------------------------------------------------------------
