@@ -250,9 +250,9 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
             path = "/" + path
         url = httpprotocol + "://" + hostname + ":" + str(port) + path
         infomsg("url " + url)
+        curlhttpcode = 0
         httpversionparts = httpversion.split(",")
         if len(httpversionparts) > 0:
-            curlhttpcode = 0
             if "0.9" in httpversionparts:
                 curlhttpcode = curlhttpcode | pycurl.CURL_HTTP_VERSION_0_9
             if "1.0" in httpversionparts:

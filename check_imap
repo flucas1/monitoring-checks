@@ -93,7 +93,7 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
                 certexpirationraw = None
                 try:
                     # In asyncio, we retrieve the peer certificate via the underlying transport
-                    cert_data = imapconnection.protocol.transport.get_extra_info('peercert')
+                    cert_data = imapconnection.protocol.transport.get_extra_info("peercert")
                     infomsg(str(cert_data))
                     certexpirationraw = cert_data.get("notAfter")
                     infomsg("Expiry date: " + str(certexpirationraw))
