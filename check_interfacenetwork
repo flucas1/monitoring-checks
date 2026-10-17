@@ -94,7 +94,7 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
                         cidr = mask_part
                     else:
                         mask_int = int(ipaddress.ip_address(mask_part))
-                        cidr = bin(mask_int).count('1')
+                        cidr = bin(mask_int).count("1")
                     network = ipaddress.ip_network(option["addr"] + "/" + str(cidr), strict=False)
                     cmp_found = str(network)
                     cmp_target = str(ipaddress.ip_network(test, strict=False))
