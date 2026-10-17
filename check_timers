@@ -62,20 +62,22 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     # Reload the systemd manager configuration
+    cmdline = ["/usr/bin/systemctl", "daemon-reload"]
     try:
-        cmdline = ["systemctl", "daemon-reload"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            exitnagios("UNKNOWN", "Error reloading daemon: " + stderr.decode().strip())
     except Exception as e:
         exitnagios("UNKNOWN", "Error reloading daemon: " + str(e))
 
     # Get the list of enabled unit files, omitting pagers and legends
     cmdline = [
-        "systemctl", "list-unit-files",
+        "/usr/bin/systemctl", "list-unit-files",
         "--state=enabled", "--no-pager",
         "--property=unit_file", "--legend=false"
     ]
@@ -112,7 +114,7 @@ async def main(forcedargs=None):
         service = unit[:-6] + ".service"
 
         # Check if the service is enabled
-        cmdline = ["systemctl", "is-enabled", service]
+        cmdline = ["/usr/bin/systemctl", "is-enabled", service]
 
         try:
             process = await asyncio.create_subprocess_exec(
