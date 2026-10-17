@@ -3,7 +3,6 @@
 
 import os
 import sys
-import io
 import socket
 import argparse
 import dns.query
@@ -344,7 +343,6 @@ async def get_resolver(addressinfo, timeoutvalue):
         customresolver = dns.asyncresolver.Resolver()
     else:
         customresolver = dns.asyncresolver.Resolver(configure=False)
-        # Bypassed io.StringIO parsing to set nameservers directly
         customresolver.nameservers = [address]
         customresolver.port = port
     customresolver.timeout = timeoutvalue
