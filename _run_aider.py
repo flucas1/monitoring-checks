@@ -41,7 +41,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
-    pattern = "feature_"
+    pattern = "check_"
 
     target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith(pattern)]
 
@@ -60,7 +60,9 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
 async def main():
     DIRECTORY = "."
-    MODEL = "ollama/qwen3-coder-next:latest"
+    #MODEL = "ollama/qwen3-coder-next:latest"
+    #MODEL = "ollama/qwen3.8:latest"
+    MODEL = "ollama/mgraffam/qwen3.8-coder390:27b"
     PROMPT = []
     PROMPT.append("Keep the comments.")
     PROMPT.append("Review the attached python for issues and transform to async.")

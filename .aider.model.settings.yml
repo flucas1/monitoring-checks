@@ -4,6 +4,12 @@
 - name: ollama/qwen3:235b
   extra_params:
     num_ctx: 131072
+- name: ollama/qwen3.8:latest
+  extra_params:
+    num_ctx: 131072
+- name: ollama/mgraffam/qwen3.8-coder390:27b
+  extra_params:
+    num_ctx: 131072
 - name: ollama/deepseek-coder-v2:236b
   extra_params:
     num_ctx: 131072
