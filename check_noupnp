@@ -62,9 +62,7 @@ async def check_upnp_gateway():
         output = stdout.decode("utf-8").strip()
         errors = stderr.decode("utf-8").strip()
     except FileNotFoundError as e:
-        print(str(e))
-        output = None
-        errors = None
+        exitnagios("UNKNOWN", str(e))
 
     if errors == "No IGD UPnP Device found on the network !":
         exitnagios("OK", "no UPnP gateway found")

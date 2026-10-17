@@ -3,9 +3,9 @@
 
 import argparse
 import sys
-import os
 import socket
 import asyncio
+import datetime
 import icmplib
 
 # -------------------------------------------------------------------------------
@@ -107,8 +107,8 @@ def parse_args(forcedargs=None):
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", action="store", help="target IP or hostname")
-    parser.add_argument("-p", "--packets", action="store", default=1, help="number of pings")
-    parser.add_argument("-t", "--timeout", action="store", default=10, help="timeout")
+    parser.add_argument("-p", "--packets", action="store", default="1", help="number of pings")
+    parser.add_argument("-t", "--timeout", action="store", default="10", help="timeout")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -136,11 +136,11 @@ async def main(forcedargs=None):
     elif (exclist < 1):
         exitnagios("CRITICAL", "no protocol selected")
 
-    if (args.hostname == ""):
+    if (args.hostname in ["", None]):
         exitnagios("CRITICAL", "hostname not defined")
 
     try:
-        canping = check_ping_answer(args.hostname, args.protocol, args.packets, args.timeout)
+        canping = await check_ping_answer(args.hostname, protocol, int(args.packets), int(args.timeout))
         if canping:
             exitnagios("CRITICAL", args.hostname + " is reachable!")
         else:
