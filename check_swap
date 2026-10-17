@@ -5,8 +5,6 @@ import argparse
 import sys
 import os
 import asyncio
-import datetime
-import dateutil.parser
 
 # -------------------------------------------------------------------------------
 
@@ -69,7 +67,7 @@ async def dofreeswapscall(warning, critical, minimum):
         lines = output.splitlines()
         hasswap = False
         total = 0
-        free = 0
+        used = 0
         if len(lines) > 1:
             lines.pop(0)
             for line in lines:
@@ -78,12 +76,12 @@ async def dofreeswapscall(warning, critical, minimum):
                     infomsg(parts)
                     hasswap = True
                     total = total + int(parts[1])
-                    free = free + int(parts[3])
+                    used = used + int(parts[2])
 
         if not hasswap:
             exitnagios("CRITICAL", "no swap detected")
         else:
-            usage = free / total
+            usage = used / total
             if minimum != "" and total < float(minimum):
                 exitnagios("CRITICAL", "swap is too small")
             elif critical != "" and usage > float(critical):
