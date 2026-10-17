@@ -66,10 +66,10 @@ async def run_cmdline(cmdline):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode != 0:
-            exitnagios("CRITICAL", "Command failed: " + str(cmdline) + ". Error: " + output)
+            exitnagios("CRITICAL", "Command failed: " + output + " - " + errors)
         return output.splitlines()
     except Exception as e:
-        exitnagios("CRITICAL", "Command failed: " + str(cmdline) + ". Error: " + str(e))
+        exitnagios("CRITICAL", "Command failed: " + str(e))
 
 
 async def check_fail2ban_status():
