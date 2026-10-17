@@ -187,7 +187,17 @@ async def get_rtc_data(device):
         exitnagios("CRITICAL", "Error reading RTC data for " + device + ": " + str(e))
 
 
+def evaluate(device, difference, warning, critical):
+    if (difference >= critical):
+        exitnagios("CRITICAL", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
+    elif (difference >= warning):
+        exitnagios("WARNING", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
+    else:
+        exitnagios("OK", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
+
+
 # -------------------------------------------------------------------------------
+
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
@@ -197,15 +207,6 @@ def parse_args(forcedargs=None):
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
-
-
-def evaluate(device, difference, warning, critical):
-    if (difference >= critical):
-        exitnagios("CRITICAL", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
-    elif (difference >= warning):
-        exitnagios("WARNING", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
-    else:
-        exitnagios("OK", "The hwclock offset using device " + device + " is " + str(difference) + "s | difference=" + str(difference))
 
 
 async def main(forcedargs=None):
