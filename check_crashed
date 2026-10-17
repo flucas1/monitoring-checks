@@ -127,7 +127,7 @@ async def dolastloginscall(warning, critical):
         if not crashed:
             exitnagios("OK", "the system has not crashed recently | elapsed=-1")
         else:
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(datetime.timezone.utc)
             elapsed = now.timestamp() - crashdate.timestamp()
             elapsedhours = int(elapsed // 3600)
             extraseconds = elapsed % 3600
