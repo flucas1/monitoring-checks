@@ -98,8 +98,7 @@ async def walk_snmp(args, oid, raw=True):
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
-            print("snmpwalk command error.\n" + stderr.decode().strip())
-            sys.exit(STATE_UNK)
+            exitnagios("UNKNOWN", "snmpwalk command error.\n" + stderr.decode().strip())
 
         text = stdout.decode().strip()
         if raw:
@@ -107,8 +106,7 @@ async def walk_snmp(args, oid, raw=True):
             text = "\n".join([line.lstrip().replace('"', "") for line in text.splitlines()])
         return text
     except Exception as e:
-        print("snmpwalk command error.\n" + str(e))
-        sys.exit(STATE_UNK)
+        exitnagios("UNKNOWN", "snmpwalk command error.\n" + str(e))
 
 
 async def check_model(args):
@@ -122,7 +120,7 @@ async def check_messages(args):
     """Shows messages on the printer display"""
     messages = await walk_snmp(args, OIDS["prtAlertDescription"], True)
     if not messages:
-        return STATE_UNK, "UNKNOWN: Can't determine messages. Device does not support this OID.", ""
+        return STATE_UNK, "Can't determine messages. Device does not support this OID.", ""
     else:
         return STATE_OK, messages.replace("\n", " - "), ""
 
@@ -132,7 +130,7 @@ async def check_pagecount(args):
     page_count = await walk_snmp(args, OIDS["prtMarkerLifeCount"], True)
     perfdata = "'Pages'=" + page_count
     try:
-        formatted_count = "{:,}".format(int(page_count))
+        formatted_count = str(int(page_count))
     except ValueError:
         formatted_count = page_count
     return STATE_OK, "Pagecount is " + formatted_count + ".", perfdata
@@ -144,7 +142,7 @@ async def check_display(args):
     if display:
         return STATE_OK, display.replace("\n", " - "), ""
     else:
-        return STATE_UNK, "UNKNOWN - printer does not appear to support using this OID.", ""
+        return STATE_UNK, "printer does not appear to support using this OID.", ""
 
 
 async def check_printer_status(args):
@@ -152,11 +150,11 @@ async def check_printer_status(args):
     prt_status = await walk_snmp(args, OIDS["hrPrinterStatus"], True)
 
     if prt_status in ("1", "other", "other(1)"):
-        return STATE_CRIT, "CRITICAL: Printer status = " + prt_status + ".", ""
+        return STATE_CRIT, "Printer status = " + prt_status + ".", ""
     elif prt_status in ("3", "idle", "idle(3)", "4", "printing", "printing(4)", "5", "warmup", "warmup(5)"):
-        return STATE_OK, "OK: Printer status = " + prt_status + ".", ""
+        return STATE_OK, "Printer status = " + prt_status + ".", ""
     else:
-        return STATE_WARN, "WARNING: Printer status = " + prt_status + ".", ""
+        return STATE_WARN, "Printer status = " + prt_status + ".", ""
 
 
 async def _check_one_consumable(args, marker_id, state_string, perfdata):
@@ -169,7 +167,7 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
         marker_name = marker_color + " " + marker_name
 
     if not marker_name:
-        return STATE_UNK, "UNKNOWN - OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+        return STATE_UNK, "OID not found. Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
     current_cap = await walk_snmp(args, OIDS["prtMarkerSuppliesLevel"] + "." + marker_id, True)
     max_cap = await walk_snmp(args, OIDS["prtMarkerSuppliesMaxCapacity"] + "." + marker_id, True)
@@ -192,7 +190,7 @@ async def _check_one_consumable(args, marker_id, state_string, perfdata):
 
             if color_id:
                 clean_hex = brother_hex.replace("\n", " ").replace("Hex-STRING:", "")
-                match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
+                match = re.search(color_id + r"\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{2}\s+([0-9A-Fa-f]{2})", clean_hex)
                 if match:
                     pct = int(match.group(1), 16)  # Convert the final hex byte to a decimal integer
 
@@ -263,7 +261,7 @@ async def check_consumables(args, param):
         matched = [line for line in all_markers if re.search(param, line, re.IGNORECASE)]
 
         if not matched:
-            return STATE_UNK, "UNKNOWN - OID not found - Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+            return STATE_UNK, "OID not found - Your printer may not support checking this consumable. Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
         tasks = []
         for line in matched:
@@ -293,7 +291,7 @@ async def check_exact_consumable(args, param):
     if found_idx != -1:
         return await _check_one_consumable(args, str(found_idx), "", "")
     else:
-        return STATE_UNK, "UNKNOWN - No match found for '" + param + "' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
+        return STATE_UNK, "No match found for '" + param + "' - Use the CONSUM TEST option to determine which consumables may be monitored.", ""
 
 
 async def check_toner_levels(args):
@@ -313,7 +311,7 @@ async def check_toner_levels(args):
             matched.append(line)
 
     if not matched:
-        return STATE_UNK, "UNKNOWN - No toner cartridges found on this device.", ""
+        return STATE_UNK, "No toner cartridges found on this device.", ""
 
     tasks = []
     for line in matched:
@@ -353,7 +351,7 @@ async def check_toner_levels(args):
 
                 if color_id:
                     clean_hex = brother_hex.replace("\n", " ").replace("Hex-STRING:", "")
-                    hex_match = re.search(rf"{color_id}\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{{2}}\s+([0-9A-Fa-f]{{2}})", clean_hex)
+                    hex_match = re.search(color_id + r"\s+01\s+04\s+00\s+00\s+[0-9A-Fa-f]{2}\s+([0-9A-Fa-f]{2})", clean_hex)
                     if hex_match:
                         pct = int(hex_match.group(1), 16)
 
@@ -532,7 +530,7 @@ async def main(forcedargs=None):
     arg_token = ","
 
     state = STATE_UNK
-    state_string = "UNKNOWN: No valid check type specified"
+    state_string = "No valid check type specified"
     perfdata = ""
 
     if check_type == "MODEL":
@@ -554,12 +552,14 @@ async def main(forcedargs=None):
     elif check_type in ("TRAY", "TRAYS"):
         state, state_string, perfdata = await check_paper_trays(args, parameter, arg_token)
 
-    if not perfdata:
-        print(state_string)
-    else:
-        print(state_string + " | " + perfdata)
+    # Map integer state to status string for exitnagios
+    status_map = {STATE_OK: "OK", STATE_WARN: "WARNING", STATE_CRIT: "CRITICAL", STATE_UNK: "UNKNOWN"}
+    status_str = status_map.get(state, "UNKNOWN")
 
-    sys.exit(state)
+    if perfdata:
+        exitnagios(status_str, state_string + " | " + perfdata)
+    else:
+        exitnagios(status_str, state_string)
 
 
 # -------------------------------------------------------------------------------
