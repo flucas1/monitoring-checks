@@ -53,7 +53,6 @@ def exitnagios(status, message):
 
 
 async def cleanup(cc_path, conf_path):
-    """Destroy credentials and remove temporary configuration."""
     if cc_path and os.path.exists(cc_path):
         try:
             cmdline = ["/usr/bin/kdestroy", "-c", cc_path]
@@ -91,15 +90,12 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    # Validate principal format
     if "@" not in args.principal:
         exitnagios("UNKNOWN", "Principal must include realm (e.g., user@REALM)")
 
-    # Extract realm (equivalent to: sed -e s/.*@//)
     realm = args.principal.split("@", 1)[-1]
     kdc_address = args.hostname + ":" + args.port
 
-    # Generate Kerberos config content
     krb5_conf_content = (
         "[libdefaults]\n"
         "default_realm = " + realm + "\n"
@@ -111,11 +107,9 @@ async def main(forcedargs=None):
         "krb4_get_tickets = false\n"
     )
 
-    # Securely create temp files for config and credential cache
     conf_fd, conf_path = tempfile.mkstemp(prefix="nagios_krb5_conf_")
     cc_fd, cc_path = tempfile.mkstemp(prefix="nagios_krb5_cc_")
 
-    # We only need the paths, close the file descriptors opened by mkstemp
     os.close(conf_fd)
     os.close(cc_fd)
 
@@ -124,11 +118,9 @@ async def main(forcedargs=None):
         await f.write(content)
 
     try:
-        # Prepare environment with our temporary config
         env = os.environ.copy()
         env["KRB5_CONFIG"] = conf_path
 
-        # Construct and run the kinit command
         cmdline = ["/usr/bin/kinit", "-c", cc_path, "-k", "-t", args.keytab, args.principal]
 
         process = await asyncio.create_subprocess_exec(
@@ -140,11 +132,9 @@ async def main(forcedargs=None):
 
         stdout, _ = await process.communicate()
 
-        # Check success
         if process.returncode == 0:
-            exitnagios("OK", "")
+            exitnagios("OK", "no issues found")
         else:
-            # Grab the first line of stdout (equivalent to head -n 1)
             error_msg = ""
             if stdout:
                 decoded = stdout.decode().strip()
