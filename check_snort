@@ -110,7 +110,7 @@ async def run_mysql_query(query):
 async def get_alert_count(time_diff_seconds, priority_level):
     now = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
     time_diff = stamp2date(now - time_diff_seconds)
-    query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > '" + str(priority_level - 1) + "' and timestamp(event.timestamp) > '" + time_diff + "';"
+    query = "select count(*) from event,signature where event.signature=signature.sig_id and signature.sig_priority > \"" + str(priority_level - 1) + "\" and timestamp(event.timestamp) > \"" + time_diff + "\";"
     infomsg("get_alert_count -> " + query)
 
     count = await run_mysql_query(query)
@@ -161,8 +161,9 @@ async def write_latest_values(values_log_file, status, count_last, avg_avg):
 
 async def check_host():
     try:
+        cmdline = ["pidof", "snort"]
         process = await asyncio.create_subprocess_exec(
-            "pidof", "snort",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -178,8 +179,9 @@ async def check_host():
     try:
         os.kill(snort_pid, signal.SIGUSR1)
         await asyncio.sleep(1)
+        cmdline = ["sudo", "tail", "-n", "200", SNORT_SYSLOG]
         process = await asyncio.create_subprocess_exec(
-            "sudo", "tail", "-n", "200", SNORT_SYSLOG,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
