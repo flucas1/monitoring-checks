@@ -54,10 +54,10 @@ def get_fail2ban_client_path():
     return "/usr/bin/fail2ban-client"
 
 
-async def run_command(cmdlist):
+async def run_cmdline(cmdline):
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmdlist,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -66,25 +66,25 @@ async def run_command(cmdlist):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode != 0:
-            exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + output)
+            exitnagios("CRITICAL", "Command failed: " + str(cmdline) + ". Error: " + output)
         return output.splitlines()
     except Exception as e:
-        exitnagios("CRITICAL", "Command failed: " + str(cmdlist) + ". Error: " + str(e))
+        exitnagios("CRITICAL", "Command failed: " + str(cmdline) + ". Error: " + str(e))
 
 
 async def check_fail2ban_status():
-    cmdlist = [get_fail2ban_client_path(), "ping"]
-    infomsg("Running command: " + str(cmdlist))
-    output = await run_command(cmdlist)
+    cmdline = [get_fail2ban_client_path(), "ping"]
+    infomsg("Running command: " + str(cmdline))
+    output = await run_cmdline(cmdline)
     infomsg("Fail2Ban server response: " + str(output))
     if "Server replied: pong" not in output:
         exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
 
 
 async def get_jail_list():
-    cmdlist = [get_fail2ban_client_path(), "status"]
-    infomsg("Running command: " + str(cmdlist))
-    output = await run_command(cmdlist)
+    cmdline = [get_fail2ban_client_path(), "status"]
+    infomsg("Running command: " + str(cmdline))
+    output = await run_cmdline(cmdline)
     for line in output:
         if "Jail list:" in line:
             jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
@@ -94,9 +94,9 @@ async def get_jail_list():
 
 
 async def get_banned_ips(jail_name):
-    cmdlist = [get_fail2ban_client_path(), "status", jail_name]
-    infomsg("Running command: " + str(cmdlist))
-    output = await run_command(cmdlist)
+    cmdline = [get_fail2ban_client_path(), "status", jail_name]
+    infomsg("Running command: " + str(cmdline))
+    output = await run_cmdline(cmdline)
     for line in output:
         if "Banned IP list:" in line:
             banned_ips = [ip.strip() for ip in line.split("Banned IP list:")[-1].strip().split()]
