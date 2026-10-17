@@ -74,27 +74,26 @@ async def buildpublickey(candidate):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode == 0:
-            lines = output.strip().splitlines()
-            if len(lines) > 2:
-                cleaned = lines[1:-1]
-                publickey = "".join(cleaned)
-
-        if mode == "pkey":
-            cmdline = ["/usr/bin/openssl", "asn1parse", "-in", "-", "-offset", "12", "-noout", "-out", "-"]
-            infomsg(str(cmdline))
-
-            process = await asyncio.create_subprocess_exec(
-                *cmdline,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            temp_stdout, temp_stderr = await process.communicate(input=output.encode("utf-8"))
-            if process.returncode == 0:
-                temp = base64.b64encode(temp_stdout)
-                publickey = temp.decode()
+            if mode == "pkey":
+                cmdline = ["/usr/bin/openssl", "asn1parse", "-in", "-", "-offset", "12", "-noout", "-out", "-"]
+                infomsg(str(cmdline))
+                process = await asyncio.create_subprocess_exec(
+                    *cmdline,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                temp_stdout, temp_stderr = await process.communicate(input=output.encode("utf-8"))
+                if process.returncode == 0:
+                    temp = base64.b64encode(temp_stdout)
+                    publickey = temp.decode()
+                else:
+                    publickey = None
             else:
-                publickey = None
+                lines = output.splitlines()
+                if len(lines) > 2:
+                    cleaned = lines[1:-1]
+                    publickey = "".join(cleaned)
 
     infomsg("the publickey is <" + str(publickey) + ">")
 
