@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import os
 import netifaces
 import ipaddress
 import asyncio
