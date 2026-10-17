@@ -96,19 +96,32 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
 
         if output in ["SSH connection failed: (no error output)"]:
             if counter > retries:
-                exitnagios(timeoutstatus, output + "\n" + errors)
+                exitnagios(timeoutstatus, output + " - " + errors)
             else:
                 infomsg("sleeping for retry " + str(counter))
                 await asyncio.sleep(10)
         else:
             if exitcode in [0, 1, 2, 3]:
                 if output != "":
-                    print(output, file=sys.stdout, flush=True)
-                if errors != "":
-                    print(errors, file=sys.stderr, flush=True)
-                sys.exit(exitcode)
+                    parts = output.split(": ", 1)
+                    if len(parts) > 1:
+                        candidate = parts[0]
+                        if candidate in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
+                            status = candidate
+                            message = parts[1]
+                        else:
+                            status = "UNKNOWN"
+                            message = output
+                    else:
+                        status = "UNKNOWN"
+                        message = output
+                    if errors != "":
+                        message = message + " - " + errors
+                    exitnagios(status, message)
+                else:
+                    exitnagios("UNKNOWN", output + " - " + errors)
             else:
-                exitnagios("UNKNOWN", output + "\n" + errors)
+                exitnagios("UNKNOWN", output + " - " + errors)
 
 
 # -------------------------------------------------------------------------------
