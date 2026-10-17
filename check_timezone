@@ -3,11 +3,9 @@
 
 import argparse
 import asyncio
-import os
 import sys
 import datetime
 import filecmp
-import signal
 import re
 import aiofiles
 
@@ -102,11 +100,10 @@ async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
         zoneinfo_file_path = ZONEINFO_DIR + "/" + zoneinfo_file_path
 
     zoneinfo_file_path = validate_filename(zoneinfo_file_path)
+    if not zoneinfo_file_path:
+        exitnagios("CRITICAL", "failed to get timezone")
 
     server_timezone = datetime.datetime.now().astimezone().tzname()
-
-    if not is_path_qualified(zoneinfo_file_path):
-        exitnagios("CRITICAL", "failed to get timezone")
 
     msg = "timezone is '" + server_timezone + "'"
 
