@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import hashlib
 import json
-import logging
 import pathlib
 import pickle
 import re
@@ -60,7 +59,7 @@ STATE_FILE_PATH = "/var/lib/nagios"
 
 def prettify_size(size, multiplier):
     binary_str = "i" if multiplier == 1024 else ""
-    for unit in ("", f"K{binary_str}", f"M{binary_str}", f"G{binary_str}"):
+    for unit in ("", "K" + binary_str, "M" + binary_str, "G" + binary_str):
         if abs(size) < multiplier:
             return str(round(size, 2)) + unit
         size /= multiplier
@@ -256,7 +255,7 @@ def parse_args(forcedargs=None):
     filter_group.add_argument("-n", "--name", help="only select interfaces whose names match this regular expression")
     filter_group.add_argument("-N", "--exclude-name", help="exclude interfaces whose names match this regular expression")
     filter_group.add_argument("-D", "--down", help="include interfaces whose operstate is down", action="store_true", default=False)
-    filter_group.add_argument("--include-netns", help='include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. "container/wg0"', action="store_true", default=False)
+    filter_group.add_argument("-I", "--include-netns", help="include interfaces from non-default network namespaces, the netns will be prepended to the interface name with a slash, e.g. \"container/wg0\"", action="store_true", default=False)
     parser.add_argument("-b", "--bytes", help="use bytes as output unit instead of bits, does not affect thresholds", action="store_true", default=False)
     threshold_group = parser.add_argument_group("threshold options, suffixes K, M, G and T (case-insensitive) are accepted, multiples of 1000 are used for bits and 1024 for bytes")
     threshold_group.add_argument("-w", "--warning", metavar=("RX", "TX"), nargs=2, help="warning threshold", type=human_size)

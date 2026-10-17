@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import socket
 import argparse
@@ -102,9 +101,9 @@ async def dotorcall(protocol, response):
 
                 status_value = status[0]
                 if status_value == response:
-                    exitnagios("OK", "the result '" + status_value + "' is as expected")
+                    exitnagios("OK", "the result \"" + status_value + "\" is as expected")
                 else:
-                    exitnagios("CRITICAL", "the result '" + status_value + "' is not the expected value '" + response + "'")
+                    exitnagios("CRITICAL", "the result \"" + status_value + "\" is not the expected value \"" + response + "\"")
 
     except aiohttp.ClientError as e:
         exitnagios("WARNING", "cannot connect - " + str(e))
