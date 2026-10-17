@@ -135,6 +135,7 @@ async def tryfindbyclassname(driver, classname):
 
 
 async def dosmtptlscall(domain, proxy):
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -173,6 +174,9 @@ async def dosmtptlscall(domain, proxy):
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 # -------------------------------------------------------------------------------
 
