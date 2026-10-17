@@ -88,7 +88,7 @@ def check_threshold(value, warning, critical):
     if warning:
         w_start, w_end, w_inc = parse_threshold(warning)
         if w_inc:
-            if w_start <= value <= c_end:
+            if w_start <= value <= w_end:
                 return "WARNING"
         else:
             if value < w_start or value > w_end:

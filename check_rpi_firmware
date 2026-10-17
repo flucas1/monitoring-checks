@@ -52,7 +52,7 @@ def exitnagios(status, message):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Raspberry Pi firmware version")
-    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug mode")
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args(forcedargs)
     return args
 

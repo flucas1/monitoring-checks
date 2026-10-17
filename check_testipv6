@@ -6,12 +6,10 @@ import sys
 import argparse
 import asyncio
 import datetime
-
 import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -126,7 +124,6 @@ async def dotestipv6call(proxy):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 10)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://test-ipv6.com/"
@@ -159,11 +156,11 @@ async def dotestipv6call(proxy):
         grading = marks.split("/")
         try:
             currentmark = int(grading[0])
-        except:
+        except Exception:
             currentmark = 0
         try:
             totalmarks = int(grading[1])
-        except:
+        except Exception:
             totalmarks = 0
 
         if currentmark == 0:
@@ -177,6 +174,14 @@ async def dotestipv6call(proxy):
 
 
 # -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
+    parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
+    args = parser.parse_args(forcedargs)
+    return args
 
 
 async def main(forcedargs=None):

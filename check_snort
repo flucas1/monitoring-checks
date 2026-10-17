@@ -298,9 +298,9 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", "--warning-thresh", dest="warning_thresh", type=int, default=500)
     parser.add_argument("-p", "--priority-level", dest="priority_level", type=int, default=3)
     parser.add_argument("-s", "--sid", dest="sid")
-    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     parser.add_argument("-l", "--log-file", dest="log_file")
     parser.add_argument("-o", "--spool-data-dir", dest="spool_data_dir")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true")
     args = parser.parse_args(forcedargs)
     return args
 
