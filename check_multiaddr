@@ -51,8 +51,8 @@ def exitnagios(status, message):
 
 async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childtimeoutvalue, childtimeoutstatus):
     try:
-        infomsg(childtimeoutvalue)
-        infomsg(childtimeoutstatus)
+        infomsg(str(childtimeoutvalue))
+        infomsg(str(childtimeoutstatus))
         cmdline = multiargs + ["-H", host]
         if childtimeoutvalue is not None and childtimeoutstatus is not None:
             cmdline = cmdline + ["-t", str(childtimeoutvalue) + ":" + childtimeoutstatus]
@@ -82,7 +82,7 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
             errors = str(e)
             exitcode = 2
 
-        infomsg(exitcode)
+        infomsg(str(exitcode))
         return (exitcode, output, errors)
 
     except Exception as e:
@@ -157,10 +157,10 @@ def parse_args(forcedargs=None):
 
     if forcedargs is None:
         forcedargs = sys.argv[3:]
-    #print(forcedargs)
+    # infomsg(forcedargs)
     args, unknown = parser.parse_known_args(forcedargs)
-    #print(args)
-    #print(unknown)
+    # infomsg(args)
+    # infomsg(unknown)
 
     hostnames = args.hostname
     maintimeout = sys.argv[1]
