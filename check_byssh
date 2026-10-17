@@ -76,16 +76,16 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
         infomsg("executing retry " + str(counter))
         counter = counter + 1
 
-        command = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
+        cmdline = ["/usr/lib/nagios/plugins/check_by_ssh", protocol, "-H", hostname]
         if key != "" and key is not None:
-            command = command + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
+            cmdline = cmdline + ["-i", key, "-o", "PasswordAuthentication=no", "-o", "IdentitiesOnly=yes"]
         if autoaccept:
-            command = command + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
-        command = command + ["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
-        infomsg(" ".join(command))
+            cmdline = cmdline + ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+        cmdline = cmdline + ["-C", remotecmdline, "-U", "-l", login, "-q", "-t", str(timeoutvalue)]
+        infomsg(" ".join(cmdline))
 
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
