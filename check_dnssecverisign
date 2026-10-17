@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import argparse
 import asyncio
 import datetime
-import selenium
 import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.common.by
