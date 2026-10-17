@@ -221,6 +221,7 @@ async def doprosafecall(model, expected, strict):
 
 async def getexpected(proxy, model):
     expected = ""
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -251,6 +252,9 @@ async def getexpected(proxy, model):
 
     except Exception as e:
         infomsg("unexpected error during the check " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
     return expected
 
