@@ -83,7 +83,7 @@ def stamp2date(ts):
 
 async def run_mysql_query(query):
     cmdline = [
-        "mysql", "--skip-column-names",
+        "/usr/bin/mysql", "--skip-column-names",
         "-h", SNORT_DB_HOST,
         "-P", str(SNORT_DB_PORT),
         "-u", SNORT_DB_USER,
@@ -101,7 +101,7 @@ async def run_mysql_query(query):
             infomsg("MySQL Error: " + stderr.decode().strip())
             return 1
         result = stdout.decode().strip()
-        return int(result) if result and result != "0" else 1
+        return int(result) if result else 0
     except Exception as e:
         infomsg("MySQL Exception: " + str(e))
         return 1
@@ -161,7 +161,7 @@ async def write_latest_values(values_log_file, status, count_last, avg_avg):
 
 async def check_host():
     try:
-        cmdline = ["pidof", "snort"]
+        cmdline = ["/usr/bin/pidof", "snort"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -179,7 +179,7 @@ async def check_host():
     try:
         os.kill(snort_pid, signal.SIGUSR1)
         await asyncio.sleep(1)
-        cmdline = ["sudo", "tail", "-n", "200", SNORT_SYSLOG]
+        cmdline = ["/usr/bin/sudo", "/usr/bin/tail", "-n", "200", SNORT_SYSLOG]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,

@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import argparse
 import asyncio
 import datetime
-
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -85,7 +81,7 @@ async def generatedriver(proxy):
     return driver
 
 
-def check_page_loaded(driver):
+async def check_page_loaded(driver):
     # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
@@ -94,7 +90,7 @@ def check_page_loaded(driver):
 async def wait_page_loaded(driver):
     timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
     while True:
-        if check_page_loaded(driver):
+        if await check_page_loaded(driver):
             break
         if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
             break
@@ -119,7 +115,6 @@ async def dospfcheck(domain, proxy):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://app.dmarcanalyzer.com/dns/spf?domain=" + domain
