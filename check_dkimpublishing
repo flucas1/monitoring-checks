@@ -4,7 +4,6 @@
 import os
 import sys
 import asyncio
-import re
 import argparse
 import dns.asyncresolver
 import base64
@@ -112,7 +111,7 @@ async def getpublishedkey(dnsentry):
                 txtfullrecord = txtfullrecord + txt_string.decode()
     except Exception as e:
         infomsg("exception - " + str(e))
-        txtrecord = None
+        txtfullrecord = None
     infomsg("the TXT record is <" + str(txtfullrecord) + ">")
 
     publishedkey = None
@@ -144,7 +143,7 @@ async def check_dkimpublishing(dkimpath):
             if fullname.endswith("-private.pem"):
                 infomsg("selecting file " + fullname)
                 candidates.append(fullname)
-    infomsg(candidates)
+    infomsg(str(candidates))
     candidates.sort()
 
     failurelist = []
@@ -152,7 +151,7 @@ async def check_dkimpublishing(dkimpath):
     for candidate in candidates:
         cleaned = os.path.splitext(os.path.basename(candidate))[0]
         parts = cleaned.split("-")
-        infomsg(parts)
+        infomsg(str(parts))
         try:
             dnsentry = "mail-" + parts[1] + "._domainkey." + parts[0]
             infomsg(dnsentry)
