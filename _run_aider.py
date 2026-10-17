@@ -21,6 +21,7 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
         "--yes"
     ]
 
+    success = False
     try:
         print("EXECUTING -> " + " ".join(cmdline))
         process = await asyncio.create_subprocess_exec(
@@ -32,11 +33,14 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 
         if process.returncode == 0:
             print(f"Successfully processed {file_path.name}")
+            success = True
         else:
             print(f"Aider failed on {file_path.name} with exit code: {process.returncode}")
 
     except Exception as e:
         print(f"Aider failed on {file_path.name} with error: {e}")
+    
+    return success
 
 
 async def run_aider(target_dir: str, model: str, prompt: str):
@@ -54,8 +58,12 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     custom_env["OLLAMA_API_BASE"] = "http://127.0.0.1:11434"
 
     # Process files sequentially in the async event loop
+    failedfiles = []
     for file_path in target_files:
-        await process_file(file_path, model, prompt, custom_env)
+        success = await process_file(file_path, model, prompt, custom_env)
+        if success == False:
+            failedfiles.append(file_path)
+    print("failed files: " + str(failedfiles))
 
 # -------------------------------------------------------------------------------
 
