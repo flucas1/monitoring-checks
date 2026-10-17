@@ -107,10 +107,10 @@ async def main(forcedargs=None):
     if interface == "":
         exitnagios("CRITICAL", "no interface selected")
     expectedspeeds = []
-    for item in args.expected.split("¶"):
+    for item in args.expected.split("~"):
         expectedspeeds.append(item.strip().lower())
     warningspeeds = []
-    for item in args.warning.split("¶"):
+    for item in args.warning.split("~"):
         warningspeeds.append(item.strip().lower())
 
     await doethtoolcall(interface, expectedspeeds, warningspeeds, [args.duplex.lower()], [])

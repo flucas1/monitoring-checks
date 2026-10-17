@@ -196,15 +196,15 @@ async def main(forcedargs=None):
 
     timeoutsecs = 120
 
-    ignoredlist = args.ignored.split("¶")
+    ignoredlist = args.ignored.split("~")
     if "" in ignoredlist:
         ignoredlist.remove("")
 
-    alertlist = args.alert.split("¶")
+    alertlist = args.alert.split("~")
     if "" in alertlist:
         alertlist.remove("")
 
-    exptparts = args.expected.split("¶")
+    exptparts = args.expected.split("~")
     if "" in exptparts:
         exptparts.remove("")
     expected = {}

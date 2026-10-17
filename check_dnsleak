@@ -121,7 +121,7 @@ def extracttable(driver):
 
 
 def comparepart(value, expecteds):
-    listexpected = expecteds.split("¶")
+    listexpected = expecteds.split("~")
     result = False
     for alternative in listexpected:
         result = result or value == alternative.strip()
