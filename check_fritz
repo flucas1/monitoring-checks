@@ -62,7 +62,7 @@ PLUGIN_UNKNOWN = 3
 
 def find_xml_value(xml_str, value):
     """Mimics the sed XML value extraction."""
-    match = re.search(rf"<{value}>(.*?)</{value}>", xml_str)
+    match = re.search("<" + value + ">(.*?)</" + value + ">", xml_str)
     return match.group(1).strip() if match else ""
 
 
@@ -320,7 +320,7 @@ async def main(forcedargs=None):
 
                 current_temp = round(float(temp_celsius) / 10.0, 1)
                 text = device_product + " " + device_firmware + " - " + device_name + " " + device_present + " " + str(current_temp) + " C"
-                check_lower(current_temp, warn, crit, text, "'thermometer_current_state'=" + str(PLUGIN_OK) + ";;;; 'thermometer_current_temp'")
+                check_lower(current_temp, warn, crit, text, "'thermometer_current_temp'")
             elif device_present == "UNKNOWN":
                 exitnagios("UNKNOWN", device_product + " " + device_firmware + " - " + device_name + " " + device_present + " | 'thermometer_current_state'=" + str(PLUGIN_UNKNOWN) + ";;;;")
             else:
