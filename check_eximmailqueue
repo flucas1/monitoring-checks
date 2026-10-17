@@ -50,7 +50,7 @@ def exitnagios(status, message):
 
 
 def parse_args(forcedargs=None):
-    parser = argparse.ArgumentParser(description="check_eximailqueue - Nagios Exim mail queue check script")
+    parser = argparse.ArgumentParser(description="check_eximmailqueue - Nagios Exim mail queue check script")
     parser.add_argument("-w", "--warning", dest="warning", type=int, required=True, help="Queue size at which a warning is triggered")
     parser.add_argument("-c", "--critical", dest="critical", type=int, required=True, help="Queue size at which a critical is triggered")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug mode")
