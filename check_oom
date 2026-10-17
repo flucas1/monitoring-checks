@@ -50,7 +50,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def oom_kernel_check(criticallevel, warninglevel, short=False):
+async def oom_kernel_check(short=False):
     infomsg("KERNEL")
 
     cmdline = ["/usr/bin/journalctl", "--utc", "--no-pager", "-kq", "-o", "json", "-b", "-0", "--output-fields=MESSAGE"]
@@ -86,7 +86,7 @@ async def oom_kernel_check(criticallevel, warninglevel, short=False):
         return None, logs
 
 
-async def oom_systemd_check(criticallevel, warninglevel, short=False):
+async def oom_systemd_check(short=False):
     infomsg("SYSTEMD")
 
     cmdline = ["/usr/bin/journalctl", "-u", "systemd-oomd.service", "--utc", "--no-pager", "-o", "json", "-b", "-0", "--output-fields=MESSAGE"]
@@ -123,8 +123,8 @@ async def oom_systemd_check(criticallevel, warninglevel, short=False):
 
 
 async def oom_check(criticallevel, warninglevel, short=False):
-    kernelcounter, kernellogs = await oom_kernel_check(criticallevel, warninglevel, short)
-    systemdcounter, systemdlogs = await oom_systemd_check(criticallevel, warninglevel, short)
+    kernelcounter, kernellogs = await oom_kernel_check(short)
+    systemdcounter, systemdlogs = await oom_systemd_check(short)
 
     if kernelcounter is None:
         exitnagios("CRITICAL", "error retrieving the information from kernel oom journalctl | counter=-1")
