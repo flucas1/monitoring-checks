@@ -3,11 +3,8 @@
 
 import os
 import sys
-import datetime
-import base64
 import argparse
 import ovh
-import json
 import asyncio
 import aiofiles
 
@@ -85,7 +82,8 @@ async def generateOvhClient(credentialsfile):
         infomsg("Logged in OVH as " + me_info["email"])
         api_info = client.get("/me/api/application")
         infomsg("List of applications in OVH as " + str(api_info))
-    except:
+    except Exception as e:
+        infomsg("exception - " + str(e))
         client = None
 
     return client
