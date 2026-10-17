@@ -58,7 +58,7 @@ async def execute_ssh_command(conn_kwargs, remotecmdline):
 async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
     retries = 3
     counter = 0
-    
+
     conn_kwargs = {
         "host": hostname,
         "username": login,
@@ -68,10 +68,11 @@ async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdl
     if key != "" and key is not None:
         conn_kwargs["client_keys"] = [key]
         conn_kwargs["password"] = None
-        
+
     if autoaccept:
         conn_kwargs["known_hosts"] = None
 
+    status_map = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKNOWN"}
     while True:
         infomsg("executing retry " + str(counter))
         counter = counter + 1
@@ -91,8 +92,8 @@ async def dobysshcheck(family, hostname, timeoutvalue, timeoutstatus, remotecmdl
                             status = candidate
                             message = parts[1]
                         else:
-                            status = "UNKNOWN"
-                            message = output
+                            status = status_map[exitcode]
+                            message = parts[0].lower() + " - " + parts[1]
                     else:
                         status = "UNKNOWN"
                         message = output
@@ -171,7 +172,7 @@ async def main(forcedargs=None):
         timeoutstatus = parts[1]
     else:
         timeoutstatus = "CRITICAL"
-        
+
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         await dobysshcheck(family, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
     else:
