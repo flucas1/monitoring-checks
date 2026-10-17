@@ -116,16 +116,18 @@ async def dowebgl(proxy):
         await asyncio.sleep(5)
         await wait_page_loaded(driver)
 
-        element = driver.find_element(selenium.webdriver.common.by.By.ID, "gl1-status")
-        text = element.get_attribute("innerText")
-        infomsg(text)
+        element1 = driver.find_element(selenium.webdriver.common.by.By.ID, "gl1-status")
+        text1 = element1.get_attribute("innerText").strip()
+        infomsg(text1)
 
-        element = driver.find_element(selenium.webdriver.common.by.By.ID, "gl2-status")
-        text = element.get_attribute("innerText")
-        infomsg(text)
+        element2 = driver.find_element(selenium.webdriver.common.by.By.ID, "gl2-status")
+        text2 = element2.get_attribute("innerText").strip()
+        infomsg(text2)
 
-        exitnagios("CRITICAL", "unimplemented")
-        exitnagios("OK", "Chrome is supporting WebGL")
+        if text1 == "True" and text2 == "True":
+            exitnagios("OK", "Chrome is supporting WebGL")
+        else:
+            exitnagios("WARNING", "Chrome does not support WebGL")
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
