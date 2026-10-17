@@ -95,16 +95,17 @@ async def run_command(cmdline):
 async def get_interfaces(args):
     netns_info = []
     if args.include_netns:
-        command_output = await run_command(["ip", "-json", "netns", "list"])
+        cmdline = ["/usr/sbin/ip", "-json", "netns", "list"]
+        command_output = await run_command(cmdline)
         if command_output:
             netns_info = json.loads(command_output)
     interfaces = []
     for netns in [None] + netns_info:
         if netns is None:
-            cmdline = ["ip"]
+            cmdline = ["/usr/sbin/ip"]
             netns_name = None
         else:
-            cmdline = ["sudo", "-n", "ip"]
+            cmdline = ["/usr/bin/sudo", "-n", "/usr/sbin/ip"]
             netns_name = netns["name"]
             cmdline += ["-netns", netns_name]
         cmdline += ["-details", "-statistics", "-json", "link", "show"]
