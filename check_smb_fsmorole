@@ -73,7 +73,12 @@ def extractmaster(role, lines):
         if line.startswith(role):
             parts = line.split(":", 1)
             if len(parts) == 2:
-                return parts[1].strip()
+                effectiverole = parts[1].strip()
+                infomsg(role + " -> " + effectiverole)
+                cns = [candidate.split('=')[1] for candidate in effectiverole.split(',') if candidate.startswith('CN=')]
+                if len(cns) > 1:
+                    second_cn = cns[1]
+                    return second_cn
     return ""
 
 # -------------------------------------------------------------------------------
@@ -110,7 +115,7 @@ async def main(forcedargs=None):
         (PdcEmulationMasterRole == args.master) and
         (DomainNamingMasterRole == args.master) and
         (DomainDnsZonesMasterRole == args.master) and
-            (ForestDnsZonesMasterRole == args.master)):
+        (ForestDnsZonesMasterRole == args.master)):
         exitnagios("OK", "All FSMO roles are " + args.master)
     else:
         exitnagios("CRITICAL", "not all FSMO roles match " + args.master + " -- " + " -- ".join(roles))
