@@ -76,20 +76,20 @@ def human_size(string):
     return int(value), power
 
 
-async def run_command(command):
+async def run_command(cmdline):
     try:
         process = await asyncio.create_subprocess_exec(
-            *command,
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
-            exitnagios("UNKNOWN", "command " + str(command) + " exited with status " + str(process.returncode) + ": " + repr(stderr.decode()))
-        infomsg("Output from " + " ".join(command) + ": " + stdout.decode())
+            exitnagios("UNKNOWN", "command " + str(cmdline) + " exited with status " + str(process.returncode) + ": " + repr(stderr.decode()))
+        infomsg("Output from " + " ".join(cmdline) + ": " + stdout.decode())
         return stdout.decode()
     except Exception as exc:
-        exitnagios("UNKNOWN", "command " + str(command) + " failed: " + str(exc))
+        exitnagios("UNKNOWN", "command " + str(cmdline) + " failed: " + str(exc))
 
 
 async def get_interfaces(args):
@@ -101,14 +101,14 @@ async def get_interfaces(args):
     interfaces = []
     for netns in [None] + netns_info:
         if netns is None:
-            command = ["ip"]
+            cmdline = ["ip"]
             netns_name = None
         else:
-            command = ["sudo", "-n", "ip"]
+            cmdline = ["sudo", "-n", "ip"]
             netns_name = netns["name"]
-            command += ["-netns", netns_name]
-        command += ["-details", "-statistics", "-json", "link", "show"]
-        interfaces_by_netns = json.loads(await run_command(command))
+            cmdline += ["-netns", netns_name]
+        cmdline += ["-details", "-statistics", "-json", "link", "show"]
+        interfaces_by_netns = json.loads(await run_command(cmdline))
         for interface in interfaces_by_netns:
             interface["netns_name"] = netns_name
             if netns_name is None:
@@ -236,7 +236,7 @@ def evaluate_traffic(filtered_interfaces, old_state, current_state, args, state_
             overall_status = max_status(overall_status, metric_status)
 
             human_readable = prettify_size(bandwidth, 1024 if args.bytes else 1000)
-            perf_str = "'" + interface_name + "_" + direction + "'=" + str(bandwidth) + unit + ";" + (str(warn_limit) if warn_limit else "") + ";" + (str(crit_limit) if crit_limit else "") + ";;"
+            perf_str = "\"" + interface_name + "_" + direction + "\"=" + str(bandwidth) + unit + ";" + (str(warn_limit) if warn_limit else "") + ";" + (str(crit_limit) if crit_limit else "") + ";;"
             perf_data.append(perf_str)
 
             messages.append(interface_name + "_" + direction + " = " + human_readable + unit + "/s")

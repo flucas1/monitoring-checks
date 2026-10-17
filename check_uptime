@@ -57,8 +57,9 @@ STATE_UNKNOWN = 3
 
 async def get_uptime():
     try:
+        cmdline = ["uptime"]
         process = await asyncio.create_subprocess_exec(
-            "uptime",
+            *cmdline,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

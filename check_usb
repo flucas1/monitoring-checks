@@ -104,7 +104,7 @@ async def is_usb_connected(device_identifiers, device_messages, device_expected)
                         else:
                             founddict[key] = 1
         else:
-            exitnagios("CRITICAL", "issue wiht lsusb")
+            exitnagios("CRITICAL", "issue with lsusb")
     except Exception as e:
         exitnagios("CRITICAL", "internal error - " + str(e))
 
