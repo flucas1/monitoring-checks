@@ -104,7 +104,7 @@ async def main(forcedargs=None):
     if args.printers is not None:
         args.printers = args.printers.split(",")
 
-    if args.socket == "":
+    if args.socket in [None, ""]:
         exitnagios("CRITICAL", "No socket specified.")
 
     try:
