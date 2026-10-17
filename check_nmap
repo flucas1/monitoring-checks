@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import argparse
 import socket
@@ -91,9 +90,12 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
     if mode == "udp":
         sflag = "-sU"
         pflag = ""  # "-PU"
-    if mode == "tcp":
+    elif mode == "tcp":
         sflag = "-sS"
         pflag = ""  # "-PS" #
+    else:
+        exitnagios("CRITICAL", "mode must be udp or tcp")
+
     command = ["/usr/bin/nmap"]
     if protocol != "":
         command = command + [protocol]
@@ -204,7 +206,7 @@ def findprivateaddress(protocol):
     try:
         defaultgateway = netifaces.default_gateway()
         iface = defaultgateway[family][1]
-    except:
+    except Exception:
         return None
 
     for addr in netifaces.ifaddresses(iface).get(family, []):
