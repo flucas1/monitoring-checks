@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 # -------------------------------------------------------------------------------
 
-import os
 import sys
 import argparse
 import asyncio
 import datetime
-
 import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -133,7 +130,6 @@ async def dodkimcall(domain, selector, proxy):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.ActionChains(driver)
 
         fullkey = selector + "._domainkey." + domain
         infomsg("testing " + fullkey)
