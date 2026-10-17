@@ -59,7 +59,7 @@ def normalizemultivalues(original):
     return " § ".join(parts)
 
 
-async def doportexternalcall(accesstoken, protocol, hostname, record, querytype, expected, timeoutvalue, timeoutstatus):
+async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, expected, timeoutvalue, timeoutstatus):
     try:
         url = "https://www.bigbroeyes.com/external_checks/check_dns.php?hostname=" + hostname + "&record=" + record + "&type=" + querytype
         infomsg("The target url is " + url)
@@ -139,7 +139,7 @@ async def main(forcedargs=None):
         async with aiofiles.open(args.accesstokenfile, "rb") as handle:
             content = await handle.read()
             accesstoken = content.decode("utf-8").strip().splitlines()[0]
-        await doportexternalcall(accesstoken, protocol, args.hostname, args.record, args.querytype, normalizemultivalues(args.expected), timeoutvalue, timeoutstatus)
+        await dodnsexternalcall(accesstoken, protocol, args.hostname, args.record, args.querytype, normalizemultivalues(args.expected), timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
