@@ -18,21 +18,21 @@ async def run_autopep8():
         "--ignore=E501",
         ".",
     ]
-    proc = await asyncio.create_subprocess_exec(
+    process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await process.communicate()
     if stdout:
         sys.stdout.buffer.write(stdout)
     if stderr:
         sys.stderr.buffer.write(stderr)
 
-    error_count = proc.returncode if proc.returncode is not None else 1
+    error_count = process.returncode if process.returncode is not None else 1
 
     if error_count > 0:
-        print(f"autopep8 process failing with {error_count} error(s).")
+        print("autopep8 process failing with " + str(error_count) + " error(s).")
     else:
         print("autopep8 process successful.")
 
@@ -50,21 +50,21 @@ async def run_flake8():
         "--select=E9,F821,F823,F831,F406,F407,F701,F702,F704,F706",
         ".",
     ]
-    proc = await asyncio.create_subprocess_exec(
+    process = await asyncio.create_subprocess_exec(
         *cmdline,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await process.communicate()
     if stdout:
         sys.stdout.buffer.write(stdout)
     if stderr:
         sys.stderr.buffer.write(stderr)
 
-    error_count = proc.returncode if proc.returncode is not None else 1
+    error_count = process.returncode if process.returncode is not None else 1
 
     if error_count > 0:
-        print(f"flake8 process failing with {error_count} error(s).")
+        print("flake8 process failing with " + str(error_count) + " error(s).")
     else:
         print("flake8 process successful.")
 

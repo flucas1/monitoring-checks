@@ -50,8 +50,8 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
-    starting_pattern = "check_"
-    exclude_files = ["_run_aider.py"]
+    starting_pattern = "___"
+    exclude_files = ["___run_aider.py"]
 
     target_files = []
     for f in directory.iterdir():
