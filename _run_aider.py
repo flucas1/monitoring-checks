@@ -49,9 +49,15 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
-    pattern = "check_"
+    starting_pattern = "check_"
+    exclude_files = []
 
-    target_files = [f for f in directory.iterdir() if f.is_file() and f.name.startswith(pattern)]
+    target_files = []
+    for f in directory.iterdir():
+        if f.is_file():
+            if f.name not in exclude_files:
+                if f.name.startswith(starting_pattern):
+                    target_files.append(f)
 
     if not target_files:
         print(f"No files starting with '" + pattern + "' found in {target_dir}")
