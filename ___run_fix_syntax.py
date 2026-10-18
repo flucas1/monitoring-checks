@@ -71,6 +71,9 @@ async def run_flake8():
     return error_count
 
 
+# -------------------------------------------------------------------------------
+
+
 async def main():
     error_count = 0
     error_count += await run_autopep8()

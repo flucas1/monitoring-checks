@@ -51,7 +51,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
     starting_pattern = "___"
-    exclude_files = ["___run_aider.py"]
+    exclude_files = {"___run_aider.py", "___run_fix_syntax.py"}
 
     target_files = []
     for f in directory.iterdir():
