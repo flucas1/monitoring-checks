@@ -5,15 +5,16 @@ import sys
 import os
 import asyncio
 import pathlib
+import shutil
 
 # -------------------------------------------------------------------------------
 
 
 async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_env: dict):
-    print(f"\n--- Processing: {file_path.name} ---")
+    print("\n--- Processing: " + file_path.name + " ---")
 
     cmdline = [
-        "aider",
+        shutil.which("aider"),
         str(file_path),
         "--message", prompt,
         "--model", model,
@@ -35,13 +36,13 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
         await process.communicate()
 
         if process.returncode == 0:
-            print(f"Successfully processed {file_path.name}")
+            print("Successfully processed " + file_path.name)
             success = True
         else:
-            print(f"Aider failed on {file_path.name} with exit code: {process.returncode}")
+            print("Aider failed on " + file_path.name + " with exit code: " + str(process.returncode))
 
     except Exception as e:
-        print(f"Aider failed on {file_path.name} with error: {e}")
+        print("Aider failed on " + file_path.name + " with error: " + str(e))
 
     return success
 
@@ -50,7 +51,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
     starting_pattern = "check_"
-    exclude_files = []
+    exclude_files = ["_run_aider.py"]
 
     target_files = []
     for f in directory.iterdir():
@@ -60,7 +61,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
                     target_files.append(f)
 
     if not target_files:
-        print(f"No files starting with '" + pattern + "' found in {target_dir}")
+        print("No valid files found in " + target_dir)
         return
 
     custom_env = os.environ.copy()
@@ -86,7 +87,7 @@ async def update_aider():
     if process.returncode == 0:
         print("Aider updated successfully!")
     else:
-        print(f"Update failed (exit code {process.returncode}):")
+        print("Update failed (exit code " + str(process.returncode) + "):")
 
 
 # -------------------------------------------------------------------------------
