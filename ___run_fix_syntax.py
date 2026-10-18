@@ -6,11 +6,11 @@ import sys
 
 # -------------------------------------------------------------------------------
 
-AUTOPEP8_PATH = "C:\\Program Files\\Python314\\Scripts\\autopep8.exe"
-PYTHON_PATH = "C:\\Program Files\\Python314\\python.exe"
-
 
 async def run_autopep8():
+    error_count = 0
+
+    AUTOPEP8_PATH = "C:\\Program Files\\Python314\\Scripts\\autopep8.exe"
     cmdline = [
         AUTOPEP8_PATH,
         "--in-place",
@@ -28,10 +28,21 @@ async def run_autopep8():
         sys.stdout.buffer.write(stdout)
     if stderr:
         sys.stderr.buffer.write(stderr)
-    return proc.returncode
+
+    error_count = proc.returncode if proc.returncode is not None else 1
+
+    if error_count > 0:
+        print(f"autopep8 process failing with {error_count} error(s).")
+    else:
+        print("autopep8 process successful.")
+
+    return error_count
 
 
 async def run_flake8():
+    error_count = 0
+
+    PYTHON_PATH = "C:\\Program Files\\Python314\\python.exe"
     cmdline = [
         PYTHON_PATH,
         "-m",
@@ -49,7 +60,15 @@ async def run_flake8():
         sys.stdout.buffer.write(stdout)
     if stderr:
         sys.stderr.buffer.write(stderr)
-    return proc.returncode
+
+    error_count = proc.returncode if proc.returncode is not None else 1
+
+    if error_count > 0:
+        print(f"flake8 process failing with {error_count} error(s).")
+    else:
+        print("flake8 process successful.")
+
+    return error_count
 
 
 async def main():
