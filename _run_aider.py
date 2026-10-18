@@ -71,7 +71,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
 async def update_aider():
     cmdline = [sys.executable, "-m", "pip", "install", "--upgrade", "aider-chat"]
-    
+
     process = await asyncio.create_subprocess_exec(
         *cmdline
     )
@@ -82,16 +82,16 @@ async def update_aider():
         print(stdout.decode())
     else:
         print(f"Update failed (exit code {process.returncode}):")
-        print(stderr.decode())  
+        print(stderr.decode())
 
 
 # -------------------------------------------------------------------------------
 
 
 async def main():
-    
+
     # await update_aider()
-    
+
     DIRECTORY = "."
     # MODEL = "ollama/qwen3-coder-next:latest"
     # MODEL = "ollama/qwen3.8:latest"
