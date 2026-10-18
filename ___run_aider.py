@@ -50,14 +50,15 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
 async def run_aider(target_dir: str, model: str, prompt: str):
     directory = pathlib.Path(target_dir)
 
-    starting_pattern = "___"
-    exclude_files = {"___run_aider.py", "___run_fix_syntax.py"}
+    starting_pattern = "check_"
+    ending_pattern = ""
+    exclude_files = ["___run_aider.py"]
 
     target_files = []
     for f in directory.iterdir():
         if f.is_file():
             if f.name not in exclude_files:
-                if f.name.startswith(starting_pattern):
+                if f.name.startswith(starting_pattern) and f.name.endswith(ending_pattern):
                     target_files.append(f)
 
     if not target_files:
