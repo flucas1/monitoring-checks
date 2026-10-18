@@ -6,8 +6,8 @@ import sys
 
 # -------------------------------------------------------------------------------
 
-AUTOPEP8_PATH = "C:\\Python311\\Scripts\\autopep8.exe"
-PYTHON_PATH = "C:\\Python311\\python.exe"
+AUTOPEP8_PATH = "C:\\Program Files\\Python314\\Scripts\\autopep8.exe"
+PYTHON_PATH = "C:\\Program Files\\Python314\\python.exe"
 
 
 async def run_autopep8():
@@ -57,10 +57,8 @@ async def main():
     error_count += await run_autopep8()
     error_count += await run_flake8()
     input("Press Enter to continue...")
-    if (error_count > 0)
-    {
+    if error_count > 0:
         sys.exit(1)
-    }
 
 # -------------------------------------------------------------------------------
 
