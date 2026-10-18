@@ -79,10 +79,8 @@ async def update_aider():
 
     if process.returncode == 0:
         print("Aider updated successfully!")
-        print(stdout.decode())
     else:
         print(f"Update failed (exit code {process.returncode}):")
-        print(stderr.decode())
 
 
 # -------------------------------------------------------------------------------
