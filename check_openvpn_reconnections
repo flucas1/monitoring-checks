@@ -48,8 +48,8 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def openvpnreconnections_check(criticallevel, warninglevel, profile, time):
-    cmdline = ["/usr/bin/journalctl", "--utc", "--no-pager", "--unit", "openvpn@" + profile, "-g", "Started openvpn@", "--since", str(time) + " hours ago"]
+async def openvpnreconnections_check(criticallevel, warninglevel, profile, hours):
+    cmdline = ["/usr/bin/journalctl", "--utc", "--no-pager", "--unit", "openvpn@" + profile, "-g", "Started openvpn@", "--since", str(hours) + " hours ago"]
     infomsg(cmdline)
     process = await asyncio.create_subprocess_exec(
         *cmdline,
@@ -68,8 +68,8 @@ async def openvpnreconnections_check(criticallevel, warninglevel, profile, time)
             line = line.strip()
             infomsg(line)
             if line != "":
-                if line.startswith("-- Boot ") == False:
-                    counter = counter + 1
+                if not line.startswith("-- Boot "):
+                    counter += 1
 
         if criticallevel != "" and counter > int(criticallevel):
             exitnagios("CRITICAL", str(counter) + " reconnections | counter=" + str(counter))
