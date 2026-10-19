@@ -64,8 +64,8 @@ async def dogpscountcall(timeout, warning, critical):
                 report = gpsd.data
                 infomsg(str(report))
                 if report.get("class") == "SKY":
-                    total_used.append(getattr(gpsd, 'satellites_used', 0))
-                    total_seen.append(len(getattr(gpsd, 'satellites', [])))
+                    total_used.append(getattr(gpsd, "satellites_used", 0))
+                    total_seen.append(len(getattr(gpsd, "satellites", [])))
             current_time = time.monotonic()
             if current_time > start + timeout:
                 break
