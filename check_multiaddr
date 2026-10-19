@@ -2,6 +2,7 @@
 # -------------------------------------------------------------------------------
 
 import sys
+import os
 import asyncio
 import argparse
 
@@ -154,6 +155,7 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--hostname", dest="hostname", help="Comma-separated hostnames", default=None)
     parser.add_argument("-t", "--timeout", dest="timeout", help="Multi timeout in seconds[:status]", default=None)
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug output", default=False)
 
     if forcedargs is None:
         forcedargs = sys.argv[3:]
@@ -166,12 +168,14 @@ def parse_args(forcedargs=None):
     maintimeout = sys.argv[1]
     childtimeout = args.timeout
 
-    return hostnames, maintimeout, childtimeout, sys.argv[2], unknown
+    maindebug = args.debug
+
+    return hostnames, maintimeout, childtimeout, sys.argv[2], unknown, maindebug
 
 
 async def main(forcedargs=None):
-    hostnames, maintimeout, childtimeout, script, childargs = parse_args(forcedargs)
-    setcandebug(False)
+    hostnames, maintimeout, childtimeout, script, childargs, maindebug = parse_args(forcedargs)
+    setcandebug(maindebug)
 
     infomsg(maintimeout)
     if maintimeout in ["", None]:
