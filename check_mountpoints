@@ -55,72 +55,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def create_zfs_fstab(original_fstab):
-    fd, tmp_fstab_path = tempfile.mkstemp()
-    os.close(fd)
 
-    content = b""
-    if os.path.exists(original_fstab):
-        async with aiofiles.open(original_fstab, "rb") as f:
-            content = await f.read()
-
-    try:
-        cmdline = ["/sbin/zfs", "list", "-H", "-o", "name"]
-        process = await asyncio.create_subprocess_exec(
-            *cmdline,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, _ = await process.communicate()
-        zfs_list = stdout.decode().strip().splitlines()
-
-        for ds in zfs_list:
-            cmdline = ["/sbin/zfs", "get", "-H", "mountpoint", ds]
-            process = await asyncio.create_subprocess_exec(
-                *cmdline,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await process.communicate()
-            parts = stdout.decode().strip().split()
-            if len(parts) < 3:
-                continue
-            mp = parts[2]
-            if not os.path.isdir(mp):
-                continue
-
-            cmdline = ["/sbin/zfs", "get", "-H", "canmount", ds]
-            process = await asyncio.create_subprocess_exec(
-                *cmdline,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await process.communicate()
-            parts = stdout.decode().strip().split()
-            if len(parts) < 3:
-                continue
-            canmount = parts[2]
-            if canmount == "off":
-                continue
-
-            cmdline = ["/sbin/zfs", "get", "-H", "readonly", ds]
-            process = await asyncio.create_subprocess_exec(
-                *cmdline,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await process.communicate()
-            parts = stdout.decode().strip().split()
-            ro = "ro" if len(parts) >= 3 and parts[2] == "on" else "rw"
-
-            content += (ds + "\t" + mp + "\tzfs\t" + ro + "\t0\t0\n").encode()
-    except Exception:
-        pass
-
-    async with aiofiles.open(tmp_fstab_path, "wb") as f:
-        await f.write(content)
-
-    return tmp_fstab_path
 
 
 async def make_mtab():
@@ -136,6 +71,8 @@ async def make_mtab():
             stderr=asyncio.subprocess.PIPE
         )
         stdout, _ = await process.communicate()
+        if process.returncode != 0:
+            raise Exception("mount command failed with returncode " + str(process.returncode))
         mount_output = stdout.decode().strip().splitlines()
         for line in mount_output:
             parts = line.replace(" on ", " ").replace(" (", " ").replace(",", " ").split()
@@ -162,6 +99,8 @@ async def run_df(mp, timeout, dfargs):
             stderr=asyncio.subprocess.PIPE
         )
         await asyncio.wait_for(process.communicate(), timeout=timeout)
+        if process.returncode != 0:
+            raise Exception("df returned " + str(process.returncode))
     except asyncio.TimeoutError:
         raise Exception("df timeout")
 
@@ -200,7 +139,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
 
     is_rw = 0
     if not os.path.isdir(mp):
-        infomsg("CRIT: " + mp + " doesn't exist on filesystem")
+        infomsg("error: " + mp + " doesn't exist on filesystem")
         err_mesg.append(mp + " doesn't exist on filesystem")
     elif args.writetest:
         is_rw = 1
@@ -210,7 +149,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
                 if len(fields) > max(args.mf - 1, args.of - 1) and fields[args.mf - 1] == mp:
                     if "ro" in fields[args.of - 1].split(","):
                         is_rw = 0
-                        infomsg("CRIT: " + mp + " is not mounted as writable.")
+                        infomsg("error: " + mp + " is not mounted as writable.")
                         err_mesg.append("Could not write in " + mp + " filesystem was mounted RO.")
 
     if is_rw == 1:
@@ -225,16 +164,19 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
                 stderr=asyncio.subprocess.PIPE
             )
             await asyncio.wait_for(process.communicate(), timeout=args.timeout)
-            if not os.path.isfile(touchfile):
-                infomsg("CRIT: " + touchfile + " is not writable.")
+            if process.returncode != 0:
+                infomsg("error: " + touchfile + " is not writable.")
+                err_mesg.append("Could not write in " + mp + ".")
+            elif not os.path.isfile(touchfile):
+                infomsg("error: " + touchfile + " is not writable.")
                 err_mesg.append("Could not write in " + mp + ".")
             else:
                 os.remove(touchfile)
         except asyncio.TimeoutError:
-            infomsg("CRIT: " + touchfile + " is not writable.")
+            infomsg("error: " + touchfile + " is not writable.")
             err_mesg.append("Could not write in " + mp + " in " + str(args.timeout) + " sec. Seems to be stale.")
         except Exception:
-            infomsg("CRIT: " + touchfile + " is not writable.")
+            infomsg("error: " + touchfile + " is not writable.")
             err_mesg.append("Could not write in " + mp + ".")
 
     return err_mesg
@@ -280,9 +222,6 @@ async def main(forcedargs=None):
 
     fstab_file = args.fstab
     mtab_file = args.mtab
-
-    if os.path.exists("/sbin/zfs") and os.access("/sbin/zfs", os.X_OK):
-        fstab_file = await create_zfs_fstab(fstab_file)
 
     mps = args.mountpoints
 
