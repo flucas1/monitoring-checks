@@ -198,7 +198,7 @@ async def main(forcedargs=None):
 
     childtimeoutvalue = None
     childtimeoutstatus = None
-    if childtimeout != "":
+    if childtimeout not in ["", None]:
         childtimeoutparts = childtimeout.split(":")
         infomsg(str(childtimeoutparts))
         childtimeoutvalue = int(childtimeoutparts[0])
