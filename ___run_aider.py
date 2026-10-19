@@ -73,22 +73,21 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
     if not target_files:
         print("No valid files found in " + target_dir)
-        return
     else:
         for target_file in target_files:
             print("Matching " + target_file.name)
 
-    custom_env = os.environ.copy()
-    custom_env["OLLAMA_API_BASE"] = "http://127.0.0.1:11434"
+        custom_env = os.environ.copy()
+        custom_env["OLLAMA_API_BASE"] = "http://127.0.0.1:11434"
 
-    # Process files sequentially in the async event loop
-    failedfiles = []
-    for file_path in target_files:
-        success = await process_file(file_path, model, prompt, custom_env)
-        if success == False:
-            failedfiles.append(file_path)
-            error_count += 1
-    print("failed files: " + str(failedfiles))
+        # Process files sequentially in the async event loop
+        failedfiles = []
+        for file_path in target_files:
+            success = await process_file(file_path, model, prompt, custom_env)
+            if success == False:
+                failedfiles.append(file_path)
+                error_count += 1
+        print("failed files: " + str(failedfiles))
 
     return error_count
 
@@ -127,9 +126,9 @@ def get_model():
 
 def get_prompt_lines():
     prompt_lines = []
+
     prompt_lines.append("Keep the comments.")
     prompt_lines.append("Review the attached python for issues and transform to async.")
-    prompt_lines.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     prompt_lines.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
     prompt_lines.append("File reading and writing should be always async.")
     prompt_lines.append("For python imports do not use 'from'.")
@@ -137,6 +136,10 @@ def get_prompt_lines():
     prompt_lines.append("Time evolution should be done usign 'time.monotonic()'.")
     prompt_lines.append("Prefer \" rather than ' for string delimitator.")
     prompt_lines.append("Avoid f\" and .format syntax, use concatenation instead.")
+    prompt_lines.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
+    prompt_lines.append("Executables should be full paths.")
+
+    prompt_lines.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     prompt_lines.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
     prompt_lines.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
     prompt_lines.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
@@ -144,8 +147,7 @@ def get_prompt_lines():
     prompt_lines.append("The option '-d' is the last one of the command line arguments.")  # , but if there is a remainder of arguments, the remainder is the last one
     prompt_lines.append("All command line arguments should have short and long form.")
     prompt_lines.append("Prefer using the 'exitnagios' function rather than sys.exit")
-    prompt_lines.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
-    prompt_lines.append("Executables should be full paths.")
+
     return prompt_lines
 
 # -------------------------------------------------------------------------------
