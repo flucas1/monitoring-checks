@@ -61,7 +61,7 @@ async def dogpscountcall(timeout, warning, critical):
             if gpsd.waiting():
                 if gpsd.read():
                     report = gpsd.data
-                    infomsg(report)
+                    infomsg(str(report))
                     if report["class"] == "SKY":
                         total_used.append(gpsd.satellites_used)
                         total_seen.append(len(gpsd.satellites))
@@ -73,30 +73,30 @@ async def dogpscountcall(timeout, warning, critical):
                 await asyncio.sleep(1)
     except Exception as e:
         exitnagios("UNKNOWN", "internal error - " + str(e))
-    finally:
-        average_used = 0
-        counter = 0
-        while counter < len(total_used):
-            average_used = average_used + total_used[counter]
-            counter = counter + 1
-        if counter > 0:
-            average_used = average_used / counter
 
-        average_seen = 0
-        counter = 0
-        while counter < len(total_seen):
-            average_seen = average_seen + total_seen[counter]
-            counter = counter + 1
-        if counter > 0:
-            average_seen = average_seen / counter
+    average_used = 0
+    counter = 0
+    while counter < len(total_used):
+        average_used = average_used + total_used[counter]
+        counter = counter + 1
+    if counter > 0:
+        average_used = average_used / counter
 
-        message = "Total used: " + str(average_used) + " ; Total seen: " + str(average_seen) + " | used=" + str(average_used) + " seen=" + str(average_seen)
-        if average_used <= critical:
-            exitnagios("CRITICAL", message)
-        elif average_used <= warning:
-            exitnagios("WARNING", message)
-        else:
-            exitnagios("OK", message)
+    average_seen = 0
+    counter = 0
+    while counter < len(total_seen):
+        average_seen = average_seen + total_seen[counter]
+        counter = counter + 1
+    if counter > 0:
+        average_seen = average_seen / counter
+
+    message = "Total used: " + str(average_used) + " ; Total seen: " + str(average_seen) + " | used=" + str(average_used) + " seen=" + str(average_seen)
+    if average_used <= critical:
+        exitnagios("CRITICAL", message)
+    elif average_used <= warning:
+        exitnagios("WARNING", message)
+    else:
+        exitnagios("OK", message)
 
 
 # -------------------------------------------------------------------------------

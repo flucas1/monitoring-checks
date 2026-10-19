@@ -9,7 +9,6 @@ import asyncio
 import aiofiles
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
