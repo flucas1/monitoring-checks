@@ -52,7 +52,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
 
     starting_pattern = "check_"
     ending_pattern = ""
-    exclude_files = ["___run_aider.py"]
+    exclude_files = ["___run_aider.py", "___run_fix_syntax.py"]
 
     target_files = []
     for f in directory.iterdir():
@@ -64,6 +64,9 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     if not target_files:
         print("No valid files found in " + target_dir)
         return
+    else:
+        for target_file in target_files:
+            print("Matching " + target_file.name)
 
     custom_env = os.environ.copy()
     custom_env["OLLAMA_API_BASE"] = "http://127.0.0.1:11434"
