@@ -140,7 +140,7 @@ def get_prompt_lines():
     prompt_lines.append("All calls to 'asyncio.create_subprocess_exec' or 'asyncio.create_subprocess_shell' should evaluate the process returncode.")
     prompt_lines.append("Executables should be full paths.")
     prompt_lines.append("Console printing should be done via the funcion 'infomsg', except in function 'exitnagios'.")
-    prompt_lines.append("'aiohttp.ClientSession' and 'asyncssh.connect' should follow the selected protocol parameter.")
+    prompt_lines.append("'aiohttp.ClientSession' and 'asyncssh.connect' should follow the selected protocol parameter (ipv4, ipv6 or undefined).")
     # prefer shutil calls over own code
     # all main functions should exit via sys.exit, no other sys.exit calls in the code are allowed
 
