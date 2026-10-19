@@ -55,13 +55,20 @@ async def run_aider(target_dir: str, model: str, prompt: str):
     starting_pattern = "check_"
     ending_pattern = ""
     exclude_files = ["___run_aider.py", "___run_fix_syntax.py"]
+    shebang = "python"
 
     target_files = []
     for f in directory.iterdir():
         if f.is_file():
             if f.name not in exclude_files:
                 if f.name.startswith(starting_pattern) and f.name.endswith(ending_pattern):
-                    target_files.append(f)
+                    try:
+                        async with asyncfiles.open(f.name, "r", encoding="utf-8") as handle:
+                            first_line = await handle.readline()
+                            if shebang in first_line:
+                                target_files.append(f)
+                    except Exception:
+                            print("Issue reading " + file_path.name + " with error: " + str(e))
 
     if not target_files:
         print("No valid files found in " + target_dir)
@@ -107,15 +114,24 @@ async def update_aider():
 # -------------------------------------------------------------------------------
 
 
+def get_directory():
+    return "."
+
+
+def get_model():
+    return "ollama/mgraffam/qwen3.8-coder390:27b"
+    # return "ollama/qwen3-coder-next:latest"
+    # return "ollama/qwen3.8:latest"
+
+
+# -------------------------------------------------------------------------------
+
+
 async def main():
     error_count = 0
 
     # error_count += await update_aider()
 
-    DIRECTORY = "."
-    # MODEL = "ollama/qwen3-coder-next:latest"
-    # MODEL = "ollama/qwen3.8:latest"
-    MODEL = "ollama/mgraffam/qwen3.8-coder390:27b"
     PROMPT = []
     PROMPT.append("Keep the comments.")
     PROMPT.append("Review the attached python for issues and transform to async.")
@@ -136,11 +152,10 @@ async def main():
     PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
     PROMPT.append("Executables should be full paths.")
 
-    error_count += await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
+    error_count += await run_aider(get_directory(), get_model(), " ".join(PROMPT))
 
     if sys.__stdin__.isatty():
         input("Press Enter to continue...")
-
     if error_count > 0:
         sys.exit(1)
 
