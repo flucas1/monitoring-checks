@@ -6,7 +6,7 @@ import sys
 import argparse
 import pathlib
 import asyncio
-import datetime
+import time
 import aiofiles
 
 import selenium
@@ -91,11 +91,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    timestamp = time.monotonic()
     while True:
         if check_page_loaded(driver):
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.monotonic() - timestamp > 20:
             break
         await asyncio.sleep(1)
 
