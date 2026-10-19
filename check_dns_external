@@ -123,6 +123,15 @@ async def main(forcedargs=None):
     if (args.hostname == ""):
         exitnagios("CRITICAL", "hostname not defined")
 
+    if (args.record == ""):
+        exitnagios("CRITICAL", "record not defined")
+
+    if (args.querytype == ""):
+        exitnagios("CRITICAL", "querytype not defined")
+
+    if (args.accesstokenfile == ""):
+        exitnagios("CRITICAL", "accesstokenfile not defined")
+
     protocol = ""
     if args.ipv4 == True:
         protocol = "-4"
