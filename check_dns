@@ -16,7 +16,7 @@ import ipaddress
 import traceback
 import random
 import asyncio
-import datetime
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -468,7 +468,11 @@ async def check_consistency(useTcp, protocol, server, timeoutvalue, timeoutstatu
                 tasks = [_check_single_ns_consistency(test, useTcp, protocol, addressinfo, timeoutvalue, zone, text_server) for test in ns]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                for test, status in results:
+                for result in results:
+                    if isinstance(result, Exception):
+                        errorservers.append("unknown")
+                        continue
+                    test, status = result
                     if status == "error":
                         if test not in errorservers:
                             errorservers.append(test)
@@ -569,7 +573,11 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
                 tasks = [_check_single_ns_serial(test, useTcp, protocol, addressinfo, timeoutvalue, zone) for test in ns]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                for test, status, serial_test in results:
+                for result in results:
+                    if isinstance(result, Exception):
+                        errorservers.append("unknown")
+                        continue
+                    test, status, serial_test = result
                     if status == "error":
                         if test not in errorservers:
                             errorservers.append(test)
@@ -613,10 +621,9 @@ async def check_transfer(useTcp, protocol, server, timeoutvalue, timeoutstatus, 
         if addressinfo is None:
             return build_exitinfo("CRITICAL", "error during get_address - " + str(protocol) + " " + str(server))
         try:
-            start = datetime.datetime.now(datetime.timezone.utc)
+            start = time.monotonic()
             text = await get_zone(useTcp, addressinfo, timeoutvalue, zone)
-            elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-            duration = elapsed.total_seconds()
+            duration = time.monotonic() - start
             if text != "":
                 return build_exitinfo("OK", "transfer of zone " + zone + " from " + addressinfo + " successful | duration=" + str(duration))
             else:
