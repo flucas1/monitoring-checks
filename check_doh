@@ -73,7 +73,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-async def makedohtest(retries, targetdohurl, testquery, timeout_val):
+async def makedohtest(protocol, retries, targetdohurl, testquery, timeout_val):
     result = False
     infomsg("preparing async client")
     timeout = httpx.Timeout(timeout_val)
@@ -127,18 +127,20 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    protocol = None
     exclist = 0
-    if args.ipv0:
-        exclist += 1
-    if args.ipv4:
-        exclist += 1
-        socket.getaddrinfo = forced_ipv4_gai_family
-    if args.ipv6:
-        exclist += 1
-        socket.getaddrinfo = forced_ipv6_gai_family
-    if exclist > 1:
-        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to rely on OS handling")
-    elif exclist < 1:
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
         exitnagios("CRITICAL", "no protocol selected")
 
     if not args.targetdohurl:
@@ -146,7 +148,7 @@ async def main(forcedargs=None):
 
     retries = 3
     timeout = 5
-    await makedohtest(retries, args.targetdohurl, args.testquery, timeout)
+    await makedohtest(protocol, retries, args.targetdohurl, args.testquery, timeout)
 
 
 # -------------------------------------------------------------------------------

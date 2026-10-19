@@ -121,7 +121,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-async def doisvpncall(expected, severity, proxy):
+async def doisvpncall(protocol, expected, severity, proxy):
     try:
         driver = await generatedriver(proxy)
 
@@ -188,11 +188,9 @@ async def main(forcedargs=None):
     if args.ipv4 == True:
         protocol = "-4"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
         protocol = "-6"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
@@ -207,7 +205,7 @@ async def main(forcedargs=None):
     if args.severity not in ["CRITICAL", "WARNING"]:
         exitnagios("CRITICAL", "the severity \"" + args.severity + "\" is not valid")
 
-    await doisvpncall(expected, args.severity, proxy)
+    await doisvpncall(protocol, expected, args.severity, proxy)
 
 # -------------------------------------------------------------------------------
 
