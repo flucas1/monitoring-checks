@@ -69,13 +69,13 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
 
     infomsg(found_addrs)
 
-    if notexists == True:
+    if notexists:
         if found_interface:
             exitnagios("WARNING", "interface " + interface + " exists, but it should not exist")
         else:
             exitnagios("OK", "interface " + interface + " does not exist")
     elif segment == "" and address == "":
-        if (found_interface == True) and (existence == True):
+        if found_interface and existence:
             exitnagios("OK", "interface " + interface + " exists")
         else:
             exitnagios("CRITICAL", "no IP for interface " + interface)
@@ -102,7 +102,7 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
                     if str(network) == str(ipaddress.ip_network(test, strict=False)):
                         found = True
                         break
-                if found == False:
+                if not found:
                     errors_segment.append(test)
                 else:
                     infomsg("Found")
@@ -124,7 +124,7 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
                                 matching = matching and (refeparts[index] == testparts[index])
                         if matching:
                             found = True
-                if found == False:
+                if not found:
                     errors_address.append(test)
                 else:
                     infomsg("Found")

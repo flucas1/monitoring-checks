@@ -131,7 +131,7 @@ async def doremotecommand(protocol, hostname, timeoutvalue, remotecmdline, key, 
 
 
 async def run_dns_check(protocol, nodename, timeoutvalue, server, key, login, autoaccept, ip_version):
-    remotecmdline = "nslookup www.google.com " + server
+    remotecmdline = "/usr/bin/nslookup www.google.com " + server
     output = await doremotecommand(protocol, nodename, timeoutvalue, remotecmdline, key, login, autoaccept)
     if output is None:
         return "could not validate " + ip_version + " DNS traffic for node " + nodename
