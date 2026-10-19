@@ -70,6 +70,8 @@ async def main(forcedargs=None):
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            exitnagios("UNKNOWN", "exim -bpc returned exit code " + str(process.returncode))
         output = stdout.decode().strip() if stdout else ""
     except Exception:
         output = ""
