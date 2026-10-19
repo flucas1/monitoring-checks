@@ -7,8 +7,8 @@ import json
 import argparse
 import sys
 import asyncio
-import socket
 import aiofiles
+import dns.asyncresolver
 
 # -------------------------------------------------------------------------------
 
@@ -52,23 +52,18 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
+async def resolve_hostname(hostname, protocol):
+    resolver = dns.asyncresolver.Resolver()
+    if protocol == "-4":
+        answers = await resolver.resolve(hostname, "A")
+    elif protocol == "-6":
+        answers = await resolver.resolve(hostname, "AAAA")
+    else:
+        try:
+            answers = await resolver.resolve(hostname, "A")
+        except dns.asyncresolver.NoAnswer:
+            answers = await resolver.resolve(hostname, "AAAA")
+    return str(answers[0])
 
 # -------------------------------------------------------------------------------
 
@@ -523,11 +518,9 @@ async def main(forcedargs=None):
     if args.ipv4 == True:
         protocol = "-4"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
         protocol = "-6"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
@@ -570,12 +563,17 @@ async def main(forcedargs=None):
         crit_low = None
         crit_high = None
 
+    try:
+        ipaddress = await resolve_hostname(args.hostname, protocol)
+    except Exception as e:
+        exitnagios("CRITICAL", "unable to resolve hostname " + args.hostname + " : " + str(e) + " | value=-1")
+
     if args.mode == "uptime":
-        await douptimecall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await douptimecall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "memory":
-        await domemorycall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await domemorycall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "cpu":
-        await docpucall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await docpucall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
 
     exitnagios("CRITICAL", "unexpected case")
 
