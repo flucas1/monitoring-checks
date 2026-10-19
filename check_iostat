@@ -53,9 +53,10 @@ def exitnagios(status, message):
 
 async def run_iostat(disk, extended, samples):
     """Executes iostat asynchronously and returns the last line matching the disk."""
-    cmdline = ["/usr/bin/iostat", disk, "-k", "-d", "10", str(samples)]
+    cmdline = ["/usr/bin/iostat", "-k", "-d", "10", str(samples)]
     if extended:
-        cmdline.insert(2, "-x")
+        cmdline.append("-x")
+    cmdline.append(disk)
 
     try:
         process = await asyncio.create_subprocess_exec(
