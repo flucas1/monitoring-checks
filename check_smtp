@@ -9,6 +9,7 @@ import socket
 import asyncio
 import dateutil.parser
 import traceback
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -79,7 +80,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
     smtpconnection = None
     is_connected = False
     try:
-        start = datetime.datetime.now(datetime.timezone.utc)
+        start = time.monotonic()
         sourcetuple = None
         if source is not None:
             sourcetuple = (source, 0)
@@ -144,8 +145,8 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
 
         await smtpconnection.quit()
 
-        elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-        duration = elapsed.total_seconds()
+        elapsed = time.monotonic() - start
+        duration = elapsed
         daysremaining = -1
 
         if duration >= critical:
