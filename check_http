@@ -217,6 +217,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
     responsecode = None
     totaltime = None
     certinfo = None
+    url = ""
     try:
         infomsg("ssl " + str(sslversion))
         curlsslfinal = None
