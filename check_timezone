@@ -75,7 +75,7 @@ def validate_filename(filename, name="filename", noquit=False):
     filename2 = is_filename(filename)
     if not filename2:
         if not noquit:
-            infomsg("invalid " + name + " (does not match regex critera): '" + filename + "'")
+            infomsg("invalid " + name + " (does not match regex critera): \"" + filename + "\"")
         return None
     return filename2
 
@@ -105,22 +105,22 @@ async def check_timezone_logic(timezone, alternate=None, zoneinfo_file=None):
 
     server_timezone = datetime.datetime.now().astimezone().tzname()
 
-    msg = "timezone is '" + server_timezone + "'"
+    msg = "timezone is \"" + server_timezone + "\""
 
     if server_timezone != timezone and server_timezone != alternate_timezone:
         if timezone != alternate_timezone:
-            msg = msg + " (expected: '" + timezone + "' or '" + alternate_timezone + "')"
+            msg = msg + " (expected: \"" + timezone + "\" or \"" + alternate_timezone + "\")"
         else:
-            msg = msg + " (expected: '" + timezone + "')"
+            msg = msg + " (expected: \"" + timezone + "\")"
         exitnagios("CRITICAL", msg)
 
     try:
         if filecmp.cmp(LOCALTIME_FILE, zoneinfo_file_path, shallow=False):
             exitnagios("OK", msg)
         else:
-            exitnagios("CRITICAL", msg + ", localtime file '" + LOCALTIME_FILE + "' does not match timezone file '" + zoneinfo_file_path + "'!")
+            exitnagios("CRITICAL", msg + ", localtime file \"" + LOCALTIME_FILE + "\" does not match timezone file \"" + zoneinfo_file_path + "\"!")
     except FileNotFoundError:
-        exitnagios("CRITICAL", msg + ", localtime file '" + LOCALTIME_FILE + "' does not match timezone file '" + zoneinfo_file_path + "'!")
+        exitnagios("CRITICAL", msg + ", localtime file \"" + LOCALTIME_FILE + "\" does not match timezone file \"" + zoneinfo_file_path + "\"!")
 
     exitnagios("UNKNOWN", msg)
 
