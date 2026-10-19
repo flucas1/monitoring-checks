@@ -136,8 +136,12 @@ def get_prompt_lines():
     prompt_lines.append("Time evolution should be done usign 'time.monotonic()'.")
     prompt_lines.append("Prefer \" rather than ' for string delimitator.")
     prompt_lines.append("Avoid f\" and .format syntax, use concatenation instead.")
-    prompt_lines.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
+    prompt_lines.append("The functions 'asyncio.create_subprocess_exec' and  'asyncio.create_subprocess_shell' should be assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
     prompt_lines.append("Executables should be full paths.")
+    # hostnames should be resolved using dns.asyncresolver
+    # prefer shutil calls over own code
+    # all subprocess calls should influece the return parameter, but not raise exceptions
+    # all main functions should exit via sys.exit, no other sys.exit calls in the code are allowed
 
     prompt_lines.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     prompt_lines.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
