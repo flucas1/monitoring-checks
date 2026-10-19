@@ -10,6 +10,7 @@ import json
 import os
 import pathlib
 import re
+import socket
 import ssl
 import sys
 import pytz
@@ -60,8 +61,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-iso8601_duration_re = \
-    re.compile(r"""^P(?:(?:(\d+)Y)?
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+def parse_iso8601(value, forward):
+    iso8601_duration_re = re.compile(r"""^P(?:(?:(\d+)Y)?
                         (?:(\d+)M)?
                         (?:(\d+)D)?
                         (?:T(?:(\d+)H)?
@@ -69,9 +79,6 @@ iso8601_duration_re = \
                             (?:(\d+)S)?)?
                         |
                         (\d+)W)$""", re.X)
-
-
-def parse_iso8601(value, forward):
     period_match = iso8601_duration_re.search(value)
     if period_match:
         multiplier = 1 if forward else -1
@@ -213,14 +220,14 @@ async def check_thing(object_json):
     return (rc, object_json["UID"] + " is " + status + ".")
 
 
-async def check_group(group_json, thresholds, args, timeoutstatus):
+async def check_group(protocol, group_json, thresholds, args, timeoutstatus):
     final_rc = "OK"
     final_messages = []
     perfdata = ""
     for i in group_json["members"]:
         if i["type"] == "GroupItem":
-            link = await fetch_object(i["link"], args, timeoutstatus)
-            rc, messages, sub_perfdata = await check_group(link, thresholds, args, timeoutstatus)
+            link = await fetch_object(protocol, i["link"], args, timeoutstatus)
+            rc, messages, sub_perfdata = await check_group(protocol, link, thresholds, args, timeoutstatus)
             final_messages += messages
             perfdata += sub_perfdata
         else:
@@ -242,7 +249,7 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
     return (final_rc, final_messages, perfdata)
 
 
-async def fetch_object(item_url, args, timeoutstatus):
+async def fetch_object(protocol, item_url, args, timeoutstatus):
     infomsg("# " + str(item_url))
 
     if args.exclude is True:
@@ -273,7 +280,8 @@ async def fetch_object(item_url, args, timeoutstatus):
     max_retries = getattr(args, "retries", 3)
     retry_delay = getattr(args, "retry_delay", 2)
     retryable_statuses = {408, 429, 500, 502, 503, 504}
-    async with aiohttp.ClientSession() as session:
+    connector = get_connector(protocol)
+    async with aiohttp.ClientSession(connector=connector) as session:
         for attempt in range(max_retries + 1):
             try:
                 async with session.get(item_url, headers=headers, ssl=ssl_context) as response:
@@ -309,6 +317,9 @@ async def readtextfile(file_path):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-I", "--item", dest="item", help="The item to check. Either this or --thing is required.")
     parser.add_argument("-T", "--thing", dest="thing", help="The thing to check. Will check thing's status. Either this or --item is required.")
     parser.add_argument("-H", "--hostname", dest="hostname", default="localhost", help="Hostname of the OpenHAB instance.  Defaults to localhost.")
@@ -338,6 +349,22 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
     timeoutparts = args.timeout.split(":")
     timeoutvalue = int(timeoutparts[0])
     timeoutstatus = "CRITICAL"
@@ -362,10 +389,10 @@ async def main(forcedargs=None):
     object_name = object_name.replace("-", "_") + "_" + temp[1]
 
     object_url = ("https" if args.ssl else "http") + "://" + args.hostname + ":" + str(args.port) + args.base_url + "/" + object_type + "/" + object_name
-    object_json = await fetch_object(object_url, args, timeoutstatus)
+    object_json = await fetch_object(protocol, object_url, args, timeoutstatus)
 
     if args.group:
-        rc, messages, perfdata = await check_group(object_json, thresholds, args, timeoutstatus)
+        rc, messages, perfdata = await check_group(protocol, object_json, thresholds, args, timeoutstatus)
         if len(messages) == 0:
             final_message = "All group members within bounds."
         elif len(messages) == 1:
