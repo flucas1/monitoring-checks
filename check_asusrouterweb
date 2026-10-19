@@ -52,33 +52,17 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def resolve_hostname(hostname, protocol):
-    resolver = dns.asyncresolver.Resolver()
+def get_connector(protocol):
     if protocol == "-4":
-        answers = await resolver.resolve(hostname, "A")
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
     elif protocol == "-6":
-        answers = await resolver.resolve(hostname, "AAAA")
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
     else:
-        try:
-            answers = await resolver.resolve(hostname, "A")
-        except dns.asyncresolver.NoAnswer:
-            answers = await resolver.resolve(hostname, "AAAA")
-    return str(answers[0])
-
-# -------------------------------------------------------------------------------
+        return aiohttp.TCPConnector()
 
 
-async def authenticate(ipaddress, username, password, timeout):
-    """
-    Authenticate with the router and return the URL and headers
-    Parameters:
-        ipaddress : IP Address of the router
-        username : Root user name
-        password : Password required to login
-        timeout : Timeout in seconds for the HTTP request
-    :returns: Tuple of (url, headers) or (url, None) if authentication fails
-    """
-    url = "http://" + ipaddress + "/appGet.cgi"
+async def authenticate(hostname, username, password, timeout, protocol):
+    url = "http://" + hostnamedress + "/appGet.cgi"
     auth = username + ":" + password
     auth_bytes = auth.encode("ascii")
     logintoken = base64.b64encode(auth_bytes).decode("ascii")
@@ -87,9 +71,10 @@ async def authenticate(ipaddress, username, password, timeout):
         "user-agent": "asusrouter-Android-DUTUtil-1.0.0.245"
     }
     client_timeout = aiohttp.ClientTimeout(total=timeout)
+    connector = get_connector(protocol)
     try:
-        async with aiohttp.ClientSession(timeout=client_timeout) as session:
-            async with session.post(url="http://" + ipaddress + "/login.cgi", data=payload, headers=headers) as resp:
+        async with aiohttp.ClientSession(timeout=client_timeout, connector=connector) as session:
+            async with session.post(url="http://" + hostname + "/login.cgi", data=payload, headers=headers) as resp:
                 r = await resp.json()
     except Exception:
         return url, None
@@ -104,21 +89,13 @@ async def authenticate(ipaddress, username, password, timeout):
         return url, None
 
 
-async def router_get(url, headers, command, timeout):
-    """
-    Execute a hook on the router and return the result
-    Parameters:
-        url : URL to post the command
-        headers : Authentication headers
-        command : Command to send
-        timeout : Timeout in seconds for the HTTP request
-    :returns: string result from the router
-    """
+async def router_get(url, headers, command, timeout, protocol):
     if headers:
         payload = "hook=" + command
         client_timeout = aiohttp.ClientTimeout(total=timeout)
+        connector = get_connector(protocol)
         try:
-            async with aiohttp.ClientSession(timeout=client_timeout) as session:
+            async with aiohttp.ClientSession(timeout=client_timeout, connector=connector) as session:
                 async with session.post(url=url, data=payload, headers=headers) as resp:
                     return await resp.text()
         except Exception:
@@ -127,13 +104,8 @@ async def router_get(url, headers, command, timeout):
         return None
 
 
-async def get_uptime(url, headers, timeout):
-    """
-    Return uptime of the router
-    Format: {"since": "Thu, 22 Jul 2021 14:32:38 +0200", "uptime": "375001"}
-    :returns: JSON with last boot time and uptime in seconds
-    """
-    r = await router_get(url, headers, "uptime()", timeout)
+async def get_uptime(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "uptime()", timeout, protocol)
     if r is None:
         return None
     else:
@@ -144,51 +116,32 @@ async def get_uptime(url, headers, timeout):
         return json.loads("{\"since\":\"" + since + "\", \"uptime\":\"" + up + "\"}")
 
 
-async def get_uptime_secs(url, headers, timeout):
-    """
-    Return uptime of the router in seconds
-    :returns: integer - uptime in seconds
-    """
-    r = await get_uptime(url, headers, timeout)
+async def get_uptime_secs(url, headers, timeout, protocol):
+    r = await get_uptime(url, headers, timeout, protocol)
     if r is None:
         return None
     else:
         return int(r["uptime"])
 
 
-async def get_memory_usage(url, headers, timeout):
-    """
-    Return memory usage of the router
-    Format: {"mem_total": "262144", "mem_free": "107320", "mem_used": "154824"}
-    :returns: JSON with memory variables
-    """
-    r = await router_get(url, headers, "memory_usage()", timeout)
+async def get_memory_usage(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "memory_usage()", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads("{" + r[17:])
 
 
-async def get_cpu_usage(url, headers, timeout):
-    """
-    Return CPU usage of the router
-    Format: {"cpu1_total": "38106047", "cpu1_usage": "3395512",
-             "cpu2_total": "38106008", "cpu2_usage": "2384694"}
-    :returns: JSON with CPU load statistics
-    """
-    r = await router_get(url, headers, "cpu_usage()", timeout)
+async def get_cpu_usage(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "cpu_usage()", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads("{" + r[14:])
 
 
-async def get_clients_fullinfo(url, headers, timeout):
-    """
-    Obtain a list of all clients
-    :returns: JSON with list of clents and a list of mac addresses
-    """
-    r = await router_get(url, headers, "get_clientlist()", timeout)
+async def get_clients_fullinfo(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "get_clientlist()", timeout, protocol)
     if r is None:
         return None
     else:
@@ -196,13 +149,8 @@ async def get_clients_fullinfo(url, headers, timeout):
 
 
 # Total traffic in Mb/s
-async def get_traffic_total(url, headers, timeout):
-    """
-    Get total amount of traffic since last restart (Megabit format)
-    Format: {"sent": "15901.92873764038", "recv": "10926.945571899414"}
-    :returns: JSON with sent and received Megabits since last boot
-    """
-    r = await router_get(url, headers, "netdev(appobj)", timeout)
+async def get_traffic_total(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "netdev(appobj)", timeout, protocol)
     if r is None:
         return None
     else:
@@ -212,17 +160,12 @@ async def get_traffic_total(url, headers, timeout):
         return json.loads("{\"sent\":\"" + str(tx) + "\", \"recv\":\"" + str(rx) + "\"}")
 
 
-async def get_traffic(url, headers, timeout):
-    """
-    Get total and current amount of traffic since last restart (Megabit format)
-    Note there is a two second delay to determine current traffic
-    :returns: JSON with current up and down stream in Mbit/s and totals since last reboot
-    """
-    meas_1 = await router_get(url, headers, "netdev(appobj)", timeout)
+async def get_traffic(url, headers, timeout, protocol):
+    meas_1 = await router_get(url, headers, "netdev(appobj)", timeout, protocol)
     if meas_1 is None:
         return None
     await asyncio.sleep(2)
-    meas_2 = await router_get(url, headers, "netdev(appobj)", timeout)
+    meas_2 = await router_get(url, headers, "netdev(appobj)", timeout, protocol)
     if meas_2 is None:
         return None
     meas_1 = json.loads(meas_1)
@@ -240,12 +183,8 @@ async def get_traffic(url, headers, timeout):
     return json.dumps({"speed": persec, "total": totaldata})
 
 
-async def get_status_wan(url, headers, timeout):
-    """
-    Get the status of the WAN connection
-    :returns: JSON with status information on the WAN connection
-    """
-    r = await router_get(url, headers, "wanlink()", timeout)
+async def get_status_wan(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "wanlink()", timeout, protocol)
     if r is None:
         return None
     else:
@@ -259,88 +198,60 @@ async def get_status_wan(url, headers, timeout):
         return json.loads(json.dumps(status))
 
 
-async def is_wan_online(url, headers, timeout):
-    """
-    Returns if the WAN connection in onlise
-    :returns: True if WAN is connected
-    """
-    r = await get_status_wan(url, headers, timeout)
+async def is_wan_online(url, headers, timeout, protocol):
+    r = await get_status_wan(url, headers, timeout, protocol)
     if r is None:
         return None
     else:
         return r["status"] == "1"
 
 
-async def get_settings(url, headers, timeout):
-    """
-    Get settings from the router
-    :returns: JSON with Router settings
-    """
+async def get_settings(url, headers, timeout, protocol):
     settings = {}
     for s in ["time_zone", "time_zone_dst", "time_zone_x", "time_zone_dstoff",
               "ntp_server0", "acs_dfs", "productid", "apps_sq", "lan_hwaddr", "lan_ipaddr",
               "lan_proto", "x_Setting", "label_mac", "lan_netmask", "lan_gateway",
               "http_enable", "https_lanport", "wl0_country_code", "wl1_country_code"]:
-        r = await router_get(url, headers, "nvram_get(" + s + ")", timeout)
+        r = await router_get(url, headers, "nvram_get(" + s + ")", timeout, protocol)
         if r is not None:
             settings[s] = json.loads(r)[s]
     return settings
 
 
-async def get_lan_ip_address(url, headers, timeout):
-    """
-    Obtain the IP address of the router
-    :return: IP address
-    """
-    r = await router_get(url, headers, "nvram_get(lan_ipaddr)", timeout)
+async def get_lan_ip_address(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "nvram_get(lan_ipaddr)", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads(r)["lan_ipaddr"]
 
 
-async def get_lan_netmask(url, headers, timeout):
-    """
-    Obtain the Netmask for the LAN network
-    :return: Netmask
-    """
-    r = await router_get(url, headers, "nvram_get(lan_netmask)", timeout)
+async def get_lan_netmask(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "nvram_get(lan_netmask)", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads(r)["lan_netmask"]
 
 
-async def get_lan_gateway(url, headers, timeout):
-    """
-    Obtain the gateway for the LAN network
-    :return: IP address of gateay
-    """
-    r = await router_get(url, headers, "nvram_get(lan_gateway)", timeout)
+async def get_lan_gateway(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "nvram_get(lan_gateway)", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads(r)["lan_gateway"]
 
 
-async def get_dhcp_list(url, headers, timeout):
-    """
-    Obtain a list of DHCP leases
-    :returns: JSON with a list of DHCP leases
-    """
-    r = await router_get(url, headers, "dhcpLeaseMacList()", timeout)
+async def get_dhcp_list(url, headers, timeout, protocol):
+    r = await router_get(url, headers, "dhcpLeaseMacList()", timeout, protocol)
     if r is None:
         return None
     else:
         return json.loads(r)
 
 
-async def get_online_clients(url, headers, timeout):
-    """
-    Obtain a list of MAC-addresses from online clients
-    :returns: JSON list with MAC addresses
-    """
-    clnts = await get_clients_fullinfo(url, headers, timeout)
+async def get_online_clients(url, headers, timeout, protocol):
+    clnts = await get_clients_fullinfo(url, headers, timeout, protocol)
     if clnts is None:
         return None
     else:
@@ -352,12 +263,8 @@ async def get_online_clients(url, headers, timeout):
         return json.dumps(lst)
 
 
-async def get_clients_info(url, headers, timeout):
-    """
-    Obtain info on all clients (limited list of datafields)
-    :return: JSON list of clients with main characteristics
-    """
-    clnts = await get_clients_fullinfo(url, headers, timeout)
+async def get_clients_info(url, headers, timeout, protocol):
+    clnts = await get_clients_fullinfo(url, headers, timeout, protocol)
     if clnts is None:
         return None
     else:
@@ -380,14 +287,8 @@ async def get_clients_info(url, headers, timeout):
         return json.loads(json.dumps(lst))
 
 
-async def get_client_info(url, headers, clientid, timeout):
-    """
-    Get info on a single client
-    :param clientid: MAC address of the client requested
-    :param timeout: Timeout in seconds for the HTTP request
-    :return: JSON with clientinfo (see get_clients_info() for description)
-    """
-    full_info = await get_clients_fullinfo(url, headers, timeout)
+async def get_client_info(url, headers, clientid, timeout, protocol):
+    full_info = await get_clients_fullinfo(url, headers, timeout, protocol)
     if full_info is None:
         return None
 
@@ -400,30 +301,30 @@ async def get_client_info(url, headers, clientid, timeout):
 # -------------------------------------------------------------------------------
 
 
-async def doasusroutercall(host, username, password, timeoutvalue):
+async def doasusroutercall(hostname, username, password, timeoutvalue, protocol):
     try:
-        url, headers = await authenticate(host, username, password, timeoutvalue)
+        url, headers = await authenticate(hostname, username, password, timeoutvalue, protocol)
         if headers is None:
             raise Exception("Authentication Failed")
 
         infomsg("Router URL: " + url)
-        infomsg("Uptime    : " + str(await get_uptime_secs(url, headers, timeoutvalue)))
-        infomsg("Memory    : " + str(await get_memory_usage(url, headers, timeoutvalue)))
-        infomsg("CPU       : " + str(await get_cpu_usage(url, headers, timeoutvalue)))
-        infomsg("Data      : " + str(await get_traffic_total(url, headers, timeoutvalue)))
-        infomsg("Settings  : " + str(await get_settings(url, headers, timeoutvalue)))
-        infomsg("Uptime    : " + str(await get_uptime(url, headers, timeoutvalue)))
-        infomsg("Online    : " + str(await is_wan_online(url, headers, timeoutvalue)))
-        infomsg("Clients   : " + str(await get_clients_fullinfo(url, headers, timeoutvalue)))
-        infomsg("Clients   : " + str(await get_clients_info(url, headers, timeoutvalue)))
-        infomsg("Online    : " + str(await get_online_clients(url, headers, timeoutvalue)))
-        infomsg("IP addr   : " + str(await get_lan_ip_address(url, headers, timeoutvalue)))
-        infomsg("Netmask   : " + str(await get_lan_netmask(url, headers, timeoutvalue)))
-        infomsg("Gateway   : " + str(await get_lan_gateway(url, headers, timeoutvalue)))
-        infomsg("DHCP      : " + str(await get_dhcp_list(url, headers, timeoutvalue)))
-        infomsg("Bandwidth : " + str(await get_traffic(url, headers, timeoutvalue)))
-        infomsg("WAN       : " + str(await get_status_wan(url, headers, timeoutvalue)))
-        infomsg("Client    : " + str(await get_client_info(url, headers, "B8:2C:A0:5F:37:52", timeoutvalue)))
+        infomsg("Uptime    : " + str(await get_uptime_secs(url, headers, timeoutvalue, protocol)))
+        infomsg("Memory    : " + str(await get_memory_usage(url, headers, timeoutvalue, protocol)))
+        infomsg("CPU       : " + str(await get_cpu_usage(url, headers, timeoutvalue, protocol)))
+        infomsg("Data      : " + str(await get_traffic_total(url, headers, timeoutvalue, protocol)))
+        infomsg("Settings  : " + str(await get_settings(url, headers, timeoutvalue, protocol)))
+        infomsg("Uptime    : " + str(await get_uptime(url, headers, timeoutvalue, protocol)))
+        infomsg("Online    : " + str(await is_wan_online(url, headers, timeoutvalue, protocol)))
+        infomsg("Clients   : " + str(await get_clients_fullinfo(url, headers, timeoutvalue, protocol)))
+        infomsg("Clients   : " + str(await get_clients_info(url, headers, timeoutvalue, protocol)))
+        infomsg("Online    : " + str(await get_online_clients(url, headers, timeoutvalue, protocol)))
+        infomsg("IP addr   : " + str(await get_lan_ip_address(url, headers, timeoutvalue, protocol)))
+        infomsg("Netmask   : " + str(await get_lan_netmask(url, headers, timeoutvalue, protocol)))
+        infomsg("Gateway   : " + str(await get_lan_gateway(url, headers, timeoutvalue, protocol)))
+        infomsg("DHCP      : " + str(await get_dhcp_list(url, headers, timeoutvalue, protocol)))
+        infomsg("Bandwidth : " + str(await get_traffic(url, headers, timeoutvalue, protocol)))
+        infomsg("WAN       : " + str(await get_status_wan(url, headers, timeoutvalue, protocol)))
+        infomsg("Client    : " + str(await get_client_info(url, headers, "B8:2C:A0:5F:37:52", timeoutvalue, protocol)))
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e) + " | value=-1")
@@ -444,9 +345,9 @@ def check_status(value, warn_low, warn_high, crit_low, crit_high):
 # -------------------------------------------------------------------------------
 
 
-async def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    url, headers = await doasusroutercall(host, username, password, timeoutvalue)
-    uptime = await get_uptime_secs(url, headers, timeoutvalue)
+async def douptimecall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol):
+    url, headers = await doasusroutercall(host, username, password, timeoutvalue, protocol)
+    uptime = await get_uptime_secs(url, headers, timeoutvalue, protocol)
     if uptime is not None:
         infomsg(uptime)
         check_status(uptime, warn_low, warn_high, crit_low, crit_high)
@@ -454,9 +355,9 @@ async def douptimecall(host, username, password, warn_low, warn_high, crit_low, 
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-async def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    url, headers = await doasusroutercall(host, username, password, timeoutvalue)
-    memory = await get_memory_usage(url, headers, timeoutvalue)
+async def domemorycall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol):
+    url, headers = await doasusroutercall(host, username, password, timeoutvalue, protocol)
+    memory = await get_memory_usage(url, headers, timeoutvalue, protocol)
     if memory is not None:
         value = (int(memory["mem_used"]) / int(memory["mem_total"])) * 100
         infomsg(value)
@@ -465,9 +366,9 @@ async def domemorycall(host, username, password, warn_low, warn_high, crit_low, 
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-async def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
-    url, headers = await doasusroutercall(host, username, password, timeoutvalue)
-    cpu = await get_cpu_usage(url, headers, timeoutvalue)
+async def docpucall(host, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol):
+    url, headers = await doasusroutercall(host, username, password, timeoutvalue, protocol)
+    cpu = await get_cpu_usage(url, headers, timeoutvalue, protocol)
     if cpu is not None:
         cores = int(len(cpu) / 2)
         infomsg(cores)
@@ -563,17 +464,12 @@ async def main(forcedargs=None):
         crit_low = None
         crit_high = None
 
-    try:
-        ipaddress = await resolve_hostname(args.hostname, protocol)
-    except Exception as e:
-        exitnagios("CRITICAL", "unable to resolve hostname " + args.hostname + " : " + str(e) + " | value=-1")
-
     if args.mode == "uptime":
-        await douptimecall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await douptimecall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol)
     elif args.mode == "memory":
-        await domemorycall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await domemorycall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol)
     elif args.mode == "cpu":
-        await docpucall(ipaddress, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await docpucall(args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus, protocol)
 
     exitnagios("CRITICAL", "unexpected case")
 
