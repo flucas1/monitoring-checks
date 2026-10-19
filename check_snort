@@ -99,12 +99,12 @@ async def run_mysql_query(query):
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
             infomsg("MySQL Error: " + stderr.decode().strip())
-            return 1
+            return -1
         result = stdout.decode().strip()
         return int(result) if result else 0
     except Exception as e:
         infomsg("MySQL Exception: " + str(e))
-        return 1
+        return -1
 
 
 async def get_alert_count(time_diff_seconds, priority_level):
@@ -114,6 +114,9 @@ async def get_alert_count(time_diff_seconds, priority_level):
     infomsg("get_alert_count -> " + query)
 
     count = await run_mysql_query(query)
+    if count == -1:
+        infomsg("get_alert_count -> MySQL query failed")
+        return -1
     infomsg("time_diff -> " + time_diff + " / count: -> " + str(count))
     return count
 
@@ -258,6 +261,9 @@ async def check_alerts():
 
     tasks = [get_alert_count(actual_alerts, PRIORITY_LEVEL), get_alert_count(average_alerts, PRIORITY_LEVEL)]
     count_last, count_avg = await asyncio.gather(*tasks, return_exceptions=True)
+
+    if count_last == -1 or count_avg == -1:
+        return "UNKNOWN", "MySQL query failed for alert counts", "", None
 
     avg_avg = count_avg // divider
     if avg_avg == 0:
