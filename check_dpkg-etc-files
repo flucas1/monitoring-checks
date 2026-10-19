@@ -88,7 +88,7 @@ async def dodpkgetcfilescall(ignorelist):
         else:
             exitnagios("WARNING", "please review extra dpkg-etc files: " + " ".join(validatedfiles) + " | total=" + str(len(validatedfiles)))
     except Exception as e:
-        exitnagios("CRITICAL", "issue retrieving extra dpkg-etc files - " + str(e) + " total=-1")
+        exitnagios("CRITICAL", "issue retrieving extra dpkg-etc files - " + str(e) + " | total=-1")
 
 
 # -------------------------------------------------------------------------------
