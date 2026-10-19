@@ -81,12 +81,12 @@ async def dosnmpwifilinkcall(warning, critical, hostname, port, community, timeo
     signal = None
     try:
         signal = float(values["signal"])
-    except:
+    except Exception:
         pass
     noise = None
     try:
         noise = float(values["noise"])
-    except:
+    except Exception:
         pass
 
     if signal is None:
