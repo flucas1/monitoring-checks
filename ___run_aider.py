@@ -6,6 +6,7 @@ import os
 import asyncio
 import pathlib
 import shutil
+import aiofiles
 
 # -------------------------------------------------------------------------------
 
@@ -63,7 +64,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
             if f.name not in exclude_files:
                 if f.name.startswith(starting_pattern) and f.name.endswith(ending_pattern):
                     try:
-                        async with asyncfiles.open(f.name, "r", encoding="utf-8") as handle:
+                        async with aiofiles.open(f.name, "r", encoding="utf-8") as handle:
                             first_line = await handle.readline()
                             if shebang in first_line:
                                 target_files.append(f)
