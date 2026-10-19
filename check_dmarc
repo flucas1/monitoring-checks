@@ -5,7 +5,7 @@ import os
 import sys
 import argparse
 import asyncio
-import datetime
+import time
 import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
@@ -87,11 +87,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    timestamp = time.monotonic()
     while True:
         if check_page_loaded(driver):
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.monotonic() - timestamp > 20:
             break
         await asyncio.sleep(1)
 
@@ -100,7 +100,7 @@ async def tryfindbyxpath(driver, xpath):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.XPATH, xpath)
-    except:
+    except Exception:
         pass
     return result
 
@@ -109,7 +109,7 @@ async def tryfindbyid(driver, idname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.ID, idname)
-    except:
+    except Exception:
         pass
     return result
 
@@ -118,7 +118,7 @@ async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
-    except:
+    except Exception:
         pass
     return result
 
@@ -127,7 +127,7 @@ async def tryfindbytagname(driver, tagname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.TAG_NAME, tagname)
-    except:
+    except Exception:
         pass
     return result
 
