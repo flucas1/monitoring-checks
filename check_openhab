@@ -90,7 +90,7 @@ def split_threshold(value, level, convert):
             return (convert(items[0], False), convert(items[1], True))
         else:
             exitnagios("CRITICAL", "Malformed " + str(level) + " value: " + str(value))
-    except:
+    except Exception:
         exitnagios("CRITICAL", "invalid value passed as " + str(level) + " parameter: " + str(value))
 
 
@@ -124,7 +124,7 @@ def build_thresholds(args):
         if args.string_ok:
             try:
                 thresholds["compiled_regex_ok"] = re.compile(args.string_ok)
-            except:
+            except Exception:
                 exitnagios("CRITICAL", "Unable to compile string OK regex: " + args.string_ok)
         else:
             thresholds["compiled_regex_ok"] = None
@@ -132,7 +132,7 @@ def build_thresholds(args):
         if args.string_warn:
             try:
                 thresholds["compiled_regex_warn"] = re.compile(args.string_warn)
-            except:
+            except Exception:
                 exitnagios("CRITICAL", "Unable to compile string WARNING regex: " + args.string_warn)
         else:
             thresholds["compiled_regex_warn"] = None
@@ -140,8 +140,8 @@ def build_thresholds(args):
         if args.string_crit:
             try:
                 thresholds["compiled_regex_crit"] = re.compile(args.string_crit)
-            except:
-                exitnagios("CRITICAL", " Unable to compile string CRITICAL regex: " + args.string_crit)
+            except Exception:
+                exitnagios("CRITICAL", "Unable to compile string CRITICAL regex: " + args.string_crit)
         else:
             thresholds["compiled_regex_crit"] = None
 
@@ -152,7 +152,7 @@ def check_thresholds(thresholds, state, name):
     if thresholds.get("numeric_limits"):
         try:
             state_float = float(state.split()[0])
-        except ValueError as e:
+        except ValueError:
             return ("CRITICAL", "Numeric thresholds given for non-numeric state: " + str(state) + " | value=" + str(state))
         rc, message = check_limits(state_float, thresholds.get("number_unkn_low"), thresholds.get("number_unkn_high"), name, "UNKNOWN")
         if rc is not None:
@@ -168,7 +168,7 @@ def check_thresholds(thresholds, state, name):
     if thresholds.get("datetime_limits"):
         try:
             state_time = dateutil.parser.parse(state)
-        except ValueError as e:
+        except ValueError:
             return ("CRITICAL", "Time thresholds given for non-time state: " + str(state) + " | value=" + str(state))
         rc, message = check_limits(state_time, thresholds.get("datetime_crit_low"), thresholds.get("datetime_crit_high"), name, "CRITICAL")
         if rc is not None:
@@ -195,14 +195,14 @@ def check_thresholds(thresholds, state, name):
     return ("OK", name + " state within fallback situation: " + str(state) + " | value=" + str(state))
 
 
-async def check_item(object_json, thresholds, timeoutstatus):
+async def check_item(object_json, thresholds):
     if object_json["state"] in ("Uninitialized", "Undefined", "UNDEF", "NULL"):
         return ("WARNING", object_json["name"] + " is uninitialized.")
     else:
         return check_thresholds(thresholds, object_json["state"], object_json["name"])
 
 
-async def check_thing(object_json, args):
+async def check_thing(object_json):
     status = object_json["statusInfo"]["status"]
     if status == "ONLINE":
         rc = "OK"
@@ -224,11 +224,11 @@ async def check_group(group_json, thresholds, args, timeoutstatus):
             final_messages += messages
             perfdata += sub_perfdata
         else:
-            rc, message = await check_item(i, thresholds, timeoutstatus)
+            rc, message = await check_item(i, thresholds)
             try:
                 state_float = float(i["state"])
                 perfdata += (i["name"] + "=" + i["state"] + " ")
-            except:
+            except Exception:
                 pass
 
             if rc != "OK":
@@ -374,10 +374,10 @@ async def main(forcedargs=None):
             final_message = str(len(messages)) + " problems in group " + object_json["name"] + ".\n" + "\n".join(messages)
         exitnagios(rc, final_message + " | " + perfdata)
     elif args.item:
-        rc, message = await check_item(object_json, thresholds, timeoutstatus)
+        rc, message = await check_item(object_json, thresholds)
         exitnagios(rc, message)
     elif args.thing:
-        rc, message = await check_thing(object_json, args)
+        rc, message = await check_thing(object_json)
         exitnagios(rc, message)
 
 
