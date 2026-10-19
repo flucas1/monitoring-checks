@@ -3,7 +3,6 @@
 
 import argparse
 import sys
-import re
 import datetime
 import socket
 import pathlib
@@ -12,7 +11,6 @@ import aiofiles
 import time
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
 import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
