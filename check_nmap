@@ -73,9 +73,9 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 def processservice(port, status, service, expectedservice, exitstatus):
     if expectedservice == "":
-        exitnagios(exitstatus, "Port is " + status + " and found service " + service + " listening on port " + str(port) + " - no expeced service specified")
+        exitnagios(exitstatus, "Port is " + status + " and found service " + service + " listening on port " + str(port) + " - no expected service specified")
     elif service == expectedservice:
-        exitnagios(exitstatus, "Port is " + status + " and found service " + service + " listening on port " + str(port) + " - and the expeced service matches")
+        exitnagios(exitstatus, "Port is " + status + " and found service " + service + " listening on port " + str(port) + " - and the expected service matches")
     elif service == "unknown":
         exitnagios("CRITICAL", "Port is " + status + " but unknown service listening on port " + str(port) + " - it was expected " + expectedservice)
     else:
@@ -177,11 +177,11 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
                     exitnagios("CRITICAL", "cannot map status")
             elif expectedresponse == "closed":
                 if status == "open":
-                    exitnagios("CRITICAL", "Port " + str(port) + " is reacheable (open)")
+                    exitnagios("CRITICAL", "Port " + str(port) + " is reachable (open)")
                 elif status == "open|filtered":
-                    exitnagios("CRITICAL", "Port " + str(port) + " is reacheable (open+filtered)")
+                    exitnagios("CRITICAL", "Port " + str(port) + " is reachable (open+filtered)")
                 elif status == "filtered":
-                    exitnagios("WARNING", "Port " + str(port) + " is reacheable (filtered)")
+                    exitnagios("WARNING", "Port " + str(port) + " is reachable (filtered)")
                 elif status == "closed":
                     exitnagios("OK", "Port " + str(port) + " is closed")
                 else:
@@ -191,7 +191,7 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
         except Exception as e:
             exitnagios("CRITICAL", "exception - " + str(e))
     else:
-        exitnagios(timeoutstatus, "nmap respose is empty for command \"" + " ".join(cmdline) + "\"")
+        exitnagios(timeoutstatus, "nmap response is empty for command \"" + " ".join(cmdline) + "\"")
 
     exitnagios("CRITICAL", "unexpected scenario")
 
@@ -234,7 +234,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-m", "--mode", dest="mode", default="", help="mode TCP/UDP")
     parser.add_argument("-p", "--port", dest="port", default="", help="port number to check")
     parser.add_argument("-s", "--service", dest="service", default="", help="Name of the service that should be listening on the port")
-    parser.add_argument("-r", "--response", dest="response", default="notclosed", help="respose: open,filtered,open+filtered,notclosed,closed")
+    parser.add_argument("-r", "--response", dest="response", default="notclosed", help="response: open,filtered,open+filtered,notclosed,closed")
     parser.add_argument("-f", "--filtered", dest="filtered", default="WARNING", help="OK,WARNING,CRITICAL,UNKNOWN")
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-i", "--sourceip", dest="sourceip", default=None, help="source ip for the request")
