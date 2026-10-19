@@ -5,7 +5,6 @@ import sys
 import argparse
 import ipaddress
 import dns.asyncresolver
-import dns.exception
 import aiofiles
 import asyncio
 
