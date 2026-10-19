@@ -70,6 +70,10 @@ async def checktune(partition, mountcount, mountperiod):
     exitcode = process.returncode
     infomsg(output)
 
+    if exitcode != 0:
+        infomsg("dumpe2fs failed for " + partition + ": " + errors)
+        return False
+
     currentcount = None
     currentperiod = None
     for line in output.splitlines():
