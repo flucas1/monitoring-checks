@@ -126,6 +126,7 @@ async def tryfindbyclassname(driver, classname):
 
 
 async def dodkimcall(domain, selector, proxy):
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -193,6 +194,9 @@ async def dodkimcall(domain, selector, proxy):
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 # -------------------------------------------------------------------------------
 
