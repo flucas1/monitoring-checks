@@ -240,9 +240,10 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
                     curlsslmin = pycurl.SSLVERSION_TLSv1_3
 
             if sslversionplus == False:
-                curlsslfinal = curlsslmin
+                curlsslmax = curlsslmin
+                curlsslfinal = curlsslmin | curlsslmax
             else:
-                curlsslfinal = curlsslmin | curlsslmin
+                curlsslfinal = curlsslmin
             infomsg(sslversion)  # 1.2+
         else:
             httpprotocol = "http"
