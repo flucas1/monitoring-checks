@@ -76,9 +76,13 @@ async def run_flake8():
 
 async def main():
     error_count = 0
+
     error_count += await run_autopep8()
     error_count += await run_flake8()
-    input("Press Enter to continue...")
+
+    if sys.__stdin__.isatty():
+        input("Press Enter to continue...")
+
     if error_count > 0:
         sys.exit(1)
 
