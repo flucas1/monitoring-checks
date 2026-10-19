@@ -52,14 +52,13 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def dointernalcall(ipprotocol, tcporudp, hostname, port, timeoutvalue):
+async def dointernalcall(protocol, tcporudp, hostname, port, timeoutvalue):
     try:
-        if ipprotocol == "4":
+        sfamily = socket.AF_UNSPEC
+        if protocol == "-4":
             sfamily = socket.AF_INET
-        elif ipprotocol == "6":
+        elif protocol == "-6":
             sfamily = socket.AF_INET6
-        else:
-            return "ERROR: invalid ip version protocol '" + ipprotocol + "'"
         try:
             info = socket.getaddrinfo(hostname, None, sfamily)
             ip_address = info[0][4][0]
@@ -104,14 +103,24 @@ async def dointernalcall(ipprotocol, tcporudp, hostname, port, timeoutvalue):
     return content
 
 
-async def dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port):
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+async def dohttpcall(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, port):
     infomsg("doing http call")
     try:
         url = baseurl + "?hostname=" + hostname + "&protocol=" + tcporudp + "&port=" + str(port)
         if ipprotocol != "":
             url = url + "&ipv=" + ipprotocol
         infomsg(url)
-        async with aiohttp.ClientSession() as session:
+        connector = get_connector(protocol)
+        async with aiohttp.ClientSession(connector=connector) as session:
             headers = {
                 "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
                 "Authorization": "Bearer " + accesstoken
@@ -126,14 +135,13 @@ async def dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname
 # -------------------------------------------------------------------------------
 
 
-async def doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcallsimple(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     try:
-        ipprotocol = ipprotocol.strip().replace("-", "")
         tcporudp = tcporudp.lower().strip()
         if baseurl in ["", None]:
-            content = await dointernalcall(ipprotocol, tcporudp, hostname, port, timeoutvalue)
+            content = await dointernalcall(protocol, tcporudp, hostname, port, timeoutvalue)
         else:
-            content = await dohttpcall(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port)
+            content = await dohttpcall(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, port)
         infomsg(content)
         if content is None:
             exitnagios("CRITICAL", "no result from page")
@@ -159,10 +167,10 @@ async def doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcpo
         return ("CRITICAL", "unexpected error during the check " + str(e))
 
 
-async def doportexternalcall(retries, proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
+async def doportexternalcall(retries, proxy, baseurl, accesstoken, protocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus):
     counter = 0
     while True:
-        exitlevel, message = await doportexternalcallsimple(proxy, baseurl, accesstoken, ipprotocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
+        exitlevel, message = await doportexternalcallsimple(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, port, responses, timeoutvalue, timeoutstatus)
         if (exitlevel == "OK") or (counter >= retries):
             exitnagios(exitlevel, message)
         else:
@@ -175,7 +183,7 @@ async def doportexternalcall(retries, proxy, baseurl, accesstoken, ipprotocol, t
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
@@ -194,9 +202,6 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    if (args.hostname == ""):
-        exitnagios("CRITICAL", "hostname not defined")
-
     protocol = None
     exclist = 0
     if args.ipv0 == True:
@@ -212,6 +217,9 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
         exitnagios("CRITICAL", "no protocol selected")
+
+    if (args.hostname == ""):
+        exitnagios("CRITICAL", "hostname not defined")
 
     tcporudp = "tcp"
 
