@@ -167,7 +167,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
                 cols = row.find_elements(selenium.webdriver.common.by.By.TAG_NAME, "td")
                 if len(cols) > 0:
                     cols.pop(0)
-                cols.pop(0)
+                if len(cols) > 0:
+                    cols.pop(0)
                 for col in cols:
                     text = col.text
                     infomsg("cell " + text)
@@ -196,6 +197,8 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
 
         except Exception as e:
             exitnagios("CRITICAL", str(e))
+        finally:
+            driver.quit()
     else:
         exitnagios("CRITICAL", "the driver was not initialized")
 
