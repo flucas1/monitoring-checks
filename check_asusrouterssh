@@ -6,7 +6,7 @@ import argparse
 import sys
 import asyncio
 import aiofiles
-import dns.asyncresolver
+import socket
 
 # -------------------------------------------------------------------------------
 
