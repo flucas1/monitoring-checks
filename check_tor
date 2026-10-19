@@ -48,29 +48,16 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-# -------------------------------------------------------------------------------
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
 
 
 async def dotorcall(protocol, response):
@@ -80,7 +67,8 @@ async def dotorcall(protocol, response):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0"
         }
 
-        async with aiohttp.ClientSession() as session:
+        connector = get_connector(protocol)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.get(url, headers=headers) as resp:
                 if resp.status != 200:
                     exitnagios("CRITICAL", "unexpected HTTP status: " + str(resp.status))
@@ -137,11 +125,9 @@ async def main(forcedargs=None):
     if args.ipv4 == True:
         protocol = "-4"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
         protocol = "-6"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
