@@ -142,6 +142,7 @@ def get_prompt_lines():
     # prefer shutil calls over own code
     # all subprocess calls should influece the return parameter, but not raise exceptions
     # all main functions should exit via sys.exit, no other sys.exit calls in the code are allowed
+    # console printing should be done via the funcion infomsg
 
     prompt_lines.append("The main function is always defined as 'async def main(forcedargs=None):'.")
     prompt_lines.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
