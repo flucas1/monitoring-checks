@@ -8,9 +8,7 @@ import asyncio
 import time
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -139,7 +137,6 @@ async def dosmtptlscall(domain, proxy):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser OK")
         url = "https://www.mailhardener.com/tools/tls-rpt-validator?domain=" + domain
