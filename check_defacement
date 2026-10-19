@@ -4,6 +4,7 @@
 import sys
 import argparse
 import asyncio
+import socket
 import aiohttp
 
 # -------------------------------------------------------------------------------
@@ -49,9 +50,18 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+async def dodefacementcheck(url, ignore, excludelist, keywordlist, protocol, session):
     try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+        async with session.get(url) as resp:
             text = await resp.text()
     except Exception:
         exitnagios("UNKNOWN", "Error accessing url: " + url)
@@ -103,6 +113,9 @@ async def dodefacementcheck(url, ignore, excludelist, keywordlist, session):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-U", "--url", dest="url", help="Specify the full url you want to check, i.e. -U https://www.google.com")
     parser.add_argument("-K", "--keyword", dest="keyword", help="Put the words you want to search, i.e. -K hacker,hacked,anonymous")
     parser.add_argument("-i", "--ignore", action="store_true", dest="ignore", default=False, help="Use this option to ignore all pre-installed suspect words")
@@ -115,6 +128,22 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     if args.ignore:
         if not args.keyword:
@@ -130,8 +159,10 @@ async def main(forcedargs=None):
     if args.keyword:
         keyword_list = args.keyword.split(",")
 
-    async with aiohttp.ClientSession() as session:
-        await dodefacementcheck(args.url, args.ignore, exclude_list, keyword_list, session)
+    client_timeout = aiohttp.ClientTimeout(total=2)
+    connector = get_connector(protocol)
+    async with aiohttp.ClientSession(timeout=client_timeout, connector=connector) as session:
+        await dodefacementcheck(args.url, args.ignore, exclude_list, keyword_list, args.protocol, session)
 
 
 # -------------------------------------------------------------------------------
