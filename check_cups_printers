@@ -107,6 +107,9 @@ async def main(forcedargs=None):
     if args.socket in [None, ""]:
         exitnagios("CRITICAL", "No socket specified.")
 
+    if args.printers is None and not args.all_printers:
+        exitnagios("CRITICAL", "No printers specified. Use -r or -a.")
+
     try:
         conn = await connect_cups(args.socket)
     except RuntimeError as e:
