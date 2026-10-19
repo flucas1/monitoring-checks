@@ -78,7 +78,7 @@ async def generatedriver(proxy):
     driver = await nodriver.start(browserconfig)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
-    nodriver.cdp.network.enable()
+    await nodriver.cdp.network.enable()
     # nodriver.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
@@ -277,9 +277,9 @@ async def dodnscheckercall(protocol, hostname, ignorelist, tolerance, proxy):
             exitnagios("OK", "No issues found for the IP " + targetip + " | count=" + str(len(issues)))
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         if driver is not None:
             infomsg(driver.page_source)
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 
 async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
@@ -322,9 +322,9 @@ async def domailmeteorcall(protocol, hostname, ignorelist, tolerance, proxy):
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         if driver is not None:
             infomsg(driver.page_source)
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 
 async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, proxy):
@@ -367,9 +367,9 @@ async def doblacklistcheckercall(protocol, hostname, ignorelist, tolerance, prox
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         if driver is not None:
             infomsg(driver.page_source)
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 
 async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
@@ -412,9 +412,9 @@ async def dodnsblcall(protocol, hostname, ignorelist, tolerance, proxy):
                 infomsg(sourceraw)
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         if driver is not None:
             infomsg(driver.page_source)
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 
 async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
@@ -518,9 +518,9 @@ async def domxtoolboxcall(protocol, hostname, ignorelist, tolerance, proxy):
             exitnagios("OK", "No issues found for the IP " + targetip + " | count=" + str(len(issues)))
 
     except Exception as e:
-        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
         if driver is not None:
             infomsg(driver.page_source)
+        exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
 
 async def doemailblacklistscall(protocol, hostname, ignorelist, tolerance, proxy):
