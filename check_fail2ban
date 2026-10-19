@@ -113,7 +113,7 @@ def is_ipv6(ip):
         return False
 
 
-def get_city_country(ip_address):
+async def get_city_country(ip_address):
     if is_ipv6(ip_address):
         database = "/usr/share/GeoIP/GeoIPv6.dat"
     else:
@@ -165,7 +165,7 @@ async def main(forcedargs=None):
         infomsg("Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
         for banned_ip in banned_ips:
             if banned_ip not in dict_banned.keys():
-                country, city = get_city_country(banned_ip)
+                country, city = await get_city_country(banned_ip)
                 dict_banned[banned_ip] = [city, country]
 
     countjails = len(jails)
