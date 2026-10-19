@@ -62,11 +62,11 @@ async def dodockerregistrycheck(port):
     exitcode = process.returncode
 
     if exitcode in [0, 1, 2, 3]:
-        if output != "":
-            print(output, file=sys.stdout, flush=True)
+        statuslist = ["OK", "WARNING", "CRITICAL", "UNKNOWN"]
+        message = output
         if errors != "":
-            print(errors, file=sys.stderr, flush=True)
-        sys.exit(exitcode)
+            message = message + "\n" + errors
+        exitnagios(statuslist[exitcode], message)
     else:
         exitnagios("UNKNOWN", output + "\n" + errors)
 
