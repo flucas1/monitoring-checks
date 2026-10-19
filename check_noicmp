@@ -94,6 +94,7 @@ async def check_ping_answer(hostname, protocol, packets, timeoutseconds):
             await asyncio.sleep(1)
         except Exception as e:
             infomsg(str(e))
+            return False
     return False
 
 
