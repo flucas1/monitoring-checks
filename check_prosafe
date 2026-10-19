@@ -3,16 +3,12 @@
 
 import argparse
 import sys
-import os
+import time
 import netifaces
 import asyncio
-import datetime
-
 import selenium
 import selenium.webdriver
-import selenium.webdriver.common.keys
 import selenium.webdriver.chrome.options
-import selenium.webdriver.common.action_chains
 import selenium.webdriver.common.by
 import selenium.webdriver.support.ui
 import selenium.webdriver.support.expected_conditions
@@ -89,11 +85,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    start = time.monotonic()
     while True:
         if check_page_loaded(driver):
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.monotonic() - start > 20:
             break
         await asyncio.sleep(1)
 
@@ -226,7 +222,6 @@ async def getexpected(proxy, model):
         driver = await generatedriver(proxy)
 
         wait = selenium.webdriver.support.ui.WebDriverWait(driver, 20)
-        action = selenium.webdriver.common.action_chains.ActionChains(driver)
 
         infomsg("browser initialized")
 
