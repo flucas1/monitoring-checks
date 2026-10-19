@@ -68,8 +68,8 @@ async def run_aider(target_dir: str, model: str, prompt: str):
                             first_line = await handle.readline()
                             if shebang in first_line:
                                 target_files.append(f)
-                    except Exception:
-                            print("Issue reading " + file_path.name + " with error: " + str(e))
+                    except Exception as e:
+                        print("Issue reading " + f.name + " with error: " + str(e))
 
     if not target_files:
         print("No valid files found in " + target_dir)
