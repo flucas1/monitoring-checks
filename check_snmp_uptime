@@ -79,7 +79,7 @@ async def dosnmpuptimecall(warningmin, criticalmin, warningmax, criticalmax, hos
         else:
             exitnagios("CRITICAL", "Unable to determine uptime")
 
-    fractionaldays = uptime_sec / (3600 * 24)
+    fractionaldays = uptime_min / 1440
     if (criticalmin != "") and (uptime_min < float(criticalmin)):
         exitnagios("CRITICAL", "Uptime less than " + str(datetime.timedelta(minutes=float(criticalmin))) + " - currently " + str(datetime.timedelta(minutes=uptime_min)) + " (SNMP method: " + method + ") | uptime=" + str(fractionaldays))
     elif (warningmin != "") and (uptime_min < float(warningmin)):
