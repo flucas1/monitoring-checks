@@ -55,9 +55,15 @@ async def execute_ssh_command(conn_kwargs, remotecmdline):
         return await conn.run(remotecmdline, check=False)
 
 
-async def dobysshcheck(hostname, family, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
+async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecmdline, key, login, autoaccept):
     retries = 3
     counter = 0
+
+    family = socket.AF_UNSPEC
+    if protocol == "-4":
+        family = socket.AF_INET
+    elif protocol == "-6":
+        family = socket.AF_INET6
 
     conn_kwargs = {
         "host": hostname,
@@ -140,18 +146,17 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    family = socket.AF_UNSPEC
+    protocol = None
     exclist = 0
-    if args.ipv0:
-        family = socket.AF_UNSPEC
+    if args.ipv0 == True:
+        protocol = ""
         exclist = exclist + 1
-    if args.ipv4:
-        family = socket.AF_INET
+    if args.ipv4 == True:
+        protocol = "-4"
         exclist = exclist + 1
-    if args.ipv6:
-        family = socket.AF_INET6
+    if args.ipv6 == True:
+        protocol = "-6"
         exclist = exclist + 1
-
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
@@ -174,7 +179,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
 
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await dobysshcheck(args.hostname, family, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
+        await dobysshcheck(protocol, args.hostname, timeoutvalue, timeoutstatus, args.remotecmdline, args.key, args.login, args.autoaccept)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
