@@ -3,7 +3,7 @@
 
 import argparse
 import sys
-import datetime
+import time
 import asyncio
 
 # -------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ def exitnagios(status, message):
 
 
 async def doclamdcall(filetest):
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = time.monotonic()
 
     cmdline = ["/usr/bin/clamdscan", "--stream", "--stdout", "--infected", "--no-summary", filetest]
     process = await asyncio.create_subprocess_exec(
@@ -62,8 +62,7 @@ async def doclamdcall(filetest):
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
 
-    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-    duration = elapsed.total_seconds()
+    duration = time.monotonic() - start
 
     if exitcode == 0:
         if errors == "":

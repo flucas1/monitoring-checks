@@ -5,7 +5,7 @@ import argparse
 import sys
 import os
 import asyncio
-import datetime
+import time
 import io
 import aiofiles
 import tesserocr
@@ -112,10 +112,7 @@ async def checkcameravalid(camerapath, entry):
     result = False
     fullpath = os.path.join(camerapath, entry)
 
-    now = datetime.datetime.now()
-    filetime = datetime.datetime.fromtimestamp(os.path.getmtime(fullpath))
-    span = now - filetime
-    if span.total_seconds() < 3600:
+    if time.time() - os.path.getmtime(fullpath) < 3600:
         cmdline = ["/usr/bin/convert", fullpath, "-format", "%[pixel:p{2,2}]", "info:-"]
         process = await asyncio.create_subprocess_exec(
             *cmdline,
@@ -139,16 +136,6 @@ async def checkcameravalid(camerapath, entry):
 def absolutelimit(parameter, total):
     value = 0
     parameter = parameter.replace(" ", "")
-    if parameter.endswith("%"):
-        temp = parameter[0:-1]
-        value = int(round(int(temp) / 100 * total, 0))
-    else:
-        value = int(parameter)
-    return value
-
-
-def absolutecritical(parameter, total):
-    value = 0
     if parameter.endswith("%"):
         temp = parameter[0:-1]
         value = int(round(int(temp) / 100 * total, 0))
