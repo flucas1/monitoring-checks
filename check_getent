@@ -94,8 +94,8 @@ async def checkgetent(database, key, value, partial, outputlevel):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--database", dest="database", help="database to use (passwod, group, ...)")
-    parser.add_argument("-k", "--key", dest="key", help="key to search")
+    parser.add_argument("-b", "--database", dest="database", required=True, help="database to use (passwd, group, ...)")
+    parser.add_argument("-k", "--key", dest="key", required=True, help="key to search")
     parser.add_argument("-l", "--value", dest="value", default=None, help="expected value")
     parser.add_argument("-p", "--partial", action="store_true", dest="partial", default=False, help="is partial match")
     parser.add_argument("-w", "--warning", action="store_false", dest="critical", help="Return warning if not matching")
