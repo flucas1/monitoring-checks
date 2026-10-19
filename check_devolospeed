@@ -62,12 +62,16 @@ async def getmacfromip(remoteIP):
     output = stdout.decode("utf-8").strip() if stdout else ""
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
+    infomsg("getmacfromip returncode: " + str(exitcode))
+    if exitcode != 0:
+        infomsg("getmacfromip stderr: " + errors)
+        return ""
     rows = output.split("\n")
     infomsg(rows)
     if len(rows) > 0:
         row = rows[1]
         parts = row.split()
-        if len(parts) > 0:
+        if len(parts) > 2:
             infomsg(parts)
             return parts[2]
     return ""
@@ -84,6 +88,10 @@ async def findinterfaces():
     output = stdout.decode("utf-8").strip() if stdout else ""
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
+    infomsg("findinterfaces returncode: " + str(exitcode))
+    if exitcode != 0:
+        infomsg("findinterfaces stderr: " + errors)
+        return []
     result = []
     for row in output.split("\n"):
         parts = row.split()
@@ -103,11 +111,15 @@ async def getspeeds(interface, targetmac):
     output = stdout.decode("utf-8").strip() if stdout else ""
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
+    infomsg("getspeeds returncode: " + str(exitcode))
+    if exitcode != 0:
+        infomsg("getspeeds stderr: " + errors)
+        return None
     rows = output.split("\n")
     infomsg(rows)
     for row in rows:
         parts = row.split()
-        if len(parts) > 0:
+        if len(parts) > 6:
             infomsg(parts[3])
             if (parts[3] == targetmac):
                 speeds = [parts[5], parts[6]]
