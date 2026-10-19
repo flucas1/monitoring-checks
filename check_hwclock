@@ -217,15 +217,17 @@ async def main(forcedargs=None):
     if device is None:
         exitnagios("CRITICAL", "Could not find any rtc device")
     else:
-        infomsg("The selected rtc device is " + device)
-        await check_rtc_utc()
-        rtctime = await get_rtc_data(device)
-        infomsg(str(rtctime))
-        systime = datetime.datetime.now(datetime.timezone.utc).timestamp()
-        infomsg(str(systime))
-        difference = abs(int(rtctime - systime))
-        evaluate(device, difference, args.warning, args.critical)
-        exitnagios("CRITICAL", "Internal error")
+        try:
+            infomsg("The selected rtc device is " + device)
+            await check_rtc_utc()
+            rtctime = await get_rtc_data(device)
+            infomsg(str(rtctime))
+            systime = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            infomsg(str(systime))
+            difference = abs(int(rtctime - systime))
+            evaluate(device, difference, args.warning, args.critical)
+        except Exception:
+            exitnagios("CRITICAL", "Internal error")
 
 # -------------------------------------------------------------------------------
 
