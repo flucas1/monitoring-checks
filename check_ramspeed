@@ -61,6 +61,9 @@ async def doramspeedcall(expected):
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
 
+    if errors != "":
+        infomsg("stderr: " + errors)
+
     token = "Configured Memory Speed:"
     if exitcode == 0:
         foundspeeds = []
@@ -69,6 +72,8 @@ async def doramspeedcall(expected):
             if line.startswith(token):
                 data = line[len(token):].strip()
                 foundspeeds.append(data)
+        if len(foundspeeds) == 0:
+            exitnagios("UNKNOWN", "no configured memory speed found in dmidecode output")
         finalvalue = " ; ".join(foundspeeds)
         if expected == "" or expected is None:
             exitnagios("OK", "the found speeds are '" + finalvalue + "'")
