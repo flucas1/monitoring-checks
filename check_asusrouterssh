@@ -5,8 +5,8 @@ import asyncssh
 import argparse
 import sys
 import asyncio
-import socket
 import aiofiles
+import dns.asyncresolver
 
 # -------------------------------------------------------------------------------
 
@@ -47,35 +47,21 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
 
 # -------------------------------------------------------------------------------
 
 
-async def doasusroutercall(host, protocol, username, password, timeoutvalue, command):
+async def doasusroutercall(protocol, hostname, username, password, timeoutvalue, command):
     result = None
 
+    family = socket.AF_UNSPEC
+    if protocol == "-4":
+        family = socket.AF_INET
+    elif protocol == "-6":
+        family = socket.AF_INET6
+
     try:
-        async with asyncssh.connect(host, username=username, password=password, known_hosts=None, login_timeout=timeoutvalue) as client:
+        async with asyncssh.connect(hostname, family=family, username=username, password=password, known_hosts=None, login_timeout=timeoutvalue) as client:
             response = await client.run(command)
             result = str(response.stdout)
     except Exception as e:
@@ -99,10 +85,10 @@ def check_status(value, warn_low, warn_high, crit_low, crit_high):
 # -------------------------------------------------------------------------------
 
 
-async def douptimecall(host, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+async def douptimecall(protocol, hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "awk '{print $1}' /proc/uptime"
-        result = await doasusroutercall(host, protocol, username, password, timeoutvalue, command)
+        result = await doasusroutercall(protocol, hostname, username, password, timeoutvalue, command)
         value = round(float(result))
     except Exception:
         value = None
@@ -113,10 +99,10 @@ async def douptimecall(host, protocol, username, password, warn_low, warn_high, 
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-async def domemorycall(host, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+async def domemorycall(protocol, hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "free"
-        result = await doasusroutercall(host, protocol, username, password, timeoutvalue, command)
+        result = await doasusroutercall(protocol, hostname, username, password, timeoutvalue, command)
         lines = result.splitlines()
         parts = lines[1].split()
         total = int(parts[1])
@@ -131,10 +117,10 @@ async def domemorycall(host, protocol, username, password, warn_low, warn_high, 
         exitnagios(timeoutstatus, "unable to retrieve the value | value=-1")
 
 
-async def docpucall(host, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
+async def docpucall(protocol, hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus):
     try:
         command = "cat /proc/stat | grep cpu | tail -1 | awk '{print ($5*100)/($2+$3+$4+$5+$6+$7+$8+$9+$10)}' | awk '{print 100-$1}'"
-        result = await doasusroutercall(host, protocol, username, password, timeoutvalue, command)
+        result = await doasusroutercall(protocol, hostname, username, password, timeoutvalue, command)
         value = round(float(result), 2)
     except Exception:
         value = None
@@ -175,11 +161,9 @@ async def main(forcedargs=None):
     if args.ipv4 == True:
         protocol = "-4"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
         protocol = "-6"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
@@ -223,11 +207,11 @@ async def main(forcedargs=None):
         crit_high = None
 
     if args.mode == "uptime":
-        await douptimecall(args.hostname, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await douptimecall(protocol, args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "memory":
-        await domemorycall(args.hostname, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await domemorycall(protocol, args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
     elif args.mode == "cpu":
-        await docpucall(args.hostname, protocol, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
+        await docpucall(protocol, args.hostname, username, password, warn_low, warn_high, crit_low, crit_high, timeoutvalue, timeoutstatus)
 
     exitnagios("CRITICAL", "unexpected case")
 
