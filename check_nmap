@@ -117,6 +117,9 @@ async def donmapcall(protocol, mode, hostname, port, expectedservice, expectedre
     errors = stderr.decode("utf-8").strip() if stderr else ""
     exitcode = process.returncode
 
+    if exitcode >= 2:
+        exitnagios("CRITICAL", "nmap returned error code " + str(exitcode) + ": " + errors)
+
     response = ""
     for line in output.splitlines():
         if line.startswith(str(port) + "/" + mode):
