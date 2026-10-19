@@ -68,7 +68,7 @@ async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, 
                 "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
                 "Authorization": "Bearer " + accesstoken
             }
-            async with session.get(url, headers=headers, timeout=timeoutvalue) as response:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeoutvalue)) as response:
                 content = await response.text()
                 if content is None:
                     exitnagios("CRITICAL", "no result from page | count=0")
