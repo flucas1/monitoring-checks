@@ -4,7 +4,7 @@
 import sys
 import argparse
 import socket
-import httpx
+import aiohttp
 import dns.message
 import dns.asyncquery
 import dns.rdatatype
@@ -49,31 +49,20 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
 
 # -------------------------------------------------------------------------------
 
 
-async def makedohtest(protocol, retries, targetdohurl, testquery, timeout_val):
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+async def dodohtest(protocol, retries, targetdohurl, testquery, timeout_val):
     result = False
     infomsg("preparing async client")
     timeout = httpx.Timeout(timeout_val)
@@ -148,7 +137,7 @@ async def main(forcedargs=None):
 
     retries = 3
     timeout = 5
-    await makedohtest(protocol, retries, args.targetdohurl, args.testquery, timeout)
+    await dodohtest(protocol, retries, args.targetdohurl, args.testquery, timeout)
 
 
 # -------------------------------------------------------------------------------

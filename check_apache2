@@ -5,8 +5,7 @@ import argparse
 import asyncio
 import re
 import sys
-import httpx
-
+import aiohttp
 
 # -------------------------------------------------------------------------------
 
