@@ -56,28 +56,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-
-# -------------------------------------------------------------------------------
-
-
 async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, certificatedays):
     cert_data = None
     lasterror = ""
@@ -85,8 +63,13 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
     start = time.monotonic()
     try:
         context = ssl.create_default_context()
+        family = socket.AF_UNSPEC
+        if protocol == "-4":
+            family = socket.AF_INET
+        elif protocol == "-6":
+            family = socket.AF_INET6
         reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname),
+            asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname, family=family),
             timeout=timeoutvalue
         )
         cert_data = writer.get_extra_info("peercert")
