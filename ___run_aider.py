@@ -125,26 +125,26 @@ def get_model():
 
 
 def get_prompt_lines():
-    PROMPT = []
-    PROMPT.append("Keep the comments.")
-    PROMPT.append("Review the attached python for issues and transform to async.")
-    PROMPT.append("The main function is always defined as 'async def main(forcedargs=None):'.")
-    PROMPT.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
-    PROMPT.append("File reading and writing should be always async.")
-    PROMPT.append("For python imports do not use 'from'.")
-    PROMPT.append("Remove legacy subprocess, urllib, requests and concurrent.futures and replace them with async alternatives.")
-    PROMPT.append("Prefer \" rather than ' for string delimitator.")
-    PROMPT.append("Avoid f\" and .format syntax, use concatenation instead.")
-    PROMPT.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
-    PROMPT.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
-    PROMPT.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
-    PROMPT.append("There is always a command line argument '-d' '--debug'.")
-    PROMPT.append("The option '-d' is the last one of the command line arguments.")  # , but if there is a remainder of arguments, the remainder is the last one
-    PROMPT.append("All command line arguments should have short and long form.")
-    PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
-    PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
-    PROMPT.append("Executables should be full paths.")
-    return PROMPT
+    prompt_lines = []
+    prompt_lines.append("Keep the comments.")
+    prompt_lines.append("Review the attached python for issues and transform to async.")
+    prompt_lines.append("The main function is always defined as 'async def main(forcedargs=None):'.")
+    prompt_lines.append("Avoid asyncio.to_thread, asyncio.get_event_loop and asyncio.get_running_loop.")
+    prompt_lines.append("File reading and writing should be always async.")
+    prompt_lines.append("For python imports do not use 'from'.")
+    prompt_lines.append("Remove legacy subprocess, urllib, requests and concurrent.futures and replace them with async alternatives.")
+    prompt_lines.append("Prefer \" rather than ' for string delimitator.")
+    prompt_lines.append("Avoid f\" and .format syntax, use concatenation instead.")
+    prompt_lines.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
+    prompt_lines.append("The last function in the code is 'main' and the previous one is 'parse_args'.")
+    prompt_lines.append("After the call to 'parse_args', this should be executed 'setcandebug(args.debug)'.")
+    prompt_lines.append("There is always a command line argument '-d' '--debug'.")
+    prompt_lines.append("The option '-d' is the last one of the command line arguments.")  # , but if there is a remainder of arguments, the remainder is the last one
+    prompt_lines.append("All command line arguments should have short and long form.")
+    prompt_lines.append("Prefer using the 'exitnagios' function rather than sys.exit")
+    prompt_lines.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
+    prompt_lines.append("Executables should be full paths.")
+    return prompt_lines
 
 # -------------------------------------------------------------------------------
 
