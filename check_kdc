@@ -65,7 +65,7 @@ async def cleanup(cc_path, conf_path):
             stdout, stderr = await process.communicate()
             if process.returncode != 0:
                 infomsg("kdestroy failed")
-                errors = errors+1
+                errors = errors + 1
         except OSError:
             pass
 
@@ -73,7 +73,7 @@ async def cleanup(cc_path, conf_path):
         try:
             os.remove(conf_path)
         except OSError:
-            errors = errors+1
+            errors = errors + 1
 
     return errors
 
@@ -142,7 +142,7 @@ async def main(forcedargs=None):
         stdout, _ = await process.communicate()
 
         if process.returncode != 0:
-            errors = errors+1
+            errors = errors + 1
             if stdout:
                 decoded = stdout.decode().strip()
                 error_msg = "issue getting Kerberos ticket: " + decoded.replace("\n", " ")
@@ -157,6 +157,8 @@ async def main(forcedargs=None):
     if errors == 0:
         exitnagios("OK", "no issues found")
     else:
+        if error_msg == "":
+            error_msg = "cleanup failed"
         exitnagios("CRITICAL", error_msg)
 
 # -------------------------------------------------------------------------------
