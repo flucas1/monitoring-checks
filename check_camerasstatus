@@ -83,9 +83,9 @@ async def extract_text(cameraspath, entry):
         text = text.replace("\n", "   ")
         infomsg("OCR text -> " + text)
     except Exception as e:
-        print("Exception - " + str(e))
+        infomsg("Exception - " + str(e))
     finally:
-        if api != None:
+        if api is not None:
             api.End()
 
     return text.strip()
