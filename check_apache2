@@ -65,7 +65,7 @@ def check_threshold(value, warn, crit):
     return status
 
 
-async def fetch_status(url, auth, verify, timeout):
+async def fetch_status(protocol, url, auth, verify, timeout):
     async with httpx.AsyncClient(auth=auth, verify=verify, timeout=timeout) as client:
         response = await client.get(url)
         return response
@@ -76,6 +76,9 @@ async def fetch_status(url, auth, verify, timeout):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", required=True)
     parser.add_argument("-p", "--port", type=int)
     parser.add_argument("-u", "--uri", default="/server-status?auto")
@@ -95,6 +98,22 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     warnings_list = args.warning.split(",") if args.warning else []
     criticals = args.critical.split(",") if args.critical else []
@@ -117,7 +136,7 @@ async def main(forcedargs=None):
     verify = not args.no_validate
 
     try:
-        response = await fetch_status(url, auth, verify, args.timeout)
+        response = await fetch_status(protocol, url, auth, verify, args.timeout)
         if response.status_code >= 500:
             status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
             exitnagios(status_prefix, str(response.reason_phrase))
