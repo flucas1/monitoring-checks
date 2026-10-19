@@ -78,7 +78,7 @@ async def doarpcall(exclusion):
 
                 try:
                     parsed = ipaddress.ip_address(value)
-                except:
+                except Exception:
                     parsed = None
 
                 typeparsed = type(parsed)
@@ -124,7 +124,7 @@ async def doarpcall(exclusion):
         for candidate6 in duplicated6:
             try:
                 basenetwork = str(ipaddress.ip_network(candidate6 + "/64", strict=False))
-            except:
+            except Exception:
                 basenetwork = None
             if basenetwork is not None:
                 if basenetwork not in map6.keys():
