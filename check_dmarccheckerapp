@@ -6,6 +6,7 @@ import argparse
 import datetime
 import smtplib
 import asyncio
+import time
 import email.mime.text
 import selenium
 import selenium.webdriver
@@ -90,11 +91,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    timestamp = time.monotonic()
     while True:
         if check_page_loaded(driver):
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.monotonic() - timestamp > 20:
             break
         await asyncio.sleep(1)
 
@@ -187,11 +188,11 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
 
         await asyncio.sleep(5)
         infomsg("waiting for element")
-        start_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        start_time = time.monotonic()
         max_duration = 180
         retry_interval = 5
         gotanswer = False
-        while datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time < max_duration:
+        while time.monotonic() - start_time < max_duration:
             founddetails = await tryfindbyclassname(driver, "report-details-table")
             if len(founddetails) > 0:
                 infomsg("found details!")
