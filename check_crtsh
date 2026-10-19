@@ -95,7 +95,7 @@ async def ipv4_default_route_exists() -> bool:
 # -------------------------------------------------------------------------------
 
 
-async def load_json(mode, proxy, domain, retries, timeoutvalue, item_url):
+async def load_json(mode, proxy, retries, timeoutvalue, item_url):
 
     headers = {
         "Upgrade-Insecure-Requests": "1",
@@ -197,7 +197,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     start = time.monotonic()
     item_url = "https://crt.sh/Identity=" + hostname + "&exclude=expired&output=json"
     infomsg(item_url)
-    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
+    parsed = await load_json(mode, proxy, retries, timeoutvalue, item_url)
     duration = time.monotonic() - start
     if parsed is not None:
         valid = True
@@ -210,11 +210,11 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
             if (issuerid not in issuers) and (certificateid not in ignored):
                 rawnotafter = str(item["not_after"])
                 parsednotafter = dateutil.parser.parse(rawnotafter)
-                infomsg(parsednotafter)
+                infomsg(str(parsednotafter))
                 if parsednotafter >= datetime.datetime.now(datetime.timezone.utc):
                     valid = False
                     problems.append(item)
-                    infomsg(item)
+                    infomsg(str(item))
         if totalfound == 0:
             exitnagios("WARNING", "no certificates in crt.sh | found=" + str(totalfound) + " duration=" + str(duration))
         elif valid:
@@ -244,7 +244,7 @@ async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalu
     start = time.monotonic()
     item_url = "https://ctlogs.dev/search?q=" + hostname + "&exclude=expired&output=json"
     infomsg(item_url)
-    parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
+    parsed = await load_json(mode, proxy, retries, timeoutvalue, item_url)
     duration = time.monotonic() - start
     if parsed is not None:
         valid = True
@@ -259,11 +259,11 @@ async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalu
             if (issuerid not in issuers) and (certificateid not in ignored):
                 rawnotafter = str(item["not_after"])
                 parsednotafter = dateutil.parser.parse(rawnotafter)
-                infomsg(parsednotafter)
+                infomsg(str(parsednotafter))
                 if parsednotafter >= datetime.datetime.now(datetime.timezone.utc):
                     valid = False
                     problems.append(item)
-                    infomsg(item)
+                    infomsg(str(item))
         if totalfound == 0:
             exitnagios("WARNING", "no certificates in ctlogs.dev | found=" + str(totalfound) + " duration=" + str(duration))
         elif valid:
