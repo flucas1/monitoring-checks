@@ -58,6 +58,9 @@ async def get_cmd_output(cmdline):
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
+        if process.returncode != 0:
+            infomsg("Command failed with returncode " + str(process.returncode) + ": " + " ".join(cmdline))
+            return ""
         return stdout.decode().strip() if stdout else ""
     except (asyncio.SubprocessError, OSError):
         return ""
@@ -70,7 +73,6 @@ async def get_current_ip(ahosts_type, fqdn):
     if not output:
         return ""
 
-    # Emulate awk '{print $1}'
     ips = []
     for line in output.splitlines():
         stripped = line.strip()
@@ -79,7 +81,6 @@ async def get_current_ip(ahosts_type, fqdn):
             if parts:
                 ips.append(parts[0])
 
-    # Emulate `uniq` (removes adjacent duplicates)
     unique_ips = []
     for ip in ips:
         if not unique_ips or unique_ips[-1] != ip:
