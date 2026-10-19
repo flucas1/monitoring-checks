@@ -124,6 +124,7 @@ async def dointerfacenetworkcheck(interface, segment, address, existence, notexi
                                 matching = matching and (refeparts[index] == testparts[index])
                         if matching:
                             found = True
+                            break
                 if not found:
                     errors_address.append(test)
                 else:
