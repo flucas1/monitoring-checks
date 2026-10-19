@@ -70,12 +70,12 @@ def is_filename(filename):
 
 def validate_filename(filename, name="filename", noquit=False):
     if not filename or not filename.strip():
-        print(name + " not defined")
+        infomsg(name + " not defined")
         return None
     filename2 = is_filename(filename)
     if not filename2:
         if not noquit:
-            print("invalid " + name + " (does not match regex critera): '" + filename + "'")
+            infomsg("invalid " + name + " (does not match regex critera): '" + filename + "'")
         return None
     return filename2
 
