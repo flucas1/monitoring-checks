@@ -84,21 +84,22 @@ def parse_systemd_list(output, toleratecriticallist, toleratewarninglist, ignore
     criticals = {}
     for line in output.splitlines():
         parts = line[2:].split()
-        unit = parts[0]
-        status = parts[2]
-        if status == "active":
-            oks[unit] = status
-        else:
-            if unit in ignorelist:
-                pass
-            elif unit in toleratewarninglist:
+        if len(parts) > 2:
+            unit = parts[0]
+            status = parts[2]
+            if status == "active":
                 oks[unit] = status
-            elif unit in toleratecriticallist:
-                warnings[unit] = status
-            elif status in ["failed"]:
-                criticals[unit] = status
             else:
-                warnings[unit] = status
+                if unit in ignorelist:
+                    pass
+                elif unit in toleratewarninglist:
+                    oks[unit] = status
+                elif unit in toleratecriticallist:
+                    warnings[unit] = status
+                elif status in ["failed"]:
+                    criticals[unit] = status
+                else:
+                    warnings[unit] = status
     return oks, warnings, criticals
 
 
