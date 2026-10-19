@@ -81,7 +81,7 @@ def parse_args(forcedargs=None):
     SELINUX_MODES = ["enforcing", "permissive", "disabled"]
     parser = argparse.ArgumentParser(description="Check expected SELinux mode.")
     parser.add_argument("-w", "--warning", action="store_true", help="Exit warning, instead of critical by default, if current SELinux status doesn't match expected one")
-    parser.add_argument("-m", "--mode", type=str.lower, choices=SELINUX_MODES, dest="mode", help="Expected SELinux mode (allowed values: " + " ".join(SELINUX_MODES) + ")")
+    parser.add_argument("-m", "--mode", type=str.lower, choices=SELINUX_MODES, dest="mode", required=True, help="Expected SELinux mode (allowed values: " + " ".join(SELINUX_MODES) + ")")
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args(forcedargs)
     return args
