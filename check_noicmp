@@ -5,7 +5,7 @@ import argparse
 import sys
 import socket
 import asyncio
-import datetime
+import time
 import icmplib
 
 # -------------------------------------------------------------------------------
@@ -83,14 +83,13 @@ async def check_ping_answer(hostname, protocol, packets, timeoutseconds):
         except (ValueError, TypeError):
             family = None
 
-    timeout = datetime.timedelta(seconds=timeoutseconds)
-    start = datetime.datetime.now()
+    start = time.monotonic()
     while True:
         try:
             host = await icmplib.async_ping(hostname, count=int(packets), timeout=1, interval=0.2, family=family, privileged=False)
             if host.is_alive:
                 return True
-            elif datetime.datetime.now() > start + timeout:
+            elif time.monotonic() - start > timeoutseconds:
                 return False
             await asyncio.sleep(1)
         except Exception as e:
