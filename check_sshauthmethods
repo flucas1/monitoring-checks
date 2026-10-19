@@ -51,30 +51,14 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-# -------------------------------------------------------------------------------
-
-
 async def test_ssh_auth(protocol, host, port, timeoutvalue, timeoutstatus, expectedlist):
     try:
-        allowed_types_set = await asyncio.wait_for(asyncssh.get_server_auth_methods(host, port=port, username=""), timeout=timeoutvalue)
+        family = socket.AF_UNSPEC
+        if protocol == "-4":
+            family = socket.AF_INET
+        elif protocol == "-6":
+            family = socket.AF_INET6
+        allowed_types_set = await asyncio.wait_for(asyncssh.get_server_auth_methods(host, port=port, username="", family=family), timeout=timeoutvalue)
         allowed_types = list(allowed_types_set)
     except Exception as e:
         exitnagios(timeoutstatus, "SSH connection failed " + host + ":" + str(port) + " - cause: " + str(e))
@@ -116,11 +100,9 @@ async def main(forcedargs=None):
     if args.ipv4 == True:
         protocol = "-4"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv4_gai_family
     if args.ipv6 == True:
         protocol = "-6"
         exclist = exclist + 1
-        socket.getaddrinfo = forced_ipv6_gai_family
     if (exclist > 1):
         exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
     elif (exclist < 1):
