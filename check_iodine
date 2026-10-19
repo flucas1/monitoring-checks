@@ -6,6 +6,7 @@ import asyncio
 import argparse
 import aiohttp
 import bs4
+import socket
 
 # -------------------------------------------------------------------------------
 
@@ -49,13 +50,23 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def doportexternalcall(domain):
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+async def doportexternalcall(domain, protocol):
     url = "https://code.kryo.se/iodine/check-it/"
     retries = 3
     counter = 0
     valid = False
 
-    async with aiohttp.ClientSession() as session:
+    connector = get_connector(protocol)
+    async with aiohttp.ClientSession(connector=connector) as session:
         while counter < retries:
             counter = counter + 1
             welldone = False
@@ -121,6 +132,9 @@ async def doportexternalcall(domain):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
@@ -131,10 +145,26 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
     if args.hostname == "":
         exitnagios("CRITICAL", "hostname not defined")
 
-    await doportexternalcall(args.hostname)
+    await doportexternalcall(args.hostname, protocol)
 
 # -------------------------------------------------------------------------------
 
