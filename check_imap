@@ -188,7 +188,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        await doimapcheck(protocol, args.hostname, int(args.port), args.ssl, int(args.warning), int(args.critical), timeoutvalue, timeoutstatus, args.certificatedays)
+        await doimapcheck(protocol, args.hostname, int(args.port), args.ssl, float(args.warning), float(args.critical), timeoutvalue, timeoutstatus, args.certificatedays)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
