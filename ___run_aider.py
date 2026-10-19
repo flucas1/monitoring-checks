@@ -124,14 +124,7 @@ def get_model():
     # return "ollama/qwen3.8:latest"
 
 
-# -------------------------------------------------------------------------------
-
-
-async def main():
-    error_count = 0
-
-    # error_count += await update_aider()
-
+def get_prompt_lines():
     PROMPT = []
     PROMPT.append("Keep the comments.")
     PROMPT.append("Review the attached python for issues and transform to async.")
@@ -151,8 +144,17 @@ async def main():
     PROMPT.append("Prefer using the 'exitnagios' function rather than sys.exit")
     PROMPT.append("The function 'asyncio.create_subprocess_exec' should assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
     PROMPT.append("Executables should be full paths.")
+    return PROMPT
 
-    error_count += await run_aider(get_directory(), get_model(), " ".join(PROMPT))
+# -------------------------------------------------------------------------------
+
+
+async def main():
+    error_count = 0
+
+    # error_count += await update_aider()
+
+    error_count += await run_aider(get_directory(), get_model(), " ".join(get_prompt_lines()))
 
     if sys.__stdin__.isatty():
         input("Press Enter to continue...")
