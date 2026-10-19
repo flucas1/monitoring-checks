@@ -177,6 +177,7 @@ async def count_red_yellow_green(block, ignoremessages):
 
 
 async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -245,6 +246,9 @@ async def dodnssecverisigncall(domain, proxy, tolerant, ignoremessages):
             exitnagios("OK", "all seems good - " + " ".join(extra))
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 
 # -------------------------------------------------------------------------------
