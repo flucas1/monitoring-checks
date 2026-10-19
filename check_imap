@@ -10,6 +10,7 @@ import ssl
 import asyncio
 import traceback
 import dateutil.parser
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -76,7 +77,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 
 async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays):
     try:
-        start = datetime.datetime.now(datetime.timezone.utc)
+        start = time.monotonic()
         imapconnection = None
 
         if dossl:
@@ -104,8 +105,7 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
                     pass
             await imapconnection.logout()
 
-            elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-            duration = elapsed.total_seconds()
+            duration = time.monotonic() - start
             daysremaining = -1
             if dossl and certificatedays != "":
                 if certexpirationparsed is None:
