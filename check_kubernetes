@@ -186,27 +186,32 @@ async def test_kubernetes_nodes(kubeconfig):
 
         if exitcode == 0:
             lines = output.splitlines()
-            header = lines.pop(0)
-            haserror = False
-            hasvalid = False
-            counterrors = 0
-            for line in lines:
-                parts = line.split()
-                if parts[1].lower() == "ready":
-                    hasvalid = True
+            if len(lines) > 0:
+                header = lines.pop(0)
+                haserror = False
+                hasvalid = False
+                counterrors = 0
+                for line in lines:
+                    parts = line.split()
+                    if parts[1].lower() == "ready":
+                        hasvalid = True
+                    else:
+                        haserror = True
+                        counterrors += 1
+                if hasvalid:
+                    if haserror:
+                        status = "WARNING"
+                        message = "some nodes in error"
+                    else:
+                        status = "OK"
                 else:
-                    haserror = True
-                    counterrors += 1
-            if hasvalid:
-                if haserror:
-                    status = "WARNING"
-                    message = "some nodes in error"
-                else:
-                    status = "OK"
+                    status = "CRITICAL"
+                    message = "all nodes in error"
+                perf = "nodes_total=" + str(len(lines)) + " nodes_err=" + str(counterrors)
             else:
                 status = "CRITICAL"
-                message = "all nodes in error"
-            perf = "nodes_total=" + str(len(lines)) + " nodes_err=" + str(counterrors)
+                message = "no output"
+                perf = "nodes_total=-1 nodes_err=-1"
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
@@ -232,33 +237,38 @@ async def test_kubernetes_pods(kubeconfig, namespace):
 
         if exitcode == 0:
             lines = output.splitlines()
-            header = lines.pop(0)
-            haserror = False
-            hasvalid = False
-            foundtotal = 0
-            counterrors = 0
-            for line in lines:
-                parts = line.split()
-                # infomsg(parts)
-                if parts[0] == namespace or namespace == "":
-                    foundtotal += 1
-                    if parts[3].lower() == "running":
-                        hasvalid = True
-                    else:
-                        haserror = True
-                        counterrors += 1
-            if foundtotal == 0:
-                status = "OK"
-            elif hasvalid:
-                if haserror:
-                    status = "WARNING"
-                    message = "some pods in error"
-                else:
+            if len(lines) > 0:
+                header = lines.pop(0)
+                haserror = False
+                hasvalid = False
+                foundtotal = 0
+                counterrors = 0
+                for line in lines:
+                    parts = line.split()
+                    # infomsg(parts)
+                    if parts[0] == namespace or namespace == "":
+                        foundtotal += 1
+                        if parts[3].lower() == "running":
+                            hasvalid = True
+                        else:
+                            haserror = True
+                            counterrors += 1
+                if foundtotal == 0:
                     status = "OK"
+                elif hasvalid:
+                    if haserror:
+                        status = "WARNING"
+                        message = "some pods in error"
+                    else:
+                        status = "OK"
+                else:
+                    status = "CRITICAL"
+                    message = "all pods in error"
+                perf = "pods_total=" + str(foundtotal) + " pods_err=" + str(counterrors)
             else:
                 status = "CRITICAL"
-                message = "all pods in error"
-            perf = "pods_total=" + str(foundtotal) + " pods_err=" + str(counterrors)
+                message = "no output"
+                perf = "pods_total=-1 pods_err=-1"
         else:
             status = "CRITICAL"
             message = "issue contacting the kubernetes cluster"
