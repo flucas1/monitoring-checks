@@ -370,7 +370,9 @@ async def dorecentmaildircall(username, warning, critical):
             critical = float(critical)
 
         userhomepath = await get_home_path(username)
-        if userhomepath == None or userhomepath == "" or os.path.isdir(userhomepath) == False:
+        if userhomepath == None:
+            exitnagios("CRITICAL", "the home folder could not be determined | maxage=-1")
+        elif userhomepath == "" or os.path.isdir(userhomepath) == False:
             exitnagios("CRITICAL", "the home folder '" + userhomepath + "' is not valid | maxage=-1")
 
         maildirpath = os.path.join(userhomepath, "Maildir")
