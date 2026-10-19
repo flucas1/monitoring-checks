@@ -16,6 +16,7 @@ import dateutil.parser
 import socket
 import random
 import asyncio
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -193,12 +194,11 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     issuers = validcas.split(";")
     ignored = ignorecerts.split(";")
 
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = time.monotonic()
     item_url = "https://crt.sh/Identity=" + hostname + "&exclude=expired&output=json"
     infomsg(item_url)
     parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
-    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-    duration = elapsed.total_seconds()
+    duration = time.monotonic() - start
     if parsed is not None:
         valid = True
         problems = []
@@ -241,12 +241,11 @@ async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalu
     issuers = validcas.split(";")
     ignored = ignorecerts.split(";")
 
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = time.monotonic()
     item_url = "https://ctlogs.dev/search?q=" + hostname + "&exclude=expired&output=json"
     infomsg(item_url)
     parsed = await load_json(mode, proxy, hostname, retries, timeoutvalue, item_url)
-    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-    duration = elapsed.total_seconds()
+    duration = time.monotonic() - start
     if parsed is not None:
         valid = True
         problems = []
@@ -308,7 +307,7 @@ async def main(forcedargs=None):
 
     proxies = []
 
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = time.monotonic()
     await asyncio.sleep(random.uniform(1, 5))
     if await ipv6_default_route_exists():
         infomsg("call ipv6")
@@ -322,8 +321,7 @@ async def main(forcedargs=None):
         infomsg("call " + str(proxy))
         await docrtshcall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
         await doctlogscall(None, proxy, args.hostname, args.valid, args.ignore, timeoutvalue, 5)
-    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-    duration = elapsed.total_seconds()
+    duration = time.monotonic() - start
 
     exitnagios(timeoutstatus, "cannot get crt.sh data | found=0 duration=" + str(duration))
 
