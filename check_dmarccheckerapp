@@ -141,6 +141,7 @@ async def tryfindbytagname(driver, tagname):
 
 
 async def dodnssecverisigncall(mailfrom, tolerate, proxy):
+    driver = None
     try:
         driver = await generatedriver(proxy)
 
@@ -183,8 +184,10 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
 
         infomsg("sending email to " + targetemail)
         s = smtplib.SMTP("localhost")
-        s.sendmail(me, [targetemail], email_message.as_string())
-        s.quit()
+        try:
+            s.sendmail(me, [targetemail], email_message.as_string())
+        finally:
+            s.quit()
 
         await asyncio.sleep(5)
         infomsg("waiting for element")
@@ -248,6 +251,9 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
 
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 # -------------------------------------------------------------------------------
 
