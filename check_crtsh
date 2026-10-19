@@ -185,9 +185,7 @@ async def docrtshcall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalue
     if mode not in ("ipv6", "ipv4", None):
         exitnagios("CRITICAL", "invalid IP mode")
 
-    hostnameparts = hostname.split(".")
-    if "" in hostnameparts:
-        hostnameparts.remove("")
+    hostnameparts = [p for p in hostname.split(".") if p != ""]
     if len(hostnameparts) == 2:
         hostnameparts.insert(0, "*")
     hostname = ".".join(hostnameparts)
@@ -232,9 +230,7 @@ async def doctlogscall(mode, proxy, hostname, validcas, ignorecerts, timeoutvalu
     if mode not in ("ipv6", "ipv4", None):
         exitnagios("CRITICAL", "invalid IP mode")
 
-    hostnameparts = hostname.split(".")
-    if "" in hostnameparts:
-        hostnameparts.remove("")
+    hostnameparts = [p for p in hostname.split(".") if p != ""]
     if len(hostnameparts) == 2:
         hostnameparts.insert(0, "*")
     hostname = ".".join(hostnameparts)
