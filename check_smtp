@@ -145,8 +145,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
 
         await smtpconnection.quit()
 
-        elapsed = time.monotonic() - start
-        duration = elapsed
+        duration = time.monotonic() - start
         daysremaining = -1
 
         if duration >= critical:
