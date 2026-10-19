@@ -122,6 +122,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-f", "--function", default="status", help="Function to check")
     parser.add_argument("-w", "--warning", type=float, default=0, help="Warning threshold")
     parser.add_argument("-c", "--critical", type=float, default=0, help="Critical threshold")
+    parser.add_argument("-s", "--ssl", action="store_true", help="Enable SSL certificate verification")
     parser.add_argument("-d", "--debug", action="store_true", help="prints debug information")
     args = parser.parse_args(forcedargs)
     return args
@@ -215,7 +216,7 @@ async def main(forcedargs=None):
                 target_url,
                 data=soap_body,
                 headers=headers,
-                ssl=False,
+                ssl=args.ssl,
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
                 query_result = await response.text()
