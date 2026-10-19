@@ -57,9 +57,9 @@ async def dorootpathpermissionscall():
         st = os.stat(fullpath)
         current = st.st_mode & 0o777
         if desired == current:
-            exitnagios("OK", "the path '/' has permissions " + oct(current) + " as expected")
+            exitnagios("OK", "the path " + fullpath+ " has permissions " + oct(current) + " as expected")
         else:
-            exitnagios("WARNING", "the path '/' has permissions " + oct(current) + " but it was expected " + oct(desired))
+            exitnagios("WARNING", "the path " + fullpath + " has permissions " + oct(current) + " but it was expected " + oct(desired))
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check " + str(e))
 
