@@ -80,7 +80,7 @@ async def generatedriver(proxy):
     return driver
 
 
-def check_page_loaded(driver):
+async def check_page_loaded(driver):
     # self.log.info("Checking if {} page is loaded.".format(self.driver.current_url))
     page_state = driver.execute_script("return document.readyState;")
     return page_state == "complete"
@@ -89,7 +89,7 @@ def check_page_loaded(driver):
 async def wait_page_loaded(driver):
     start = time.monotonic()
     while True:
-        if check_page_loaded(driver):
+        if await check_page_loaded(driver):
             break
         if time.monotonic() - start > 20:
             break
