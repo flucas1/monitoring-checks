@@ -4,6 +4,7 @@
 import argparse
 import sys
 import time
+import socket
 import asyncio
 import aiohttp
 import aiohttp_socks
@@ -55,6 +56,9 @@ def exitnagios(status, message):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-i", "--ip", dest="ip", default="127.0.0.1")
     parser.add_argument("-p", "--port", dest="port", default="1080")
     parser.add_argument("-g", "--target", dest="target", default="https://www.google.com")
@@ -68,6 +72,22 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
     if not args.ip or not args.port or not args.target:
         exitnagios("UNKNOWN", "Missing required parameter(s).")
 
@@ -76,7 +96,12 @@ async def main(forcedargs=None):
     connector = None
 
     try:
-        connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port)
+        family = socket.AF_UNSPEC
+        if protocol == "-4":
+            family = socket.AF_INET
+        elif protocol == "-6":
+            family = socket.AF_INET6
+        connector = aiohttp_socks.SocksConnector.from_url("socks5://" + args.ip + ":" + args.port, family=family)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             async with session.get(args.target) as response:
                 ret = 0 if response.status == 200 else 1
