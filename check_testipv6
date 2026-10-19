@@ -9,8 +9,6 @@ import selenium
 import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.common.by
-import selenium.webdriver.support.ui
-import selenium.webdriver.support.expected_conditions
 
 # -------------------------------------------------------------------------------
 
@@ -99,14 +97,28 @@ async def wait_page_loaded(driver):
         await asyncio.sleep(1)
 
 
+async def wait_for_text(driver, element_id, text, timeout=10):
+    timestamp = time.monotonic()
+    while True:
+        try:
+            element = driver.find_element(selenium.webdriver.common.by.By.ID, element_id)
+            if text in element.text:
+                return element
+        except Exception:
+            pass
+        if time.monotonic() - timestamp > timeout:
+            break
+        await asyncio.sleep(1)
+    return None
+
+
 # -------------------------------------------------------------------------------
 
 
 async def dotestipv6call(proxy):
+    driver = None
     try:
         driver = await generatedriver(proxy)
-
-        wait = selenium.webdriver.support.ui.WebDriverWait(driver, 10)
 
         infomsg("browser OK")
         url = "https://test-ipv6.com/"
@@ -118,7 +130,7 @@ async def dotestipv6call(proxy):
         infomsg("page loaded")
 
         try:
-            wait.until(selenium.webdriver.support.expected_conditions.text_to_be_present_in_element((selenium.webdriver.common.by.By.ID, "debugtable"), "Your readiness score"))
+            await wait_for_text(driver, "debugtable", "Your readiness score")
         except Exception as e:
             pass
         finally:
@@ -135,7 +147,7 @@ async def dotestipv6call(proxy):
         rawresult = resume.text
         parts = rawresult.split()
         marks = parts[3]
-        infomsg("raw marks is '" + marks + "'")
+        infomsg("raw marks is \"" + marks + "\"")
         grading = marks.split("/")
         try:
             currentmark = int(grading[0])
@@ -154,6 +166,9 @@ async def dotestipv6call(proxy):
             exitnagios("WARNING", "The result of the test is " + str(currentmark) + "/" + str(totalmarks) + " | result=" + str(currentmark) + " best=" + str(totalmarks))
     except Exception as e:
         exitnagios("CRITICAL", "unexpected error during the check - " + str(e))
+    finally:
+        if driver is not None:
+            driver.quit()
 
 
 # -------------------------------------------------------------------------------
