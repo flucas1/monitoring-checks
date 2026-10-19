@@ -89,7 +89,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
             asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname),
             timeout=timeoutvalue
         )
-        cert_data = writer.getpeercert()
+        cert_data = writer.get_extra_info("peercert")
         writer.close()
         await writer.wait_closed()
     except asyncio.TimeoutError:
