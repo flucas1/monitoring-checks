@@ -96,7 +96,10 @@ async def findservers(interface, requestmac, timeout):
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
-        return output
+        if exitcode != 0:
+            return None
+        else:
+            return output
     except Exception:
         return None
 
@@ -148,7 +151,6 @@ async def checkdhcp(interface, chaddr, warning, ciaddr, servers, timeout):
 
 
 async def checkall(interfaces, chaddr, warning, ciaddr, servers, timeout):
-    result = True
     infomsg("List of interfaces: " + " ".join(interfaces))
 
     successes = []
