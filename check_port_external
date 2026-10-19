@@ -54,13 +54,13 @@ def exitnagios(status, message):
 
 async def dointernalcall(protocol, tcporudp, hostname, port, timeoutvalue):
     try:
-        sfamily = socket.AF_UNSPEC
+        family = socket.AF_UNSPEC
         if protocol == "-4":
-            sfamily = socket.AF_INET
+            family = socket.AF_INET
         elif protocol == "-6":
-            sfamily = socket.AF_INET6
+            family = socket.AF_INET6
         try:
-            info = socket.getaddrinfo(hostname, None, sfamily)
+            info = socket.getaddrinfo(hostname, None, family)
             ip_address = info[0][4][0]
             infomsg("The ip address is " + ip_address)
         except Exception:
