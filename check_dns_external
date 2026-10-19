@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import aiohttp
 import aiofiles
+import socket
 
 # -------------------------------------------------------------------------------
 
@@ -49,6 +50,15 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
 def normalizemultivalues(original):
     parts = []
     for item in original.strip().split("#"):
@@ -63,7 +73,7 @@ async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, 
     try:
         url = "https://www.bigbroeyes.com/external_checks/check_dns.php?hostname=" + hostname + "&record=" + record + "&type=" + querytype
         infomsg("The target url is " + url)
-        connector = aiohttp.TCPConnector()
+        connector = get_connector(protocol)
         async with aiohttp.ClientSession(connector=connector) as session:
             headers = {
                 "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
@@ -99,8 +109,9 @@ async def dodnsexternalcall(accesstoken, protocol, hostname, record, querytype, 
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (default, exclusive with ipv6)")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-r", "--record", dest="record", default="", help="record to query")
     parser.add_argument("-p", "--querytype", dest="querytype", default="", help="type of record")
@@ -116,10 +127,21 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    if (args.ipv4 == True) and (args.ipv6 == True):
-        exitnagios("CRITICAL", "choose ipv4 or ipv6, not both")
-    if (args.ipv4 == False) and (args.ipv6 == False):
-        args.ipv4 = True
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     if (args.hostname == ""):
         exitnagios("CRITICAL", "hostname not defined")
@@ -132,12 +154,6 @@ async def main(forcedargs=None):
 
     if (args.accesstokenfile == ""):
         exitnagios("CRITICAL", "accesstokenfile not defined")
-
-    protocol = ""
-    if args.ipv4 == True:
-        protocol = "-4"
-    elif args.ipv6 == True:
-        protocol = "-6"
 
     parts = args.timeout.split(":")
     timeoutvalue = int(parts[0])
