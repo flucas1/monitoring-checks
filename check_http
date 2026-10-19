@@ -342,9 +342,9 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
         toleratedfailures = []
         toleratedfailures.append("Invalid HTTP header field was received: frame type: 1, stream: 1, name: [upgrade], value: [h2,h2c]")
         if failuremessage not in toleratedfailures:
-            return "CRITICAL", "error - " + str(failuremessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+            return "CRITICAL", "error - " + str(failuremessage) + " for URL \"" + url + "\" | totaltime=" + str(totaltime)
     if timeoutmessage is not None:
-        return timeoutstatus, "error - " + str(timeoutmessage) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+        return timeoutstatus, "error - " + str(timeoutmessage) + " for URL \"" + url + "\" | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 2")
 
@@ -354,7 +354,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
             if line.startswith(unknown):
                 foundunknown = True
         if foundunknown == True:
-            return timeoutstatus, "match '" + unknown + "' in " + str(_preheaders) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+            return timeoutstatus, "match \"" + unknown + "\" in " + str(_preheaders) + " for URL \"" + url + "\" | totaltime=" + str(totaltime)
     if len(expect) > 0:
         foundexpect = False
         for line in _preheaders:
@@ -362,7 +362,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
                 if line.startswith(test):
                     foundexpect = True
         if foundexpect == False:
-            return "CRITICAL", "cannot match '" + str(expect) + "' in " + str(_preheaders) + " for URL '" + url + "' | totaltime=" + str(totaltime)
+            return "CRITICAL", "cannot match \"" + str(expect) + "\" in " + str(_preheaders) + " for URL \"" + url + "\" | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 3")
 
@@ -372,9 +372,9 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
         headermatchvalue = headermatchparts[1].strip()
         if headermatchkey in _headers:
             if _headers[headermatchkey] != headermatchvalue:
-                return "CRITICAL", "headerstring '" + headermatchkey + "' is '" + _headers[headermatchkey] + "' but it was expected '" + headermatchvalue + "' for URL '" + url + "' | totaltime=" + str(totaltime)
+                return "CRITICAL", "headerstring \"" + headermatchkey + "\" is \"" + _headers[headermatchkey] + "\" but it was expected \"" + headermatchvalue + "\" for URL \"" + url + "\" | totaltime=" + str(totaltime)
         else:
-            return "CRITICAL", "cannot locate headerstring '" + headermatchkey + "' for URL '" + url + "' | totaltime=" + str(totaltime)
+            return "CRITICAL", "cannot locate headerstring \"" + headermatchkey + "\" for URL \"" + url + "\" | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 4")
 
@@ -402,7 +402,7 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
             infomsg(traceback.format_exc())
             pass
         if certexpirationparsed is None:
-            return "CRITICAL", "cannot parse certificate expiration date '" + str(certexpirationraw) + "' for URL '" + url + "' | totaltime=" + str(totaltime)
+            return "CRITICAL", "cannot parse certificate expiration date \"" + str(certexpirationraw) + "\" for URL \"" + url + "\" | totaltime=" + str(totaltime)
         else:
             today = datetime.datetime.now(datetime.timezone.utc)
             timeremaining = certexpirationparsed.timestamp() - today.timestamp()
@@ -414,18 +414,18 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
             else:
                 warningdays = -1
             if daysremaining < criticaldays:
-                return "CRITICAL", "the certificate is expiring in '" + str(daysremaining) + "' days for URL '" + url + "' | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
+                return "CRITICAL", "the certificate is expiring in \"" + str(daysremaining) + "\" days for URL \"" + url + "\" | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
             elif daysremaining < warningdays:
-                return "WARNING", "the certificate is expiring in '" + str(daysremaining) + "' days for URL '" + url + "' | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
+                return "WARNING", "the certificate is expiring in \"" + str(daysremaining) + "\" days for URL \"" + url + "\" | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
 
     infomsg("----- checks stage 5")
 
     if responsecode >= 500:
-        return "WARNING", "unexpected responsecode for URL '" + url + "' : " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime)
+        return "WARNING", "unexpected responsecode for URL \"" + url + "\" : " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime)
 
     infomsg("----- checks stage 6")
 
-    return "OK", "everything seems OK for URL '" + url + "' - responsecode: " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
+    return "OK", "everything seems OK for URL \"" + url + "\" - responsecode: " + str(responsecode) + " - totaltime: " + str(totaltime) + " | totaltime=" + str(totaltime) + " remaining=" + str(daysremaining)
 
 #    context = ssl.create_default_context()
 #    with socket.create_connection((hostname, port)) as sock:
@@ -449,11 +449,11 @@ async def dolibcurlcheck_simple(ipprotocol, hostname, port, path, timeoutvalue, 
 #            break
 #    if matching:
 #        response=0
-#        output = "can connect and certificate for '"+hostname+"' matches via extended search"
+#        output = "can connect and certificate for \""+hostname+"\" matches via extended search"
 #    else:
 #        response=2
-#        foundname = output.split("'")[1]
-#        output = "can connect, but the certificate found '"+foundname+"' name does not match the expected '"+hostname+"'"
+#        foundname = output.split("\"")[1]
+#        output = "can connect, but the certificate found \""+foundname+"\" name does not match the expected \""+hostname+"\""
 
 
 # -------------------------------------------------------------------------------
