@@ -134,6 +134,7 @@ def get_prompt_lines():
     prompt_lines.append("File reading and writing should be always async.")
     prompt_lines.append("For python imports do not use 'from'.")
     prompt_lines.append("Remove legacy subprocess, urllib, requests and concurrent.futures and replace them with async alternatives.")
+    prompt_lines.append("Time evolution should be done usign 'time.monotonic()'.")
     prompt_lines.append("Prefer \" rather than ' for string delimitator.")
     prompt_lines.append("Avoid f\" and .format syntax, use concatenation instead.")
     prompt_lines.append("The arguments should be parsed with argparse, in a function defined as 'def parse_args(forcedargs=None):' that is invoked from main, and returning the args.")
