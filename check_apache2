@@ -50,6 +50,15 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
 def check_threshold(value, warn, crit):
     status = 0
     try:
@@ -65,10 +74,13 @@ def check_threshold(value, warn, crit):
     return status
 
 
-async def fetch_status(protocol, url, auth, verify, timeout):
-    async with httpx.AsyncClient(auth=auth, verify=verify, timeout=timeout) as client:
-        response = await client.get(url)
-        return response
+async def fetch_status(protocol, url, username, password, verify, timeout):
+    timeout_obj = aiohttp.ClientTimeout(total=timeout)
+    connector = get_connector(protocol)
+    async with aiohttp.ClientSession(auth=auth, timeout=timeout_obj, connector=connector) as session:
+        async with session.get(url, ssl=verify) as response:
+            await response.read() 
+            return response
 
 
 # -------------------------------------------------------------------------------
@@ -124,8 +136,6 @@ async def main(forcedargs=None):
     if bool(args.username) != bool(args.password):
         exitnagios("UNKNOWN", "If you specify an username, you have to set a password too!")
 
-    auth = (args.username, args.password) if args.username and args.password else None
-
     proto = "https://" if args.ssl else "http://"
     port_str = ":" + str(args.port) if args.port else ""
 
@@ -136,7 +146,7 @@ async def main(forcedargs=None):
     verify = not args.no_validate
 
     try:
-        response = await fetch_status(protocol, url, auth, verify, args.timeout)
+        response = await fetch_status(protocol, url, args.username, args.password, verify, args.timeout)
         if response.status_code >= 500:
             status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
             exitnagios(status_prefix, str(response.reason_phrase))
