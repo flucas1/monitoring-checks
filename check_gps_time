@@ -3,9 +3,9 @@
 
 import argparse
 import asyncio
-import datetime
 import gps
 import sys
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -57,7 +57,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
     gps_time = None
     error = None
     try:
-        start = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        start = time.monotonic()
         while True:
             if gpsd.waiting():
                 if gpsd.read() == 0:
@@ -68,7 +68,7 @@ async def dogpstimecheck(timeoutvalue, timeoutstatus):
                         if test_time != "":
                             gps_time = test_time
                             break
-            if datetime.datetime.now(datetime.timezone.utc).timestamp() > start + timeoutvalue:
+            if time.monotonic() > start + timeoutvalue:
                 timeout = True
                 break
             else:
