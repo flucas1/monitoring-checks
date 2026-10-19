@@ -5,6 +5,7 @@ import sys
 import asyncio
 import aiohttp
 import argparse
+import socket
 import xml.etree.ElementTree
 
 # -------------------------------------------------------------------------------
@@ -49,19 +50,33 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def fetch_data(url, timeout):
+def get_connector(protocol):
+    if protocol == "-4":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+    elif protocol == "-6":
+        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+    else:
+        return aiohttp.TCPConnector()
+
+
+async def fetch_data(url, timeout, protocol):
+    connector = get_connector(protocol)
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=timeout) as response:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+            async with session.get(url) as response:
                 return await response.read()
     except Exception:
         exitnagios("UNKNOWN", "Stats collection failed")
+
 
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="Check Bind9 Statistics (new format XML v3)")
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostaddress", required=True, help="Host address of the Bind9 server")
     parser.add_argument("-p", "--port", required=True, help="Port of the Bind9 statistics channel")
     parser.add_argument("-w", "--warning", type=float, default=5.0, help="Warning threshold for slow RTT percentage (default: 5.0 percent)")
@@ -75,10 +90,26 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
+
     url = "http://" + str(args.hostaddress) + ":" + str(args.port) + "/xml/v3/server"
 
     TIMEOUT = 20
-    xml_data = await fetch_data(url, TIMEOUT)
+    xml_data = await fetch_data(url, TIMEOUT, args.protocol)
 
     if not xml_data:
         exitnagios("UNKNOWN", "Stats collection failed")
