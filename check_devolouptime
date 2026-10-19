@@ -9,7 +9,7 @@ import socket
 import pathlib
 import asyncio
 import aiofiles
-
+import time
 import selenium
 import selenium.webdriver
 import selenium.webdriver.common.keys
@@ -96,11 +96,11 @@ def check_page_loaded(driver):
 
 
 async def wait_page_loaded(driver):
-    timestamp = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    start_time = time.monotonic()
     while True:
         if check_page_loaded(driver):
             break
-        if datetime.datetime.now(datetime.timezone.utc).timestamp() - timestamp > 20:
+        if time.monotonic() - start_time > 20:
             break
         await asyncio.sleep(1)
 

@@ -50,12 +50,12 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-def connect_cups(socket_path):
+async def connect_cups(socket_path):
     cups.setServer(socket_path)
     return cups.Connection()
 
 
-def get_printers_states(conn, printers_names=None, all_printers=False):
+async def get_printers_states(conn, printers_names=None, all_printers=False):
     printer_valid = []
     printers_failed = []
     found = False
@@ -108,11 +108,11 @@ async def main(forcedargs=None):
         exitnagios("CRITICAL", "No socket specified.")
 
     try:
-        conn = connect_cups(args.socket)
+        conn = await connect_cups(args.socket)
     except RuntimeError as e:
         exitnagios("UNKNOWN", str(e))
 
-    printers_valid, printers_failed = get_printers_states(conn, args.printers, args.all_printers)
+    printers_valid, printers_failed = await get_printers_states(conn, args.printers, args.all_printers)
     if printers_failed:
         exitnagios("CRITICAL", ", ".join(printers_failed) + " | valid=" + str(len(printers_valid)) + " invalid=" + str(len(printers_failed)))
     if printers_valid:
