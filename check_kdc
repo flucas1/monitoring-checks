@@ -53,6 +53,7 @@ def exitnagios(status, message):
 
 
 async def cleanup(cc_path, conf_path):
+    errors = 0
     if cc_path and os.path.exists(cc_path):
         try:
             cmdline = ["/usr/bin/kdestroy", "-c", cc_path]
@@ -62,6 +63,9 @@ async def cleanup(cc_path, conf_path):
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                infomsg("kdestroy failed")
+                errors = errors+1
         except OSError:
             pass
 
@@ -69,7 +73,9 @@ async def cleanup(cc_path, conf_path):
         try:
             os.remove(conf_path)
         except OSError:
-            pass
+            errors = errors+1
+
+    return errors
 
 
 # -------------------------------------------------------------------------------
@@ -95,6 +101,9 @@ async def main(forcedargs=None):
 
     realm = args.principal.split("@", 1)[-1]
     kdc_address = args.hostname + ":" + args.port
+
+    errors = 0
+    error_msg = ""
 
     krb5_conf_content = (
         "[libdefaults]\n"
@@ -132,23 +141,23 @@ async def main(forcedargs=None):
 
         stdout, _ = await process.communicate()
 
-        if process.returncode == 0:
-            exitnagios("OK", "no issues found")
-        else:
-            error_msg = ""
+        if process.returncode != 0:
+            errors = errors+1
             if stdout:
                 decoded = stdout.decode().strip()
-                error_msg = decoded.replace("\n", " ")
-            exitnagios("CRITICAL", "Getting Kerberos ticket: " + error_msg)
+                error_msg = "issue getting Kerberos ticket: " + decoded.replace("\n", " ")
 
     except FileNotFoundError:
         exitnagios("CRITICAL", "/usr/bin/kinit not found")
     except Exception as e:
         exitnagios("CRITICAL", str(e))
-    finally:
-        # Cleanup mechanism via finally (equivalent to bash trap)
-        await cleanup(cc_path, conf_path)
 
+    errors += await cleanup(cc_path, conf_path)
+
+    if errors == 0:
+        exitnagios("OK", "no issues found")
+    else:
+        exitnagios("CRITICAL", error_msg)
 
 # -------------------------------------------------------------------------------
 
