@@ -118,32 +118,37 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         else:
             infomsg("skipping ssl test")
 
-        await smtpconnection.ehlo()
-        response, message = await smtpconnection.noop()
-        infomsg("initial response is " + str(response) + " " + str(message))
-        if response not in [200, 250]:
-            exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
+        try:
+            await smtpconnection.ehlo()
+            response, message = await smtpconnection.noop()
+            infomsg("initial response is " + str(response) + " " + str(message))
+            if response not in [200, 250]:
+                exitnagios("CRITICAL", "initial check, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
 
-        testemailaddress = b"mailing-probe@example.net"
-        response, message = await smtpconnection.execute_command(b"MAIL FROM: " + testemailaddress)
-        infomsg("mailfrom response is " + str(response) + " " + str(message))
+            testemailaddress = b"mailing-probe@example.net"
+            response, message = await smtpconnection.execute_command(b"MAIL FROM: " + testemailaddress)
+            infomsg("mailfrom response is " + str(response) + " " + str(message))
 
-        if response in [250]:
-            response, message = await smtpconnection.execute_command(b"RCPT TO: " + testemailaddress)
-            infomsg(response)
-            infomsg(message)
-            if response in [250, 251, 354]:
-                if relay != "open":
-                    exitnagios("CRITICAL", "found an open relay " + str(response) + ", but it should be closed | time=-1 validity=-1")
-            elif response in [550]:
-                if relay != "closed":
-                    exitnagios("CRITICAL", "found a closed relay " + str(response) + ", but it should be open | time=-1 validity=-1")
-        elif response in [555] and relay == "closed":
-            exitnagios("OK", "closed relay with response " + str(response) + " | time=-1 validity=-1")
-        else:
-            exitnagios("CRITICAL", "sending test, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
+            if response in [250]:
+                response, message = await smtpconnection.execute_command(b"RCPT TO: " + testemailaddress)
+                infomsg(str(response))
+                infomsg(str(message))
+                if response in [250, 251, 354]:
+                    if relay != "open":
+                        exitnagios("CRITICAL", "found an open relay " + str(response) + ", but it should be closed | time=-1 validity=-1")
+                elif response in [550]:
+                    if relay != "closed":
+                        exitnagios("CRITICAL", "found a closed relay " + str(response) + ", but it should be open | time=-1 validity=-1")
+            elif response in [555] and relay == "closed":
+                exitnagios("OK", "closed relay with response " + str(response) + " | time=-1 validity=-1")
+            else:
+                exitnagios("CRITICAL", "sending test, unexpected state - " + str(response) + ": " + str(message) + " | time=-1 validity=-1")
 
-        await smtpconnection.quit()
+            await smtpconnection.quit()
+        except Exception as e:
+            infomsg("smtp session error - " + str(e))
+            infomsg(str(traceback.format_exc()))
+            exitnagios("UNKNOWN", "unexpected error during smtp session - " + str(e) + " | time=-1 validity=-1")
 
         duration = time.monotonic() - start
         daysremaining = -1
