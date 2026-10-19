@@ -103,7 +103,7 @@ async def checkblockedemails(domain, client):
             infomsg("MX invalid")
             result = False
         elif checkSPF and (domaininfo["isSPFValid"].strip().lower() != "valid"):
-            infomsg("SFP invalid")
+            infomsg("SPF invalid")
             result = False
         elif checkStatus and (domaininfo["status"].strip().lower() != "ok"):
             infomsg("status invalid")
