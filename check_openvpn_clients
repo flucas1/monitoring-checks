@@ -69,6 +69,8 @@ async def read_until(reader, expected, timeout=10):
 
 async def interact(hostname, port, password, request):
     timeout = 5
+    tnreader = None
+    tnwriter = None
     try:
         tnreader, tnwriter = await telnetlib3.open_connection(hostname, port)
         await read_until(tnreader, "ENTER PASSWORD:")
@@ -80,6 +82,9 @@ async def interact(hostname, port, password, request):
         return response
     except Exception as e:
         exitnagios("CRITICAL", str(e))
+    finally:
+        if tnwriter is not None:
+            tnwriter.close()
 
 
 # -------------------------------------------------------------------------------
