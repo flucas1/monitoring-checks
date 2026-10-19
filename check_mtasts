@@ -131,7 +131,7 @@ async def tryfindbyclassname(driver, classname):
 # -------------------------------------------------------------------------------
 
 
-async def dodnssecverisigncall(domain, proxy):
+async def domtastscheck(domain, proxy):
     try:
         driver = await generatedriver(proxy)
 
@@ -187,7 +187,7 @@ async def main(forcedargs=None):
     setcandebug(args.debug)
 
     proxy = ""
-    await dodnssecverisigncall(args.host, proxy)
+    await domtastscheck(args.host, proxy)
 
 
 # -------------------------------------------------------------------------------
