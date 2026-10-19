@@ -3,7 +3,7 @@
 
 import argparse
 import sys
-import datetime
+import time
 import asyncio
 import aiohttp
 import aiohttp_socks
@@ -72,7 +72,7 @@ async def main(forcedargs=None):
         exitnagios("UNKNOWN", "Missing required parameter(s).")
 
     timeout = aiohttp.ClientTimeout(total=args.max_time)
-    ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    ts = time.monotonic()
     connector = None
 
     try:
@@ -92,7 +92,7 @@ async def main(forcedargs=None):
         if connector is not None:
             await connector.close()
 
-    tt = datetime.datetime.now(datetime.timezone.utc).timestamp() - ts
+    tt = time.monotonic() - ts
     mse = int(tt * 1000)
 
     if ret == 0:

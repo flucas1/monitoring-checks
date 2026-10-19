@@ -105,6 +105,7 @@ async def snmpget(hostname, port, community, oid, timeoutvalue):
             exitcode = None
             output = None
     except asyncio.TimeoutError:
+        process.kill()
         exitcode = None
         output = None
 
