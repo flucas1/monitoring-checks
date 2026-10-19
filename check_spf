@@ -103,7 +103,7 @@ async def tryfindbyclassname(driver, classname):
     result = []
     try:
         result = driver.find_elements(selenium.webdriver.common.by.By.CLASS_NAME, classname)
-    except:
+    except Exception:
         pass
     return result
 
