@@ -107,7 +107,7 @@ async def dobysshcheck(protocol, hostname, timeoutvalue, timeoutstatus, remotecm
                         message = message + " - " + errors
                     exitnagios(status, message)
                 else:
-                    exitnagios("UNKNOWN", output + " - " + errors)
+                    exitnagios("UNKNOWN", errors)
             else:
                 exitnagios("UNKNOWN", output + " - " + errors)
 
