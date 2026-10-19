@@ -8,7 +8,7 @@ import sys
 import os
 import argparse
 import asyncio
-import datetime
+import time
 import zmqtt
 
 # -------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ async def main(forcedargs=None):
     if args.check_subscription is None:
         args.check_subscription = args.check_topic
 
-    start_time = datetime.datetime.now(datetime.timezone.utc).timestamp()
+    start_time = time.monotonic()
 
     # TLS Configuration
     tls_context = None
@@ -165,7 +165,7 @@ async def main(forcedargs=None):
                     await client.publish(args.check_topic, args.mqtt_payload, qos=zmqtt.QoS.EXACTLY_ONCE, retain=False)
 
                 try:
-                    time_left = args.max_wait - (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
+                    time_left = args.max_wait - (time.monotonic() - start_time)
                     if time_left <= 0:
                         raise asyncio.TimeoutError
 
@@ -189,7 +189,7 @@ async def main(forcedargs=None):
 
                     infomsg("The payload is " + str(payload))
 
-                    elapsed = (datetime.datetime.now(datetime.timezone.utc).timestamp() - start_time)
+                    elapsed = time.monotonic() - start_time
 
                     if args.short_output:
                         message = "value=" + str(payload) + " | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
