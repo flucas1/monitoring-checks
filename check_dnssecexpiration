@@ -60,7 +60,7 @@ async def run_cmdline(cmdline):
         )
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
-            raise Exception("Command failed with code " + str(process.returncode) + ": " + stderr.decode().strip())
+            exitnagios("UNKNOWN", "Command failed with code " + str(process.returncode) + ": " + stderr.decode().strip())
         return stdout.decode().strip()
     except Exception as e:
         exitnagios("UNKNOWN", "Command execution failed - " + str(e))
