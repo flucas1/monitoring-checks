@@ -205,7 +205,7 @@ async def main(forcedargs=None):
     proxy = ""
 
     if args.severity not in ["CRITICAL", "WARNING"]:
-        exitnagios("CRITICAL", "the severity '" + args.severity + "' is not valid")
+        exitnagios("CRITICAL", "the severity \"" + args.severity + "\" is not valid")
 
     await doisvpncall(expected, args.severity, proxy)
 
