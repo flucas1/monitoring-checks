@@ -150,9 +150,12 @@ async def make_mtab():
     return tmp_mtab_path
 
 
-async def run_df(mp, timeout):
+async def run_df(mp, timeout, dfargs):
     try:
-        cmdline = ["/usr/bin/df", "-k", mp]
+        cmdline = ["/usr/bin/df", "-k"]
+        if dfargs:
+            cmdline += dfargs.split()
+        cmdline.append(mp)
         process = await asyncio.create_subprocess_exec(
             *cmdline,
             stdout=asyncio.subprocess.PIPE,
@@ -190,7 +193,7 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             err_mesg.append(mp + " is not mounted")
 
     try:
-        await run_df(mp, args.timeout)
+        await run_df(mp, args.timeout, args.dfargs)
     except Exception:
         err_mesg.append(mp + " did not respond in " + str(args.timeout) + " sec. Seems to be stale.")
         return err_mesg
