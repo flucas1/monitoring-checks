@@ -10,6 +10,8 @@ import argparse
 import asyncio
 import time
 import zmqtt
+import ast
+import operator
 
 # -------------------------------------------------------------------------------
 
@@ -52,11 +54,60 @@ def exitnagios(status, message):
     sys.exit(exitcode)
 
 
+def safe_eval(expr, payload):
+    """
+    Safely evaluates simple mathematical and boolean expressions using the ast module
+    to avoid the security risks associated with eval().
+    """
+    expr_clean = expr.replace("<payload>", "payload")
+    
+    allowed_operators = {
+        ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+        ast.Div: operator.truediv, ast.Mod: operator.mod, ast.Eq: operator.eq,
+        ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le,
+        ast.Gt: operator.gt, ast.GtE: operator.ge, ast.USub: operator.neg,
+        ast.In: lambda a, b: a in b, ast.NotIn: lambda a, b: a not in b
+    }
+
+    def _eval_node(node):
+        if isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.Name):
+            if node.id == "payload":
+                try:
+                    return float(payload)
+                except (ValueError, TypeError):
+                    return payload
+            raise ValueError(f"Unsupported variable: {node.id}")
+        elif type(node) in (ast.Num, ast.Str):
+            return getattr(node, 'n', getattr(node, 's', None))
+        elif isinstance(node, ast.BinOp):
+            return allowed_operators[type(node.op)](_eval_node(node.left), _eval_node(node.right))
+        elif isinstance(node, ast.UnaryOp):
+            return allowed_operators[type(node.op)](_eval_node(node.operand))
+        elif isinstance(node, ast.Compare):
+            left = _eval_node(node.left)
+            for op, comparator in zip(node.ops, node.comparators):
+                right = _eval_node(comparator)
+                if not allowed_operators[type(op)](left, right):
+                    return False
+                left = right
+            return True
+        elif isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                return all(_eval_node(val) for val in node.values)
+            elif isinstance(node.op, ast.Or):
+                return any(_eval_node(val) for val in node.values)
+        else:
+            raise ValueError(f"Unsupported syntax element used in expression")
+
+    tree = ast.parse(expr_clean, mode='eval')
+    return _eval_node(tree.body)
+
 # -------------------------------------------------------------------------------
 
 
 def parse_args(forcedargs=None):
-    # Setup default values and parse command line arguments for the MQTT check
     DEFAULTS = {
         "mqtt_host": "localhost",
         "mqtt_port": 1883,
@@ -84,26 +135,26 @@ def parse_args(forcedargs=None):
     operators = ["eq", "equal", "lt", "lessthan", "gt", "greaterthan", "ct", "contains", "any"]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host", metavar="<hostname>", help="mqtt host to connect to (default: " + DEFAULTS["mqtt_host"] + ")", dest="mqtt_host", default=DEFAULTS["mqtt_host"])
-    parser.add_argument("-P", "--port", metavar="<port>", help="network port to connect to (default: " + str(DEFAULTS["mqtt_port"]) + ")", dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
-    parser.add_argument("-u", "--username", metavar="<username>", help="MQTT username (default: " + str(DEFAULTS["mqtt_username"]) + ")", dest="mqtt_username", default=DEFAULTS["mqtt_username"])
-    parser.add_argument("-p", "--password", metavar="<password>", help="MQTT password (default: " + str(DEFAULTS["mqtt_password"]) + ")", dest="mqtt_password", default=DEFAULTS["mqtt_password"])
-    parser.add_argument("-m", "--max-wait", metavar="<seconds>", help="maximum time to wait for the check (default: " + str(DEFAULTS["max_wait"]) + " seconds)", dest="max_wait", default=DEFAULTS["max_wait"], type=int)
-    parser.add_argument("-e", "--keepalive", metavar="<seconds>", help="maximum period in seconds allowed between communications with the broker (default: " + str(DEFAULTS["keepalive"]) + " seconds)", dest="keepalive", default=DEFAULTS["keepalive"], type=int)
-    parser.add_argument("-L", "--sleep", metavar="<seconds>", help="main loop sleep period in seconds (default: " + str(DEFAULTS["sleep"]) + ")", dest="sleep", default=DEFAULTS["sleep"], type=float)
-    parser.add_argument("-a", "--cafile", metavar="<cafile>", help="cafile (default: " + str(DEFAULTS["mqtt_cafile"]) + ")", dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
-    parser.add_argument("-C", "--certfile", metavar="<certfile>", help="certfile (default: " + str(DEFAULTS["mqtt_certfile"]) + ")", dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
-    parser.add_argument("-k", "--keyfile", metavar="<keyfile>", help="keyfile (default: " + str(DEFAULTS["mqtt_keyfile"]) + ")", dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
+    parser.add_argument("-H", "--host", help="mqtt host to connect to (default: " + DEFAULTS["mqtt_host"] + ")", dest="mqtt_host", default=DEFAULTS["mqtt_host"])
+    parser.add_argument("-P", "--port", help="network port to connect to (default: " + str(DEFAULTS["mqtt_port"]) + ")", dest="mqtt_port", default=DEFAULTS["mqtt_port"], type=int)
+    parser.add_argument("-u", "--username", help="MQTT username (default: " + str(DEFAULTS["mqtt_username"]) + ")", dest="mqtt_username", default=DEFAULTS["mqtt_username"])
+    parser.add_argument("-p", "--password", help="MQTT password (default: " + str(DEFAULTS["mqtt_password"]) + ")", dest="mqtt_password", default=DEFAULTS["mqtt_password"])
+    parser.add_argument("-m", "--max-wait", help="maximum time to wait for the check (default: " + str(DEFAULTS["max_wait"]) + " seconds)", dest="max_wait", default=DEFAULTS["max_wait"], type=int)
+    parser.add_argument("-e", "--keepalive", help="maximum period in seconds allowed between communications with the broker (default: " + str(DEFAULTS["keepalive"]) + " seconds)", dest="keepalive", default=DEFAULTS["keepalive"], type=int)
+    parser.add_argument("-L", "--sleep", help="main loop sleep period in seconds (default: " + str(DEFAULTS["sleep"]) + ")", dest="sleep", default=DEFAULTS["sleep"], type=float)
+    parser.add_argument("-a", "--cafile", help="cafile (default: " + str(DEFAULTS["mqtt_cafile"]) + ")", dest="mqtt_cafile", default=DEFAULTS["mqtt_cafile"])
+    parser.add_argument("-C", "--certfile", help="certfile (default: " + str(DEFAULTS["mqtt_certfile"]) + ")", dest="mqtt_certfile", default=DEFAULTS["mqtt_certfile"])
+    parser.add_argument("-k", "--keyfile", help="keyfile (default: " + str(DEFAULTS["mqtt_keyfile"]) + ")", dest="mqtt_keyfile", default=DEFAULTS["mqtt_keyfile"])
     parser.add_argument("-n", "--insecure", help="suppress TLS verification of server hostname" + (" (default)" if DEFAULTS["mqtt_insecure"] else ""), dest="mqtt_insecure", default=DEFAULTS["mqtt_insecure"], action="store_true")
-    parser.add_argument("-i", "--topic", metavar="<topic>", help="topic to use for the active check (default: " + DEFAULTS["check_topic"] + ")", dest="check_topic", default=DEFAULTS["check_topic"])
-    parser.add_argument("-s", "--subscription", metavar="<subscription>", help="topic to use for the passive check (default: " + str(DEFAULTS["check_subscription"]) + ")", dest="check_subscription", default=DEFAULTS["check_subscription"])
+    parser.add_argument("-i", "--topic", help="topic to use for the active check (default: " + DEFAULTS["check_topic"] + ")", dest="check_topic", default=DEFAULTS["check_topic"])
+    parser.add_argument("-s", "--subscription", help="topic to use for the passive check (default: " + str(DEFAULTS["check_subscription"]) + ")", dest="check_subscription", default=DEFAULTS["check_subscription"])
     parser.add_argument("-r", "--readonly", help="just read the value of the topic" + (" (default)" if DEFAULTS["mqtt_readonly"] else ""), dest="mqtt_readonly", default=DEFAULTS["mqtt_readonly"], action="store_true")
-    parser.add_argument("-l", "--payload", metavar="<payload>", help="payload which will be PUBLISHed (default: " + DEFAULTS["mqtt_payload"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_payload", default=DEFAULTS["mqtt_payload"])
-    parser.add_argument("-j", "--jsonpath", metavar="<jsonpath>", help="if given, payload is interpreted as JSON string and value is extracted using <jsonpath> (default: " + str(DEFAULTS["mqtt_jsonpath"]) + ")", dest="mqtt_jsonpath", default=DEFAULTS["mqtt_jsonpath"])
-    parser.add_argument("-v", "--value", metavar="<value>", help="value to compare against received payload (default: " + DEFAULTS["mqtt_value"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_value", default=DEFAULTS["mqtt_value"])
-    parser.add_argument("-o", "--operator", metavar="<operator>", help="operator to compare received value with value. Choose from " + str(operators) + " (default: " + DEFAULTS["mqtt_operator"] + "). 'eq' compares Strings, the other convert the arguments to float before compare", dest="mqtt_operator", default=DEFAULTS["mqtt_operator"], choices=operators)
-    parser.add_argument("-w", "--warning", metavar="<expr>", help="Exit with WARNING status if <expr> is true (default: " + str(DEFAULTS["warning"]) + "). <expr> can be any Python expression, use <payload> within expression for current payload value.", dest="warning", default=DEFAULTS["warning"])
-    parser.add_argument("-c", "--critical", metavar="<expr>", help="Exit with CRITICAL status if <expr> is true (default: " + str(DEFAULTS["critical"]) + "). <expr> can be any Python expression, use <payload> within expression for current payload value.", dest="critical", default=DEFAULTS["critical"])
+    parser.add_argument("-l", "--payload", help="payload which will be PUBLISHed (default: " + DEFAULTS["mqtt_payload"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_payload", default=DEFAULTS["mqtt_payload"])
+    parser.add_argument("-j", "--jsonpath", help="if given, payload is interpreted as JSON string and value is extracted using <jsonpath> (default: " + str(DEFAULTS["mqtt_jsonpath"]) + ")", dest="mqtt_jsonpath", default=DEFAULTS["mqtt_jsonpath"])
+    parser.add_argument("-v", "--value", help="value to compare against received payload (default: " + DEFAULTS["mqtt_value"] + "). If it starts with an exclamation mark (!) the output of the command will be used", dest="mqtt_value", default=DEFAULTS["mqtt_value"])
+    parser.add_argument("-o", "--operator", help="operator to compare received value with value. Choose from " + str(operators) + " (default: " + DEFAULTS["mqtt_operator"] + "). 'eq' compares Strings, the other convert the arguments to float before compare", dest="mqtt_operator", default=DEFAULTS["mqtt_operator"], choices=operators)
+    parser.add_argument("-w", "--warning", help="Exit with WARNING status if <expr> is true (default: " + str(DEFAULTS["warning"]) + "). <expr> can be a comparison, use <payload> within expression for current payload value.", dest="warning", default=DEFAULTS["warning"])
+    parser.add_argument("-c", "--critical", help="Exit with CRITICAL status if <expr> is true (default: " + str(DEFAULTS["critical"]) + "). <expr> can be a comparison, use <payload> within expression for current payload value.", dest="critical", default=DEFAULTS["critical"])
     parser.add_argument("-S", "--short", help="use a shorter string on output" + (" (default)" if DEFAULTS["short_output"] else ""), dest="short_output", default=DEFAULTS["short_output"], action="store_true")
     parser.add_argument("-t", "--timeout", action="store", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
@@ -126,7 +177,6 @@ async def main(forcedargs=None):
 
     start_time = time.monotonic()
 
-    # TLS Configuration
     tls_context = None
     if args.mqtt_cafile is not None:
         tls_context = ssl.create_default_context(cafile=args.mqtt_cafile)
@@ -157,10 +207,8 @@ async def main(forcedargs=None):
     try:
         async with zmqtt.create_client(**client_kwargs) as client:
 
-            # Use zmqtt's context manager subscription to read messages
             async with client.subscribe(args.check_subscription) as messages:
 
-                # Publish active check message if not explicitly in readonly mode
                 if not args.mqtt_readonly:
                     await client.publish(args.check_topic, args.mqtt_payload, qos=zmqtt.QoS.EXACTLY_ONCE, retain=False)
 
@@ -169,13 +217,11 @@ async def main(forcedargs=None):
                     if time_left <= 0:
                         raise asyncio.TimeoutError
 
-                    # Fetch the next message directly from the async subscription queue
                     msg = await asyncio.wait_for(messages.get_message(), timeout=time_left)
 
                     rawpayload = msg.payload.decode("utf-8")
                     infomsg("The rawpayload is " + str(rawpayload))
 
-                    # Check jsonpath mapping to correctly extract payload values
                     if args.mqtt_jsonpath:
                         try:
                             jspayload = json.loads(rawpayload)
@@ -196,29 +242,27 @@ async def main(forcedargs=None):
                     else:
                         message = "message from " + args.check_subscription + " at " + args.mqtt_host + " in " + str("%.2f" % elapsed) + "s | response_time=" + str("%.2f" % elapsed) + " value=" + str(payload)
 
-                    # Execute dynamic evaluation of warning/critical expression variables
                     if args.critical is not None or args.warning is not None:
                         infomsg("non-value checks")
                         status = "OK"
                         if args.critical is not None:
                             try:
-                                if eval(args.critical):
+                                if safe_eval(args.critical, payload):
                                     status = "CRITICAL"
-                            except Exception:
+                            except Exception as e:
                                 status = "CRITICAL"
-                                message = "critical expression error '" + args.critical + "'"
+                                message = "critical expression error '" + args.critical + "': " + str(e)
                         if status == "OK" and args.warning is not None:
                             try:
-                                if eval(args.warning):
+                                if safe_eval(args.warning, payload):
                                     status = "WARNING"
-                            except Exception:
+                            except Exception as e:
                                 status = "CRITICAL"
-                                message = "warning expression error '" + args.warning + "'"
+                                message = "warning expression error '" + args.warning + "': " + str(e)
                     else:
                         infomsg("value checks")
                         status = "CRITICAL"
                         try:
-                            # Conditional operators verify payload dynamically to apply the exit statuses
                             if (args.mqtt_operator == "lt" or args.mqtt_operator == "lessthan") and float(payload) < float(args.mqtt_value):
                                 status = "OK"
                             if (args.mqtt_operator == "gt" or args.mqtt_operator == "greaterthan") and float(payload) > float(args.mqtt_value):
