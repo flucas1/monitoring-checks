@@ -533,7 +533,7 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
             if (difference > tolerancecrit) or (difference > tolerancewarn):
                 identical = False
                 if difference > tolerancecrit:
-                    return build_exitinfo("CRITICAL", "zone in target server " + server + ":" + str(serial_server) + " and MNANE server " + mname + ":" + str(serial_mname) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
+                    return build_exitinfo("CRITICAL", "zone in target server " + server + ":" + str(serial_server) + " and MNAME server " + mname + ":" + str(serial_mname) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
                 elif difference > tolerancewarn:
                     return build_exitinfo("WARNING", "zone in target server " + server + ":" + str(serial_server) + " and MNAME server " + mname + ":" + str(serial_mname) + " have different serial (diff=" + str(difference) + ") | diff=" + str(difference))
             else:
@@ -579,7 +579,7 @@ async def check_serial(useTcp, protocol, server, timeoutvalue, timeoutstatus, au
             if identical == True:
                 return build_exitinfo("OK", "zone in target server has identical serial " + str(serial_server) + " than the MNAME and NS entries - errors " + " ".join(errorservers) + " - valid: " + " ".join(validservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
             else:
-                return build_exitinfo("OK", "zone in target server withing the tolerance " + str(tolerancewarn) + " of the serial " + str(serial_server) + " from the MNAME and NS entries - errors: " + " ".join(errorservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
+                return build_exitinfo("OK", "zone in target server within the tolerance " + str(tolerancewarn) + " of the serial " + str(serial_server) + " from the MNAME and NS entries - errors: " + " ".join(errorservers) + " (maxdiff=" + str(maxdifference) + ") | maxdiff=" + str(maxdifference) + " valid=" + str(len(validservers)) + " errors=" + str(len(errorservers)))
         except dns.exception.Timeout as e:
             return build_exitinfo(timeoutstatus, "timeout reaching " + addressinfo)
     except dns.resolver.NoNameservers as e:
