@@ -89,8 +89,8 @@ def check_thresholds(download, upload, args):
     return status
 
 
-def build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args):
-    nagout = status + " - Ping = " + str(ping) + " " + pingUOM + " Download = " + str(download) + " " + downloadUOM + " Upload = " + str(upload) + " " + uploadUOM
+def build_output(ping, pingUOM, download, downloadUOM, upload, uploadUOM, args):
+    nagout = "Ping = " + str(ping) + " " + pingUOM + " Download = " + str(download) + " " + downloadUOM + " Upload = " + str(upload) + " " + uploadUOM
 
     if args.perfdata:
         max_dl_calc = args.max_download * 1.05
@@ -171,7 +171,7 @@ async def main(forcedargs=None):
 
     status = check_thresholds(download, upload, args)
 
-    nagout = build_output(status, ping, pingUOM, download, downloadUOM, upload, uploadUOM, args)
+    nagout = build_output(ping, pingUOM, download, downloadUOM, upload, uploadUOM, args)
 
     exitnagios(status, nagout)
 
