@@ -137,7 +137,7 @@ def get_prompt_lines():
     prompt_lines.append("Prefer \" rather than ' for string delimitator.")
     prompt_lines.append("Avoid f\" and .format syntax, use concatenation instead.")
     prompt_lines.append("The functions 'asyncio.create_subprocess_exec' and 'asyncio.create_subprocess_shell' should be assigned to a variable named named 'process', and the executable with arguments should be defined in a variable called cmdline.")
-    prompt_lines.append("All calls to 'asyncio.create_subprocess_exec' or 'asyncio.create_subprocess_shell' should influence the return value, without raising exceptions.")
+    prompt_lines.append("All calls to 'asyncio.create_subprocess_exec' or 'asyncio.create_subprocess_shell' should evaluate the process returncode.")
     prompt_lines.append("Executables should be full paths.")
     prompt_lines.append("Console printing should be done via the funcion 'infomsg'.")
     # hostnames should be resolved using dns.asyncresolver
