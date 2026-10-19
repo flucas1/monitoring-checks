@@ -223,8 +223,7 @@ async def main(forcedargs=None):
     except Exception as e:
         exitnagios("UNKNOWN", "Connection error - " + str(e))
 
-    if args.debug:
-        print(query_result)
+    infomsg(query_result)
 
     if response_status == 401 or "401 Unauthorized" in query_result:
         exitnagios("CRITICAL", "Wrong Password")
