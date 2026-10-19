@@ -9,6 +9,7 @@ import collections
 import traceback
 import datetime
 import asyncio
+import time
 import dateutil.parser
 
 # -------------------------------------------------------------------------------
@@ -81,16 +82,22 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
     cert_data = None
     lasterror = ""
     duration = None
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = time.monotonic()
     try:
         context = ssl.create_default_context()
-        with socket.create_connection((hostname, port)) as sock:
-            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                cert_data = ssock.getpeercert()
+        reader, writer = await asyncio.wait_for(
+            asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname),
+            timeout=timeoutvalue
+        )
+        cert_data = writer.getpeercert()
+        writer.close()
+        await writer.wait_closed()
+    except asyncio.TimeoutError:
+        duration = time.monotonic() - start
+        exitnagios(timeoutstatus, "timeout after " + str(timeoutvalue) + " seconds | time=" + str(duration) + " validity=0")
     except Exception as e:
         lasterror = str(e)
-    elapsed = datetime.datetime.now(datetime.timezone.utc) - start
-    duration = elapsed.total_seconds()
+    duration = time.monotonic() - start
 
     if cert_data is None:
         exitnagios("CRITICAL", "cannot retrieve certificate: " + lasterror + " | time=" + str(duration) + " validity=0")
