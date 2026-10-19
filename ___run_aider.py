@@ -138,7 +138,9 @@ async def main():
 
     error_count += await run_aider(DIRECTORY, MODEL, " ".join(PROMPT))
 
-    input("Press Enter to continue...")
+    if sys.__stdin__.isatty():
+        input("Press Enter to continue...")
+
     if error_count > 0:
         sys.exit(1)
 
