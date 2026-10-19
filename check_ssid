@@ -136,27 +136,31 @@ async def dossidcall(interface, passive, timeoutsecs, ignoredlist, alertlist, ex
                 resultmessages.append("The SSID " + current_ssid + " with channel " + current_channel + " matches the alert list " + str(alertlist) + ".")
                 alertcount = alertcount + 1
             elif current_ssid in expected.keys():
-                current_mac = network["bssid"].strip().upper()
-                cleaned_mac = current_mac.replace(":", "")
-                expected_macs = expected[current_ssid]
-                if cleaned_mac not in expected_macs:
-                    resultstatus = mergestatus(resultstatus, "CRITICAL")
-                    resultmessages.append("The base mac " + current_mac + " for SSID " + current_ssid + " with channel " + current_channel + " is not in valid list " + str(expected_macs) + ".")
-                if "channel_utilisation" in network.keys():
-                    current_utilization_parts = network["channel_utilisation"].strip().split("/")
-                    current_utilization = round((int(current_utilization_parts[0]) / int(current_utilization_parts[1])) * 100)
-                    infomsg(current_utilization)
-                    if current_utilization >= utilcrit:
-                        resultstatus = mergestatus(resultstatus, "CRITICAL")
-                        resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the critical " + str(utilcrit) + "%.")
-                    elif current_utilization >= utilwarn:
-                        resultstatus = mergestatus(resultstatus, "WARNING")
-                        resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the warning " + str(utilwarn) + "%.")
-                    else:
-                        resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " is OK.")
+                if "bssid" not in network.keys():
+                    resultstatus = mergestatus(resultstatus, "WARNING")
+                    resultmessages.append("The SSID " + current_ssid + " with channel " + current_channel + " has no bssid information.")
                 else:
-                    current_utilization = -1
-                resultperf.append("ssid_" + current_ssid + "=" + str(current_utilization))
+                    current_mac = network["bssid"].strip().upper()
+                    cleaned_mac = current_mac.replace(":", "")
+                    expected_macs = expected[current_ssid]
+                    if cleaned_mac not in expected_macs:
+                        resultstatus = mergestatus(resultstatus, "CRITICAL")
+                        resultmessages.append("The base mac " + current_mac + " for SSID " + current_ssid + " with channel " + current_channel + " is not in valid list " + str(expected_macs) + ".")
+                    if "channel_utilisation" in network.keys():
+                        current_utilization_parts = network["channel_utilisation"].strip().split("/")
+                        current_utilization = round((int(current_utilization_parts[0]) / int(current_utilization_parts[1])) * 100)
+                        infomsg(current_utilization)
+                        if current_utilization >= utilcrit:
+                            resultstatus = mergestatus(resultstatus, "CRITICAL")
+                            resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the critical " + str(utilcrit) + "%.")
+                        elif current_utilization >= utilwarn:
+                            resultstatus = mergestatus(resultstatus, "WARNING")
+                            resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " has reached the warning " + str(utilwarn) + "%.")
+                        else:
+                            resultmessages.append("The channel utilization is " + str(current_utilization) + "% for SSID " + current_ssid + " with channel " + current_channel + " is OK.")
+                    else:
+                        current_utilization = -1
+                    resultperf.append("ssid_" + current_ssid + "=" + str(current_utilization))
 
     return (resultstatus, " ".join(resultmessages) + " | totalcount=" + str(totalcount) + " ignoredcount=" + str(ignoredcount) + " alertcount=" + str(alertcount) + " " + " ".join(resultperf))
 
