@@ -282,7 +282,10 @@ async def main(forcedargs=None):
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for res in results:
-        err_mesg.extend(res)
+        if isinstance(res, Exception):
+            err_mesg.append(str(res))
+        else:
+            err_mesg.extend(res)
 
     if "/tmp" in mtab_file and os.path.exists(mtab_file):
         os.remove(mtab_file)
