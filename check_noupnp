@@ -64,10 +64,12 @@ async def check_upnp_gateway():
     except FileNotFoundError as e:
         exitnagios("UNKNOWN", str(e))
 
-    if errors == "No IGD UPnP Device found on the network !":
+    if process.returncode == 0:
+        exitnagios("CRITICAL", "an UPnP gateway was found - " + output)
+    elif errors == "No IGD UPnP Device found on the network !":
         exitnagios("OK", "no UPnP gateway found")
     else:
-        exitnagios("CRITICAL", "an UPnP gateway was found - " + errors)
+        exitnagios("UNKNOWN", "unexpected situation")
 
 
 # -------------------------------------------------------------------------------
