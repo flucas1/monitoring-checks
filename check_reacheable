@@ -52,6 +52,14 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname).strip()
+        return targetip
+    except Exception:
+        return ""
+
+
 def interface_to_address(interface, protocol):
     primary_ip = None
     if interface != "":
@@ -96,7 +104,9 @@ async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warn
     source = interface_to_address(interface, protocol)
 
     try:
-        host = await asyncio.wait_for(icmplib.async_ping(hostname, count=int(packets), timeout=2, interval=0.2, family=family, source=source, privileged=False), timeout=timeout)
+        resolvedip = await resolve_hostname_to_ip(hostname)
+        infomsg("The hostname " + hostname + " resolves into " + str(resolvedip))
+        host = await asyncio.wait_for(icmplib.async_ping(resolvedip, count=int(packets), timeout=2, interval=0.2, family=family, source=source, privileged=False), timeout=timeout)
     except asyncio.TimeoutError:
         return [2, -1, 100.0, "error"]
     except Exception as e:
