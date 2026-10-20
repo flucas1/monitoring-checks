@@ -78,7 +78,7 @@ async def generatedriver(proxy):
     driver = await nodriver.start(browserconfig)
     # driver.implicitly_Wait(10, TimeUnit.SECONDS)
 
-    await nodriver.cdp.network.enable()
+    nodriver.cdp.network.enable()
     # nodriver.cdp.network.setExtraHTTPHeaders("Network.setExtraHTTPHeaders",{"headers": {"Accept-Language": "en-US,en;q=0.9","Sec-Fetch-Site": "none","Sec-Fetch-Mode": "navigate","Sec-Fetch-User": "?1","Sec-Fetch-Dest": "document"}})
 
     return driver
