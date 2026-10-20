@@ -107,8 +107,14 @@ async def wait_page_loaded(driver):
 
 
 async def resolve_hostname_to_ip(hostname, protocol):
+    family = socket.AF_UNSPEC
+    if protocol == "-4":
+        family = socket.AF_INET
+    elif protocol == "-6":
+        family = socket.AF_INET6
     try:
-        targetip = socket.gethostbyname(hostname).strip()
+        result = socket.getaddrinfo(hostname, None, family=family)
+        targetip = result[0][4][0]
         return targetip
     except Exception:
         return ""
