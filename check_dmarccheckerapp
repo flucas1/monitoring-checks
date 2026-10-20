@@ -5,6 +5,7 @@ import sys
 import argparse
 import datetime
 import aiosmtplib
+import ssl
 import asyncio
 import time
 import email.mime.text
@@ -183,7 +184,10 @@ async def dodnssecverisigncall(mailfrom, tolerate, proxy):
         email_message["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:102.0) Gecko/20100101 Thunderbird/102.0"
 
         infomsg("sending email to " + targetemail)
-        await aiosmtplib.send(email_message, hostname="localhost")
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        await aiosmtplib.send(email_message, hostname="localhost", tls_context=context)
 
         await asyncio.sleep(5)
         infomsg("waiting for element")
