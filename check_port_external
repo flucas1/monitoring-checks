@@ -116,8 +116,8 @@ async def dohttpcall(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, 
     infomsg("doing http call")
     try:
         url = baseurl + "?hostname=" + hostname + "&protocol=" + tcporudp + "&port=" + str(port)
-        if ipprotocol != "":
-            url = url + "&ipv=" + ipprotocol
+        if protocol != "":
+            url = url + "&ipv=" + protocol.replace("-", "")
         infomsg(url)
         connector = get_connector(protocol)
         async with aiohttp.ClientSession(connector=connector) as session:
@@ -128,6 +128,7 @@ async def dohttpcall(proxy, baseurl, accesstoken, protocol, tcporudp, hostname, 
             async with session.get(url, headers=headers, proxy=proxy) as response:
                 content = await response.text()
     except Exception as e:
+        infomsg("error: " + str(e))
         content = ""
 
     return content

@@ -61,12 +61,13 @@ def get_connector(protocol):
 
 async def fetch_data(url, timeout, protocol):
     connector = get_connector(protocol)
+    timeout_obj = aiohttp.ClientTimeout(total=timeout)
     try:
-        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout_obj) as session:
             async with session.get(url) as response:
                 return await response.read()
-    except Exception:
-        exitnagios("UNKNOWN", "Stats collection failed")
+    except Exception as e:
+        exitnagios("UNKNOWN", "Stats collection failed - " + str(e))
 
 
 # -------------------------------------------------------------------------------
@@ -109,7 +110,7 @@ async def main(forcedargs=None):
     url = "http://" + str(args.hostaddress) + ":" + str(args.port) + "/xml/v3/server"
 
     TIMEOUT = 20
-    xml_data = await fetch_data(url, TIMEOUT, args.protocol)
+    xml_data = await fetch_data(url, TIMEOUT, protocol)
 
     if not xml_data:
         exitnagios("UNKNOWN", "Stats collection failed")
