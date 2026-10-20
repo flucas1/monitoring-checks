@@ -59,7 +59,7 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
         infomsg("executing retry " + str(counter))
         counter = counter + 1
         try:
-            resolved_ip = await resolve_hostname_to_ip(hostname)
+            resolved_ip = await resolve_hostname_to_ip(hostname, protocol)
             response = client.request(resolved_ip, version=4, timeout=timeoutvalue)
             offset = response.offset
             infomsg("NTP offset: " + str(round(offset, 3)) + " seconds")
@@ -83,7 +83,7 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
                 await asyncio.sleep(5)
 
 
-async def resolve_hostname_to_ip(hostname):
+async def resolve_hostname_to_ip(hostname, protocol):
     try:
         targetip = socket.gethostbyname(hostname).strip()
         return targetip
