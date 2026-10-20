@@ -54,6 +54,14 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname).strip()
+        return targetip
+    except Exception:
+        return ""
+
+
 async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     smtpconnection = None
     is_connected = False
@@ -64,7 +72,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             sourcetuple = (source, 0)
 
         infomsg("ssl is " + str(dossl))
-        resolved_ip = hostname
+        resolved_ip = await resolve_hostname_to_ip(hostname)
         smtpconnection = aiosmtplib.SMTP(hostname=resolved_ip, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()

@@ -55,12 +55,20 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname).strip()
+        return targetip
+    except Exception:
+        return ""
+
+
 async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays):
     try:
         start = time.monotonic()
         imapconnection = None
 
-        resolved_ip = hostname
+        resolved_ip = await resolve_hostname_to_ip(hostname)
         if dossl:
             ctx = ssl.create_default_context()
             imapconnection = aioimaplib.IMAP4_SSL(host=resolved_ip, port=port, timeout=timeoutvalue, ssl_context=ctx)
