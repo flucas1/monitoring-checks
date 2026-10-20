@@ -51,7 +51,7 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def resolve_hostname_to_ip(hostname):
+async def resolve_hostname_to_ip(hostname, protocol):
     try:
         targetip = socket.gethostbyname(hostname).strip()
         return targetip
@@ -112,7 +112,7 @@ async def main(forcedargs=None):
 
     client = ntplib.NTPClient()
     try:
-        resolved_ip = await resolve_hostname_to_ip(ntpserver)
+        resolved_ip = await resolve_hostname_to_ip(ntpserver, protocol)
         response = client.request(resolved_ip, version=4)
         offset = response.offset
     except Exception:

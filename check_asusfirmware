@@ -227,7 +227,7 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
         exitnagios("CRITICAL", "there is a new firmware " + target + " and the current one is " + actual)
 
 
-async def resolve_hostname_to_ip(hostname):
+async def resolve_hostname_to_ip(hostname, protocol):
     try:
         targetip = socket.gethostbyname(hostname).strip()
         return targetip
@@ -240,6 +240,9 @@ async def resolve_hostname_to_ip(hostname):
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
     parser.add_argument("-t", "--timeout", dest="timeout", default="10:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
@@ -251,6 +254,22 @@ def parse_args(forcedargs=None):
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     if args.filecred == "":
         exitnagios("CRITICAL", "filecred is not specified")
@@ -272,7 +291,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         try:
-            address = await resolve_hostname_to_ip(args.hostname)
+            address = await resolve_hostname_to_ip(args.hostname, protocol)
             infomsg("The target ip is: " + address)
             proxy = ""
             await do_is_newest(proxy, username, password, address, timeoutvalue, timeoutstatus)

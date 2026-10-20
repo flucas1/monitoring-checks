@@ -103,7 +103,7 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
-async def resolve_hostname_to_ip(hostname):
+async def resolve_hostname_to_ip(hostname, protocol):
     try:
         targetip = socket.gethostbyname(hostname).strip()
         return targetip
@@ -111,12 +111,12 @@ async def resolve_hostname_to_ip(hostname):
         return ""
 
 
-async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
+async def dogocoaxspeedcall(protocol, proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
     try:
-        ip = await resolve_hostname_to_ip(hostname)
+        ip = await resolve_hostname_to_ip(hostname, protocol)
 
         try:
             reader, writer = await asyncio.wait_for(asyncio.open_connection(ip, 80), timeout=5.0)
@@ -216,6 +216,9 @@ async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostna
 
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("-4", "--ipv4", action="store_true", dest="ipv4", default=False, help="use ipv4 (exclusive with ipv6)")
+    parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
+    parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-w", "--warning", dest="warning", default="1000", help="minimum value for a warning")
@@ -228,8 +231,23 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
+
+    protocol = None
+    exclist = 0
+    if args.ipv0 == True:
+        protocol = ""
+        exclist = exclist + 1
+    if args.ipv4 == True:
+        protocol = "-4"
+        exclist = exclist + 1
+    if args.ipv6 == True:
+        protocol = "-6"
+        exclist = exclist + 1
+    if (exclist > 1):
+        exitnagios("CRITICAL", "select ip protocol version 4 or 6, or 0 to relay on OS handling")
+    elif (exclist < 1):
+        exitnagios("CRITICAL", "no protocol selected")
 
     if args.filecred == "":
         exitnagios("CRITICAL", "filecred is not specified")
@@ -254,7 +272,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         proxy = ""
-        await dogocoaxspeedcall(proxy, username, password, args.warning, args.critical, args.hostname, timeoutvalue, timeoutstatus)
+        await dogocoaxspeedcall(protocol, proxy, username, password, args.warning, args.critical, args.hostname, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")
 
