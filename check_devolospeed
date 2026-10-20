@@ -140,7 +140,7 @@ def change_mac(base, offset):
 
 async def resolve_hostname_to_ip(hostname):
     try:
-        targetip = socket.gethostbyname(hostname)
+        targetip = socket.gethostbyname(hostname).strip()
         return targetip
     except Exception:
         return ""

@@ -103,12 +103,20 @@ async def wait_page_loaded(driver):
 # -------------------------------------------------------------------------------
 
 
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname).strip()
+        return targetip
+    except Exception:
+        return ""
+
+
 async def dogocoaxspeedcall(proxy, username, password, warning, critical, hostname, timeoutvalue, timeoutstatus):
     driver = None
     ip = None
 
     try:
-        ip = socket.gethostbyname(hostname)
+        ip = await resolve_hostname_to_ip(hostname)
 
         try:
             reader, writer = await asyncio.wait_for(asyncio.open_connection(ip, 80), timeout=5.0)

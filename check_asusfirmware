@@ -226,6 +226,15 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
     else:
         exitnagios("CRITICAL", "there is a new firmware " + target + " and the current one is " + actual)
 
+
+async def resolve_hostname_to_ip(hostname):
+    try:
+        targetip = socket.gethostbyname(hostname).strip()
+        return targetip
+    except Exception:
+        return ""
+
+
 # -------------------------------------------------------------------------------
 
 
@@ -263,7 +272,7 @@ async def main(forcedargs=None):
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
         try:
-            address = socket.gethostbyname(args.hostname).strip()
+            address = await resolve_hostname_to_ip(args.hostname)
             infomsg("The target ip is: " + address)
             proxy = ""
             await do_is_newest(proxy, username, password, address, timeoutvalue, timeoutstatus)
