@@ -6,6 +6,7 @@ import asyncio
 import re
 import sys
 import aiohttp
+import socket
 
 # -------------------------------------------------------------------------------
 
@@ -51,9 +52,9 @@ def exitnagios(status, message):
 
 def get_connector(protocol):
     if protocol == "-4":
-        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET)
+        return aiohttp.TCPConnector(family=socket.AF_INET)
     elif protocol == "-6":
-        return aiohttp.TCPConnector(family=aiohttp.SocketFamily.AF_INET6)
+        return aiohttp.TCPConnector(family=socket.AF_INET6)
     else:
         return aiohttp.TCPConnector()
 
