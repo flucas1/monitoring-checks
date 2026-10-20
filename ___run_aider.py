@@ -48,15 +48,13 @@ async def process_file(file_path: pathlib.Path, model: str, prompt: str, custom_
     return success
 
 
-async def run_aider(target_dir: str, model: str, prompt: str):
+async def run_aider(target_dir: str, starting_pattern: str, ending_pattern: str, model: str, prompt: str):
     error_count = 0
 
     directory = pathlib.Path(target_dir)
 
-    starting_pattern = "check_"
-    ending_pattern = ""
     exclude_files = ["___run_aider.py", "___run_fix_syntax.py"]
-    shebang = "python"
+    shebang_filter = "python"
 
     target_files = []
     for f in directory.iterdir():
@@ -66,7 +64,7 @@ async def run_aider(target_dir: str, model: str, prompt: str):
                     try:
                         async with aiofiles.open(f, "r", encoding="utf-8") as handle:
                             first_line = await handle.readline()
-                            if shebang in first_line:
+                            if shebang_filter in first_line:
                                 target_files.append(f)
                     except Exception as e:
                         print("Issue reading " + f.name + " with error: " + str(e))
@@ -163,7 +161,9 @@ async def main():
 
     # error_count += await update_aider()
 
-    error_count += await run_aider(get_directory(), get_model(), " ".join(get_prompt_lines()))
+    starting_pattern = "check_"
+    ending_pattern = ""
+    error_count += await run_aider(get_directory(), starting_pattern, ending_pattern, get_model(), " ".join(get_prompt_lines()))
 
     if sys.__stdin__.isatty():
         input("Press Enter to continue...")
