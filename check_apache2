@@ -148,18 +148,18 @@ async def main(forcedargs=None):
 
     try:
         response = await fetch_status(protocol, url, args.username, args.password, verify, args.timeout)
-        if response.status_code >= 500:
+        if response.status >= 500:
             status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
-            exitnagios(status_prefix, str(response.reason_phrase))
-        elif response.status_code != 200:
-            exitnagios("CRITICAL", str(response.reason_phrase))
+            exitnagios(status_prefix, str(response.reason))
+        elif response.status != 200:
+            exitnagios("CRITICAL", str(response.reason))
     except asyncio.TimeoutError:
         status_prefix = "CRITICAL" if args.unreachable else "UNKNOWN"
         exitnagios(status_prefix, "plugin timed out")
     except Exception as e:
         exitnagios("CRITICAL", str(e))
 
-    content = response.text
+    content = await response.text()
 
     match = re.search(r"ReqPerSec:\s([0-9\.]+).*?BytesPerSec:\s([0-9\.]+).*?BusyWorkers:\s([0-9]+).*?IdleWorkers:\s([0-9]+).*?Scoreboard:\s(\S*)", content, re.DOTALL)
     if not match:
