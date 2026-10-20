@@ -51,26 +51,6 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
 
 # -------------------------------------------------------------------------------
 
@@ -80,11 +60,12 @@ async def doimapcheck(protocol, hostname, port, dossl, warning, critical, timeou
         start = time.monotonic()
         imapconnection = None
 
+        resolved_ip = hostname
         if dossl:
             ctx = ssl.create_default_context()
-            imapconnection = aioimaplib.IMAP4_SSL(host=hostname, port=port, timeout=timeoutvalue, ssl_context=ctx)
+            imapconnection = aioimaplib.IMAP4_SSL(host=resolved_ip, port=port, timeout=timeoutvalue, ssl_context=ctx)
         else:
-            imapconnection = aioimaplib.IMAP4(host=hostname, port=port, timeout=timeoutvalue)
+            imapconnection = aioimaplib.IMAP4(host=resolved_ip, port=port, timeout=timeoutvalue)
 
         await imapconnection.wait_hello_from_server()
 

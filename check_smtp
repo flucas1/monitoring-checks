@@ -54,28 +54,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
-
-
-# -------------------------------------------------------------------------------
-
-
 async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     smtpconnection = None
     is_connected = False
@@ -86,7 +64,8 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             sourcetuple = (source, 0)
 
         infomsg("ssl is " + str(dossl))
-        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
+        resolved_ip = hostname
+        smtpconnection = aiosmtplib.SMTP(hostname=resolved_ip, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
         is_connected = True
