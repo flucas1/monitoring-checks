@@ -75,12 +75,12 @@ def check_threshold(value, warn, crit):
 
 
 async def fetch_status(protocol, url, username, password, verify, timeout):
-    headers = { "Authorization": aiohttp.encode_basic_auth(username, password) }
+    headers = {"Authorization": aiohttp.encode_basic_auth(username, password)}
     timeout_obj = aiohttp.ClientTimeout(total=timeout)
     connector = get_connector(protocol)
     async with aiohttp.ClientSession(headers=headers, timeout=timeout_obj, connector=connector) as session:
         async with session.get(url, ssl=verify) as response:
-            await response.read() 
+            await response.read()
             return response
 
 

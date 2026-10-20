@@ -55,9 +55,6 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-
-
-
 async def make_mtab():
     fd, tmp_mtab_path = tempfile.mkstemp()
     os.close(fd)

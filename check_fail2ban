@@ -120,7 +120,7 @@ async def get_city_country(ip_address):
         database = "/usr/share/GeoIP/GeoIP.dat"
     gi = pygeoip.GeoIP(database)
     if gi is not None:
-        city = "" # this database does not support 'region'
+        city = ""  # this database does not support 'region'
         country = gi.country_name_by_addr(ip_address)
     else:
         city = None
