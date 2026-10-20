@@ -47,26 +47,6 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
 
 # -------------------------------------------------------------------------------
 
@@ -79,7 +59,8 @@ async def dontptimecheck(protocol, hostname, warning, critical, timeoutvalue, ti
         infomsg("executing retry " + str(counter))
         counter = counter + 1
         try:
-            response = client.request(hostname, version=4, timeout=timeoutvalue)
+            resolved_ip = hostname
+            response = client.request(resolved_ip, version=4, timeout=timeoutvalue)
             offset = response.offset
             infomsg("NTP offset: " + str(round(offset, 3)) + " seconds")
 

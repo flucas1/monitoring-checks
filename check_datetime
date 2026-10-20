@@ -82,7 +82,8 @@ async def main(forcedargs=None):
 
     client = ntplib.NTPClient()
     try:
-        response = client.request(ntpserver, version=4)
+        resolved_ip = ntpserver
+        response = client.request(resolved_ip, version=4)
         offset = response.offset
     except Exception:
         exitnagios("CRITICAL", "NTP Server " + str(ntpserver) + " is unreachable")

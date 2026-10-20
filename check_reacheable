@@ -48,26 +48,6 @@ def exitnagios(status, message):
     print(status + ": " + message, flush=True)
     sys.exit(exitcode)
 
-# -------------------------------------------------------------------------------
-
-
-original_getaddrinfo = socket.getaddrinfo
-
-
-def forced_ipv6_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET6]
-
-
-def forced_ipv4_gai_family(*args, **kwargs):
-    global original_getaddrinfo
-    responses = original_getaddrinfo(*args, **kwargs)
-    return [response
-            for response in responses
-            if response[0] == socket.AF_INET]
 
 # -------------------------------------------------------------------------------
 
@@ -107,14 +87,11 @@ def interface_to_address(interface, protocol):
 
 
 async def dopingtestsingle(protocol, interface, packets, timeout, hostname, warningms, warningpercent, criticalms, criticalpercent):
-    family = None
-    if protocol not in ("", None):
-        try:
-            family = abs(int(protocol))
-            if family not in (4, 6):
-                family = None
-        except (ValueError, TypeError):
-            family = None
+    family = socket.AF_UNSPEC
+    if protocol == "-4":
+        family = socket.AF_INET
+    elif protocol == "-6":
+        family = socket.AF_INET6
 
     source = interface_to_address(interface, protocol)
 
