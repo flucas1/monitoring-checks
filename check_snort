@@ -54,17 +54,11 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-SNORT_DB = "snort"
-SNORT_DB_HOST = "localhost"
-SNORT_DB_PORT = "3306"
-SNORT_DB_USER = "snortuser"
-SNORT_DB_PASS = "snortpass"
-
 SPOOL_DATA_DIR = "/var/log/nagios"
 DEBUG = False
 NOW_DATE = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M")
 LOG_FILE = SPOOL_DATA_DIR + "/check_snort." + datetime.datetime.now().strftime("%a") + ".log"
-HOSTNAME = socket.getfqdn()
+HOSTNAME = socket.gethostname()
 
 INTERVAL = "2"
 WARNING_THRESH = 500
@@ -82,6 +76,12 @@ def stamp2date(ts):
 
 
 async def run_mysql_query(query):
+    SNORT_DB = "snort"
+    SNORT_DB_HOST = "localhost"
+    SNORT_DB_PORT = "3306"
+    SNORT_DB_USER = "snortuser"
+    SNORT_DB_PASS = "snortpass"
+
     cmdline = [
         "/usr/bin/mysql", "--skip-column-names",
         "-h", SNORT_DB_HOST,
