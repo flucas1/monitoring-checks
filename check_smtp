@@ -54,15 +54,36 @@ def exitnagios(status, message):
 # -------------------------------------------------------------------------------
 
 
-async def resolve_hostname_to_ip(hostname):
-    try:
-        targetip = socket.gethostbyname(hostname).strip()
-        return targetip
-    except Exception:
-        return ""
+original_getaddrinfo = socket.getaddrinfo
+
+
+def forced_ipv6_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET6]
+
+
+def forced_ipv4_gai_family(*args, **kwargs):
+    global original_getaddrinfo
+    responses = original_getaddrinfo(*args, **kwargs)
+    return [response
+            for response in responses
+            if response[0] == socket.AF_INET]
+
+
+# -------------------------------------------------------------------------------
 
 
 async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
+    if protocol == "-4":
+        socket.getaddrinfo = forced_ipv4_gai_family
+    elif protocol == "-6":
+        socket.getaddrinfo = forced_ipv6_gai_family
+    else:
+        socket.getaddrinfo = original_getaddrinfo
+
     smtpconnection = None
     is_connected = False
     try:
@@ -72,8 +93,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             sourcetuple = (source, 0)
 
         infomsg("ssl is " + str(dossl))
-        resolved_ip = await resolve_hostname_to_ip(hostname)
-        smtpconnection = aiosmtplib.SMTP(hostname=resolved_ip, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
+        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
         is_connected = True
@@ -168,6 +188,8 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
             exitnagios("OK", "it took " + str(duration) + " seconds to answer | time=" + str(duration) + " validity=" + str(daysremaining))
     else:
         exitnagios("CRITICAL", "cannot init SMTP connection | time=-1 validity=-1")
+
+    socket.getaddrinfo = original_getaddrinfo
 
 
 # -------------------------------------------------------------------------------
