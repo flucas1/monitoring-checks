@@ -66,10 +66,15 @@ async def run_cmdline(cmdline):
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode
         if exitcode != 0:
-            exitnagios("CRITICAL", "Command failed: " + output + " - " + errors)
-        return output.splitlines()
+            infomsg("Command failed:")
+            infomsg(output)
+            infomsg(errors)
+            return None
+        else:
+            return output
     except Exception as e:
-        exitnagios("CRITICAL", "Command failed: " + str(e))
+        infosmg("exception - " + str(e))
+    return None
 
 
 async def check_fail2ban_status():
@@ -77,32 +82,37 @@ async def check_fail2ban_status():
     infomsg("Running command: " + str(cmdline))
     output = await run_cmdline(cmdline)
     infomsg("Fail2Ban server response: " + str(output))
-    if "Server replied: pong" not in output:
-        exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
+    if output != None:
+        if "Server replied: pong" in output:
+            return True
+    return False
 
 
 async def get_jail_list():
     cmdline = [get_fail2ban_client_path(), "status"]
     infomsg("Running command: " + str(cmdline))
     output = await run_cmdline(cmdline)
-    for line in output:
-        if "Jail list:" in line:
-            jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
-            infomsg("Jails list: " + ", ".join(jail_list))
-            return jail_list
-    exitnagios("CRITICAL", "Unable to retrieve the jail list.")
+    if output != None:
+        for line in output.splitlines():
+            if "Jail list:" in line:
+                jail_list = [jail.strip() for jail in line.split("Jail list:")[-1].strip().split(",")]
+                infomsg("Jails list: " + ", ".join(jail_list))
+                return jail_list
+    return None
+
 
 
 async def get_banned_ips(jail_name):
     cmdline = [get_fail2ban_client_path(), "status", jail_name]
     infomsg("Running command: " + str(cmdline))
     output = await run_cmdline(cmdline)
-    for line in output:
-        if "Banned IP list:" in line:
-            banned_ips = [ip.strip() for ip in line.split("Banned IP list:")[-1].strip().split()]
-            infomsg("Currently banned IPs for jail " + jail_name + ": " + " ".join(banned_ips))
-            return banned_ips
-    return []
+    if output != None:
+        for line in output.splitlines():
+            if "Banned IP list:" in line:
+                banned_ips = [ip.strip() for ip in line.split("Banned IP list:")[-1].strip().split()]
+                infomsg("Currently banned IPs for jail " + jail_name + ": " + " ".join(banned_ips))
+                return banned_ips
+    return None
 
 
 def is_ipv6(ip):
@@ -143,42 +153,50 @@ def parse_args(forcedargs=None):
 
 async def main(forcedargs=None):
     args = parse_args(forcedargs)
-
     setcandebug(args.debug)
 
     jail = args.jail
     warning = int(args.warning)
     critical = int(args.critical)
 
-    await check_fail2ban_status()
+    valid_status = await check_fail2ban_status()
+    if not valid_status:
+        exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
 
-    jails = []
+    jails = None
     if jail:
         jails = [jail]
     else:
         jails = await get_jail_list()
 
-    dict_banned = {}
+    error_count = 0
+    if jails == None:
+        exitnagios("CRITICAL", "Unable to retrieve the jail list.")
+    else:
+        dict_banned = {}
+        for jail_name in jails:
+            banned_ips = await get_banned_ips(jail_name)
+            if banned_ips != None:
+                infomsg("Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
+                for banned_ip in banned_ips:
+                    if banned_ip not in dict_banned.keys():
+                        country, city = await get_city_country(banned_ip)
+                        dict_banned[banned_ip] = [city, country]
+            else:
+                error_count += 1
 
-    for jail_name in jails:
-        banned_ips = await get_banned_ips(jail_name)
-        infomsg("Jail " + jail_name + " has " + str(len(banned_ips)) + " banned IP(s): " + ", ".join(banned_ips))
-        for banned_ip in banned_ips:
-            if banned_ip not in dict_banned.keys():
-                country, city = await get_city_country(banned_ip)
-                dict_banned[banned_ip] = [city, country]
 
-    countjails = len(jails)
-    countbanned = len(dict_banned)
-
-    state = "OK"
-    if countbanned >= critical:
-        state = "CRITICAL"
-    elif countbanned >= warning:
-        state = "WARNING"
-
-    exitnagios(state, str(countjails) + " detected jails with " + str(countbanned) + " banned IPs: " + str(dict_banned) + " | banned=" + str(countbanned) + " jails=" + str(countjails))
-
+    if error_count == 0:
+        countjails = len(jails)
+        countbanned = len(dict_banned)
+        state = "OK"
+        if countbanned >= critical:
+            state = "CRITICAL"
+        elif countbanned >= warning:
+            state = "WARNING"
+        exitnagios(state, str(countjails) + " detected jails with " + str(countbanned) + " banned IPs: " + str(dict_banned) + " | banned=" + str(countbanned) + " jails=" + str(countjails))
+    else:
+        exitnagios("CRITICAL", "some calls failed | banned=-1 jails=-1")
 
 # -------------------------------------------------------------------------------
 
