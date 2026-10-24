@@ -129,18 +129,24 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
         infomsg("login page ready")
 
         elemusername = driver.find_element(by=selenium.webdriver.common.by.By.NAME, value="login_username")
-        infomsg(elemusername.get_attribute("outerHTML"))
-        action.move_to_element(elemusername).perform()
-        elemusername.click()
-        elemusername.send_keys(username)
-        infomsg("username sent")
+        if elemusername == None:
+            exitnagios("CRITICAL", "could not locate the elemusername input")
+        else:
+            infomsg(elemusername.get_attribute("outerHTML"))
+            action.move_to_element(elemusername).perform()
+            elemusername.click()
+            elemusername.send_keys(username)
+            infomsg("username sent")
 
         elempassword = driver.find_element(by=selenium.webdriver.common.by.By.NAME, value="login_passwd")
-        infomsg(elempassword.get_attribute("outerHTML"))
-        action.move_to_element(elempassword).perform()
-        elempassword.click()
-        elempassword.send_keys(password)
-        infomsg("password sent")
+        if elempassword == None:
+            exitnagios("CRITICAL", "could not locate the elempassword input")
+        else:
+            infomsg(elempassword.get_attribute("outerHTML"))
+            action.move_to_element(elempassword).perform()
+            elempassword.click()
+            elempassword.send_keys(password)
+            infomsg("password sent")
 
         login = None
         if login is None:
@@ -155,10 +161,11 @@ async def do_is_newest(proxy, username, password, ip, timeoutvalue, timeoutstatu
                 pass
         if login is None:
             exitnagios("CRITICAL", "could not locate the login button")
-        infomsg(login.get_attribute("outerHTML"))
-        action.move_to_element(login).perform()
-        login.click()
-        infomsg("login click!")
+        else:
+            infomsg(login.get_attribute("outerHTML"))
+            action.move_to_element(login).perform()
+            login.click()
+            infomsg("login click!")
 
         await asyncio.sleep(5)
         await wait_page_loaded(driver)

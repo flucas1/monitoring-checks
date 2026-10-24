@@ -164,19 +164,25 @@ async def dodevolouptimecall(protocol, proxy, password, warningmin, criticalmin,
             wait.until(selenium.webdriver.support.expected_conditions.visibility_of_element_located((selenium.webdriver.common.by.By.ID, "btn-login")))
 
             elempassword = driver.find_element(selenium.webdriver.common.by.By.ID, "login-password")
-            infomsg(elempassword.get_attribute("outerHTML"))
-            action.move_to_element(elempassword).perform()
-            elempassword.click()
-            # await asyncio.sleep(1)
-            # elempassword.clear()
-            # await asyncio.sleep(1)
-            elempassword.send_keys(password)
-            # await asyncio.sleep(2)
+            if elempassword == None:
+                exitnagios("CRITICAL", "could not locate the elempassword input")
+            else:
+                infomsg(elempassword.get_attribute("outerHTML"))
+                action.move_to_element(elempassword).perform()
+                elempassword.click()
+                # await asyncio.sleep(1)
+                # elempassword.clear()
+                # await asyncio.sleep(1)
+                elempassword.send_keys(password)
+                # await asyncio.sleep(2)
 
             login = driver.find_element(selenium.webdriver.common.by.By.ID, "btn-login")
-            infomsg(login.get_attribute("outerHTML"))
-            action.move_to_element(login).perform()
-            login.click()
+            if login == None:
+                exitnagios("CRITICAL", "could not locate the login button")
+            else:
+                infomsg(login.get_attribute("outerHTML"))
+                action.move_to_element(login).perform()
+                login.click()
 
             # await asyncio.sleep(5)
             await wait_page_loaded(driver)
