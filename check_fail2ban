@@ -159,7 +159,7 @@ async def main(forcedargs=None):
     warning = int(args.warning)
     critical = int(args.critical)
 
-    valid_status = await check_fail2ban_status()
+    valid_status = await check_fail2ban_status(5, 3)
     if not valid_status:
         exitnagios("CRITICAL", "Fail2Ban server not responding. Check if it is running and accessible.")
 
