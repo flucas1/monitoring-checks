@@ -77,14 +77,17 @@ async def run_cmdline(cmdline):
     return None
 
 
-async def check_fail2ban_status():
+async def check_fail2ban_status(max_retries=5, delay=1):
     cmdline = [get_fail2ban_client_path(), "ping"]
-    infomsg("Running command: " + str(cmdline))
-    output = await run_cmdline(cmdline)
-    infomsg("Fail2Ban server response: " + str(output))
-    if output != None:
-        if "Server replied: pong" in output:
+    for attempt in range(max_retries):
+        infomsg(f"Running command (Attempt {attempt + 1}/{max_retries}): {cmdline}")
+        output = await run_cmdline(cmdline)
+        infomsg(f"Fail2Ban server response: {output}")
+        if output is not None and "Server replied: pong" in output:
             return True
+        if attempt < max_retries - 1:
+            infomsg(f"Fail2Ban not ready (output was None or missing pong). Retrying in {delay} seconds...")
+            await asyncio.sleep(delay)
     return False
 
 
