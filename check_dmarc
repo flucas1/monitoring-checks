@@ -194,6 +194,7 @@ async def dodmarccall(domain, proxy):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", dest="host", help="Hostname")
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -203,7 +204,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    proxy = ""
+    proxy = args.proxy
     await dodmarccall(args.host, proxy)
 
 
