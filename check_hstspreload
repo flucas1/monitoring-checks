@@ -176,6 +176,7 @@ async def dohstspreloadcall(proxy, domain):
 def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--host", dest="host", help="Hostname")
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -189,7 +190,7 @@ async def main(forcedargs=None):
     if (args.host == ""):
         exitnagios("CRITICAL", "specify a host/domain to check")
 
-    proxy = ""
+    proxy = args.proxy
     await dohstspreloadcall(proxy, args.host)
 
 # -------------------------------------------------------------------------------

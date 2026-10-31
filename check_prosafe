@@ -263,6 +263,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-e", "--expected", dest="expected", default="auto", help="expected firmware version")
     parser.add_argument("-s", "--strict", action="store_true", dest="strict", default=False, help="if version not found, raise problem")
     parser.add_argument("-l", "--tolerant", action="store_false", dest="strict", help="if version not found, do not raise problem")
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -276,7 +277,7 @@ async def main(forcedargs=None):
     model = args.model
     strict = args.strict
     if args.expected in ["auto", "", None]:
-        proxy = ""
+        proxy = args.proxy
         expected = await getexpected(proxy, model)
         infomsg(expected)
     else:

@@ -230,6 +230,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-w", "--warning", dest="warning", default="1000", help="minimum value for a warning")
     parser.add_argument("-c", "--critical", dest="critical", default="500", help="maximum value for a critical")
     parser.add_argument("-f", "--filecred", dest="filecred", default="", help="file containing the management credentials")
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -277,7 +278,7 @@ async def main(forcedargs=None):
     else:
         timeoutstatus = "CRITICAL"
     if timeoutstatus in ["OK", "WARNING", "CRITICAL", "UNKNOWN"]:
-        proxy = ""
+        proxy = args.proxy
         await dogocoaxspeedcall(protocol, proxy, username, password, args.warning, args.critical, args.hostname, timeoutvalue, timeoutstatus)
     else:
         exitnagios("CRITICAL", "timeout status is not valid")

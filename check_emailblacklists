@@ -537,6 +537,7 @@ def parse_args(forcedargs=None):
     parser.add_argument("-H", "--hostname", dest="hostname", help="server to check")
     parser.add_argument("-i", "--ignore", dest="ignore", default="", help="lists to ignore")
     parser.add_argument("-l", "--tolerance", dest="tolerance", default="0", help="number of listed databases to tolerate")
+    parser.add_argument("-p", "--proxy", dest="proxy", default="", help="use a proxy")
     parser.add_argument("-d", "--debug", action="store_true", dest="debug", default=False, help="be more verbose")
     args = parser.parse_args(forcedargs)
     return args
@@ -565,7 +566,7 @@ async def main(forcedargs=None):
     if (args.hostname == ""):
         exitnagios("CRITICAL", "hostname not defined")
 
-    proxy = ""
+    proxy = args.proxy
     ignorelist = args.ignore.split(",")
     tolerance = int(args.tolerance)
     await doemailblacklistscall(protocol, args.hostname, ignorelist, tolerance, proxy)
