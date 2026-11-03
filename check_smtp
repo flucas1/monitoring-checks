@@ -76,7 +76,7 @@ def forced_ipv4_gai_family(*args, **kwargs):
 # -------------------------------------------------------------------------------
 
 
-async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
+async def dosmtpcheck(protocol, hostname, port, sslmode, warning, critical, timeoutvalue, timeoutstatus, certificatedays, relay, blocked, source):
     if protocol == "-4":
         socket.getaddrinfo = forced_ipv4_gai_family
     elif protocol == "-6":
@@ -84,6 +84,9 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
     else:
         socket.getaddrinfo = original_getaddrinfo
 
+    dossl = sslmode in ["tls", "starttls"]
+    infomsg("sslmode is " + str(sslmode))
+    infomsg("dossl is " + str(dossl))
     smtpconnection = None
     is_connected = False
     try:
@@ -92,8 +95,7 @@ async def dosmtpcheck(protocol, hostname, port, dossl, warning, critical, timeou
         if source is not None:
             sourcetuple = (source, 0)
 
-        infomsg("ssl is " + str(dossl))
-        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=False, use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
+        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=(sslmode=="starttls"), use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
 
         await smtpconnection.connect()
         is_connected = True
@@ -201,10 +203,10 @@ def parse_args(forcedargs=None):
     parser.add_argument("-6", "--ipv6", action="store_true", dest="ipv6", default=False, help="use ipv6 (exclusive with ipv4)")
     parser.add_argument("-0", "--ipv0", action="store_true", dest="ipv0", default=False, help="do not specify ip protocol version")
     parser.add_argument("-H", "--hostname", dest="hostname", default="", help="server to check")
-    parser.add_argument("-p", "--port", dest="port", default=25, help="port to use, usually 25 or 465 or 587")
+    parser.add_argument("-p", "--port", dest="port", default=25, help="port to use, usually 25, 465 or 587")
     parser.add_argument("-w", "--warning", dest="warning", default=15, help="warning time (float)")
     parser.add_argument("-c", "--critical", dest="critical", default=20, help="critical time (float)")
-    parser.add_argument("-S", "--ssl", action="store_true", dest="ssl", default=False, help="use ssl")
+    parser.add_argument("-S", "--ssl", dest="ssl", default="none", choices=["none", "tls", "starttls"], help="select the TLS behavior")
     parser.add_argument("-t", "--timeout", dest="timeout", default="30:CRITICAL", help="timeout value:STATUS")
     parser.add_argument("-C", "--certificatedays", dest="certificatedays", default="5,20", help="minimum number of days a certificate has to be valid crit,warn")
     parser.add_argument("-r", "--relay", dest="relay", default="closed", help="open or closed relay")
