@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# -------------------------------------------------------------------------------
+
+import sys
+import argparse
+import asyncio
+
+# -------------------------------------------------------------------------------
+
+
+_candebug = False
+
+
+def candebug():
+    global _candebug
+    return _candebug
+
+
+def setcandebug(value):
+    global _candebug
+    _candebug = value
+
+
+def infomsg(msg):
+    if candebug():
+        print(msg, flush=True)
+
+
+def mapstatustoexitcode(status):
+    if status == "OK":
+        exitcode = 0
+    elif status == "WARNING":
+        exitcode = 1
+    elif status == "CRITICAL":
+        exitcode = 2
+    elif status == "UNKNOWN":
+        exitcode = 3
+    else:
+        exitcode = 4
+    return exitcode
+
+
+def exitnagios(status, message):
+    exitcode = mapstatustoexitcode(status)
+    print(status + ": " + message, flush=True)
+    sys.exit(exitcode)
+
+
+# -------------------------------------------------------------------------------
+
+
+def parse_args(forcedargs=None):
+    parser = argparse.ArgumentParser(description="check_eximmailqueue - Nagios Exim mail queue check script")
+    parser.add_argument("-w", "--warning", dest="warning", type=int, required=True, help="If files are older than this age in seconds raise a warning")
+    parser.add_argument("-c", "--critical", dest="critical", type=int, required=True, help="If files are older than this age in seconds raise a critical")
+    parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug mode")
+    args = parser.parse_args(forcedargs)
+    return args
+
+
+async def main(forcedargs=None):
+    args = parse_args(forcedargs)
+    setcandebug(args.debug)
+
+    oldest = None
+    queue_size = None
+
+    # Evaluate thresholds and return information and exit status
+    if oldest >= args.critical:
+        exitnagios("CRITICAL", str(queue_size) + " messages on queue | queue=" + str(queue_size))
+    elif oldest >= args.warning:
+        exitnagios("WARNING", str(queue_size) + " messages on queue | queue=" + str(queue_size))
+    else:
+        exitnagios("OK", str(queue_size) + " messages on queue | queue=" + str(queue_size))
+
+
+# -------------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+# -------------------------------------------------------------------------------
