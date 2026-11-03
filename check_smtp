@@ -10,6 +10,8 @@ import asyncio
 import dateutil.parser
 import traceback
 import time
+import ssl
+import cryptography.x509
 
 # -------------------------------------------------------------------------------
 
@@ -89,14 +91,20 @@ async def dosmtpcheck(protocol, hostname, port, sslmode, warning, critical, time
     infomsg("dossl is " + str(dossl))
     smtpconnection = None
     is_connected = False
+    insecure = True
+
     try:
         start = time.monotonic()
         sourcetuple = None
         if source is not None:
             sourcetuple = (source, 0)
-
-        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=(sslmode=="starttls"), use_tls=dossl, timeout=timeoutvalue, source_address=sourcetuple)
-
+        tls_context = ssl.create_default_context()
+        if insecure:
+            tls_context.check_hostname = False
+            tls_context.verify_mode = ssl.CERT_NONE
+        is_tls = (sslmode == "tls")
+        is_starttls = (sslmode == "starttls")
+        smtpconnection = aiosmtplib.SMTP(hostname=hostname, port=port, start_tls=is_starttls, use_tls=is_tls, timeout=timeoutvalue, source_address=sourcetuple, tls_context=tls_context)
         await smtpconnection.connect()
         is_connected = True
     except Exception as e:
@@ -112,20 +120,30 @@ async def dosmtpcheck(protocol, hostname, port, sslmode, warning, critical, time
         certexpirationparsed = None
         certexpirationraw = None
         if dossl is True:
-            infomsg("doing SSL")
+            infomsg("checking SSL/TLS certificate")
             try:
+                # 1. Try standard decoded peercert dict (populated when certificate is validated)
                 cert_data = smtpconnection.transport.get_extra_info("peercert")
-                infomsg(cert_data)
-                if cert_data is not None:
+                infomsg(f"Peer cert: {cert_data}")
+
+                if cert_data and isinstance(cert_data, dict) and "notAfter" in cert_data:
                     certexpirationraw = cert_data.get("notAfter")
-                    infomsg("Expiry date: " + str(certexpirationraw))
-                    if certexpirationraw is not None:
-                        certexpirationparsed = dateutil.parser.parse(certexpirationraw)
+                    infomsg(f"Expiry date (raw): {certexpirationraw}")
+                    certexpirationparsed = dateutil.parser.parse(certexpirationraw)
+                else:
+                    # 2. Fallback: handles CERT_NONE / self-signed / unvalidated certificates
+                    ssl_obj = smtpconnection.transport.get_extra_info("ssl_object")
+                    if ssl_obj is not None:
+                        der_cert = ssl_obj.getpeercert(binary_form=True)
+                        if der_cert:
+                            cert = cryptography.x509.load_der_x509_certificate(der_cert)
+                            certexpirationparsed = cert.not_valid_after_utc
+                            certexpirationraw = str(certexpirationparsed)
+                            infomsg(f"Expiry date (from binary DER): {certexpirationparsed}")
             except Exception:
                 infomsg(str(traceback.format_exc()))
-                pass
         else:
-            infomsg("skipping ssl test")
+            infomsg("skipping SSL/TLS certificate test")
 
         try:
             await smtpconnection.ehlo()
