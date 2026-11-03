@@ -4,6 +4,8 @@
 import sys
 import argparse
 import asyncio
+import os
+import time
 
 # -------------------------------------------------------------------------------
 
@@ -63,8 +65,28 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    oldest = 900
-    queue_size = None
+    localnow = time.time()
+    queue_size = 0
+    oldest = 0
+
+    infomsg(f"Checking queue directory: {args.path}")
+
+    try:
+        for root, _, files in os.walk(args.path):
+            for filename in files:
+                queue_size += 1
+                filepath = os.path.join(root, filename)
+                try:
+                    mtime = os.path.getmtime(filepath)
+                    age = int(localnow - mtime)
+                    if age > oldest:
+                        oldest = age
+                except OSError as err:
+                    infomsg(f"Could not stat file {filepath}: {err}")
+    except OSError as err:
+        exitnagios("UNKNOWN", f"Failed to read path '{args.path}': {err}")
+
+    infomsg(f"Queue size: {queue_size}, Oldest message age: {oldest}s")
 
     # Evaluate thresholds and return information and exit status
     if oldest >= args.critical:
