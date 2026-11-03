@@ -53,6 +53,7 @@ def parse_args(forcedargs=None):
     parser = argparse.ArgumentParser(description="check_eximmailqueue - Nagios Exim mail queue check script")
     parser.add_argument("-w", "--warning", dest="warning", type=int, required=True, help="If files are older than this age in seconds raise a warning")
     parser.add_argument("-c", "--critical", dest="critical", type=int, required=True, help="If files are older than this age in seconds raise a critical")
+    parser.add_argument("-p", "--path", dest="path", type=str, required=True, help="Folder to check")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="Enable debug mode")
     args = parser.parse_args(forcedargs)
     return args
@@ -62,7 +63,7 @@ async def main(forcedargs=None):
     args = parse_args(forcedargs)
     setcandebug(args.debug)
 
-    oldest = None
+    oldest = 900
     queue_size = None
 
     # Evaluate thresholds and return information and exit status
