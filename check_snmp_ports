@@ -94,10 +94,7 @@ async def snmpget(hostname, port, community, oid, timeoutvalue):
         stderr=asyncio.subprocess.PIPE
     )
     try:
-        stdout, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=timeoutvalue
-        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeoutvalue)
         output = stdout.decode("utf-8").strip() if stdout else ""
         errors = stderr.decode("utf-8").strip() if stderr else ""
         exitcode = process.returncode

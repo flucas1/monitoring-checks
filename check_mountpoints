@@ -99,6 +99,11 @@ async def run_df(mp, timeout, dfargs):
         if process.returncode != 0:
             raise Exception("df returned " + str(process.returncode))
     except asyncio.TimeoutError:
+        try:
+            process.kill()
+        except ProcessLookupError:
+            pass
+        await process.wait()
         raise Exception("df timeout")
 
 
@@ -170,6 +175,11 @@ async def check_mountpoint(mp, args, fstab_lines, mtab_lines):
             else:
                 os.remove(touchfile)
         except asyncio.TimeoutError:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+            await process.wait()
             infomsg("error: " + touchfile + " is not writable.")
             err_mesg.append("Could not write in " + mp + " in " + str(args.timeout) + " sec. Seems to be stale.")
         except Exception:

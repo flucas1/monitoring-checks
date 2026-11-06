@@ -51,17 +51,11 @@ def exitnagios(status, message):
 
 async def check_rsync(remote, rsync_port, timeoutvalue, timeoutstatus):
     try:
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(remote, rsync_port),
-            timeout=timeoutvalue
-        )
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(remote, rsync_port), timeout=timeoutvalue)
         try:
             writer.write(b"\r\n")
             await writer.drain()
-            rsync_out = await asyncio.wait_for(
-                reader.read(1024),
-                timeout=timeoutvalue
-            )
+            rsync_out = await asyncio.wait_for(reader.read(1024), timeout=timeoutvalue)
             rsync_out = rsync_out.decode("utf-8", errors="ignore").strip()
 
             if rsync_out.startswith("@RSYNCD:"):

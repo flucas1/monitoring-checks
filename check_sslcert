@@ -68,10 +68,7 @@ async def dosslcertcheck(protocol, hostname, port, timeoutvalue, timeoutstatus, 
             family = socket.AF_INET
         elif protocol == "-6":
             family = socket.AF_INET6
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname, family=family),
-            timeout=timeoutvalue
-        )
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(hostname, port, ssl=context, server_hostname=hostname, family=family), timeout=timeoutvalue)
         cert_data = writer.get_extra_info("peercert")
         writer.close()
         await writer.wait_closed()
