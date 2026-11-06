@@ -72,9 +72,9 @@ async def dotest(host, multiargs, multitimeoutvalue, multitimeoutstatus, childti
         except asyncio.TimeoutError:
             try:
                 process.kill()
-                await process.wait()
             except ProcessLookupError:
                 pass
+            await process.wait()
             output = "timeout"
             errors = ""
             exitcode = mapstatustoexitcode(multitimeoutstatus)
